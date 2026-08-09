@@ -102,9 +102,12 @@ function synthesizeDimension(input: {
     excludedSafetyCount: input.excludedSafetyCount,
   });
   const confidence = determineConfidence(agreementLevel, supportingEvidenceIds.length, proxyChildPerspectives.length);
+  const hasDirectParentAndChild = parentPerspectives.length > 0 && childPerspectives.length > proxyChildPerspectives.length;
+  const isSufficient = supportingEvidenceIds.length >= 2 && hasDirectParentAndChild;
 
   return {
     dimension_id: input.dimensionId,
+    fact_boundary: 'PROFILE_IS_INTERPRETIVE_NOT_FACT',
     profile_scope: input.profileScope,
     subject_type: input.subjectType,
     subject_person_id: input.subjectPersonId,
@@ -119,7 +122,7 @@ function synthesizeDimension(input: {
     evidence_grade_coverage: { E1: supportingEvidenceIds.length },
     agreement_level: agreementLevel,
     confidence,
-    candidate_state: determineCandidateState(supportingEvidenceIds.length, agreementLevel),
+    candidate_state: determineCandidateState(supportingEvidenceIds.length, agreementLevel, isSufficient),
     limitations,
     policy_version: PROFILE_SYNTHESIS_POLICY_VERSION,
   };
@@ -145,8 +148,8 @@ function determineAgreementLevel(parentCount: number, childCount: number, proxyC
   return 'ALIGNED';
 }
 
-function determineCandidateState(evidenceCount: number, agreementLevel: AgreementLevel): GrowthProfileCandidateState {
-  if (evidenceCount === 0 || agreementLevel === 'INSUFFICIENT' || agreementLevel === 'DIVERGENT') {
+function determineCandidateState(evidenceCount: number, agreementLevel: AgreementLevel, isSufficient: boolean): GrowthProfileCandidateState {
+  if (!isSufficient || evidenceCount === 0 || agreementLevel === 'INSUFFICIENT' || agreementLevel === 'DIVERGENT') {
     return 'UNRESOLVED';
   }
   if (agreementLevel === 'ALIGNED' && evidenceCount >= 2) {

@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { FamilyRepository } from './family.repository';
+import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyService } from './family.service';
 
 describe('FamilyService CreateFamily integration', () => {
@@ -16,7 +17,7 @@ describe('FamilyService CreateFamily integration', () => {
     pool = createTestPool();
     repository = new FamilyRepository();
     aggregateRepository = new FamilyAggregateRepository(repository);
-    service = new FamilyService(repository, aggregateRepository);
+    service = new FamilyService(repository, aggregateRepository, new EvidenceSynthesisService());
   });
 
   beforeEach(async () => {
@@ -283,6 +284,186 @@ describe('FamilyService CreateFamily integration', () => {
     expect(evidence.rowCount).toBe(0);
   });
 
+  it('builds M2-103 profile drafts from E1 perspectives without writing priorities or confirmed profiles', async () => {
+    const { family, parent, child, meta } = await seedM2ReadyFamily();
+    const onboarding = await seedM2Perspectives(family.family.family_id, parent.parent.person_id, child.child.person_id, meta);
+
+    const response = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-build-drafts',
+    }, meta);
+    const replay = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-build-drafts',
+    }, meta);
+
+    expect(replay).toEqual(response);
+    expect(response.drafts).toHaveLength(4);
+    expect(response.drafts.find((draft) => draft.dimension_id === 'P03')).toMatchObject({
+      profile_scope: 'PARENT_GROWTH_PROFILE',
+      subject_person_id: parent.parent.person_id,
+      subject_relationship_id: null,
+      candidate_state: 'UNRESOLVED',
+      confidence: 'LOW',
+      status: 'REVIEW_REQUIRED',
+    });
+    expect(response.drafts.find((draft) => draft.dimension_id === 'R03')).toMatchObject({
+      profile_scope: 'RELATIONSHIP_GROWTH_PROFILE',
+      subject_person_id: null,
+      candidate_state: 'DEVELOPING',
+      confidence: 'MEDIUM',
+      status: 'DRAFT',
+    });
+    expect(response.drafts.find((draft) => draft.dimension_id === 'R05')).toMatchObject({
+      candidate_state: 'UNRESOLVED',
+      status: 'REVIEW_REQUIRED',
+    });
+
+    const drafts = await pool.query('select * from growth_profile_drafts');
+    const profiles = await pool.query('select * from growth_profiles');
+    const priorities = await pool.query('select * from growth_priorities');
+    const outbox = await pool.query('select * from outbox_events where event_name = $1', ['GrowthProfileDrafted']);
+    expect(drafts.rowCount).toBe(4);
+    expect(profiles.rowCount).toBe(0);
+    expect(priorities.rowCount).toBe(0);
+    expect(outbox.rowCount).toBe(1);
+  });
+
+  it('confirms a M2-103 draft into a limited working growth profile with versioned evidence snapshot', async () => {
+    const { family, parent, child, meta } = await seedM2ReadyFamily();
+    const onboarding = await seedM2Perspectives(family.family.family_id, parent.parent.person_id, child.child.person_id, meta);
+    const drafts = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-confirm-build',
+    }, meta);
+    const draft = drafts.drafts.find((item) => item.dimension_id === 'R03');
+    expect(draft).toBeDefined();
+
+    const response = await service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: draft!.draft_id,
+      idempotency_key: 'idem-m2-103-confirm-r03',
+    }, meta);
+    const replay = await service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: draft!.draft_id,
+      idempotency_key: 'idem-m2-103-confirm-r03',
+    }, meta);
+    const insight = await service.getGrowthInsight(family.family.family_id, onboarding.onboarding.onboarding_id, meta.actor);
+
+    expect(replay).toEqual(response);
+    expect(response.profile).toMatchObject({
+      family_id: family.family.family_id,
+      profile_scope: 'RELATIONSHIP_GROWTH_PROFILE',
+      dimension_id: 'R03',
+      state: 'DEVELOPING',
+      confidence: 'MEDIUM',
+      status: 'WORKING',
+      confirmed_by_actor_id: meta.actor,
+      policy_version: 'M2_103_DETERMINISTIC_V1',
+    });
+    expect(response.profile.evidence_snapshot.evidence_ids).toHaveLength(2);
+    expect(response.draft.status).toBe('CONFIRMED');
+    expect(insight.confirmed_profiles.map((profile) => profile.dimension_id)).toContain('R03');
+
+    const profileDimensions = await pool.query('select * from growth_profile_dimensions where dimension_id = $1', ['R03']);
+    const priorities = await pool.query('select * from growth_priorities');
+    const outbox = await pool.query('select * from outbox_events where event_name = $1', ['GrowthProfileConfirmed']);
+    expect(profileDimensions.rowCount).toBe(1);
+    expect(priorities.rowCount).toBe(0);
+    expect(outbox.rowCount).toBe(1);
+  });
+
+  it('rechecks required consent before confirming a M2-103 draft', async () => {
+    const { family, parent, child, meta } = await seedM2ReadyFamily();
+    const onboarding = await seedM2Perspectives(family.family.family_id, parent.parent.person_id, child.child.person_id, meta);
+    const drafts = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-consent-recheck-build',
+    }, meta);
+    const draft = drafts.drafts.find((item) => item.dimension_id === 'R03');
+    expect(draft).toBeDefined();
+
+    await pool.query(
+      `update consents
+       set status = 'WITHDRAWN', withdrawn_at = now()
+       where family_id = $1 and subject_person_id = $2 and purpose = 'GROWTH_TRACKING'`,
+      [family.family.family_id, child.child.person_id],
+    );
+
+    await expect(service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: draft!.draft_id,
+      idempotency_key: 'idem-m2-103-consent-recheck-confirm',
+    }, meta)).rejects.toThrow('missing_required_consent:GROWTH_TRACKING');
+
+    const profiles = await pool.query('select * from growth_profiles');
+    expect(profiles.rowCount).toBe(0);
+  });
+
+  it('versions confirmed profiles for the same M2-103 dimension', async () => {
+    const { family, parent, child, meta } = await seedM2ReadyFamily();
+    const onboarding = await seedM2Perspectives(family.family.family_id, parent.parent.person_id, child.child.person_id, meta);
+    const firstDrafts = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-version-build-1',
+    }, meta);
+    const firstDraft = firstDrafts.drafts.find((item) => item.dimension_id === 'R03');
+    expect(firstDraft).toBeDefined();
+    const first = await service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: firstDraft!.draft_id,
+      idempotency_key: 'idem-m2-103-version-confirm-1',
+    }, meta);
+
+    const secondDrafts = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-version-build-2',
+    }, meta);
+    const secondDraft = secondDrafts.drafts.find((item) => item.dimension_id === 'R03' && item.status === 'DRAFT');
+    expect(secondDraft).toBeDefined();
+    const second = await service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: secondDraft!.draft_id,
+      idempotency_key: 'idem-m2-103-version-confirm-2',
+    }, meta);
+
+    expect(first.profile).toMatchObject({ version: 1, previous_profile_id: null });
+    expect(second.profile).toMatchObject({ version: 2, previous_profile_id: first.profile.profile_id });
+
+    const workingProfiles = await pool.query('select profile_id, status, version, previous_profile_id from growth_profiles where status = $1', ['WORKING']);
+    const supersededProfiles = await pool.query('select profile_id, status, version, previous_profile_id from growth_profiles where status = $1', ['SUPERSEDED']);
+    expect(workingProfiles.rows).toMatchObject([{ profile_id: second.profile.profile_id, version: 2, previous_profile_id: first.profile.profile_id }]);
+    expect(supersededProfiles.rows).toMatchObject([{ profile_id: first.profile.profile_id, version: 1, previous_profile_id: null }]);
+  });
+
+  it('does not confirm unresolved M2-103 drafts', async () => {
+    const { family, parent, child, meta } = await seedM2ReadyFamily();
+    const onboarding = await seedM2Perspectives(family.family.family_id, parent.parent.person_id, child.child.person_id, meta);
+    const drafts = await service.buildGrowthProfileDrafts({
+      family_id: family.family.family_id,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      idempotency_key: 'idem-m2-103-unresolved-build',
+    }, meta);
+    const unresolved = drafts.drafts.find((item) => item.dimension_id === 'R05');
+    expect(unresolved).toBeDefined();
+
+    await expect(service.confirmGrowthProfile({
+      family_id: family.family.family_id,
+      draft_id: unresolved!.draft_id,
+      idempotency_key: 'idem-m2-103-unresolved-confirm',
+    }, meta)).rejects.toThrow('growth_profile_draft_not_confirmable:REVIEW_REQUIRED');
+
+    const profiles = await pool.query('select * from growth_profiles');
+    expect(profiles.rowCount).toBe(0);
+  });
+
   it('rejects a perspective subject that does not match the active onboarding child', async () => {
     const { family, parent, child, meta } = await seedM2ReadyFamily();
     const otherChild = await service.addChild({
@@ -396,5 +577,48 @@ describe('FamilyService CreateFamily integration', () => {
     }
 
     return { family, parent, child, meta };
+  }
+
+  async function seedM2Perspectives(familyId: string, parentId: string, childId: string, meta: { actor: string; correlationId: string; source: string; occurredAt: string }) {
+    const onboarding = await service.startGrowthOnboarding({
+      family_id: familyId,
+      child_id: childId,
+      guardian_person_id: parentId,
+      safety_screening_result: 'LOW',
+      idempotency_key: `idem-m2-103-onboarding-${crypto.randomUUID()}`,
+    }, meta);
+    await service.recordPerspective({
+      family_id: familyId,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      subject_person_id: childId,
+      author_person_id: parentId,
+      perspective_type: 'PARENT_PERSPECTIVE',
+      capture_mode: 'DIRECT_SELF_REPORT',
+      related_dimension_ids: ['P03', 'R03'],
+      content: {
+        prompt_id: 'parent-m2-103-v1',
+        response_text: '我发现自己经常还没听完就开始评价。',
+        selected_signals: ['interrupts', 'evaluates-too-fast'],
+      },
+      structured_safety_signals: ['NONE'],
+      idempotency_key: `idem-m2-103-parent-perspective-${crypto.randomUUID()}`,
+    }, meta);
+    await service.recordPerspective({
+      family_id: familyId,
+      onboarding_id: onboarding.onboarding.onboarding_id,
+      subject_person_id: childId,
+      author_person_id: childId,
+      perspective_type: 'CHILD_PERSPECTIVE',
+      capture_mode: 'FACILITATED_ENTRY',
+      related_dimension_ids: ['R03', 'R04'],
+      content: {
+        prompt_id: 'child-m2-103-v1',
+        response_text: '我希望大人先听我讲完，再一起想办法。',
+        selected_signals: ['wants-to-be-heard'],
+      },
+      structured_safety_signals: ['NONE'],
+      idempotency_key: `idem-m2-103-child-perspective-${crypto.randomUUID()}`,
+    }, meta);
+    return onboarding;
   }
 });

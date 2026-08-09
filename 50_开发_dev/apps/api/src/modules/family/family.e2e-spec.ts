@@ -291,6 +291,96 @@ describe('POST /families E2E', () => {
     await expectCount('growth_priorities', 0);
   });
 
+  it('E2E-M2-103 builds insight drafts and confirms one limited profile through real HTTP', async () => {
+    const correlationId = 'corr-e2e-m2-103';
+    const setup = await seedM2Onboarding(correlationId);
+    await seedM2PerspectivePair(setup, correlationId);
+
+    const draftsResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/profile-drafts`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'x-source': 'vitest-e2e',
+        'idempotency-key': 'e2e-m2-103-build-drafts',
+      },
+      body: JSON.stringify({}),
+    });
+    const draftsBody = await draftsResponse.json() as GrowthProfileDraftsHttpResponse;
+
+    expect(draftsResponse.status).toBe(201);
+    expect(draftsBody.drafts).toHaveLength(4);
+    expect(draftsBody.drafts.find((draft) => draft.dimension_id === 'P03')).toMatchObject({
+      profile_scope: 'PARENT_GROWTH_PROFILE',
+      subject_person_id: setup.parentId,
+      subject_relationship_id: null,
+      candidate_state: 'UNRESOLVED',
+      confidence: 'LOW',
+      status: 'REVIEW_REQUIRED',
+    });
+    expect(draftsBody.drafts.find((draft) => draft.dimension_id === 'R03')).toMatchObject({
+      profile_scope: 'RELATIONSHIP_GROWTH_PROFILE',
+      candidate_state: 'DEVELOPING',
+      status: 'DRAFT',
+    });
+    expect(draftsBody.drafts.find((draft) => draft.dimension_id === 'R05')).toMatchObject({
+      candidate_state: 'UNRESOLVED',
+      status: 'REVIEW_REQUIRED',
+    });
+
+    const insightResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/insight`, {
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer test-token',
+        'x-actor-id': 'architect-1',
+      },
+    });
+    const insightBody = await insightResponse.json() as GrowthInsightHttpResponse;
+    const draftToConfirm = draftsBody.drafts.find((draft) => draft.dimension_id === 'R03');
+    expect(draftToConfirm).toBeDefined();
+
+    expect(insightResponse.status).toBe(200);
+    expect(insightBody.parent_profile_drafts).toHaveLength(1);
+    expect(insightBody.relationship_profile_drafts).toHaveLength(3);
+    expect(insightBody.confirmed_profiles).toHaveLength(0);
+
+    const confirmResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/profile-drafts/${draftToConfirm!.draft_id}/confirm`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'x-source': 'vitest-e2e',
+        'idempotency-key': 'e2e-m2-103-confirm-r03',
+      },
+      body: JSON.stringify({}),
+    });
+    const confirmBody = await confirmResponse.json() as ConfirmGrowthProfileHttpResponse;
+
+    expect(confirmResponse.status).toBe(201);
+    expect(confirmBody.profile).toMatchObject({
+      profile_scope: 'RELATIONSHIP_GROWTH_PROFILE',
+      dimension_id: 'R03',
+      state: 'DEVELOPING',
+      confidence: 'MEDIUM',
+      status: 'WORKING',
+      policy_version: 'M2_103_DETERMINISTIC_V1',
+    });
+    expect(confirmBody.profile.basis.fact_boundary).toBe('PROFILE_IS_INTERPRETIVE_NOT_FACT');
+    expect(confirmBody.profile.evidence_snapshot.evidence_ids).toHaveLength(2);
+    expect(confirmBody.draft.status).toBe('CONFIRMED');
+
+    await expectCount('growth_profile_drafts', 4);
+    await expectCount('growth_profiles', 1);
+    await expectCount('growth_profile_dimensions', 1);
+    await expectCount('growth_priorities', 0);
+    const aiEvents = await pool.query("select count(*)::int as count from outbox_events where event_name like 'AI%' or event_name like 'Model%'");
+    expect(aiEvents.rows[0].count).toBe(0);
+  });
+
   async function postFamily(body: Record<string, unknown>, correlationId: string): Promise<Response> {
     return fetch(`${baseUrl}/families`, {
       method: 'POST',
@@ -403,6 +493,38 @@ describe('POST /families E2E', () => {
     });
   }
 
+  async function seedM2PerspectivePair(setup: { familyId: string; parentId: string; childId: string; onboardingId: string }, correlationId: string): Promise<void> {
+    const parentResponse = await postPerspective(setup.familyId, setup.onboardingId, {
+      subjectPersonId: setup.childId,
+      authorPersonId: setup.parentId,
+      perspectiveType: 'PARENT_PERSPECTIVE',
+      captureMode: 'DIRECT_SELF_REPORT',
+      relatedDimensionIds: ['P03', 'R03'],
+      content: {
+        promptId: 'parent-m2-103-v1',
+        responseText: '我发现自己经常还没听完就开始评价。',
+        selectedSignals: ['interrupts', 'evaluates-too-fast'],
+      },
+      structuredSafetySignals: ['NONE'],
+    }, correlationId, `e2e-m2-103-parent-${correlationId}`);
+    const childResponse = await postPerspective(setup.familyId, setup.onboardingId, {
+      subjectPersonId: setup.childId,
+      authorPersonId: setup.childId,
+      perspectiveType: 'CHILD_PERSPECTIVE',
+      captureMode: 'FACILITATED_ENTRY',
+      relatedDimensionIds: ['R03', 'R04'],
+      content: {
+        promptId: 'child-m2-103-v1',
+        responseText: '我希望大人先听我讲完，再一起想办法。',
+        selectedSignals: ['wants-to-be-heard'],
+      },
+      structuredSafetySignals: ['NONE'],
+    }, correlationId, `e2e-m2-103-child-${correlationId}`);
+
+    expect(parentResponse.status).toBe(201);
+    expect(childResponse.status).toBe(201);
+  }
+
   async function errorStatus(response: Response): Promise<number> {
     const body = await response.json() as { statusCode?: number };
     return body.statusCode ?? 0;
@@ -471,4 +593,51 @@ interface RecordPerspectiveHttpResponse {
 interface PerspectiveSummaryHttpResponse {
   perspectives: RecordPerspectiveHttpResponse['perspective'][];
   evidence: RecordPerspectiveHttpResponse['evidence'][];
+}
+
+interface GrowthProfileDraftHttpDto {
+  draft_id: string;
+  profile_scope: 'PARENT_GROWTH_PROFILE' | 'RELATIONSHIP_GROWTH_PROFILE';
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  dimension_id: 'P03' | 'R03' | 'R04' | 'R05';
+  candidate_state: 'UNRESOLVED' | 'EMERGING' | 'DEVELOPING' | 'PRACTICING' | 'STABILIZING';
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'DRAFT' | 'CONFIRMED' | 'STALE' | 'REVIEW_REQUIRED';
+  synthesis: {
+    fact_boundary: 'PROFILE_IS_INTERPRETIVE_NOT_FACT';
+  };
+  evidence_snapshot: {
+    evidence_ids: string[];
+  };
+}
+
+interface GrowthProfileDraftsHttpResponse {
+  drafts: GrowthProfileDraftHttpDto[];
+}
+
+interface GrowthInsightHttpResponse {
+  parent_profile_drafts: GrowthProfileDraftHttpDto[];
+  relationship_profile_drafts: GrowthProfileDraftHttpDto[];
+  confirmed_profiles: GrowthProfileHttpDto[];
+}
+
+interface ConfirmGrowthProfileHttpResponse {
+  draft: GrowthProfileDraftHttpDto;
+  profile: GrowthProfileHttpDto;
+}
+
+interface GrowthProfileHttpDto {
+  profile_scope: 'PARENT_GROWTH_PROFILE' | 'RELATIONSHIP_GROWTH_PROFILE';
+  dimension_id: 'P03' | 'R03' | 'R04' | 'R05';
+  state: 'EMERGING' | 'DEVELOPING' | 'PRACTICING' | 'STABILIZING';
+  confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'WORKING' | 'SUPERSEDED' | 'ARCHIVED';
+  policy_version: 'M2_103_DETERMINISTIC_V1';
+  basis: {
+    fact_boundary: 'PROFILE_IS_INTERPRETIVE_NOT_FACT';
+  };
+  evidence_snapshot: {
+    evidence_ids: string[];
+  };
 }

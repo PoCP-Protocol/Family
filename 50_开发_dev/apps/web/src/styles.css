@@ -52,7 +52,8 @@ textarea {
 .perspective-grid,
 .result-panel div,
 .family-panel dl div,
-.summary-item dl div {
+.summary-item dl div,
+.insight-card dl div {
   display: flex;
 }
 
@@ -129,7 +130,8 @@ h2 {
 
 .onboarding-panel,
 .perspective-card,
-.summary-panel {
+.summary-panel,
+.insight-panel {
   flex: 1;
   padding: 24px;
 }
@@ -141,7 +143,8 @@ h2 {
 
 .family-panel dl div,
 .result-panel div,
-.summary-item dl div {
+.summary-item dl div,
+.insight-card dl div {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
@@ -261,11 +264,16 @@ button:disabled {
 }
 
 .perspective-card,
-.summary-panel {
+.summary-panel,
+.insight-panel {
   border: 1px solid rgba(71, 115, 90, 0.24);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: var(--shadow);
+}
+
+.insight-panel {
+  background: rgba(255, 253, 247, 0.9);
 }
 
 .perspective-card {
@@ -291,6 +299,13 @@ button:disabled {
   margin-top: 20px;
 }
 
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
 .summary-item {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -298,9 +313,22 @@ button:disabled {
   background: var(--paper);
 }
 
+.insight-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  border: 1px solid rgba(199, 121, 45, 0.28);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--panel);
+}
+
 .summary-item h3,
 .summary-item p,
-.summary-item dl {
+.summary-item dl,
+.insight-card h3,
+.insight-card p,
+.insight-card dl {
   margin: 0;
 }
 
@@ -310,8 +338,40 @@ button:disabled {
   line-height: 1.65;
 }
 
+.insight-card p {
+  color: var(--ink);
+  line-height: 1.6;
+}
+
 .summary-item dl {
   margin-top: 12px;
+}
+
+.boundary-note {
+  margin: 14px 0;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.limitation {
+  color: var(--amber);
+  font-weight: 800;
+}
+
+.review-needed,
+.confirmed-strip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  border-radius: 8px;
+  background: rgba(199, 121, 45, 0.12);
+  color: #76501f;
+  padding: 0 14px;
+  font-weight: 900;
+}
+
+.confirmed-strip {
+  margin-top: 16px;
 }
 
 @media (max-width: 760px) {

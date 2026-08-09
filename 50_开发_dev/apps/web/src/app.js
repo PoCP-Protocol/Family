@@ -4,6 +4,10 @@
 /** @typedef {import('@family/contracts').RecordPerspectiveRequest} RecordPerspectiveRequest */
 /** @typedef {import('@family/contracts').RecordPerspectiveResponse} RecordPerspectiveResponse */
 /** @typedef {import('@family/contracts').PerspectiveSummaryResponse} PerspectiveSummaryResponse */
+/** @typedef {import('@family/contracts').BuildGrowthProfileDraftsResponse} BuildGrowthProfileDraftsResponse */
+/** @typedef {import('@family/contracts').GrowthInsightResponse} GrowthInsightResponse */
+/** @typedef {import('@family/contracts').ConfirmGrowthProfileResponse} ConfirmGrowthProfileResponse */
+/** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
 /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
 
 /**
@@ -36,6 +40,8 @@ export function createGrowthApp(root, config = defaultConfig) {
     onboarding: undefined,
     /** @type {PerspectiveSummaryResponse | undefined} */
     summary: undefined,
+    /** @type {GrowthInsightResponse | undefined} */
+    insight: undefined,
   };
 
   const render = () => {
@@ -99,6 +105,7 @@ export function createGrowthApp(root, config = defaultConfig) {
 
             ${state.onboarding ? renderPerspectiveForms() : ''}
             ${state.summary ? renderPerspectiveSummary(state.summary) : ''}
+            ${state.summary ? renderGrowthInsightPanel(state.insight) : ''}
           </main>
         </section>
       </section>
@@ -119,6 +126,19 @@ export function createGrowthApp(root, config = defaultConfig) {
         await recordPerspective(form);
       });
     });
+
+    root.querySelector('#build-profile-drafts')?.addEventListener('click', async () => {
+      await buildProfileDrafts();
+    });
+
+    root.querySelectorAll('button[data-confirm-draft-id]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const draftId = button.getAttribute('data-confirm-draft-id');
+        if (draftId) {
+          await confirmProfileDraft(draftId);
+        }
+      });
+    });
   };
 
   /** @param {SafetyScreeningResult} safetyScreeningResult */
@@ -127,6 +147,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     state.message = '正在提交 StartGrowthOnboarding Named Action...';
     state.onboarding = undefined;
     state.summary = undefined;
+    state.insight = undefined;
     render();
 
     try {
@@ -163,11 +184,57 @@ export function createGrowthApp(root, config = defaultConfig) {
       const request = createPerspectiveRequest(config, state.onboarding.onboarding_id, perspectiveKind, responseText, selectedSignals);
       await submitRecordPerspective(config, state.onboarding.onboarding_id, request);
       state.summary = await fetchPerspectiveSummary(config, state.onboarding.onboarding_id);
+      state.insight = undefined;
       state.status = 'started';
       state.message = '视角已记录为 Perspective + E1 Evidence。没有写入事实、画像或优先级。';
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '记录视角失败。';
+    }
+
+    render();
+  };
+
+  const buildProfileDrafts = async () => {
+    if (!state.onboarding) {
+      return;
+    }
+
+    state.status = 'submitting';
+    state.message = '正在合成 Growth Profile Draft。Evidence 支持 Profile，但 Evidence 本身不是 Profile。';
+    render();
+
+    try {
+      await submitBuildGrowthProfileDrafts(config, state.onboarding.onboarding_id);
+      state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      state.status = 'started';
+      state.message = '已生成工作画像草稿。它不是评分，也不是事实判定。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '生成成长画像草稿失败。';
+    }
+
+    render();
+  };
+
+  /** @param {string} draftId */
+  const confirmProfileDraft = async (draftId) => {
+    if (!state.onboarding) {
+      return;
+    }
+
+    state.status = 'submitting';
+    state.message = '正在确认 Growth Profile。确认画像不会自动生成优先级或行动。';
+    render();
+
+    try {
+      await submitConfirmGrowthProfile(config, draftId);
+      state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      state.status = 'started';
+      state.message = '画像已确认。当前仍没有写入 Growth Priority、行动或 AI 侧效果。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '确认成长画像失败。';
     }
 
     render();
@@ -274,6 +341,90 @@ export async function fetchPerspectiveSummary(config, onboardingId) {
 
   if (!body || !('perspectives' in body) || !('evidence' in body)) {
     throw new Error('Perspective summary returned an invalid response.');
+  }
+
+  return body;
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {string} onboardingId
+ * @returns {Promise<BuildGrowthProfileDraftsResponse>}
+ */
+export async function submitBuildGrowthProfileDrafts(config, onboardingId) {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/profile-drafts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Actor-Id': config.actorPersonId,
+      'Idempotency-Key': createIdempotencyKey('m2-103-drafts', config.familyId, onboardingId),
+    },
+    body: JSON.stringify({}),
+  });
+  const body = /** @type {BuildGrowthProfileDraftsResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
+
+  if (!response.ok) {
+    const message = body && 'message' in body && body.message ? body.message : `BuildGrowthProfileDrafts failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!body || !('drafts' in body)) {
+    throw new Error('BuildGrowthProfileDrafts returned an invalid response.');
+  }
+
+  return body;
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {string} onboardingId
+ * @returns {Promise<GrowthInsightResponse>}
+ */
+export async function fetchGrowthInsight(config, onboardingId) {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/insight`, {
+    method: 'GET',
+    headers: {
+      'X-Actor-Id': config.actorPersonId,
+    },
+  });
+  const body = /** @type {GrowthInsightResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
+
+  if (!response.ok) {
+    const message = body && 'message' in body && body.message ? body.message : `GrowthInsight failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!body || !('parent_profile_drafts' in body) || !('relationship_profile_drafts' in body)) {
+    throw new Error('GrowthInsight returned an invalid response.');
+  }
+
+  return body;
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {string} draftId
+ * @returns {Promise<ConfirmGrowthProfileResponse>}
+ */
+export async function submitConfirmGrowthProfile(config, draftId) {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/profile-drafts/${draftId}/confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Actor-Id': config.actorPersonId,
+      'Idempotency-Key': createIdempotencyKey('m2-103-confirm', config.familyId, draftId),
+    },
+    body: JSON.stringify({}),
+  });
+  const body = /** @type {ConfirmGrowthProfileResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
+
+  if (!response.ok) {
+    const message = body && 'message' in body && body.message ? body.message : `ConfirmGrowthProfile failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!body || !('draft' in body) || !('profile' in body)) {
+    throw new Error('ConfirmGrowthProfile returned an invalid response.');
   }
 
   return body;
@@ -411,6 +562,133 @@ function renderPerspectiveSummary(summary) {
       </div>
     </section>
   `;
+}
+
+/** @param {GrowthInsightResponse | undefined} insight */
+function renderGrowthInsightPanel(insight) {
+  const drafts = insight ? [...insight.parent_profile_drafts, ...insight.relationship_profile_drafts] : [];
+  return `
+    <section class="insight-panel" aria-labelledby="growth-insight-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">F05 Growth Insight</p>
+          <h2 id="growth-insight-title">我们目前看到的沟通状态</h2>
+        </div>
+        <button id="build-profile-drafts" type="button">生成成长画像草稿</button>
+      </div>
+      <p class="boundary-note">这不是评分，也不是事实判定，而是基于目前信息形成的工作画像。</p>
+      <div class="contract-strip" aria-label="画像边界">
+        <span>Evidence 支持 Profile</span>
+        <span>Evidence 本身不是 Profile</span>
+        <span>不生成优先级</span>
+        <span>不触发 AI</span>
+      </div>
+      ${drafts.length > 0 ? `
+        <div class="insight-grid">
+          ${drafts.map(renderGrowthProfileDraft).join('')}
+        </div>
+      ` : '<p class="message">记录父母与孩子视角后，可以生成一组有限的成长画像草稿。</p>'}
+      ${insight && insight.confirmed_profiles.length > 0 ? `
+        <div class="confirmed-strip" aria-label="已确认画像">
+          已确认 ${insight.confirmed_profiles.length} 个工作画像；确认不代表事实成立，也不会自动生成行动。
+        </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+/** @param {GrowthProfileDraftDto} draft */
+function renderGrowthProfileDraft(draft) {
+  const confirmable = draft.status === 'DRAFT' && draft.candidate_state !== 'UNRESOLVED';
+  return `
+    <article class="insight-card" data-dimension="${draft.dimension_id}">
+      <div>
+        <p class="eyebrow">${profileScopeLabel(draft)}</p>
+        <h3>${dimensionLabel(draft.dimension_id)}</h3>
+      </div>
+      <dl>
+        <div><dt>当前状态</dt><dd>${candidateStateLabel(draft.candidate_state)}</dd></div>
+        <div><dt>信心</dt><dd>${confidenceLabel(draft.confidence)}</dd></div>
+        <div><dt>证据</dt><dd>${draft.evidence_snapshot.evidence_ids.length} 条 E1</dd></div>
+        <div><dt>一致性</dt><dd>${agreementLabel(draft.synthesis.agreement_level)}</dd></div>
+      </dl>
+      <p>${evidenceExplanation(draft)}</p>
+      ${draft.synthesis.limitations.length > 0 ? `<p class="limitation">${limitationExplanation(draft.synthesis.limitations)}</p>` : ''}
+      ${confirmable ? `<button type="button" data-confirm-draft-id="${draft.draft_id}">这符合我们目前的情况</button>` : '<span class="review-needed">信息不足，暂不确认</span>'}
+    </article>
+  `;
+}
+
+/** @param {GrowthProfileDraftDto} draft */
+function profileScopeLabel(draft) {
+  return draft.profile_scope === 'PARENT_GROWTH_PROFILE' ? '父母成长画像' : '亲子关系画像';
+}
+
+/** @param {string} dimensionId */
+function dimensionLabel(dimensionId) {
+  /** @type {Record<string, string>} */
+  const labels = {
+    P03: 'P03 父母倾听与回应方式',
+    R03: 'R03 冲突中被听见的程度',
+    R04: 'R04 分歧后的修复能力',
+    R05: 'R05 日常协作节奏',
+  };
+  return labels[dimensionId] ?? dimensionId;
+}
+
+/** @param {string} state */
+function candidateStateLabel(state) {
+  /** @type {Record<string, string>} */
+  const labels = {
+    UNRESOLVED: '信息不足',
+    EMERGING: '刚开始浮现',
+    DEVELOPING: '正在发展',
+    PRACTICING: '正在练习',
+    STABILIZING: '趋于稳定',
+  };
+  return labels[state] ?? state;
+}
+
+/** @param {string} confidence */
+function confidenceLabel(confidence) {
+  return confidence === 'MEDIUM' ? '中' : confidence === 'HIGH' ? '高' : '低';
+}
+
+/** @param {string} agreement */
+function agreementLabel(agreement) {
+  /** @type {Record<string, string>} */
+  const labels = {
+    ALIGNED: '多方表达相互支持',
+    PARTIAL: '部分支持',
+    DIVERGENT: '存在分歧',
+    INSUFFICIENT: '证据不足',
+  };
+  return labels[agreement] ?? agreement;
+}
+
+/** @param {GrowthProfileDraftDto} draft */
+function evidenceExplanation(draft) {
+  if (draft.candidate_state === 'UNRESOLVED') {
+    return '目前证据还不足，只能保留为待澄清状态。';
+  }
+  if (draft.synthesis.agreement_level === 'DIVERGENT') {
+    return '不同视角之间存在差异，画像只能作为工作假设。';
+  }
+  return '当前草稿来自父母/孩子 Perspective 及其 E1 Evidence，只能支持解释性画像。';
+}
+
+/** @param {string[]} limitations */
+function limitationExplanation(limitations) {
+  /** @type {Record<string, string>} */
+  const labels = {
+    INSUFFICIENT_EVIDENCE: '证据不足',
+    SELF_REPORT_ONLY: '仅有自陈材料',
+    PERSPECTIVE_DIVERGENCE: '视角存在分歧',
+    SAFETY_ESCALATION_EXCLUDED: '安全升级内容已排除',
+    PROXY_CHILD_PERSPECTIVE: '孩子视角为代理记录',
+    NO_CHILD_PERSPECTIVE: '缺少孩子视角',
+  };
+  return limitations.map((item) => labels[item] ?? item).join('、');
 }
 
 /** @param {PerspectiveSummaryResponse['perspectives'][number]} perspective */

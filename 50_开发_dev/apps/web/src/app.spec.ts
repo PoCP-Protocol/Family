@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGrowthApp, createPerspectiveRequest, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
+import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
 
 import type { AppConfig } from './app.js';
 
@@ -138,6 +138,80 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('Perspective != Fact');
     expect(root.textContent).toContain('E1');
   });
+
+  it('submits BuildGrowthProfileDrafts and ConfirmGrowthProfile through named-action HTTP endpoints', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('R03', 'DRAFT')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ draft: growthDraftFixture('R03', 'CONFIRMED'), profile: growthProfileFixture('R03') }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await submitBuildGrowthProfileDrafts(config, 'onboarding-1');
+    await submitConfirmGrowthProfile(config, 'draft-R03');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1,
+      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/profile-drafts`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-Actor-Id': config.actorPersonId,
+          'Idempotency-Key': `m2-103-drafts-${config.familyId}-onboarding-1`,
+        }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2,
+      `http://api.test/families/${config.familyId}/growth/profile-drafts/draft-R03/confirm`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-Actor-Id': config.actorPersonId,
+          'Idempotency-Key': `m2-103-confirm-${config.familyId}-draft-R03`,
+        }),
+      }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({});
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({});
+  });
+
+  it('renders Chinese F05 growth insight without scores, rankings, or fact claims', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspective: perspectiveFixture('PARENT_PERSPECTIVE'), evidence: evidenceFixture('PARENT') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspectives: [perspectiveFixture('PARENT_PERSPECTIVE'), perspectiveFixture('CHILD_PERSPECTIVE')], evidence: [evidenceFixture('PARENT'), evidenceFixture('CHILD')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('P03', 'DRAFT'), growthDraftFixture('R03', 'DRAFT'), growthDraftFixture('R05', 'REVIEW_REQUIRED')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => growthInsightFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ draft: growthDraftFixture('R03', 'CONFIRMED'), profile: growthProfileFixture('R03') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('main');
+
+    createGrowthApp(root, config);
+    root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
+    await flushPromises();
+
+    expect(root.textContent).toContain('我们目前看到的沟通状态');
+    expect(root.textContent).toContain('这不是评分，也不是事实判定，而是基于目前信息形成的工作画像。');
+    expect(root.textContent).toContain('Evidence 本身不是 Profile');
+    expect(root.textContent).not.toContain('总分');
+    expect(root.textContent).not.toContain('排名');
+
+    root.querySelector<HTMLButtonElement>('#build-profile-drafts')?.click();
+    await flushPromises();
+
+    expect(root.textContent).toContain('P03 父母倾听与回应方式');
+    expect(root.textContent).toContain('R03 冲突中被听见的程度');
+    expect(root.textContent).toContain('信息不足，暂不确认');
+    expect(root.textContent).toContain('这符合我们目前的情况');
+
+    root.querySelector<HTMLButtonElement>('button[data-confirm-draft-id="draft-R03"]')?.click();
+    await flushPromises();
+
+    expect(root.textContent).toContain('已确认 1 个工作画像');
+    expect(root.textContent).toContain('不会自动生成行动');
+  });
 });
 
 function onboardingFixture() {
@@ -197,6 +271,84 @@ function evidenceFixture(source: 'PARENT' | 'CHILD') {
     evidence_level: 'E1',
     payload: {},
     observed_at: '2026-08-09T00:00:00.000Z',
+    created_at: '2026-08-09T00:00:00.000Z',
+  };
+}
+
+function growthDraftFixture(dimensionId: 'P03' | 'R03' | 'R05', status: 'DRAFT' | 'REVIEW_REQUIRED' | 'CONFIRMED') {
+  const isParent = dimensionId === 'P03';
+  const unresolved = status === 'REVIEW_REQUIRED';
+  return {
+    draft_id: `draft-${dimensionId}`,
+    family_id: config.familyId,
+    onboarding_id: 'onboarding-1',
+    profile_scope: isParent ? 'PARENT_GROWTH_PROFILE' : 'RELATIONSHIP_GROWTH_PROFILE',
+    subject_type: isParent ? 'PARENT' : 'RELATIONSHIP',
+    subject_person_id: isParent ? config.guardianPersonId : null,
+    subject_relationship_id: isParent ? null : 'relationship-1',
+    dimension_id: dimensionId,
+    candidate_state: unresolved ? 'UNRESOLVED' : dimensionId === 'R03' ? 'DEVELOPING' : 'EMERGING',
+    confidence: dimensionId === 'R03' ? 'MEDIUM' : 'LOW',
+    status,
+    synthesis: {
+      dimension_id: dimensionId,
+      fact_boundary: 'PROFILE_IS_INTERPRETIVE_NOT_FACT',
+      profile_scope: isParent ? 'PARENT_GROWTH_PROFILE' : 'RELATIONSHIP_GROWTH_PROFILE',
+      subject_type: isParent ? 'PARENT' : 'RELATIONSHIP',
+      subject_person_id: isParent ? config.guardianPersonId : null,
+      subject_relationship_id: isParent ? null : 'relationship-1',
+      supporting_evidence_ids: unresolved ? [] : ['evidence-PARENT', 'evidence-CHILD'],
+      contradicting_evidence_ids: [],
+      perspective_coverage: { parent_perspective_count: 1, child_perspective_count: dimensionId === 'R03' ? 1 : 0, proxy_child_perspective_count: 0 },
+      evidence_grade_coverage: { E1: unresolved ? 0 : 2 },
+      agreement_level: unresolved ? 'INSUFFICIENT' : dimensionId === 'R03' ? 'ALIGNED' : 'PARTIAL',
+      confidence: dimensionId === 'R03' ? 'MEDIUM' : 'LOW',
+      candidate_state: unresolved ? 'UNRESOLVED' : dimensionId === 'R03' ? 'DEVELOPING' : 'EMERGING',
+      limitations: unresolved ? ['INSUFFICIENT_EVIDENCE'] : ['SELF_REPORT_ONLY'],
+      policy_version: 'M2_103_DETERMINISTIC_V1',
+    },
+    evidence_snapshot: {
+      evidence_ids: unresolved ? [] : ['evidence-PARENT', 'evidence-CHILD'],
+      perspective_versions: [],
+    },
+    policy_version: 'M2_103_DETERMINISTIC_V1',
+    created_at: '2026-08-09T00:00:00.000Z',
+  };
+}
+
+function growthInsightFixture() {
+  return {
+    onboarding_id: 'onboarding-1',
+    family_id: config.familyId,
+    parent_profile_drafts: [growthDraftFixture('P03', 'DRAFT')],
+    relationship_profile_drafts: [growthDraftFixture('R03', 'DRAFT'), growthDraftFixture('R05', 'REVIEW_REQUIRED')],
+    confirmed_profiles: [],
+    evidence: [evidenceFixture('PARENT'), evidenceFixture('CHILD')],
+    perspectives: [perspectiveFixture('PARENT_PERSPECTIVE'), perspectiveFixture('CHILD_PERSPECTIVE')],
+  };
+}
+
+function growthProfileFixture(dimensionId: 'R03') {
+  return {
+    profile_id: 'profile-R03',
+    family_id: config.familyId,
+    profile_scope: 'RELATIONSHIP_GROWTH_PROFILE',
+    subject_type: 'RELATIONSHIP',
+    subject_person_id: null,
+    subject_relationship_id: 'relationship-1',
+    dimension_id: dimensionId,
+    state: 'DEVELOPING',
+    confidence: 'MEDIUM',
+    status: 'WORKING',
+    version: 1,
+    basis: growthDraftFixture(dimensionId, 'CONFIRMED').synthesis,
+    evidence_snapshot: growthDraftFixture(dimensionId, 'CONFIRMED').evidence_snapshot,
+    policy_version: 'M2_103_DETERMINISTIC_V1',
+    confirmed_by_actor_id: config.actorPersonId,
+    confirmed_at: '2026-08-09T00:00:00.000Z',
+    effective_from: '2026-08-09T00:00:00.000Z',
+    effective_to: null,
+    previous_profile_id: null,
     created_at: '2026-08-09T00:00:00.000Z',
   };
 }

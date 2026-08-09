@@ -42,7 +42,7 @@ describe('EvidenceSynthesisService', () => {
       subject_type: 'PARENT',
       subject_person_id: parentPersonId,
       subject_relationship_id: null,
-      candidate_state: 'EMERGING',
+      candidate_state: 'UNRESOLVED',
       confidence: 'LOW',
       limitations: ['SELF_REPORT_ONLY', 'NO_CHILD_PERSPECTIVE'],
     });

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
+import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, M2GrowthDimensionId, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
 import type pg from 'pg';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
@@ -347,10 +347,11 @@ export class FamilyService {
       await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const draft = await getGrowthProfileDraftForUpdate(client, request.family_id, request.draft_id);
       await assertActiveOnboarding(client, request.family_id, draft.onboarding_id);
+      await assertGrowthProfileConfirmationPreconditions(client, request.family_id, draft.onboarding_id, meta.actor);
       assertDraftConfirmable(draft);
       await assertDraftSnapshotCurrent(client, draft);
-      await supersedeCurrentProfileDimension(client, draft);
-      const profile = await insertConfirmedGrowthProfile(client, draft, meta);
+      const previousProfile = await supersedeCurrentProfileDimension(client, draft);
+      const profile = await insertConfirmedGrowthProfile(client, draft, previousProfile, meta);
       const confirmedDraft = await markDraftConfirmed(client, draft.draft_id);
       const occurredAt = new Date().toISOString();
       const eventId = randomUUID();
@@ -453,6 +454,24 @@ function hashRecordPerspectiveRequest(request: RecordPerspectiveRequest): string
       content: request.content,
       structured_safety_signals: request.structured_safety_signals,
       expressed_at: request.expressed_at ?? null,
+    }))
+    .digest('hex');
+}
+
+function hashBuildGrowthProfileDraftsRequest(request: BuildGrowthProfileDraftsRequest): string {
+  return createHash('sha256')
+    .update(JSON.stringify({
+      family_id: request.family_id,
+      onboarding_id: request.onboarding_id,
+    }))
+    .digest('hex');
+}
+
+function hashConfirmGrowthProfileRequest(request: ConfirmGrowthProfileRequest): string {
+  return createHash('sha256')
+    .update(JSON.stringify({
+      family_id: request.family_id,
+      draft_id: request.draft_id,
     }))
     .digest('hex');
 }
@@ -1135,6 +1154,417 @@ async function getPerspectiveSummary(client: pg.PoolClient, familyId: string, on
   };
 }
 
+async function getOnboardingProfileContext(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<{ childId: string; guardianPersonId: string; relationshipId: string }> {
+  const event = await client.query<{ child_id: string; guardian_person_id: string }>(
+    `select payload->>'child_id' as child_id, payload->>'guardian_person_id' as guardian_person_id
+     from growth_events
+     where family_id = $1 and event_type = $2 and payload->>'onboarding_id' = $3
+     order by occurred_at desc
+     limit 1`,
+    [familyId, GROWTH_ONBOARDING_STARTED_EVENT, onboardingId],
+  );
+  const row = event.rows[0];
+  if (!row) {
+    throw new NotFoundException('growth_onboarding_context_not_found');
+  }
+  const relationship = await client.query<{ relationship_id: string }>(
+    `select relationship_id
+     from family_relationships
+     where family_id = $1
+       and person_a_id = $2
+       and person_b_id = $3
+       and relationship_type in ('PARENT_CHILD', 'GUARDIAN_CHILD')
+     order by created_at asc
+     limit 1`,
+    [familyId, row.guardian_person_id, row.child_id],
+  );
+  if (relationship.rowCount !== 1) {
+    throw new NotFoundException('growth_profile_relationship_not_found');
+  }
+  return { childId: row.child_id, guardianPersonId: row.guardian_person_id, relationshipId: relationship.rows[0].relationship_id };
+}
+
+async function insertGrowthProfileDrafts(
+  client: pg.PoolClient,
+  request: BuildGrowthProfileDraftsRequest,
+  synthesis: EvidenceSynthesisDto[],
+  evidenceSnapshot: EvidenceSnapshotDto,
+): Promise<GrowthProfileDraftDto[]> {
+  const drafts: GrowthProfileDraftDto[] = [];
+  for (const item of synthesis) {
+    const itemEvidenceSnapshot: EvidenceSnapshotDto = {
+      evidence_ids: item.supporting_evidence_ids,
+      perspective_versions: evidenceSnapshot.perspective_versions,
+    };
+    const result = await client.query<GrowthProfileDraftRow>(
+      `insert into growth_profile_drafts(
+         family_id, onboarding_id, profile_scope, subject_type, subject_person_id,
+         subject_relationship_id, dimension_id, candidate_state, qualitative_confidence,
+         synthesis, evidence_snapshot, policy_version, status
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13)
+       returning draft_id, family_id, onboarding_id, profile_scope, subject_type, subject_person_id,
+         subject_relationship_id, dimension_id, candidate_state, qualitative_confidence,
+         synthesis, evidence_snapshot, policy_version, status, created_at`,
+      [
+        request.family_id,
+        request.onboarding_id,
+        item.profile_scope,
+        item.subject_type,
+        item.subject_person_id,
+        item.subject_relationship_id,
+        item.dimension_id,
+        item.candidate_state,
+        item.confidence,
+        JSON.stringify(item),
+        JSON.stringify(itemEvidenceSnapshot),
+        item.policy_version,
+        item.candidate_state === 'UNRESOLVED' ? 'REVIEW_REQUIRED' : 'DRAFT',
+      ],
+    );
+    drafts.push(mapGrowthProfileDraft(result.rows[0]));
+  }
+  return drafts;
+}
+
+async function getGrowthProfileDrafts(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<GrowthProfileDraftDto[]> {
+  const result = await client.query<GrowthProfileDraftRow>(
+    `select draft_id, family_id, onboarding_id, profile_scope, subject_type, subject_person_id,
+       subject_relationship_id, dimension_id, candidate_state, qualitative_confidence,
+       synthesis, evidence_snapshot, policy_version, status, created_at
+     from growth_profile_drafts
+     where family_id = $1 and onboarding_id = $2
+     order by created_at desc, dimension_id asc`,
+    [familyId, onboardingId],
+  );
+  return result.rows.map(mapGrowthProfileDraft);
+}
+
+async function getGrowthProfileDraftForUpdate(client: pg.PoolClient, familyId: string, draftId: string): Promise<GrowthProfileDraftDto> {
+  const result = await client.query<GrowthProfileDraftRow>(
+    `select draft_id, family_id, onboarding_id, profile_scope, subject_type, subject_person_id,
+       subject_relationship_id, dimension_id, candidate_state, qualitative_confidence,
+       synthesis, evidence_snapshot, policy_version, status, created_at
+     from growth_profile_drafts
+     where family_id = $1 and draft_id = $2
+     for update`,
+    [familyId, draftId],
+  );
+  if (result.rowCount !== 1) {
+    throw new NotFoundException('growth_profile_draft_not_found');
+  }
+  return mapGrowthProfileDraft(result.rows[0]);
+}
+
+function assertDraftConfirmable(draft: GrowthProfileDraftDto): void {
+  if (draft.status !== 'DRAFT') {
+    throw new ConflictException(`growth_profile_draft_not_confirmable:${draft.status}`);
+  }
+  if (draft.candidate_state === 'UNRESOLVED') {
+    throw new ConflictException('unresolved_growth_profile_draft_cannot_be_confirmed');
+  }
+}
+
+async function assertGrowthProfileConfirmationPreconditions(client: pg.PoolClient, familyId: string, onboardingId: string, actorId: string): Promise<void> {
+  const context = await getOnboardingProfileContext(client, familyId, onboardingId);
+  const persons = await getOnboardingContextPersons(client, familyId, context.guardianPersonId, context.childId);
+  assertActorIsGuardian(persons.guardian, actorId);
+  await assertOnboardingGuardianAuthorized(
+    client,
+    {
+      family_id: familyId,
+      guardian_person_id: context.guardianPersonId,
+      child_id: context.childId,
+      safety_screening_result: 'LOW',
+      idempotency_key: 'confirm-growth-profile-precondition',
+    },
+    persons.guardian,
+    persons.child,
+  );
+  await assertRequiredGrowthConsents(client, familyId, context.childId);
+}
+
+async function getOnboardingContextPersons(client: pg.PoolClient, familyId: string, guardianPersonId: string, childId: string): Promise<{ guardian: PersonDto; child: PersonDto }> {
+  const result = await client.query<{
+    person_id: string;
+    family_id: string;
+    person_type: PersonDto['person_type'];
+    parent_role: PersonDto['parent_role'];
+    display_name: string;
+    birth_date: Date | null;
+    account_id: string | null;
+    created_at: Date;
+    updated_at: Date;
+  }>(
+    `select person_id, family_id, person_type, parent_role, display_name, birth_date, account_id, created_at, updated_at
+     from persons
+     where family_id = $1 and person_id = any($2::uuid[])
+     for share`,
+    [familyId, [guardianPersonId, childId]],
+  );
+  const persons = new Map(result.rows.map((row) => [row.person_id, mapPerson(row)]));
+  const guardian = persons.get(guardianPersonId);
+  const child = persons.get(childId);
+  if (!guardian) {
+    throw new NotFoundException('guardian_not_found');
+  }
+  if (!child) {
+    throw new NotFoundException('child_not_found');
+  }
+  return { guardian, child };
+}
+
+async function assertDraftSnapshotCurrent(client: pg.PoolClient, draft: GrowthProfileDraftDto): Promise<void> {
+  if (draft.evidence_snapshot.perspective_versions.length === 0) {
+    return;
+  }
+  const result = await client.query<{ perspective_id: string; version: number }>(
+    `select perspective_id, version
+     from perspectives
+     where perspective_id = any($1::uuid[])`,
+    [draft.evidence_snapshot.perspective_versions.map((item) => item.perspective_id)],
+  );
+  const current = new Map(result.rows.map((row) => [row.perspective_id, row.version]));
+  const stale = draft.evidence_snapshot.perspective_versions.some((item) => current.get(item.perspective_id) !== item.version);
+  if (stale || result.rowCount !== draft.evidence_snapshot.perspective_versions.length) {
+    await markDraftStale(client, draft.draft_id);
+    throw new ConflictException('growth_profile_draft_stale');
+  }
+}
+
+async function supersedeCurrentProfileDimension(client: pg.PoolClient, draft: GrowthProfileDraftDto): Promise<GrowthProfileVersionAnchor | null> {
+  const current = await client.query<GrowthProfileVersionAnchor>(
+    `select gp.profile_id, gp.version
+     from growth_profiles gp
+     join growth_profile_dimensions gpd on gpd.profile_id = gp.profile_id
+     where gp.family_id = $1
+       and gp.profile_scope = $2
+       and coalesce(gp.subject_person_id::text, '') = coalesce($3::uuid::text, '')
+       and coalesce(gp.subject_relationship_id::text, '') = coalesce($4::uuid::text, '')
+       and gpd.dimension_id = $5
+       and gp.status = 'WORKING'
+       and gp.effective_to is null
+     order by gp.effective_from desc
+     limit 1
+     for update`,
+    [draft.family_id, draft.profile_scope, draft.subject_person_id, draft.subject_relationship_id, draft.dimension_id],
+  );
+  const previousProfile = current.rows[0] ?? null;
+  if (!previousProfile) {
+    return null;
+  }
+
+  await client.query(
+    `update growth_profiles gp
+     set status = 'SUPERSEDED', effective_to = now()
+     where gp.profile_id = $1
+       and gp.family_id = $2
+       and gp.status = 'WORKING'
+       and gp.effective_to is null`,
+    [previousProfile.profile_id, draft.family_id],
+  );
+  return previousProfile;
+}
+
+async function insertConfirmedGrowthProfile(client: pg.PoolClient, draft: GrowthProfileDraftDto, previousProfile: GrowthProfileVersionAnchor | null, meta: AuditMeta): Promise<GrowthProfileDto> {
+  const state = draft.candidate_state;
+  if (state === 'UNRESOLVED') {
+    throw new ConflictException('unresolved_growth_profile_draft_cannot_be_confirmed');
+  }
+  const version = previousProfile ? previousProfile.version + 1 : 1;
+  const profile = await client.query<GrowthProfileRow>(
+    `insert into growth_profiles(
+       family_id, subject_type, subject_ref_id, life_stage_code, confidence, version,
+       effective_from, profile_scope, subject_person_id, subject_relationship_id, status,
+       basis, evidence_snapshot, policy_version, confirmed_by_actor_id, confirmed_at,
+       previous_profile_id
+     ) values ($1, $2, $3, 'EARLY_ADOLESCENCE_12_15', $4, $5, now(), $6, $7, $8,
+       'WORKING', $9::jsonb, $10::jsonb, $11, $12, now(), $13)
+     returning profile_id, family_id, profile_scope, subject_type, subject_person_id,
+       subject_relationship_id, status, basis, evidence_snapshot, policy_version,
+       confirmed_by_actor_id, confirmed_at, effective_from, effective_to, previous_profile_id,
+       created_at, version`,
+    [
+      draft.family_id,
+      draft.subject_type,
+      draft.subject_person_id ?? draft.subject_relationship_id,
+      numericConfidence(draft.confidence),
+      version,
+      draft.profile_scope,
+      draft.subject_person_id,
+      draft.subject_relationship_id,
+      JSON.stringify(draft.synthesis),
+      JSON.stringify(draft.evidence_snapshot),
+      draft.policy_version,
+      meta.actor,
+      previousProfile?.profile_id ?? null,
+    ],
+  );
+  await client.query(
+    `insert into growth_profile_dimensions(
+       profile_id, dimension_id, state, evidence_ids, confidence,
+       qualitative_confidence, synthesis, evidence_snapshot, policy_version
+     ) values ($1, $2, $3, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb, $9)`,
+    [
+      profile.rows[0].profile_id,
+      draft.dimension_id,
+      state,
+      JSON.stringify(draft.evidence_snapshot.evidence_ids),
+      numericConfidence(draft.confidence),
+      draft.confidence,
+      JSON.stringify(draft.synthesis),
+      JSON.stringify(draft.evidence_snapshot),
+      draft.policy_version,
+    ],
+  );
+  return mapGrowthProfile(profile.rows[0], draft.dimension_id, state, draft.confidence);
+}
+
+async function markDraftConfirmed(client: pg.PoolClient, draftId: string): Promise<GrowthProfileDraftDto> {
+  const result = await client.query<GrowthProfileDraftRow>(
+    `update growth_profile_drafts
+     set status = 'CONFIRMED'
+     where draft_id = $1
+     returning draft_id, family_id, onboarding_id, profile_scope, subject_type, subject_person_id,
+       subject_relationship_id, dimension_id, candidate_state, qualitative_confidence,
+       synthesis, evidence_snapshot, policy_version, status, created_at`,
+    [draftId],
+  );
+  return mapGrowthProfileDraft(result.rows[0]);
+}
+
+async function markDraftStale(client: pg.PoolClient, draftId: string): Promise<void> {
+  await client.query(`update growth_profile_drafts set status = 'STALE' where draft_id = $1`, [draftId]);
+}
+
+async function getConfirmedGrowthProfiles(client: pg.PoolClient, familyId: string, drafts: GrowthProfileDraftDto[]): Promise<GrowthProfileDto[]> {
+  if (drafts.length === 0) {
+    return [];
+  }
+  const result = await client.query<GrowthProfileRow & { dimension_id: M2GrowthDimensionId; state: GrowthProfileDto['state']; qualitative_confidence: GrowthProfileDto['confidence'] }>(
+    `select gp.profile_id, gp.family_id, gp.profile_scope, gp.subject_type, gp.subject_person_id,
+       gp.subject_relationship_id, gp.status, gp.basis, gp.evidence_snapshot, gp.policy_version,
+       gp.confirmed_by_actor_id, gp.confirmed_at, gp.effective_from, gp.effective_to,
+       gp.previous_profile_id, gp.created_at, gp.version, gpd.dimension_id, gpd.state, gpd.qualitative_confidence
+     from growth_profiles gp
+     join growth_profile_dimensions gpd on gpd.profile_id = gp.profile_id
+     where gp.family_id = $1 and gp.status = 'WORKING'
+       and exists (
+         select 1
+         from jsonb_array_elements($2::jsonb) scope(item)
+         where scope.item->>'profile_scope' = gp.profile_scope
+           and coalesce(scope.item->>'subject_person_id', '') = coalesce(gp.subject_person_id::text, '')
+           and coalesce(scope.item->>'subject_relationship_id', '') = coalesce(gp.subject_relationship_id::text, '')
+           and scope.item->>'dimension_id' = gpd.dimension_id
+       )
+     order by gp.effective_from desc`,
+    [familyId, JSON.stringify(drafts.map((draft) => ({
+      profile_scope: draft.profile_scope,
+      subject_person_id: draft.subject_person_id,
+      subject_relationship_id: draft.subject_relationship_id,
+      dimension_id: draft.dimension_id,
+    })))],
+  );
+  return result.rows.map((row) => mapGrowthProfile(row, row.dimension_id, row.state, row.qualitative_confidence));
+}
+
+interface GrowthProfileVersionAnchor {
+  profile_id: string;
+  version: number;
+}
+
+function numericConfidence(confidence: GrowthProfileDraftDto['confidence']): number {
+  if (confidence === 'HIGH') {
+    return 0.75;
+  }
+  if (confidence === 'MEDIUM') {
+    return 0.5;
+  }
+  return 0.25;
+}
+
+interface GrowthProfileDraftRow {
+  draft_id: string;
+  family_id: string;
+  onboarding_id: string;
+  profile_scope: GrowthProfileDraftDto['profile_scope'];
+  subject_type: GrowthProfileDraftDto['subject_type'];
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  dimension_id: M2GrowthDimensionId;
+  candidate_state: GrowthProfileDraftDto['candidate_state'];
+  qualitative_confidence: GrowthProfileDraftDto['confidence'];
+  synthesis: EvidenceSynthesisDto;
+  evidence_snapshot: EvidenceSnapshotDto;
+  policy_version: GrowthProfileDraftDto['policy_version'];
+  status: GrowthProfileDraftDto['status'];
+  created_at: Date;
+}
+
+function mapGrowthProfileDraft(row: GrowthProfileDraftRow): GrowthProfileDraftDto {
+  return {
+    draft_id: row.draft_id,
+    family_id: row.family_id,
+    onboarding_id: row.onboarding_id,
+    profile_scope: row.profile_scope,
+    subject_type: row.subject_type,
+    subject_person_id: row.subject_person_id,
+    subject_relationship_id: row.subject_relationship_id,
+    dimension_id: row.dimension_id,
+    candidate_state: row.candidate_state,
+    confidence: row.qualitative_confidence,
+    synthesis: row.synthesis,
+    evidence_snapshot: row.evidence_snapshot,
+    policy_version: row.policy_version,
+    status: row.status,
+    created_at: row.created_at.toISOString(),
+  };
+}
+
+interface GrowthProfileRow {
+  profile_id: string;
+  family_id: string;
+  profile_scope: GrowthProfileDto['profile_scope'];
+  subject_type: GrowthProfileDto['subject_type'];
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  status: GrowthProfileDto['status'];
+  basis: EvidenceSynthesisDto;
+  evidence_snapshot: EvidenceSnapshotDto;
+  policy_version: GrowthProfileDto['policy_version'];
+  confirmed_by_actor_id: string;
+  confirmed_at: Date;
+  effective_from: Date;
+  effective_to: Date | null;
+  previous_profile_id: string | null;
+  created_at: Date;
+  version: number;
+}
+
+function mapGrowthProfile(row: GrowthProfileRow, dimensionId: M2GrowthDimensionId, state: GrowthProfileDto['state'], confidence: GrowthProfileDto['confidence']): GrowthProfileDto {
+  return {
+    profile_id: row.profile_id,
+    family_id: row.family_id,
+    profile_scope: row.profile_scope,
+    subject_type: row.subject_type,
+    subject_person_id: row.subject_person_id,
+    subject_relationship_id: row.subject_relationship_id,
+    dimension_id: dimensionId,
+    state,
+    confidence,
+    status: row.status,
+    version: row.version,
+    basis: row.basis,
+    evidence_snapshot: row.evidence_snapshot,
+    policy_version: row.policy_version,
+    confirmed_by_actor_id: row.confirmed_by_actor_id,
+    confirmed_at: row.confirmed_at.toISOString(),
+    effective_from: row.effective_from.toISOString(),
+    effective_to: row.effective_to ? row.effective_to.toISOString() : null,
+    previous_profile_id: row.previous_profile_id,
+    created_at: row.created_at.toISOString(),
+  };
+}
+
 function perspectiveSource(request: RecordPerspectiveRequest): EvidenceRecordDto['source'] {
   if (request.perspective_type === 'PARENT_PERSPECTIVE') {
     return 'PARENT';
@@ -1723,6 +2153,88 @@ async function insertPerspectiveRecordedEvent(
         },
         perspective,
         evidence,
+      }),
+      occurredAt,
+    ],
+  );
+}
+
+async function insertGrowthProfileDraftedEvent(
+  client: pg.PoolClient,
+  familyId: string,
+  onboardingId: string,
+  drafts: GrowthProfileDraftDto[],
+  eventId: string,
+  occurredAt: string,
+  meta: AuditMeta,
+): Promise<void> {
+  await client.query(
+    `insert into outbox_events(
+       aggregate_type, aggregate_id, event_name, event_version, event_id,
+       correlation_id, payload, occurred_at
+     ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+    [
+      'GrowthOnboarding',
+      familyId,
+      GROWTH_PROFILE_DRAFTED_EVENT,
+      1,
+      eventId,
+      meta.correlationId,
+      JSON.stringify({
+        event_id: eventId,
+        family_id: familyId,
+        onboarding_id: onboardingId,
+        draft_ids: drafts.map((draft) => draft.draft_id),
+        occurred_at: occurredAt,
+        actor_id: meta.actor,
+        correlation_id: meta.correlationId,
+        metadata: {
+          source: meta.source,
+          schema_version: '0.1',
+        },
+        drafts,
+      }),
+      occurredAt,
+    ],
+  );
+}
+
+async function insertGrowthProfileConfirmedEvent(
+  client: pg.PoolClient,
+  familyId: string,
+  profile: GrowthProfileDto,
+  draft: GrowthProfileDraftDto,
+  eventId: string,
+  occurredAt: string,
+  meta: AuditMeta,
+): Promise<void> {
+  await client.query(
+    `insert into outbox_events(
+       aggregate_type, aggregate_id, event_name, event_version, event_id,
+       correlation_id, payload, occurred_at
+     ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+    [
+      'GrowthProfile',
+      familyId,
+      GROWTH_PROFILE_CONFIRMED_EVENT,
+      1,
+      eventId,
+      meta.correlationId,
+      JSON.stringify({
+        event_id: eventId,
+        family_id: familyId,
+        onboarding_id: draft.onboarding_id,
+        draft_id: draft.draft_id,
+        profile_id: profile.profile_id,
+        occurred_at: occurredAt,
+        actor_id: meta.actor,
+        correlation_id: meta.correlationId,
+        metadata: {
+          source: meta.source,
+          schema_version: '0.1',
+        },
+        profile,
+        draft,
       }),
       occurredAt,
     ],

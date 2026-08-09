@@ -278,6 +278,7 @@ export type ProfileDraftStatus = 'DRAFT' | 'REVIEW_REQUIRED' | 'STALE' | 'CONFIR
 export type AgreementLevel = 'ALIGNED' | 'PARTIAL' | 'DIVERGENT' | 'INSUFFICIENT';
 export type ProfileConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
 export type ProfileSynthesisPolicyVersion = 'M2_103_DETERMINISTIC_V1';
+export type GrowthProfileFactBoundary = 'PROFILE_IS_INTERPRETIVE_NOT_FACT';
 export type ProfileLimitation =
   | 'INSUFFICIENT_EVIDENCE'
   | 'SELF_REPORT_ONLY'
@@ -298,6 +299,7 @@ export interface EvidenceGradeCoverageDto {
 
 export interface EvidenceSynthesisDto {
   dimension_id: M2GrowthDimensionId;
+  fact_boundary: GrowthProfileFactBoundary;
   profile_scope: GrowthProfileScope;
   subject_type: GrowthProfileSubjectType;
   subject_person_id: string | null;
