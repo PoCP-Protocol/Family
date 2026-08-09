@@ -1,0 +1,38 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-event.schema.yaml
+title: M2GrowthEvent
+status: PROPOSED_ONLY_EXTENDS_EXISTING_FOUNDATION
+type: object
+additionalProperties: false
+required:
+  - event_id
+  - family_id
+  - event_type
+  - occurred_at
+  - source
+properties:
+  event_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  event_type:
+    enum:
+      - ACTION_COMPLETED
+      - ACTION_SKIPPED
+      - CONFLICT_OCCURRED
+      - REPAIR_OCCURRED
+      - PARENT_PAUSED
+      - CHILD_INITIATED
+      - AGREEMENT_CREATED
+      - SUPPORT_REQUESTED
+      - MILESTONE_SIGNAL
+  occurred_at: { type: string, format: date-time }
+  source:
+    enum: [PARENT, CHILD, SYSTEM, GROWTH_ADVISOR]
+  action_id: { type: [string, "null"], format: uuid }
+  evidence_ids:
+    type: array
+    items: { type: string, format: uuid }
+  payload:
+    type: object
+  raw_note:
+    type: [string, "null"]
+    description: Raw note is perspective material, not Fact.

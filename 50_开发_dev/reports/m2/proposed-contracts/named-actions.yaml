@@ -1,0 +1,37 @@
+status: PROPOSED_ONLY
+named_actions:
+  - id: StartGrowthOnboarding
+    phase: M2-101
+    writes: [growth_onboarding]
+    requires_consent: [SERVICE, ASSESSMENT, GROWTH_TRACKING]
+    ai_allowed: false
+  - id: RecordPerspective
+    phase: M2-102
+    writes: [perspectives, evidence_records]
+    invariant: Perspective != Fact
+    ai_allowed: false
+  - id: CreateGrowthProfile
+    phase: M2-103
+    writes: [growth_profiles, growth_profile_dimensions]
+    requires_human_gate: MEDIUM
+    ai_allowed: AL1_AL2_RECOMMEND_ONLY
+  - id: ConfirmGrowthPriority
+    phase: M2-104
+    writes: [growth_priorities]
+    requires_human_gate: LOW_OR_MEDIUM
+    ai_allowed: AL1_AL2_RECOMMEND_ONLY
+  - id: AssignGrowthAction
+    phase: M2-105
+    writes: [growth_actions]
+    requires_human_gate: LOW
+    ai_allowed: false
+  - id: RecordGrowthEvent
+    phase: M2-106
+    writes: [growth_events, evidence_records]
+    invariant: Raw note is not automatically Fact
+    ai_allowed: false
+  - id: EvaluateGrowthOutcome
+    phase: M2-107
+    writes: [milestones, outcomes, growth_reviews]
+    requires_human_gate: MEDIUM
+    ai_allowed: AL1_AL2_SUMMARIZE_ONLY

@@ -1,0 +1,30 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-priority.schema.yaml
+title: M2GrowthPriority
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - priority_id
+  - family_id
+  - profile_id
+  - dimension_id
+  - rank
+  - confirmed_by_actor_id
+  - confirmed_at
+properties:
+  priority_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  profile_id: { type: string, format: uuid }
+  dimension_id:
+    enum: [P03, R03, R04, R05]
+  rank:
+    type: integer
+    minimum: 1
+    maximum: 2
+  rationale:
+    type: string
+  confirmed_by_actor_id: { type: string }
+  confirmation_type:
+    enum: [PARENT_CONFIRMATION, ADVISOR_REVIEW]
+  confirmed_at: { type: string, format: date-time }

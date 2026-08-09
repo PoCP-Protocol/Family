@@ -1,0 +1,32 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-action.schema.yaml
+title: M2GrowthAction
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - action_id
+  - family_id
+  - intervention_id
+  - dimension_id
+  - action_type
+  - instruction
+  - status
+  - assigned_at
+properties:
+  action_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  journey_id: { type: [string, "null"], format: uuid }
+  intervention_id:
+    const: INTERVENTION-001
+  dimension_id:
+    enum: [P03, R03, R04, R05]
+  action_type:
+    const: LISTEN_BEFORE_RESPOND_PRACTICE
+  instruction:
+    type: string
+  assigned_to_person_id: { type: [string, "null"], format: uuid }
+  status:
+    enum: [ASSIGNED, COMPLETED, SKIPPED, CANCELLED]
+  assigned_at: { type: string, format: date-time }
+  completed_at: { type: [string, "null"], format: date-time }

@@ -1,0 +1,27 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.evidence.schema.yaml
+title: M2EvidenceRecord
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - evidence_id
+  - family_id
+  - evidence_type
+  - source
+  - evidence_level
+  - payload
+  - created_at
+properties:
+  evidence_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  evidence_type:
+    enum: [SELF_REPORT, OBSERVED_EVENT, ACTION_LOG, ADVISOR_CONFIRMATION, OUTCOME_MEASURE]
+  source:
+    enum: [PARENT, CHILD, SYSTEM, GROWTH_ADVISOR]
+  evidence_level:
+    enum: [E0, E1, E2, E3, E4, E5, E6, E7]
+  payload:
+    type: object
+  observed_at: { type: [string, "null"], format: date-time }
+  created_at: { type: string, format: date-time }

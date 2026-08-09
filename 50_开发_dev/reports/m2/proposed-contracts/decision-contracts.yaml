@@ -1,0 +1,18 @@
+status: PROPOSED_ONLY
+decisions:
+  - id: DetermineM2Eligibility
+    inputs: [FamilyAggregateResponse, ConsentSnapshot, SafetyScreening]
+    outputs: [ELIGIBLE, NEEDS_CONSENT, NEEDS_REVIEW, SAFETY_ESCALATION]
+    invariant: No M2 growth processing starts without SERVICE, ASSESSMENT, GROWTH_TRACKING, and AI_PERSONALIZATION consent when AI is used.
+  - id: SelectGrowthPriority
+    inputs: [M2GrowthProfile, M2EvidenceRecord, HumanConfirmation]
+    outputs: [M2GrowthPriority]
+    invariant: Priority is not a Fact and must be confirmed by parent or advisor before action assignment.
+  - id: RouteSafetySignal
+    inputs: [Perspective, EvidenceRecord, SafetySignalRules]
+    outputs: [ALLOW, GROWTH_ADVISOR_REVIEW, SAFETY_ESCALATION]
+    invariant: Self-harm, harm-to-others, abuse, violence, and severe crisis bypass normal growth flow.
+  - id: EvaluateOutcomeWindow
+    inputs: [GrowthAction, GrowthEvent, Milestone, EvidenceRecord]
+    outputs: [M2Outcome, M2GrowthReview]
+    invariant: Outcome is measured over a window and never collapsed into a Family Total Score.

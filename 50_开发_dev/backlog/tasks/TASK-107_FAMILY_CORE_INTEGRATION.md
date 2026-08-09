@@ -1,6 +1,6 @@
 # TASK-107_FAMILY_CORE_INTEGRATION
 
-status: APPROVED_AFTER_TASK_106_PASS
+status: PASS
 
 ## Goal
 证明M1 Family Core完整运行。
@@ -31,6 +31,22 @@ CreateFamily
 - integration/e2e test
 - `reports/M1_FAMILY_CORE_REPORT.md`
 
+## Completion Evidence
+
+- `apps/api/src/modules/family/family-core-integration.e2e-spec.ts`
+- `reports/task-107/IMPLEMENTATION_PLAN_FINAL.md`
+- `reports/task-107/INDEPENDENT_ARCHITECTURE_REVIEW.md`
+- `reports/TASK-107_FAMILY_CORE_INTEGRATION_GATE.md`
+- `reports/M1_FAMILY_CORE_REPORT.md`
+- `reports/m2/M2_FIRST_GROWTH_VERTICAL_SLICE_PLAN.md` planning only
+
+## Validation
+
+- `node tools/validate-contracts.mjs` PASS
+- `pnpm lint` PASS
+- `pnpm typecheck` PASS
+- `pnpm build` PASS
+- `TEST_DATABASE_URL=postgres://family:***@localhost:55433/family_gate pnpm test:required` PASS
+
 ## Gate
-报告通过后，人类才能把项目Milestone推进到：
-`M2_GROWTH_STATE_RUNNING`
+TASK-107 PASS closes M1 Family Core Running. M2 implementation still requires explicit human approval.

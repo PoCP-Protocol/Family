@@ -1,8 +1,14 @@
-);
-CREATE INDEX IF NOT EXISTS idx_consents_subject_purpose
-ON consents(subject_person_id, purpose, status);
+-- 0003_growth_foundation — Growth 基础(FIX-01 重切,依赖顺序正确:先 journeys/interventions 后 actions/events)
+-- 依赖:0001(families/persons/life_stage_code)。对象:growth 枚举 + growth_profiles..outcomes
+-- 注:M1(Family Core)不写入这些表;此处仅建结构,为 M2 GrowthProfile 预留。幂等 + 单事务可执行。
+DO $$ BEGIN
+  CREATE TYPE growth_domain AS ENUM ('CHILD','PARENT','RELATIONSHIP');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Growth foundation
+DO $$ BEGIN
+  CREATE TYPE growth_state AS ENUM ('EMERGING','DEVELOPING','PRACTICING','STABILIZING');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 CREATE TABLE IF NOT EXISTS growth_profiles (
   profile_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   family_id uuid NOT NULL REFERENCES families(family_id),
@@ -118,3 +124,33 @@ CREATE TABLE IF NOT EXISTS evidence_records (
   payload jsonb NOT NULL,
   observed_at timestamptz NULL,
   created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS milestones (
+  milestone_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id uuid NOT NULL REFERENCES families(family_id),
+  journey_id uuid NULL REFERENCES growth_journeys(journey_id),
+  dimension_id varchar(16) NULL,
+  milestone_type varchar(64) NOT NULL,
+  title varchar(200) NOT NULL,
+  evidence_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  confirmed_by_actor_id varchar(128) NOT NULL,
+  confirmed_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS outcomes (
+  outcome_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  family_id uuid NOT NULL REFERENCES families(family_id),
+  dimension_id varchar(16) NOT NULL,
+  baseline jsonb NULL,
+  current_value jsonb NULL,
+  window_start timestamptz NOT NULL,
+  window_end timestamptz NOT NULL,
+  source varchar(64) NOT NULL,
+  evidence_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
+  confidence numeric(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
+  context jsonb NOT NULL DEFAULT '{}'::jsonb,
+  possible_confounders jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT outcome_window CHECK (window_end > window_start)
+);

@@ -1,0 +1,30 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.milestone.schema.yaml
+title: M2Milestone
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - milestone_id
+  - family_id
+  - dimension_id
+  - milestone_type
+  - title
+  - evidence_ids
+  - confirmed_by_actor_id
+  - confirmed_at
+properties:
+  milestone_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  journey_id: { type: [string, "null"], format: uuid }
+  dimension_id:
+    enum: [P03, R03, R04, R05]
+  milestone_type:
+    enum: [FIRST_PRACTICE, REPEATED_PRACTICE, REPAIR_SIGNAL, STABILIZATION_SIGNAL]
+  title: { type: string }
+  evidence_ids:
+    type: array
+    minItems: 1
+    items: { type: string, format: uuid }
+  confirmed_by_actor_id: { type: string }
+  confirmed_at: { type: string, format: date-time }

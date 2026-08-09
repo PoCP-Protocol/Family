@@ -1,34 +1,6 @@
-);
-
-CREATE TABLE IF NOT EXISTS milestones (
-  milestone_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  family_id uuid NOT NULL REFERENCES families(family_id),
-  journey_id uuid NULL REFERENCES growth_journeys(journey_id),
-  dimension_id varchar(16) NULL,
-  milestone_type varchar(64) NOT NULL,
-  title varchar(200) NOT NULL,
-  evidence_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
-  confirmed_by_actor_id varchar(128) NOT NULL,
-  confirmed_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS outcomes (
-  outcome_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  family_id uuid NOT NULL REFERENCES families(family_id),
-  dimension_id varchar(16) NOT NULL,
-  baseline jsonb NULL,
-  current_value jsonb NULL,
-  window_start timestamptz NOT NULL,
-  window_end timestamptz NOT NULL,
-  source varchar(64) NOT NULL,
-  evidence_ids jsonb NOT NULL DEFAULT '[]'::jsonb,
-  confidence numeric(5,4) NOT NULL CHECK (confidence BETWEEN 0 AND 1),
-  context jsonb NOT NULL DEFAULT '{}'::jsonb,
-  possible_confounders jsonb NOT NULL DEFAULT '[]'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT outcome_window CHECK (window_end > window_start)
-);
-
+-- 0002_platform_foundation — 平台基础(FIX-01 重切)
+-- 依赖:0001(families 供 audit_logs.family_id FK)。对象:audit_logs / outbox_events / idempotency_keys
+-- 幂等:IF NOT EXISTS;可在单事务内执行。
 CREATE TABLE IF NOT EXISTS audit_logs (
   audit_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   family_id uuid NULL REFERENCES families(family_id),

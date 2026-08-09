@@ -1,0 +1,56 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-onboarding.schema.yaml
+title: M2GrowthOnboarding
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - onboarding_id
+  - family_id
+  - scenario_code
+  - life_stage_code
+  - relationship_context
+  - consent_snapshot
+  - safety_screening
+  - created_at
+properties:
+  onboarding_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  scenario_code:
+    const: ADOLESCENCE_PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+  life_stage_code:
+    const: EARLY_ADOLESCENCE_12_15
+  relationship_context:
+    type: object
+    additionalProperties: false
+    required: [parent_person_id, child_person_id, relationship_id]
+    properties:
+      parent_person_id: { type: string, format: uuid }
+      child_person_id: { type: string, format: uuid }
+      relationship_id: { type: string, format: uuid }
+  consent_snapshot:
+    type: object
+    additionalProperties: false
+    required: [service, assessment, growth_tracking]
+    properties:
+      service: { const: GRANTED }
+      assessment: { const: GRANTED }
+      growth_tracking: { const: GRANTED }
+      ai_personalization:
+        enum: [GRANTED, NOT_GRANTED, NOT_REQUESTED]
+      policy_version: { type: string }
+      ai_state_when_missing:
+        const: AI_DISABLED_UNTIL_CONSENT_GRANTED
+  safety_screening:
+    type: object
+    additionalProperties: false
+    required: [verdict, human_gate_level]
+    properties:
+      verdict:
+        enum: [ALLOW, NEEDS_REVIEW, SAFETY_ESCALATION]
+      human_gate_level:
+        enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      matched_signals:
+        type: array
+        items: { type: string }
+  created_at: { type: string, format: date-time }

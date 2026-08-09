@@ -1,6 +1,6 @@
 # TASK-106_GRANT_CONSENT
 
-status: APPROVED_AFTER_PREVIOUS_TASK_PASS
+status: PASS
 action: GrantConsent
 
 ## Goal
@@ -46,3 +46,16 @@ AC6 policy_version mandatory
 - lint/build PASS
 - PROJECT_STATUS updated
 - stop after this task
+
+## Completion Evidence
+
+- Gate report: `reports/TASK-106_GRANT_CONSENT_GATE.md`
+- Final implementation plan: `reports/task-106/IMPLEMENTATION_PLAN_FINAL.md`
+- DTO unit: PASS, 6/6
+- GrantConsent integration: PASS, 6/6 on real PostgreSQL
+- GrantConsent HTTP E2E: PASS, 5/5 on real PostgreSQL
+- Full required gate: PASS, unit 25/25, integration 29/29, e2e 35/35
+- Contract validation: PASS, total 49, failed 0
+- Lint/typecheck/build/test:required: PASS
+- READY_FOR_TASK_107: YES
+- TASK-107 implementation started: NO

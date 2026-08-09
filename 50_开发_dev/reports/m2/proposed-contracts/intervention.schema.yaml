@@ -1,0 +1,44 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.intervention.schema.yaml
+title: M2Intervention
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - intervention_id
+  - code
+  - name
+  - life_stage_code
+  - target_dimensions
+  - risk_level
+  - human_requirement
+  - status
+properties:
+  intervention_id:
+    const: INTERVENTION-001
+  code:
+    const: LISTEN_BEFORE_RESPOND
+  name:
+    const: 先听后回应
+  life_stage_code:
+    const: EARLY_ADOLESCENCE_12_15
+  target_dimensions:
+    type: array
+    items:
+      enum: [P03, R03, R04, R05]
+  mechanism:
+    type: string
+  action_templates:
+    type: array
+    items: { type: string }
+  contraindications:
+    type: array
+    items: { type: string }
+  evidence_grade:
+    type: string
+  risk_level:
+    enum: [LOW, MEDIUM, HIGH, CRITICAL]
+  human_requirement:
+    enum: [PARENT_CONFIRMATION, GROWTH_ADVISOR_REVIEW, SAFETY_ESCALATION]
+  status:
+    enum: [DRAFT, ACTIVE, RETIRED]

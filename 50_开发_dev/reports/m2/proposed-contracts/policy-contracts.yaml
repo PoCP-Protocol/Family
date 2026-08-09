@@ -1,0 +1,26 @@
+status: PROPOSED_ONLY
+consent_requirements:
+  required_before_m2_start: [SERVICE, ASSESSMENT, GROWTH_TRACKING]
+  required_before_ai_personalization: [AI_PERSONALIZATION]
+  separate_and_deferred: [MODEL_IMPROVEMENT, RESEARCH, CONTENT_PUBLICATION]
+safety_gate:
+  escalation_signals:
+    - self_harm
+    - harm_to_others
+    - abuse
+    - violence
+    - severe_crisis
+  escalation_route: SAFETY_ESCALATION
+  normal_growth_flow_allowed_after_escalation: false
+human_gate:
+  LOW: Parent confirmation required.
+  MEDIUM: Growth Advisor Review required.
+  HIGH: Safety owner review required before continuation.
+  CRITICAL: Safety escalation; no automated growth continuation.
+ai_policy:
+  allowed_levels: [AL1, AL2]
+  prohibited:
+    - direct_core_state_update
+    - autonomous_action_assignment
+    - unsupervised_safety_decision
+    - model_training_without_explicit_consent

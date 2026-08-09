@@ -1,6 +1,6 @@
 # TASK-104_CREATE_RELATIONSHIP
 
-status: APPROVED_AFTER_PREVIOUS_TASK_PASS
+status: PASS
 action: CreateFamilyRelationship
 
 ## Goal
@@ -43,5 +43,8 @@ AC5 event/audit exist
 - All AC PASS
 - tests PASS
 - lint/build PASS
+- contract validation PASS
+- gate report: `reports/TASK-104_CREATE_RELATIONSHIP_GATE.md`
+- TASK-105 implementation plan only: `reports/task-105/IMPLEMENTATION_PLAN.md`
 - PROJECT_STATUS updated
-- stop after this task
+- stopped after this task; do not implement TASK-105 without explicit authorization

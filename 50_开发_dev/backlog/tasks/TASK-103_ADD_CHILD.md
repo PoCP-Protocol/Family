@@ -1,6 +1,6 @@
 # TASK-103_ADD_CHILD
 
-status: APPROVED_AFTER_PREVIOUS_TASK_PASS
+status: PASS
 action: AddChild
 
 ## Goal

@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { FamilyAggregateRepository } from './family-aggregate.repository';
+import { FamilyController } from './family.controller';
+import { FamilyRepository } from './family.repository';
+import { FamilyService } from './family.service';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -6,5 +10,8 @@ import { Module } from '@nestjs/common';
  * 严格依据 ../../../../specs/actions/*.action.yaml 与 ../../../../specs/ontology/*.schema.yaml。
  * bootstrap 阶段不实现任何业务写操作。
  */
-@Module({})
+@Module({
+	controllers: [FamilyController],
+	providers: [FamilyRepository, FamilyAggregateRepository, FamilyService],
+})
 export class FamilyModule {}

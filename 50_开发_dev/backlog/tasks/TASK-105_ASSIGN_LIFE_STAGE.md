@@ -1,6 +1,6 @@
 # TASK-105_ASSIGN_LIFE_STAGE
 
-status: APPROVED_AFTER_PREVIOUS_TASK_PASS
+status: PASS
 action: AssignLifeStage
 
 ## Goal
@@ -45,3 +45,20 @@ AC5 AI cannot invent new LifeStage
 - lint/build PASS
 - PROJECT_STATUS updated
 - stop after this task
+
+## Gate Evidence
+
+- `reports/task-105/IMPLEMENTATION_PLAN_FINAL.md`
+- `reports/task-105/TASK-105_ASSIGN_LIFE_STAGE_GATE.md`
+- `pnpm --filter @family/contracts build`: PASS
+- `pnpm --filter @family/api typecheck`: PASS
+- `pnpm --filter @family/api lint`: PASS
+- `node tools/validate-contracts.mjs`: PASS, 48/48
+- `pnpm --filter @family/api build`: PASS
+- `TEST_DATABASE_URL=postgres://family:***@localhost:55433/family_gate pnpm --filter @family/api test:required`: PASS
+
+## Transition
+
+- READY_FOR_TASK_106: YES
+- TASK-106 implementation started: NO
+- Do not implement TASK-106 without explicit authorization.

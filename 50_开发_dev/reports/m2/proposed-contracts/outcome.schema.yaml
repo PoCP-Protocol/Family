@@ -1,0 +1,41 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.outcome.schema.yaml
+title: M2Outcome
+status: PROPOSED_ONLY_EXTENDS_EXISTING_FOUNDATION
+type: object
+additionalProperties: false
+required:
+  - outcome_id
+  - family_id
+  - dimension_id
+  - measurement_window
+  - source
+  - confidence
+properties:
+  outcome_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  dimension_id:
+    enum: [P03, R03, R04, R05]
+  baseline:
+    type: object
+  current:
+    type: object
+  measurement_window:
+    type: object
+    additionalProperties: false
+    required: [start, end]
+    properties:
+      start: { type: string, format: date-time }
+      end: { type: string, format: date-time }
+  source:
+    enum: [ACTION_LOG, SELF_REPORT, ADVISOR_REVIEW, MIXED]
+  evidence_ids:
+    type: array
+    items: { type: string, format: uuid }
+  confidence:
+    type: number
+    minimum: 0
+    maximum: 1
+  possible_confounders:
+    type: array
+    items: { type: string }

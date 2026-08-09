@@ -1,5 +1,6 @@
--- Family Database Schema V0.1
--- PostgreSQL 15+
+-- 0001_family_identity — Family Identity 核心(FIX-01 重切,按语句边界,零语义改动)
+-- 依赖:无。对象:pgcrypto + 身份枚举 + families/persons/family_relationships/life_stage_assignments/consents
+-- 幂等:IF NOT EXISTS / DO$$ duplicate_object 守卫;可在单事务内执行。
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 DO $$ BEGIN
@@ -31,14 +32,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE TYPE consent_status AS ENUM ('GRANTED','WITHDRAWN','EXPIRED');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE growth_domain AS ENUM ('CHILD','PARENT','RELATIONSHIP');
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-  CREATE TYPE growth_state AS ENUM ('EMERGING','DEVELOPING','PRACTICING','STABILIZING');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS families (
@@ -117,3 +110,6 @@ CREATE TABLE IF NOT EXISTS consents (
     (status='WITHDRAWN' AND withdrawn_at IS NOT NULL) OR
     (status<>'WITHDRAWN')
   )
+);
+CREATE INDEX IF NOT EXISTS idx_consents_subject_purpose
+ON consents(subject_person_id, purpose, status);

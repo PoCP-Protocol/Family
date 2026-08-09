@@ -1,9 +1,9 @@
 # Family Project Status
 
-status_version: 1
+status_version: 2
 phase: ENGINEERING_KICKOFF
-milestone: M1_FAMILY_CORE_RUNNING
-as_of: 2026-08-09
+milestone: M2_WAVE_1_START_GROWTH_ONBOARDING
+as_of: 2026-08-10
 
 ## Completed Design Baseline
 
@@ -27,26 +27,33 @@ as_of: 2026-08-09
 
 ## Current Milestone
 
-M1 — Family Core Running
+M2 — First Growth Slice Wave 1 / M2-101 Start Growth Onboarding
 
 ## In Progress
 
-- Engineering Contract Validation (TASK-002)
+- M2-101 StartGrowthOnboarding + F01/F02 implementation
 
 ## Completed
 
 - TASK-000 Repo Audit → reports/REPO_AUDIT_REPORT.md
 - TASK-001 Engineering Bootstrap → reports/BOOTSTRAP_REPORT.md（monorepo/api/health/audit/迁移机制;build/lint/test/typecheck/启动 实测通过）
+- M1 Family Core Running → CLOSED after TASK-107 PASS
+- Rebaseline V3.0 applied: Product Vertical Slice First, Frontend / UX as first-class delivery line
+- Previous M2-000 planning artifacts created, but gate was NOT PASS because Frontend / UI / UX was insufficient
+- M2-000 V3.0 First Growth Slice Contract Gate → PASS; BLOCKERS=0; READY_FOR_M2_WAVE1=YES
 
 ## Known Issues
 
-- 本机 Docker 守护未运行、psql 缺失 → 迁移对活库的实跑与集成测试延后至 TASK-002(Docker 启动后)
-- last_completed_task: TASK-001_ENGINEERING_BOOTSTRAP
-- 注:Sprint 0 未 PASS(TASK-002 为门禁),不得进入 TASK-101
+- active_task: M2-101_START_GROWTH_ONBOARDING
+- last_completed_task: M2-000_FIRST_GROWTH_SLICE_DEFINITION
+- current_gate_blocker: none for M2-000; user approved automatic continuation to M2-101 on 2026-08-10
 
 ## Not Started
 
 - GrowthProfile implementation
+- GrowthPriority implementation
+- GrowthAction implementation
+- GrowthReview implementation
 - 90-Day Journey implementation
 - Intervention engine
 - AI Model Gateway

@@ -1,6 +1,6 @@
 # TASK-102_ADD_PARENT
 
-status: APPROVED_AFTER_PREVIOUS_TASK_PASS
+status: PASS
 action: AddParent
 
 ## Goal

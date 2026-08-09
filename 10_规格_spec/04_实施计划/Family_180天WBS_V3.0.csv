@@ -1,0 +1,25 @@
+﻿WBS,阶段,时间,工作包,核心产出,Gate,并行治理
+V3-00,Rebaseline,D1-D5,V3.0基线生效,SSOT/Roadmap/WBS/M2规则,V3_BASELINE_PASS,
+M2-000,M2 Definition,D6-D12,第一Growth Slice Contract Gate,Domain/UX/AI/Safety/Outcome/Backlog,READY_FOR_M2_WAVE1,GOV-001/GOV-002登记
+M2-W1-01,Wave1 Understand,D13-D20,Growth Onboarding,API+UI+Telemetry,Onboarding E2E PASS,
+M2-W1-02,Wave1 Understand,D13-D24,Parent/Child Perspective,双Perspective API+UI,Perspective Separation PASS,
+M2-W1-03,Wave1 Understand,D20-D30,Evidence + Limited Profile,P03/R03/R04/R05,Evidence Link PASS,
+M2-W1-04,Wave1 Understand,D20-D32,Family Home + Growth Insight UI,Responsive Web,Wave1 Demo PASS,GOV-001开始
+M2-W2-01,Wave2 Decide & Act,D33-D42,GrowthPriority,1个Primary Priority,Explainable Priority PASS,
+M2-W2-02,Wave2 Decide & Act,D38-D48,Intervention-001,LISTEN_BEFORE_RESPOND,Intervention PASS,
+M2-W2-03,Wave2 Decide & Act,D43-D55,7-Day GrowthAction,Today Action+Check-in,Action E2E PASS,GOV-002设计
+M2-W2-04,Wave2 Decide & Act,D48-D58,Priority/Intervention UI,Plan/Action screens,Wave2 Demo PASS,
+M2-W3-01,Wave3 Observe,D59-D70,GrowthEvent,Communication/Conflict/Repair events,Event PASS,
+M2-W3-02,Wave3 Observe,D65-D76,Milestone,可观察Milestone,Rule-based Milestone PASS,
+M2-W3-03,Wave3 Observe,D70-D82,Outcome,L1/L3 Outcome,Outcome Evidence PASS,
+M2-W3-04,Wave3 Observe,D74-D88,Timeline + GrowthReview,Timeline/Review UI,Wave3 Demo PASS,
+M2-W4-01,Wave4 Intelligence,D89-D98,Minimal Model Gateway,Provider abstraction最小版,Gateway E2E PASS,GOV-001完成
+M2-W4-02,Wave4 Intelligence,D92-D104,Curated Knowledge,KnowledgeCard001/002 + InterventionCard001,Grounding PASS,
+M2-W4-03,Wave4 Intelligence,D98-D110,Structured Growth Insight AI,Insight/Priority Recommendation,Structured+Grounding PASS,
+M2-W4-04,Wave4 Intelligence,D104-D116,Growth Review Draft AI,Evidence-linked Review,Human Confirmation PASS,GOV-002最小实现
+M2-W4-05,Wave4 Intelligence,D110-D120,Family AI嵌入体验,Journey-aware AI UI,Wave4 Demo PASS,
+M2-FINAL,M2 Closure,D121-D128,First Growth Loop Final Gate,完整7–14天Slice,M2_PASS,Pilot prep
+PILOT-READY,Pilot Readiness,D129-D142,治理与安全收口,WithdrawConsent/IAM/ConsentUX/Safety/HumanReview,PILOT_ALLOWED=YES,
+PILOT-1,Pilot,D143-D160,小规模家庭Pilot,真实使用+Outcome数据,Pilot Gate,
+LEARN-1,Learn,D161-D170,复盘优化,Intervention/UX/AI/Outcome优化,Learning Review PASS,
+M3-PLAN,M3 Planning,D171-D180,Family Growth Product扩展,更多维度/Intervention/榜样业务迁移,READY_FOR_M3,

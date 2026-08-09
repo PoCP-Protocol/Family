@@ -7,11 +7,50 @@ paths:
     post:
       operationId: CreateFamily
       summary: Create canonical Family account
+      parameters:
+        - in: header
+          name: x-actor-id
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-correlation-id
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-source
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFamilyRequest'
       responses:
-        "201": {description: Created}
-        "400": {description: Invalid schema}
-        "401": {description: Unauthorized}
-        "409": {description: Idempotency conflict}
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFamilyResponse'
+        "400":
+          description: Invalid schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /families/{familyId}/parents:
     post:
       operationId: AddParent
@@ -40,28 +79,193 @@ paths:
           name: familyId
           required: true
           schema: {type: string, format: uuid}
+        - in: header
+          name: x-actor-id
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-correlation-id
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-source
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFamilyRelationshipRequest'
       responses:
-        "201": {description: Relationship created}
+        "201":
+          description: Relationship created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFamilyRelationshipResponse'
+        "400":
+          description: Invalid schema or relationship invariant failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Missing family or person
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Relationship duplicate or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /families/{familyId}/life-stages:
     post:
       operationId: AssignLifeStage
+      summary: Assign contextual LifeStage to a child via Named Action
       parameters:
         - in: path
           name: familyId
           required: true
           schema: {type: string, format: uuid}
+        - in: header
+          name: x-actor-id
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-correlation-id
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-source
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignLifeStageRequest'
       responses:
-        "201": {description: LifeStage assigned}
+        "201":
+          description: LifeStage assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignLifeStageResponse'
+        "400":
+          description: Invalid schema or child/life-stage precondition failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Missing family or child
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Active assignment duplicate or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /families/{familyId}/consents:
     post:
       operationId: GrantConsent
+      summary: Grant purpose-scoped consent for a child via Named Action
       parameters:
         - in: path
           name: familyId
           required: true
           schema: {type: string, format: uuid}
+        - in: header
+          name: x-actor-id
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-correlation-id
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 128}
+        - in: header
+          name: x-source
+          required: false
+          schema: {type: string, minLength: 1, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantConsentRequest'
       responses:
-        "201": {description: Consent granted}
+        "201":
+          description: Consent granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantConsentResponse'
+        "400":
+          description: Invalid schema or consent precondition failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden guardian or actor authorization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Missing family, subject, guardian, or relationship
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Active consent duplicate or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /families/{familyId}:
     get:
       operationId: GetFamilyAggregate
@@ -71,4 +275,246 @@ paths:
           required: true
           schema: {type: string, format: uuid}
       responses:
-        "200": {description: Family aggregate}
+        "200":
+          description: Family aggregate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FamilyAggregateResponse'
+        "400":
+          description: Invalid family id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Missing actor context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Forbidden read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Missing family
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CreateFamilyRequest:
+      type: object
+      additionalProperties: false
+      required: [display_name, idempotency_key]
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        idempotency_key:
+          type: string
+          minLength: 8
+          maxLength: 128
+        primary_contact_account_id:
+          type: string
+          minLength: 1
+          maxLength: 128
+    CreateFamilyResponse:
+      type: object
+      additionalProperties: false
+      required: [family]
+      properties:
+        family:
+          $ref: '#/components/schemas/Family'
+    CreateFamilyRelationshipRequest:
+      type: object
+      additionalProperties: false
+      required: [person_a_id, person_b_id, relationship_type, idempotency_key]
+      properties:
+        person_a_id: {type: string, format: uuid}
+        person_b_id: {type: string, format: uuid}
+        relationship_type:
+          type: string
+          enum: [PARENT_CHILD, SPOUSE, SIBLING, GUARDIAN_CHILD, OTHER]
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+    CreateFamilyRelationshipResponse:
+      type: object
+      additionalProperties: false
+      required: [relationship]
+      properties:
+        relationship:
+          $ref: '#/components/schemas/FamilyRelationship'
+    AssignLifeStageRequest:
+      type: object
+      additionalProperties: false
+      required: [child_id, life_stage_code, effective_from, idempotency_key]
+      properties:
+        child_id: {type: string, format: uuid}
+        life_stage_code:
+          type: string
+          enum: [EARLY_ADOLESCENCE_12_15]
+        effective_from: {type: string, format: date-time}
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 128
+    AssignLifeStageResponse:
+      type: object
+      additionalProperties: false
+      required: [assignment]
+      properties:
+        assignment:
+          $ref: '#/components/schemas/LifeStageAssignment'
+    GrantConsentRequest:
+      type: object
+      additionalProperties: false
+      required: [subjectPersonId, guardianPersonId, purpose, policyVersion]
+      properties:
+        subjectPersonId: {type: string, format: uuid}
+        guardianPersonId: {type: string, format: uuid}
+        purpose:
+          type: string
+          enum: [SERVICE, ASSESSMENT, AI_PERSONALIZATION, GROWTH_TRACKING, EXPERT_SERVICE, RESEARCH, MODEL_IMPROVEMENT, CONTENT_PUBLICATION]
+        policyVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+    GrantConsentResponse:
+      type: object
+      additionalProperties: false
+      required: [consent]
+      properties:
+        consent:
+          $ref: '#/components/schemas/Consent'
+    Family:
+      type: object
+      additionalProperties: false
+      required: [family_id, display_name, status, primary_contact_person_id, created_at, updated_at, version]
+      properties:
+        family_id: {type: string, format: uuid}
+        display_name: {type: string, minLength: 1, maxLength: 100}
+        status: {type: string, enum: [ACTIVE, INACTIVE, ARCHIVED]}
+        primary_contact_person_id:
+          oneOf:
+            - {type: string, format: uuid}
+            - {type: 'null'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        version: {type: integer, minimum: 1}
+    Person:
+      type: object
+      additionalProperties: false
+      required: [person_id, family_id, person_type, parent_role, display_name, birth_date, account_id, created_at, updated_at]
+      properties:
+        person_id: {type: string, format: uuid}
+        family_id: {type: string, format: uuid}
+        person_type: {type: string, enum: [PARENT, CHILD]}
+        parent_role:
+          oneOf:
+            - {type: string, enum: [MOTHER, FATHER, GUARDIAN, OTHER_GUARDIAN]}
+            - {type: 'null'}
+        display_name: {type: string, minLength: 1, maxLength: 100}
+        birth_date:
+          oneOf:
+            - {type: string, format: date}
+            - {type: 'null'}
+        account_id:
+          oneOf:
+            - {type: string, minLength: 1, maxLength: 128}
+            - {type: 'null'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    FamilyRelationship:
+      type: object
+      additionalProperties: false
+      required: [relationship_id, family_id, person_a_id, person_b_id, relationship_type, created_at]
+      properties:
+        relationship_id: {type: string, format: uuid}
+        family_id: {type: string, format: uuid}
+        person_a_id: {type: string, format: uuid}
+        person_b_id: {type: string, format: uuid}
+        relationship_type:
+          type: string
+          enum: [PARENT_CHILD, SPOUSE, SIBLING, GUARDIAN_CHILD, OTHER]
+        created_at: {type: string, format: date-time}
+    LifeStageAssignment:
+      type: object
+      additionalProperties: false
+      required: [assignment_id, family_id, child_id, life_stage_code, effective_from, effective_to, source, created_at]
+      properties:
+        assignment_id: {type: string, format: uuid}
+        family_id: {type: string, format: uuid}
+        child_id: {type: string, format: uuid}
+        life_stage_code:
+          type: string
+          enum: [EARLY_ADOLESCENCE_12_15]
+        effective_from: {type: string, format: date-time}
+        effective_to:
+          oneOf:
+            - {type: string, format: date-time}
+            - {type: 'null'}
+        source: {type: string, minLength: 1, maxLength: 64}
+        created_at: {type: string, format: date-time}
+    Consent:
+      type: object
+      additionalProperties: false
+      required: [consent_id, family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at, withdrawn_at, created_at]
+      properties:
+        consent_id: {type: string, format: uuid}
+        family_id: {type: string, format: uuid}
+        subject_person_id: {type: string, format: uuid}
+        guardian_person_id: {type: string, format: uuid}
+        purpose:
+          type: string
+          enum: [SERVICE, ASSESSMENT, AI_PERSONALIZATION, GROWTH_TRACKING, EXPERT_SERVICE, RESEARCH, MODEL_IMPROVEMENT, CONTENT_PUBLICATION]
+        status:
+          type: string
+          enum: [GRANTED, WITHDRAWN, EXPIRED]
+        policy_version: {type: string, minLength: 1, maxLength: 128}
+        granted_at: {type: string, format: date-time}
+        withdrawn_at:
+          oneOf:
+            - {type: string, format: date-time}
+            - {type: 'null'}
+        created_at: {type: string, format: date-time}
+    FamilyAggregateResponse:
+      type: object
+      additionalProperties: false
+      required: [family, members, relationships, lifeStages, consents]
+      properties:
+        family:
+          $ref: '#/components/schemas/Family'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/FamilyRelationship'
+        lifeStages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifeStageAssignment'
+        consents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Consent'
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode: {type: integer}
+        message:
+          oneOf:
+            - {type: string}
+            - {type: array, items: {type: string}}
+        error: {type: string}

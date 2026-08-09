@@ -1,0 +1,39 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-review.schema.yaml
+title: M2GrowthReview
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - review_id
+  - family_id
+  - review_window
+  - dimension_summaries
+  - outcome_ids
+  - human_gate_result
+  - created_at
+properties:
+  review_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  review_window:
+    type: object
+    required: [start, end]
+    properties:
+      start: { type: string, format: date-time }
+      end: { type: string, format: date-time }
+  dimension_summaries:
+    type: array
+    items:
+      type: object
+      required: [dimension_id, summary]
+      properties:
+        dimension_id:
+          enum: [P03, R03, R04, R05]
+        summary: { type: string }
+        state_delta: { type: [string, "null"] }
+  outcome_ids:
+    type: array
+    items: { type: string, format: uuid }
+  human_gate_result:
+    enum: [PARENT_CONFIRMED, ADVISOR_REVIEWED, SAFETY_ESCALATED]
+  created_at: { type: string, format: date-time }

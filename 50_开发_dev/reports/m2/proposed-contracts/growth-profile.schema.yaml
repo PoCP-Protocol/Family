@@ -1,0 +1,56 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.growth-profile.schema.yaml
+title: M2GrowthProfile
+status: PROPOSED_ONLY_EXTENDS_EXISTING_FOUNDATION
+type: object
+additionalProperties: false
+required:
+  - profile_id
+  - family_id
+  - subject_type
+  - subject_id
+  - life_stage_code
+  - dimension_states
+  - confidence
+  - version
+  - effective_from
+properties:
+  profile_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  subject_type:
+    const: RELATIONSHIP
+  subject_id: { type: string }
+  life_stage_code:
+    const: EARLY_ADOLESCENCE_12_15
+  dimension_states:
+    type: array
+    minItems: 4
+    maxItems: 4
+    items:
+      type: object
+      additionalProperties: false
+      required: [dimension_id, state, evidence_ids, confidence]
+      properties:
+        dimension_id:
+          enum: [P03, R03, R04, R05]
+        state:
+          enum: [EMERGING, DEVELOPING, PRACTICING, STABILIZING]
+        observable_signals:
+          type: array
+          items: { type: string }
+        evidence_ids:
+          type: array
+          items: { type: string, format: uuid }
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+  confidence:
+    type: number
+    minimum: 0
+    maximum: 1
+  version:
+    type: integer
+    minimum: 1
+  effective_from: { type: string, format: date-time }
+  effective_to: { type: [string, "null"], format: date-time }

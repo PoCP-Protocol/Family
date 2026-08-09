@@ -1,0 +1,30 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: m2.proposed.perspective.schema.yaml
+title: M2Perspective
+status: PROPOSED_ONLY
+type: object
+additionalProperties: false
+required:
+  - perspective_id
+  - family_id
+  - person_id
+  - perspective_type
+  - statement
+  - fact_boundary
+  - recorded_at
+properties:
+  perspective_id: { type: string, format: uuid }
+  family_id: { type: string, format: uuid }
+  person_id: { type: string, format: uuid }
+  perspective_type:
+    enum: [PARENT_REPORT, CHILD_REPORT, ADVISOR_OBSERVATION]
+  statement:
+    type: string
+    minLength: 1
+  fact_boundary:
+    const: PERSPECTIVE_NOT_FACT
+  related_dimension_ids:
+    type: array
+    items:
+      enum: [P03, R03, R04, R05]
+  recorded_at: { type: string, format: date-time }
