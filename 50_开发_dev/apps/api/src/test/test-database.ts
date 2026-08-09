@@ -15,8 +15,9 @@ export function createTestPool(): pg.Pool {
 }
 
 export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
-  await pool.query('delete from perspectives');
+  await pool.query('delete from growth_profile_drafts');
   await pool.query('delete from evidence_records');
+  await pool.query('delete from perspectives');
   await pool.query('delete from milestones');
   await pool.query('delete from outcomes');
   await pool.query('delete from growth_events');

@@ -31,7 +31,7 @@ M2 — First Growth Slice Wave 1 / M2-101 Start Growth Onboarding
 
 ## In Progress
 
-- M2-101 StartGrowthOnboarding + F01/F02 implementation
+- Waiting for explicit next-task approval after M2-101 completion
 
 ## Completed
 
@@ -41,12 +41,13 @@ M2 — First Growth Slice Wave 1 / M2-101 Start Growth Onboarding
 - Rebaseline V3.0 applied: Product Vertical Slice First, Frontend / UX as first-class delivery line
 - Previous M2-000 planning artifacts created, but gate was NOT PASS because Frontend / UI / UX was insufficient
 - M2-000 V3.0 First Growth Slice Contract Gate → PASS; BLOCKERS=0; READY_FOR_M2_WAVE1=YES
+- M2-101 StartGrowthOnboarding + F01/F02 → COMPLETED with backend API, Family Web path, HTTP E2E, web tests, and browser demo check
 
 ## Known Issues
 
-- active_task: M2-101_START_GROWTH_ONBOARDING
-- last_completed_task: M2-000_FIRST_GROWTH_SLICE_DEFINITION
-- current_gate_blocker: none for M2-000; user approved automatic continuation to M2-101 on 2026-08-10
+- active_task: none; awaiting explicit approval for M2-102 or another next task
+- last_completed_task: M2-101_START_GROWTH_ONBOARDING
+- current_gate_blocker: none for M2-101; M2-102+ not started
 
 ## Not Started
 

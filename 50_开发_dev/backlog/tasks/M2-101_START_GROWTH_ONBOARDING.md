@@ -1,10 +1,11 @@
 # M2-101 — Start Growth Onboarding
 
-status: APPROVED
+status: COMPLETED
 approved_at: 2026-08-10
 approved_by: user_auto_continue_request
 phase: M2 Wave 1 Understand
-implementation_started: NO
+implementation_started: YES
+completed_at: 2026-08-10
 
 ## Objective
 
@@ -52,6 +53,14 @@ This task is the first implementation task after `M2-000_FIRST_GROWTH_SLICE_DEFI
 - The write path is idempotent and creates audit + outbox records.
 - F01/F02 web path can be exercised by an automated browser test or demo check.
 - No M2-102+ domain behavior is implemented in this task.
+
+## Completion Evidence
+
+- Backend contracts, DTO validation, controller route, service write path, audit/outbox/idempotency, and growth event persistence implemented for `StartGrowthOnboarding` only.
+- Family Web / Responsive Web F01 Family Home and F02 Growth Onboarding implemented in `apps/web`.
+- HTTP E2E passed for `E2E-M2-101 starts growth onboarding through real HTTP without AI consent`.
+- Web typecheck and F01/F02 unit tests passed.
+- Browser demo path passed: Family Home -> Start onboarding -> Started, with no AI personalization payload.
 
 ## Reference Artifacts
 

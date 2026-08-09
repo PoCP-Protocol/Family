@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
+import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyController } from './family.controller';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
@@ -12,6 +13,6 @@ import { FamilyService } from './family.service';
  */
 @Module({
 	controllers: [FamilyController],
-	providers: [FamilyRepository, FamilyAggregateRepository, FamilyService],
+	providers: [FamilyRepository, FamilyAggregateRepository, EvidenceSynthesisService, FamilyService],
 })
 export class FamilyModule {}

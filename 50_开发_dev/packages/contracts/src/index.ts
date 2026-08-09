@@ -28,6 +28,16 @@ export type GrowthDomain = 'CHILD' | 'PARENT' | 'RELATIONSHIP';
 export type SafetyScreeningResult = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type GrowthOnboardingStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 export type GrowthOnboardingPhase = 'ONBOARDING';
+export type M2GrowthDimensionId = 'P03' | 'R03' | 'R04' | 'R05';
+export type PerspectiveType = 'PARENT_PERSPECTIVE' | 'CHILD_PERSPECTIVE';
+export type PerspectiveCaptureMode = 'DIRECT_SELF_REPORT' | 'FACILITATED_ENTRY' | 'PROXY_REPORTED';
+export type PerspectiveFactBoundary = 'PERSPECTIVE_NOT_FACT';
+export type EvidenceType = 'SELF_REPORT';
+export type EvidenceSource = 'PARENT' | 'CHILD' | 'SYSTEM';
+export type EvidenceLevel = 'E1';
+export type StructuredSafetySignal = 'NONE' | 'SELF_HARM' | 'HARM_TO_OTHERS' | 'ABUSE' | 'VIOLENCE' | 'SEVERE_CRISIS';
+export type SafetyDisposition = 'NORMAL' | 'HUMAN_REVIEW' | 'SAFETY_ESCALATION';
+export type SafetyPolicyVersion = 'M2_102_DETERMINISTIC_V1';
 
 export interface FamilyDto {
   family_id: string;
@@ -188,6 +198,199 @@ export interface GrowthOnboardingDto {
 
 export interface StartGrowthOnboardingResponse {
   onboarding: GrowthOnboardingDto;
+}
+
+export interface PerspectiveContentDto {
+  prompt_id: string;
+  response_text: string;
+  selected_signals: string[];
+}
+
+export interface RecordPerspectiveRequest {
+  family_id: string;
+  onboarding_id: string;
+  subject_person_id: string;
+  author_person_id: string;
+  perspective_type: PerspectiveType;
+  capture_mode: PerspectiveCaptureMode;
+  related_dimension_ids: M2GrowthDimensionId[];
+  content: PerspectiveContentDto;
+  structured_safety_signals: StructuredSafetySignal[];
+  expressed_at?: string;
+  idempotency_key: string;
+}
+
+export interface SafetyDispositionDto {
+  severity: SafetyScreeningResult;
+  disposition: SafetyDisposition;
+  policy_version: SafetyPolicyVersion;
+  signals: StructuredSafetySignal[];
+}
+
+export interface PerspectiveDto {
+  perspective_id: string;
+  family_id: string;
+  onboarding_id: string;
+  subject_person_id: string;
+  author_person_id: string;
+  recorded_by_actor_id: string;
+  perspective_type: PerspectiveType;
+  capture_mode: PerspectiveCaptureMode;
+  related_dimension_ids: M2GrowthDimensionId[];
+  content: PerspectiveContentDto;
+  fact_boundary: PerspectiveFactBoundary;
+  safety_disposition: SafetyDispositionDto;
+  expressed_at: string | null;
+  recorded_at: string;
+  created_at: string;
+  version: number;
+}
+
+export interface EvidenceRecordDto {
+  evidence_id: string;
+  family_id: string;
+  perspective_id: string;
+  evidence_type: EvidenceType;
+  source: EvidenceSource;
+  evidence_level: EvidenceLevel;
+  payload: Record<string, unknown>;
+  observed_at: string | null;
+  created_at: string;
+}
+
+export interface RecordPerspectiveResponse {
+  perspective: PerspectiveDto;
+  evidence: EvidenceRecordDto;
+  safety_disposition: SafetyDispositionDto;
+}
+
+export interface PerspectiveSummaryResponse {
+  perspectives: PerspectiveDto[];
+  evidence: EvidenceRecordDto[];
+}
+
+export type GrowthState = 'EMERGING' | 'DEVELOPING' | 'PRACTICING' | 'STABILIZING';
+export type GrowthProfileCandidateState = GrowthState | 'UNRESOLVED';
+export type GrowthProfileScope = 'PARENT_GROWTH_PROFILE' | 'RELATIONSHIP_GROWTH_PROFILE';
+export type GrowthProfileSubjectType = 'PARENT' | 'RELATIONSHIP';
+export type GrowthProfileStatus = 'WORKING' | 'REVIEW_REQUIRED' | 'SUPERSEDED';
+export type ProfileDraftStatus = 'DRAFT' | 'REVIEW_REQUIRED' | 'STALE' | 'CONFIRMED';
+export type AgreementLevel = 'ALIGNED' | 'PARTIAL' | 'DIVERGENT' | 'INSUFFICIENT';
+export type ProfileConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
+export type ProfileSynthesisPolicyVersion = 'M2_103_DETERMINISTIC_V1';
+export type ProfileLimitation =
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'SELF_REPORT_ONLY'
+  | 'PERSPECTIVE_DIVERGENCE'
+  | 'SAFETY_ESCALATION_EXCLUDED'
+  | 'PROXY_CHILD_PERSPECTIVE'
+  | 'NO_CHILD_PERSPECTIVE';
+
+export interface PerspectiveCoverageDto {
+  parent_perspective_count: number;
+  child_perspective_count: number;
+  proxy_child_perspective_count: number;
+}
+
+export interface EvidenceGradeCoverageDto {
+  E1: number;
+}
+
+export interface EvidenceSynthesisDto {
+  dimension_id: M2GrowthDimensionId;
+  profile_scope: GrowthProfileScope;
+  subject_type: GrowthProfileSubjectType;
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  supporting_evidence_ids: string[];
+  contradicting_evidence_ids: string[];
+  perspective_coverage: PerspectiveCoverageDto;
+  evidence_grade_coverage: EvidenceGradeCoverageDto;
+  agreement_level: AgreementLevel;
+  confidence: ProfileConfidence;
+  candidate_state: GrowthProfileCandidateState;
+  limitations: ProfileLimitation[];
+  policy_version: ProfileSynthesisPolicyVersion;
+}
+
+export interface EvidenceSnapshotDto {
+  evidence_ids: string[];
+  perspective_versions: Array<{
+    perspective_id: string;
+    version: number;
+  }>;
+}
+
+export interface GrowthProfileDraftDto {
+  draft_id: string;
+  family_id: string;
+  onboarding_id: string;
+  profile_scope: GrowthProfileScope;
+  subject_type: GrowthProfileSubjectType;
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  dimension_id: M2GrowthDimensionId;
+  candidate_state: GrowthProfileCandidateState;
+  confidence: ProfileConfidence;
+  synthesis: EvidenceSynthesisDto;
+  evidence_snapshot: EvidenceSnapshotDto;
+  policy_version: ProfileSynthesisPolicyVersion;
+  status: ProfileDraftStatus;
+  created_at: string;
+}
+
+export interface GrowthProfileDto {
+  profile_id: string;
+  family_id: string;
+  profile_scope: GrowthProfileScope;
+  subject_type: GrowthProfileSubjectType;
+  subject_person_id: string | null;
+  subject_relationship_id: string | null;
+  dimension_id: M2GrowthDimensionId;
+  state: GrowthState;
+  confidence: ProfileConfidence;
+  status: GrowthProfileStatus;
+  version: number;
+  basis: EvidenceSynthesisDto;
+  evidence_snapshot: EvidenceSnapshotDto;
+  policy_version: ProfileSynthesisPolicyVersion;
+  confirmed_by_actor_id: string;
+  confirmed_at: string;
+  effective_from: string;
+  effective_to: string | null;
+  previous_profile_id: string | null;
+  created_at: string;
+}
+
+export interface BuildGrowthProfileDraftsRequest {
+  family_id: string;
+  onboarding_id: string;
+  idempotency_key: string;
+}
+
+export interface BuildGrowthProfileDraftsResponse {
+  drafts: GrowthProfileDraftDto[];
+}
+
+export interface GrowthInsightResponse {
+  onboarding_id: string;
+  family_id: string;
+  parent_profile_drafts: GrowthProfileDraftDto[];
+  relationship_profile_drafts: GrowthProfileDraftDto[];
+  confirmed_profiles: GrowthProfileDto[];
+  evidence: EvidenceRecordDto[];
+  perspectives: PerspectiveDto[];
+}
+
+export interface ConfirmGrowthProfileRequest {
+  family_id: string;
+  draft_id: string;
+  idempotency_key: string;
+}
+
+export interface ConfirmGrowthProfileResponse {
+  profile: GrowthProfileDto;
+  draft: GrowthProfileDraftDto;
 }
 
 /** 审计元数据:每个关键写 Action 必带(CLAUDE C06)。 */

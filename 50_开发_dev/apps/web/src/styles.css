@@ -32,7 +32,9 @@ body {
 }
 
 button,
-select {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -46,8 +48,11 @@ select {
 .workspace,
 .panel-heading,
 .consent-strip,
+.contract-strip,
+.perspective-grid,
 .result-panel div,
-.family-panel dl div {
+.family-panel dl div,
+.summary-item dl div {
   display: flex;
 }
 
@@ -116,7 +121,15 @@ h2 {
   padding: 22px;
 }
 
-.onboarding-panel {
+.flow-panel {
+  flex: 1;
+  display: grid;
+  gap: 18px;
+}
+
+.onboarding-panel,
+.perspective-card,
+.summary-panel {
   flex: 1;
   padding: 24px;
 }
@@ -127,7 +140,8 @@ h2 {
 }
 
 .family-panel dl div,
-.result-panel div {
+.result-panel div,
+.summary-item dl div {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
@@ -185,12 +199,28 @@ select {
   background: var(--paper);
 }
 
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+textarea {
+  min-height: 128px;
+  resize: vertical;
+}
+
 .consent-strip {
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.consent-strip span {
+.consent-strip span,
+.contract-strip span {
   padding: 8px 10px;
   font-size: 0.78rem;
 }
@@ -225,6 +255,65 @@ button:disabled {
   border-top: 1px solid var(--line);
 }
 
+.perspective-grid {
+  align-items: stretch;
+  gap: 18px;
+}
+
+.perspective-card,
+.summary-panel {
+  border: 1px solid rgba(71, 115, 90, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow);
+}
+
+.perspective-card {
+  flex: 1;
+}
+
+.contract-strip {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contract-strip span {
+  border: 1px solid rgba(23, 107, 115, 0.24);
+  border-radius: 999px;
+  background: rgba(237, 244, 239, 0.86);
+  color: var(--teal);
+  font-weight: 800;
+}
+
+.summary-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.summary-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--paper);
+}
+
+.summary-item h3,
+.summary-item p,
+.summary-item dl {
+  margin: 0;
+}
+
+.summary-item p {
+  margin-top: 10px;
+  color: var(--ink);
+  line-height: 1.65;
+}
+
+.summary-item dl {
+  margin-top: 12px;
+}
+
 @media (max-width: 760px) {
   .shell {
     width: min(100vw - 20px, 560px);
@@ -233,7 +322,8 @@ button:disabled {
 
   .topbar,
   .workspace,
-  .panel-heading {
+  .panel-heading,
+  .perspective-grid {
     display: grid;
   }
 

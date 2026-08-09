@@ -1,9 +1,11 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
-import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthOnboardingDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, RelationshipType, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
+import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
 import type pg from 'pg';
+import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { FamilyRepository } from './family.repository';
+import { assessStructuredSafetySignals } from './safety-assessment.policy';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const CREATE_FAMILY_EVENT = 'FamilyCreated';
@@ -13,11 +15,17 @@ const CREATE_FAMILY_RELATIONSHIP_ACTION = 'CreateFamilyRelationship';
 const ASSIGN_LIFE_STAGE_ACTION = 'AssignLifeStage';
 const GRANT_CONSENT_ACTION = 'GrantConsent';
 const START_GROWTH_ONBOARDING_ACTION = 'StartGrowthOnboarding';
+const RECORD_PERSPECTIVE_ACTION = 'RecordPerspective';
+const BUILD_GROWTH_PROFILE_DRAFTS_ACTION = 'BuildGrowthProfileDrafts';
+const CONFIRM_GROWTH_PROFILE_ACTION = 'ConfirmGrowthProfile';
 const FAMILY_MEMBER_ADDED_EVENT = 'FamilyMemberAdded';
 const FAMILY_RELATIONSHIP_CREATED_EVENT = 'FamilyRelationshipCreated';
 const LIFE_STAGE_ASSIGNED_EVENT = 'LifeStageAssigned';
 const CONSENT_GRANTED_EVENT = 'ConsentGranted';
 const GROWTH_ONBOARDING_STARTED_EVENT = 'GrowthOnboardingStarted';
+const PERSPECTIVE_RECORDED_EVENT = 'PerspectiveRecorded';
+const GROWTH_PROFILE_DRAFTED_EVENT = 'GrowthProfileDrafted';
+const GROWTH_PROFILE_CONFIRMED_EVENT = 'GrowthProfileConfirmed';
 const M2_ONBOARDING_JOURNEY_TYPE = 'PARENT_CHILD_COMMUNICATION_CONFLICT';
 const M2_ONBOARDING_DIMENSIONS = ['P03', 'R03', 'R04', 'R05'] as const;
 
@@ -26,6 +34,7 @@ export class FamilyService {
   constructor(
     @Inject(FamilyRepository) private readonly repository: FamilyRepository,
     @Inject(FamilyAggregateRepository) private readonly aggregateRepository: FamilyAggregateRepository,
+    @Inject(EvidenceSynthesisService) private readonly evidenceSynthesisService: EvidenceSynthesisService,
   ) {}
 
   async getFamilyAggregate(familyId: string, actorId: string): Promise<FamilyAggregateResponse> {
@@ -226,6 +235,134 @@ export class FamilyService {
       return response;
     });
   }
+
+  async recordPerspective(request: RecordPerspectiveRequest, meta: AuditMeta): Promise<RecordPerspectiveResponse> {
+    const requestHash = hashRecordPerspectiveRequest(request);
+
+    return this.repository.withTransaction(async (client) => {
+      const idempotency = await lockIdempotencyKey<RecordPerspectiveResponse>(client, RECORD_PERSPECTIVE_ACTION, request.idempotency_key, requestHash);
+      if (idempotency.replay) {
+        return idempotency.response;
+      }
+
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
+      await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
+      await assertPerspectiveSubjectMatchesOnboarding(client, request.family_id, request.onboarding_id, request.subject_person_id);
+      const persons = await getPerspectivePersons(client, request);
+      assertPerspectivePersons(request, persons.subject, persons.author);
+      await assertRequiredGrowthConsents(client, request.family_id, request.subject_person_id);
+      const safetyDisposition = assessStructuredSafetySignals(request.structured_safety_signals);
+      assertNormalSafetyDisposition(safetyDisposition);
+
+      const perspective = await insertPerspective(client, request, meta, safetyDisposition);
+      const evidence = await insertEvidenceRecord(client, perspective, request);
+      const occurredAt = new Date().toISOString();
+      const eventId = randomUUID();
+      const response: RecordPerspectiveResponse = { perspective, evidence, safety_disposition: safetyDisposition };
+
+      await insertAudit(client, RECORD_PERSPECTIVE_ACTION, 'Perspective', request.family_id, perspective.perspective_id, request.idempotency_key, meta, response);
+      await insertPerspectiveRecordedEvent(client, request.family_id, perspective, evidence, eventId, occurredAt, meta);
+      await storeIdempotencyResponse(client, request.idempotency_key, response);
+
+      return response;
+    });
+  }
+
+  async getPerspectiveSummary(familyId: string, onboardingId: string, actorId: string): Promise<PerspectiveSummaryResponse> {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      await assertActiveOnboarding(client, familyId, onboardingId);
+      return getPerspectiveSummary(client, familyId, onboardingId);
+    });
+  }
+
+  async buildGrowthProfileDrafts(request: BuildGrowthProfileDraftsRequest, meta: AuditMeta): Promise<BuildGrowthProfileDraftsResponse> {
+    const requestHash = hashBuildGrowthProfileDraftsRequest(request);
+
+    return this.repository.withTransaction(async (client) => {
+      const idempotency = await lockIdempotencyKey<BuildGrowthProfileDraftsResponse>(client, BUILD_GROWTH_PROFILE_DRAFTS_ACTION, request.idempotency_key, requestHash);
+      if (idempotency.replay) {
+        return idempotency.response;
+      }
+
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
+      await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
+      const context = await getOnboardingProfileContext(client, request.family_id, request.onboarding_id);
+      await assertRequiredGrowthConsents(client, request.family_id, context.childId);
+      const summary = await getPerspectiveSummary(client, request.family_id, request.onboarding_id);
+      const synthesisResult = this.evidenceSynthesisService.synthesize({
+        familyId: request.family_id,
+        onboardingId: request.onboarding_id,
+        parentPersonId: context.guardianPersonId,
+        relationshipId: context.relationshipId,
+        perspectives: summary.perspectives,
+        evidence: summary.evidence,
+      });
+      const drafts = await insertGrowthProfileDrafts(client, request, synthesisResult.synthesis, synthesisResult.evidenceSnapshot);
+      const occurredAt = new Date().toISOString();
+      const eventId = randomUUID();
+      const response: BuildGrowthProfileDraftsResponse = { drafts };
+
+      await insertAudit(client, BUILD_GROWTH_PROFILE_DRAFTS_ACTION, 'GrowthProfileDraft', request.family_id, request.onboarding_id, request.idempotency_key, meta, response);
+      await insertGrowthProfileDraftedEvent(client, request.family_id, request.onboarding_id, drafts, eventId, occurredAt, meta);
+      await storeIdempotencyResponse(client, request.idempotency_key, response);
+
+      return response;
+    });
+  }
+
+  async getGrowthInsight(familyId: string, onboardingId: string, actorId: string): Promise<GrowthInsightResponse> {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      await assertActiveOnboarding(client, familyId, onboardingId);
+      const summary = await getPerspectiveSummary(client, familyId, onboardingId);
+      const drafts = await getGrowthProfileDrafts(client, familyId, onboardingId);
+      const confirmedProfiles = await getConfirmedGrowthProfiles(client, familyId, drafts);
+      return {
+        onboarding_id: onboardingId,
+        family_id: familyId,
+        parent_profile_drafts: drafts.filter((draft) => draft.profile_scope === 'PARENT_GROWTH_PROFILE'),
+        relationship_profile_drafts: drafts.filter((draft) => draft.profile_scope === 'RELATIONSHIP_GROWTH_PROFILE'),
+        confirmed_profiles: confirmedProfiles,
+        evidence: summary.evidence,
+        perspectives: summary.perspectives,
+      };
+    });
+  }
+
+  async confirmGrowthProfile(request: ConfirmGrowthProfileRequest, meta: AuditMeta): Promise<ConfirmGrowthProfileResponse> {
+    const requestHash = hashConfirmGrowthProfileRequest(request);
+
+    return this.repository.withTransaction(async (client) => {
+      const idempotency = await lockIdempotencyKey<ConfirmGrowthProfileResponse>(client, CONFIRM_GROWTH_PROFILE_ACTION, request.idempotency_key, requestHash);
+      if (idempotency.replay) {
+        return idempotency.response;
+      }
+
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
+      const draft = await getGrowthProfileDraftForUpdate(client, request.family_id, request.draft_id);
+      await assertActiveOnboarding(client, request.family_id, draft.onboarding_id);
+      assertDraftConfirmable(draft);
+      await assertDraftSnapshotCurrent(client, draft);
+      await supersedeCurrentProfileDimension(client, draft);
+      const profile = await insertConfirmedGrowthProfile(client, draft, meta);
+      const confirmedDraft = await markDraftConfirmed(client, draft.draft_id);
+      const occurredAt = new Date().toISOString();
+      const eventId = randomUUID();
+      const response: ConfirmGrowthProfileResponse = { profile, draft: confirmedDraft };
+
+      await insertAudit(client, CONFIRM_GROWTH_PROFILE_ACTION, 'GrowthProfile', request.family_id, profile.profile_id, request.idempotency_key, meta, response);
+      await insertGrowthProfileConfirmedEvent(client, request.family_id, profile, draft, eventId, occurredAt, meta);
+      await storeIdempotencyResponse(client, request.idempotency_key, response);
+
+      return response;
+    });
+  }
 }
 
 function hashCreateFamilyRequest(request: CreateFamilyRequest): string {
@@ -299,6 +436,23 @@ function hashStartGrowthOnboardingRequest(request: StartGrowthOnboardingRequest)
       child_id: request.child_id,
       guardian_person_id: request.guardian_person_id,
       safety_screening_result: request.safety_screening_result,
+    }))
+    .digest('hex');
+}
+
+function hashRecordPerspectiveRequest(request: RecordPerspectiveRequest): string {
+  return createHash('sha256')
+    .update(JSON.stringify({
+      family_id: request.family_id,
+      onboarding_id: request.onboarding_id,
+      subject_person_id: request.subject_person_id,
+      author_person_id: request.author_person_id,
+      perspective_type: request.perspective_type,
+      capture_mode: request.capture_mode,
+      related_dimension_ids: request.related_dimension_ids,
+      content: request.content,
+      structured_safety_signals: request.structured_safety_signals,
+      expressed_at: request.expressed_at ?? null,
     }))
     .digest('hex');
 }
@@ -812,6 +966,248 @@ async function insertGrowthOnboarding(client: pg.PoolClient, request: StartGrowt
   };
 }
 
+async function assertActiveOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
+  const result = await client.query(
+    `select journey_id
+     from growth_journeys
+     where family_id = $1
+       and journey_id = $2
+       and journey_type = $3
+       and phase = 'ONBOARDING'
+       and status = 'ACTIVE'
+     for share`,
+    [familyId, onboardingId, M2_ONBOARDING_JOURNEY_TYPE],
+  );
+
+  if (result.rowCount !== 1) {
+    throw new NotFoundException('active_growth_onboarding_not_found');
+  }
+}
+
+async function assertPerspectiveSubjectMatchesOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string, subjectPersonId: string): Promise<void> {
+  const result = await client.query<{ child_id: string }>(
+    `select payload->>'child_id' as child_id
+     from growth_events
+     where family_id = $1
+       and event_type = $2
+       and payload->>'onboarding_id' = $3
+     order by occurred_at desc
+     limit 1`,
+    [familyId, GROWTH_ONBOARDING_STARTED_EVENT, onboardingId],
+  );
+
+  if (result.rowCount !== 1 || result.rows[0].child_id !== subjectPersonId) {
+    throw new BadRequestException('perspective_subject_must_match_onboarding_child');
+  }
+}
+
+async function getPerspectivePersons(client: pg.PoolClient, request: RecordPerspectiveRequest): Promise<{ subject: PersonDto; author: PersonDto }> {
+  const result = await client.query<{
+    person_id: string;
+    family_id: string;
+    person_type: PersonDto['person_type'];
+    parent_role: PersonDto['parent_role'];
+    display_name: string;
+    birth_date: Date | null;
+    account_id: string | null;
+    created_at: Date;
+    updated_at: Date;
+  }>(
+    `select person_id, family_id, person_type, parent_role, display_name, birth_date, account_id, created_at, updated_at
+     from persons
+     where person_id = any($1::uuid[])
+     for share`,
+    [[request.subject_person_id, request.author_person_id]],
+  );
+
+  const persons = new Map(result.rows.map((row) => [row.person_id, mapPerson(row)]));
+  const subject = persons.get(request.subject_person_id);
+  const author = persons.get(request.author_person_id);
+  if (!subject) {
+    throw new NotFoundException('perspective_subject_not_found');
+  }
+  if (!author) {
+    throw new NotFoundException('perspective_author_not_found');
+  }
+
+  return { subject, author };
+}
+
+function assertPerspectivePersons(request: RecordPerspectiveRequest, subject: PersonDto, author: PersonDto): void {
+  if (subject.family_id !== request.family_id || author.family_id !== request.family_id) {
+    throw new BadRequestException('perspective_persons_must_belong_to_family');
+  }
+
+  if (request.perspective_type === 'PARENT_PERSPECTIVE' && author.person_type !== 'PARENT') {
+    throw new BadRequestException('parent_perspective_author_must_be_parent');
+  }
+
+  if (request.perspective_type === 'CHILD_PERSPECTIVE' && author.person_type !== 'CHILD') {
+    throw new BadRequestException('child_perspective_author_must_be_child');
+  }
+}
+
+function assertNormalSafetyDisposition(disposition: SafetyDispositionDto): void {
+  if (disposition.severity !== 'LOW' || disposition.disposition !== 'NORMAL') {
+    throw new ForbiddenException('human_gate_required_for_safety_signals');
+  }
+}
+
+async function insertPerspective(
+  client: pg.PoolClient,
+  request: RecordPerspectiveRequest,
+  meta: AuditMeta,
+  safetyDisposition: SafetyDispositionDto,
+): Promise<PerspectiveDto> {
+  const result = await client.query<PerspectiveRow>(
+    `insert into perspectives(
+       family_id, onboarding_id, subject_person_id, author_person_id, recorded_by_actor_id,
+       perspective_type, capture_mode, related_dimension_ids, content, fact_boundary,
+       safety_disposition, expressed_at, statement, person_id
+     ) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, 'PERSPECTIVE_NOT_FACT', $10::jsonb, $11, $12, $3)
+     returning perspective_id, family_id, onboarding_id, subject_person_id, author_person_id,
+       recorded_by_actor_id, perspective_type, capture_mode, related_dimension_ids, content,
+       fact_boundary, safety_disposition, expressed_at, recorded_at, created_at, version`,
+    [
+      request.family_id,
+      request.onboarding_id,
+      request.subject_person_id,
+      request.author_person_id,
+      meta.actor,
+      request.perspective_type,
+      request.capture_mode,
+      JSON.stringify(request.related_dimension_ids),
+      JSON.stringify(request.content),
+      JSON.stringify(safetyDisposition),
+      request.expressed_at ?? null,
+      request.content.response_text,
+    ],
+  );
+
+  return mapPerspective(result.rows[0]);
+}
+
+async function insertEvidenceRecord(client: pg.PoolClient, perspective: PerspectiveDto, request: RecordPerspectiveRequest): Promise<EvidenceRecordDto> {
+  const payload = {
+    perspective_id: perspective.perspective_id,
+    fact_boundary: perspective.fact_boundary,
+    content: request.content,
+    related_dimension_ids: request.related_dimension_ids,
+    provenance: {
+      subject_person_id: request.subject_person_id,
+      author_person_id: request.author_person_id,
+      recorded_by_actor_id: perspective.recorded_by_actor_id,
+      capture_mode: request.capture_mode,
+      perspective_type: request.perspective_type,
+    },
+  };
+  const result = await client.query<EvidenceRecordRow>(
+    `insert into evidence_records(family_id, perspective_id, evidence_type, source, evidence_level, source_ref, payload, observed_at)
+     values ($1, $2, 'SELF_REPORT', $3, 'E1', ($2::uuid)::text, $4::jsonb, $5)
+     returning evidence_id, family_id, perspective_id, evidence_type, source, evidence_level, payload, observed_at, created_at`,
+    [perspective.family_id, perspective.perspective_id, perspectiveSource(request), JSON.stringify(payload), request.expressed_at ?? null],
+  );
+
+  return mapEvidenceRecord(result.rows[0]);
+}
+
+async function getPerspectiveSummary(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<PerspectiveSummaryResponse> {
+  const perspectives = await client.query<PerspectiveRow>(
+    `select perspective_id, family_id, onboarding_id, subject_person_id, author_person_id,
+       recorded_by_actor_id, perspective_type, capture_mode, related_dimension_ids, content,
+       fact_boundary, safety_disposition, expressed_at, recorded_at, created_at, version
+     from perspectives
+     where family_id = $1 and onboarding_id = $2
+     order by recorded_at asc`,
+    [familyId, onboardingId],
+  );
+  const evidence = await client.query<EvidenceRecordRow>(
+    `select evidence_id, family_id, perspective_id, evidence_type, source, evidence_level, payload, observed_at, created_at
+     from evidence_records
+     where family_id = $1 and perspective_id = any($2::uuid[])
+     order by created_at asc`,
+    [familyId, perspectives.rows.map((row) => row.perspective_id)],
+  );
+
+  return {
+    perspectives: perspectives.rows.map(mapPerspective),
+    evidence: evidence.rows.map(mapEvidenceRecord),
+  };
+}
+
+function perspectiveSource(request: RecordPerspectiveRequest): EvidenceRecordDto['source'] {
+  if (request.perspective_type === 'PARENT_PERSPECTIVE') {
+    return 'PARENT';
+  }
+  return 'CHILD';
+}
+
+interface PerspectiveRow {
+  perspective_id: string;
+  family_id: string;
+  onboarding_id: string;
+  subject_person_id: string;
+  author_person_id: string;
+  recorded_by_actor_id: string;
+  perspective_type: PerspectiveDto['perspective_type'];
+  capture_mode: PerspectiveDto['capture_mode'];
+  related_dimension_ids: PerspectiveDto['related_dimension_ids'];
+  content: PerspectiveDto['content'];
+  fact_boundary: PerspectiveDto['fact_boundary'];
+  safety_disposition: SafetyDispositionDto;
+  expressed_at: Date | null;
+  recorded_at: Date;
+  created_at: Date;
+  version: number;
+}
+
+function mapPerspective(row: PerspectiveRow): PerspectiveDto {
+  return {
+    perspective_id: row.perspective_id,
+    family_id: row.family_id,
+    onboarding_id: row.onboarding_id,
+    subject_person_id: row.subject_person_id,
+    author_person_id: row.author_person_id,
+    recorded_by_actor_id: row.recorded_by_actor_id,
+    perspective_type: row.perspective_type,
+    capture_mode: row.capture_mode,
+    related_dimension_ids: row.related_dimension_ids,
+    content: row.content,
+    fact_boundary: row.fact_boundary,
+    safety_disposition: row.safety_disposition,
+    expressed_at: row.expressed_at ? row.expressed_at.toISOString() : null,
+    recorded_at: row.recorded_at.toISOString(),
+    created_at: row.created_at.toISOString(),
+    version: row.version,
+  };
+}
+
+interface EvidenceRecordRow {
+  evidence_id: string;
+  family_id: string;
+  perspective_id: string;
+  evidence_type: EvidenceRecordDto['evidence_type'];
+  source: EvidenceRecordDto['source'];
+  evidence_level: EvidenceRecordDto['evidence_level'];
+  payload: Record<string, unknown>;
+  observed_at: Date | null;
+  created_at: Date;
+}
+
+function mapEvidenceRecord(row: EvidenceRecordRow): EvidenceRecordDto {
+  return {
+    evidence_id: row.evidence_id,
+    family_id: row.family_id,
+    perspective_id: row.perspective_id,
+    evidence_type: row.evidence_type,
+    source: row.source,
+    evidence_level: row.evidence_level,
+    payload: row.payload,
+    observed_at: row.observed_at ? row.observed_at.toISOString() : null,
+    created_at: row.created_at.toISOString(),
+  };
+}
+
 function mapPerson(row: {
   person_id: string;
   family_id: string;
@@ -1287,6 +1683,48 @@ async function insertGrowthOnboardingDomainEvent(
         safety_screening_result: onboarding.safety_screening_result,
         ai_personalization_enabled: onboarding.ai_personalization_enabled,
       }),
+    ],
+  );
+}
+
+async function insertPerspectiveRecordedEvent(
+  client: pg.PoolClient,
+  familyId: string,
+  perspective: PerspectiveDto,
+  evidence: EvidenceRecordDto,
+  eventId: string,
+  occurredAt: string,
+  meta: AuditMeta,
+): Promise<void> {
+  await client.query(
+    `insert into outbox_events(
+       aggregate_type, aggregate_id, event_name, event_version, event_id,
+       correlation_id, payload, occurred_at
+     ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+    [
+      'GrowthOnboarding',
+      familyId,
+      PERSPECTIVE_RECORDED_EVENT,
+      1,
+      eventId,
+      meta.correlationId,
+      JSON.stringify({
+        event_id: eventId,
+        family_id: familyId,
+        onboarding_id: perspective.onboarding_id,
+        perspective_id: perspective.perspective_id,
+        evidence_id: evidence.evidence_id,
+        occurred_at: occurredAt,
+        actor_id: meta.actor,
+        correlation_id: meta.correlationId,
+        metadata: {
+          source: meta.source,
+          schema_version: '0.1',
+        },
+        perspective,
+        evidence,
+      }),
+      occurredAt,
     ],
   );
 }

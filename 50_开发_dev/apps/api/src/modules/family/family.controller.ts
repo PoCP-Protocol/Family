@@ -1,11 +1,14 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, GrantConsentResponse, StartGrowthOnboardingResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, GrantConsentResponse, GrowthInsightResponse, PerspectiveSummaryResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
+import { validateBuildGrowthProfileDraftsRequest } from './build-growth-profile-drafts.dto';
+import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dto';
 import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
+import { validateRecordPerspectiveRequest } from './record-perspective.dto';
 import { validateStartGrowthOnboardingRequest } from './start-growth-onboarding.dto';
 import { FamilyService } from './family.service';
 
@@ -189,6 +192,115 @@ export class FamilyController {
     };
 
     return this.familyService.startGrowthOnboarding(request, meta);
+  }
+
+  @Post(':familyId/growth/onboardings/:onboardingId/perspectives')
+  async recordPerspective(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<RecordPerspectiveResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateRecordPerspectiveRequest(familyId, onboardingId, idempotencyKey, body);
+    const meta: AuditMeta = {
+      actor: actorId,
+      correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
+      source: source && source.trim().length > 0 ? source : 'api',
+      occurredAt: new Date().toISOString(),
+    };
+
+    return this.familyService.recordPerspective(request, meta);
+  }
+
+  @Get(':familyId/growth/onboardings/:onboardingId/perspectives')
+  async getPerspectiveSummary(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Headers('x-actor-id') actorId?: string,
+  ): Promise<PerspectiveSummaryResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    if (!isUuid(familyId) || !isUuid(onboardingId)) {
+      throw new BadRequestException('Invalid schema');
+    }
+
+    return this.familyService.getPerspectiveSummary(familyId, onboardingId, actorId);
+  }
+
+  @Post(':familyId/growth/onboardings/:onboardingId/profile-drafts')
+  async buildGrowthProfileDrafts(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<BuildGrowthProfileDraftsResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateBuildGrowthProfileDraftsRequest(familyId, onboardingId, idempotencyKey, body);
+    const meta: AuditMeta = {
+      actor: actorId,
+      correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
+      source: source && source.trim().length > 0 ? source : 'api',
+      occurredAt: new Date().toISOString(),
+    };
+
+    return this.familyService.buildGrowthProfileDrafts(request, meta);
+  }
+
+  @Get(':familyId/growth/onboardings/:onboardingId/insight')
+  async getGrowthInsight(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Headers('x-actor-id') actorId?: string,
+  ): Promise<GrowthInsightResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    if (!isUuid(familyId) || !isUuid(onboardingId)) {
+      throw new BadRequestException('Invalid schema');
+    }
+
+    return this.familyService.getGrowthInsight(familyId, onboardingId, actorId);
+  }
+
+  @Post(':familyId/growth/profile-drafts/:draftId/confirm')
+  async confirmGrowthProfile(
+    @Param('familyId') familyId: string,
+    @Param('draftId') draftId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<ConfirmGrowthProfileResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateConfirmGrowthProfileRequest(familyId, draftId, idempotencyKey, body);
+    const meta: AuditMeta = {
+      actor: actorId,
+      correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
+      source: source && source.trim().length > 0 ? source : 'api',
+      occurredAt: new Date().toISOString(),
+    };
+
+    return this.familyService.confirmGrowthProfile(request, meta);
   }
 }
 

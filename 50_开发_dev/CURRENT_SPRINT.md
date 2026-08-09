@@ -126,8 +126,8 @@ Domain Contract + API + Frontend + E2E + Demo
 
 Family Web / Responsive Web is the only approved first frontend target. Native App and Mini Program are deferred.
 
-M2 business implementation status: STARTING_M2_101_ONLY.
-M2 frontend runtime implementation status: STARTING_M2_101_ONLY.
+M2 business implementation status: M2_101_COMPLETED_ONLY.
+M2 frontend runtime implementation status: F01_F02_COMPLETED_ONLY.
 M2 gate blocker: NONE for M2-000.
 
 User approval recorded: automatic review completed and automatic continuation approved on 2026-08-10.
@@ -136,4 +136,12 @@ Current Approved Task:
 
 1. `M2-101_START_GROWTH_ONBOARDING`
 
-Task boundary: implement only StartGrowthOnboarding + F01/F02 under V3.0 Wave 1 Understand. Do not start M2-102 or later tasks.
+Task status: COMPLETED on 2026-08-10.
+
+Completion evidence:
+
+- Backend `StartGrowthOnboarding` API path, contract, validation, service, audit/outbox/idempotency, and growth event write path implemented.
+- Family Web F01/F02 implemented under `apps/web`.
+- API typecheck, DTO tests, service integration tests, HTTP E2E, web typecheck, web unit tests, and browser demo check passed.
+
+Next boundary: do not start M2-102 or later tasks without explicit next-task approval.

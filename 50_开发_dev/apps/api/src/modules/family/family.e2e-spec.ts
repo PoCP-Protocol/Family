@@ -197,6 +197,100 @@ describe('POST /families E2E', () => {
     expect(growthEvent.rows[0]?.payload?.ai_personalization_enabled).toBe(false);
   });
 
+  it('E2E-M2-102 records parent and child perspectives through real HTTP and rejects client final severity', async () => {
+    const correlationId = 'corr-e2e-m2-102';
+    const setup = await seedM2Onboarding(correlationId);
+
+    const parentResponse = await postPerspective(setup.familyId, setup.onboardingId, {
+      subjectPersonId: setup.childId,
+      authorPersonId: setup.parentId,
+      perspectiveType: 'PARENT_PERSPECTIVE',
+      captureMode: 'DIRECT_SELF_REPORT',
+      relatedDimensionIds: ['P03', 'R03'],
+      content: {
+        promptId: 'parent-friction-v1',
+        responseText: '我觉得我们最近一说学习就容易吵起来。',
+        selectedSignals: ['interrupts', 'argues'],
+      },
+      structuredSafetySignals: ['NONE'],
+    }, correlationId, 'e2e-m2-102-parent');
+    const parentBody = await parentResponse.json() as RecordPerspectiveHttpResponse;
+    const childResponse = await postPerspective(setup.familyId, setup.onboardingId, {
+      subjectPersonId: setup.childId,
+      authorPersonId: setup.childId,
+      perspectiveType: 'CHILD_PERSPECTIVE',
+      captureMode: 'FACILITATED_ENTRY',
+      relatedDimensionIds: ['R03', 'R04'],
+      content: {
+        promptId: 'child-friction-v1',
+        responseText: '我希望妈妈先听我说完再评价。',
+        selectedSignals: ['wants-to-be-heard'],
+      },
+      structuredSafetySignals: ['NONE'],
+    }, correlationId, 'e2e-m2-102-child');
+    const childBody = await childResponse.json() as RecordPerspectiveHttpResponse;
+
+    expect(parentResponse.status).toBe(201);
+    expect(childResponse.status).toBe(201);
+    expect(parentBody.perspective).toMatchObject({
+      family_id: setup.familyId,
+      onboarding_id: setup.onboardingId,
+      subject_person_id: setup.childId,
+      author_person_id: setup.parentId,
+      recorded_by_actor_id: 'architect-1',
+      perspective_type: 'PARENT_PERSPECTIVE',
+      capture_mode: 'DIRECT_SELF_REPORT',
+      fact_boundary: 'PERSPECTIVE_NOT_FACT',
+      safety_disposition: {
+        severity: 'LOW',
+        disposition: 'NORMAL',
+        policy_version: 'M2_102_DETERMINISTIC_V1',
+        signals: ['NONE'],
+      },
+    });
+    expect(parentBody.evidence).toMatchObject({
+      perspective_id: parentBody.perspective.perspective_id,
+      evidence_type: 'SELF_REPORT',
+      source: 'PARENT',
+      evidence_level: 'E1',
+    });
+    expect(childBody.evidence.source).toBe('CHILD');
+
+    const summaryResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/perspectives`, {
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer test-token',
+        'x-actor-id': 'architect-1',
+      },
+    });
+    const summary = await summaryResponse.json() as PerspectiveSummaryHttpResponse;
+    expect(summaryResponse.status).toBe(200);
+    expect(summary.perspectives.map((item) => item.perspective_type)).toEqual(['PARENT_PERSPECTIVE', 'CHILD_PERSPECTIVE']);
+    expect(summary.evidence).toHaveLength(2);
+
+    const rejected = await postPerspective(setup.familyId, setup.onboardingId, {
+      subjectPersonId: setup.childId,
+      authorPersonId: setup.parentId,
+      perspectiveType: 'PARENT_PERSPECTIVE',
+      captureMode: 'DIRECT_SELF_REPORT',
+      relatedDimensionIds: ['P03'],
+      content: {
+        promptId: 'invalid-severity-v1',
+        responseText: '客户端不能提交最终安全等级。',
+        selectedSignals: [],
+      },
+      structuredSafetySignals: ['NONE'],
+      safetySeverity: 'LOW',
+    }, correlationId, 'e2e-m2-102-client-severity');
+    expect(rejected.status).toBe(400);
+    expect(await errorStatus(rejected)).toBe(400);
+
+    await expectCount('perspectives', 2);
+    await expectCount('evidence_records', 2);
+    await expectCount('growth_profiles', 0);
+    await expectCount('growth_priorities', 0);
+  });
+
   async function postFamily(body: Record<string, unknown>, correlationId: string): Promise<Response> {
     return fetch(`${baseUrl}/families`, {
       method: 'POST',
@@ -228,6 +322,85 @@ describe('POST /families E2E', () => {
 
     expect(response.status).toBe(201);
     return await response.json() as TBody;
+  }
+
+  async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {
+    const familyResponse = await postFamily({ display_name: '青春期沟通家庭', idempotency_key: `e2e-m2-family-${correlationId}` }, correlationId);
+    const familyBody = await familyResponse.json() as CreateFamilyHttpResponse;
+    const parentBody = await postJson<{ parent: { person_id: string } }>(`/families/${familyBody.family.family_id}/parents`, {
+      role: 'GUARDIAN',
+      display_name: '监护人',
+      account_id: 'architect-1',
+      idempotency_key: `e2e-m2-parent-${correlationId}`,
+    }, correlationId);
+    const childBody = await postJson<{ child: { person_id: string } }>(`/families/${familyBody.family.family_id}/children`, {
+      display_name: '孩子',
+      birth_date: '2012-06-01',
+      idempotency_key: `e2e-m2-child-${correlationId}`,
+    }, correlationId);
+
+    await postJson(`/families/${familyBody.family.family_id}/relationships`, {
+      person_a_id: parentBody.parent.person_id,
+      person_b_id: childBody.child.person_id,
+      relationship_type: 'GUARDIAN_CHILD',
+      idempotency_key: `e2e-m2-relationship-${correlationId}`,
+    }, correlationId);
+    await postJson(`/families/${familyBody.family.family_id}/life-stages`, {
+      child_id: childBody.child.person_id,
+      life_stage_code: 'EARLY_ADOLESCENCE_12_15',
+      effective_from: '2026-08-10T00:00:00.000Z',
+      idempotency_key: `e2e-m2-life-stage-${correlationId}`,
+    }, correlationId);
+
+    for (const purpose of ['SERVICE', 'ASSESSMENT', 'GROWTH_TRACKING'] as const) {
+      await postJson(`/families/${familyBody.family.family_id}/consents`, {
+        subjectPersonId: childBody.child.person_id,
+        guardianPersonId: parentBody.parent.person_id,
+        purpose,
+        policyVersion: 'm2-102-e2e',
+      }, correlationId, `e2e-m2-consent-${purpose}-${correlationId}`);
+    }
+
+    const onboardingResponse = await fetch(`${baseUrl}/families/${familyBody.family.family_id}/growth/onboarding`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'x-source': 'vitest-e2e',
+        'idempotency-key': `e2e-m2-start-onboarding-${correlationId}`,
+      },
+      body: JSON.stringify({
+        childId: childBody.child.person_id,
+        guardianPersonId: parentBody.parent.person_id,
+        safetyScreeningResult: 'LOW',
+      }),
+    });
+    const onboardingBody = await onboardingResponse.json() as StartGrowthOnboardingHttpResponse;
+    expect(onboardingResponse.status).toBe(201);
+
+    return {
+      familyId: familyBody.family.family_id,
+      parentId: parentBody.parent.person_id,
+      childId: childBody.child.person_id,
+      onboardingId: onboardingBody.onboarding.onboarding_id,
+    };
+  }
+
+  async function postPerspective(familyId: string, onboardingId: string, body: Record<string, unknown>, correlationId: string, idempotencyKey: string): Promise<Response> {
+    return fetch(`${baseUrl}/families/${familyId}/growth/onboardings/${onboardingId}/perspectives`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'x-source': 'vitest-e2e',
+        'idempotency-key': idempotencyKey,
+      },
+      body: JSON.stringify(body),
+    });
   }
 
   async function errorStatus(response: Response): Promise<number> {
@@ -265,4 +438,37 @@ interface StartGrowthOnboardingHttpResponse {
     safety_screening_result: 'LOW';
     ai_personalization_enabled: false;
   };
+}
+
+interface RecordPerspectiveHttpResponse {
+  perspective: {
+    perspective_id: string;
+    family_id: string;
+    onboarding_id: string;
+    subject_person_id: string;
+    author_person_id: string;
+    recorded_by_actor_id: string;
+    perspective_type: 'PARENT_PERSPECTIVE' | 'CHILD_PERSPECTIVE';
+    capture_mode: 'DIRECT_SELF_REPORT' | 'FACILITATED_ENTRY' | 'PROXY_REPORTED';
+    related_dimension_ids: string[];
+    fact_boundary: 'PERSPECTIVE_NOT_FACT';
+    safety_disposition: {
+      severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+      disposition: 'NORMAL' | 'SAFETY_ESCALATION';
+      policy_version: 'M2_102_DETERMINISTIC_V1';
+      signals: string[];
+    };
+  };
+  evidence: {
+    evidence_id: string;
+    perspective_id: string;
+    evidence_type: 'SELF_REPORT';
+    source: 'PARENT' | 'CHILD' | 'FACILITATOR';
+    evidence_level: 'E1';
+  };
+}
+
+interface PerspectiveSummaryHttpResponse {
+  perspectives: RecordPerspectiveHttpResponse['perspective'][];
+  evidence: RecordPerspectiveHttpResponse['evidence'][];
 }

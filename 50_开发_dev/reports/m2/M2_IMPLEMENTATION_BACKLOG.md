@@ -113,7 +113,7 @@ Demo: A family understands change and asks a journey-scoped AI explanation.
 
 Objective: Create the M2 onboarding entry point for the fixed 12-15 parent-child communication conflict slice.
 
-Status: APPROVED after V3.0 M2-000 PASS with BLOCKERS=0, READY_FOR_M2_WAVE1=YES, and user approval to auto-review and continue development on 2026-08-10.
+Status: COMPLETED on 2026-08-10 after V3.0 M2-000 PASS with BLOCKERS=0, READY_FOR_M2_WAVE1=YES, and user approval to auto-review and continue development on 2026-08-10.
 
 Must implement:
 
@@ -131,6 +131,12 @@ Must not implement:
 - GrowthProfile generation.
 - Intervention assignment.
 - Native App or Mini Program.
+
+Completion evidence:
+
+- Backend `StartGrowthOnboarding` contract, DTO, route, service, audit, outbox, idempotency, and growth event path implemented.
+- Family Web F01/F02 path implemented in `apps/web`.
+- API HTTP E2E and browser demo path passed.
 
 ## M2-102 Record Perspective And Evidence
 
