@@ -1,0 +1,37 @@
+# 方法卡｜可执行到家庭日常粒度的动作 —— 回答"今晚这个家庭具体做什么"
+# id 前缀必须为 MD-。
+# grounded_in 指向 TH- 卡(必填,否则 error);targets_constructs 指向 CN- 卡(必填,否则 error)。
+# derived_from 指向 PG- 卡,说明这个动作是从哪套已验证项目里拆出来的。
+# dose 缺失 = warn(无法执行也无法复核);contraindication 缺失 = warn。
+#
+# 注意:本层目前没有 risk_level / human_requirement 字段,
+# 而规格要求"高风险家庭场景必须 Human Gate"。见 ..\..\10_规格_spec\ISSUES.md B1。
+
+methods: []
+
+# 模板:
+#
+# - id: MD-001
+#   name: 先听完再回应
+#   summary: 一句话说清这个动作
+#   grounded_in: [TH-001]
+#   targets_constructs: [CN-001]
+#   derived_from: [PG-001]
+#   steps:
+#     - 孩子开口时,先不打断,听完整段
+#     - 复述你听到的内容,问"我理解对吗"
+#     - 得到确认后再表达你的看法
+#   dose: 每日 1 次晚间对话,连续 2 周     # 必填,否则 warn
+#   age_range: 12-15
+#   observable_signal: 孩子主动开口的次数增加;打断后的沉默变短
+#   contraindication: 涉及安全风险的话题不适用,须直接进入 Human Gate  # 必填,否则 warn
+#   failure_mode: 家长把"复述"做成"审问",或复述后立刻接"但是"
+#   tags: [倾听, 沟通]
+#   open_questions:
+#     - 单亲家庭中执行难度是否显著更高
+#   evidence:
+#     - claim: 反映式倾听可短期降低亲子冲突频次
+#       grade: 6
+#       provenance: third_party_real
+#       source: "10.xxxx/xxxxx"
+#       population: 青少年家庭

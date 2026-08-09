@@ -1,0 +1,26 @@
+# 构念卡｜可测量的中间变量 —— 回答"到底在改变什么"
+# id 前缀必须为 CN-。这一层最容易被跳过,跳过就没法测量。
+# grounded_in 指向 TH- 卡;measured_by 指向 MM- 卡。
+# 校验器规则:没有测量通道 = error(无法验证);没有理论根 = error(来源不明)。
+
+constructs: []
+
+# 模板:
+#
+# - id: CN-001
+#   name: 父母自主支持
+#   summary: 一句话说清这个构念指什么
+#   definition: 家长在多大程度上给孩子提供选择、解释理由、接纳其视角
+#   grounded_in: [TH-001]            # 必填,否则 error
+#   measured_by: [MM-001, MM-002]    # 必填,否则 error
+#   direction: 越高越好               # 越高越好 / 越低越好 / 适中
+#   proxy_risk: 用"家长自评"测它会高估,家长倾向于报告理想自我
+#   tags: [父母, 自主]
+#   open_questions:
+#     - 与"放任"的边界如何在测量上区分
+#   evidence:
+#     - claim: 该构念有成熟量表且信效度良好
+#       grade: 6
+#       provenance: third_party_real
+#       source: "10.xxxx/xxxxx"
+#       population: 12-15 岁家庭

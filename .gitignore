@@ -1,0 +1,13 @@
+# 可再生中间产物与归档(体积大、可从素材/脚本重建)
+90_归档_archive/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 纯临时目录
+.tmp/
+
+# 系统文件
+Thumbs.db
+.DS_Store

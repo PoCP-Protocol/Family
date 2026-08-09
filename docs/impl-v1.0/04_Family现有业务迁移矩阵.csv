@@ -1,0 +1,56 @@
+﻿ID,现有资产,现状形态,策略,Family目标对象/模块,改造重点,技术方式,优先级,Owner,计划
+M001,客户/线索,客户档案,改造,Family Account / Family,family_id作为长期主键；Lead只保留增长视图,CRM Adapter,P0,产品+数据,0-60天
+M002,家长信息,客户联系人,改造,Parent,分离身份、家庭角色、Consent,CRM/User,P0,数据,0-45天
+M003,孩子信息,备注/测评,改造,Child,建立独立对象和Guardian关系,Family Core,P0,产品+数据,0-45天
+M004,家庭成员关系,弱/无,新建,FamilyRelationship,亲子、夫妻、兄弟姐妹等,Family Core,P0,Ontology,0-60天
+M005,家庭测评,问卷/报告,改造,Assessment + Growth Onboarding,从一次测评升级动态画像输入,Assessment Adapter,P0,产品+教研,30-75天
+M006,AI诊断,报告文本,改造,Growth Insight / Recommendation,避免临床化语言；Evidence驱动,AI Platform,P0,AI+教研,60-105天
+M007,家庭档案,测评/报告/成长记录,改造,GrowthProfile + FamilyTimeline,三张成长画像+时间线,Family Core,P0,产品+数据,30-90天
+M008,课程,视频/课件,改造,Course + KnowledgeCard + Intervention,课程拆知识/方法/行动,Knowledge Foundry,P0,教研,30-120天
+M009,训练营,班级+内容,改造,GrowthProgram,与Journey/Profile关联,Learning Adapter,P0,产品+交付,45-105天
+M010,21天挑战,任务+打卡,改造,21-Day GrowthCycle,任务变GrowthAction,Journey Service,P0,产品+交付,45-105天
+M011,90天陪跑,课程+顾问+群,改造,90-Day GrowthJourney,四阶段+Outcome,Journey Service,P0,产品+交付,45-120天
+M012,年度会员,会员权益,改造,Family Growth Membership,从优惠权益升级持续陪伴关系,Membership Adapter,P1,商业化,90-150天
+M013,任务,学习任务,改造,GrowthAction,必须绑定Dimension/Intervention,Action Service,P0,产品+教研,45-90天
+M014,打卡,完成记录,改造,ActionCompletion Event,形成Event/Evidence,Event Service,P0,数据+研发,45-90天
+M015,作业点评,助教文本,改造,HumanObservation / Feedback,结构化Evidence+Perspective,Staff Workbench,P1,交付,75-135天
+M016,助教,提醒/点评,改造,Growth Companion + Human Copilot,从催打卡转成长陪伴,Staff Platform,P0,交付+AI,75-120天
+M017,班主任,班级服务,改造,Growth Advisor / Service Owner,围绕Family Case管理,Staff Platform,P1,交付,90-150天
+M018,顾问,咨询/销售混合,改造,Human Growth Advisor,专业服务和商业推荐分离,Staff Platform,P0,交付,75-135天
+M019,专家,名师/咨询,保留+改造,Expert + Specialist Intervention,专业服务进入Journey/Outcome,Service Platform,P1,教研+服务,90-150天
+M020,社群,微信群,集成+改造,GrowthCommunity,群继续存在，事件回写Family,Community Adapter,P1,运营,90-150天
+M021,沙龙/活动,报名活动,保留+改造,FamilyActivity,绑定Family Journey/Outcome,Activity Service,P1,运营,90-150天
+M022,城市活动,区域运营,后置,City Growth Network,第二年平台化重点,Ecosystem,P2,战略,180天后
+M023,课程SOP,文档,改造,Executable Workflow,流程进入Workflow Engine,Workflow,P0,交付+研发,30-120天
+M024,助教SOP,文档,改造,Growth Service Workflow,提醒/中断/升级规则化,Workflow,P0,交付+AI,45-120天
+M025,运营SOP,文档,改造,Growth Operations Workflow,Journey、会员、活动运营,Workflow,P1,运营,90-150天
+M026,评估SOP,报告流程,改造,Outcome Measurement Workflow,阶段Review标准化,Outcome Service,P0,教研+数据,45-120天
+M027,复购SOP,销售流程,改造,Next Growth Journey Decision,从卖课升级下一阶段成长,Membership/Decision,P1,商业化,90-150天
+M028,质检SOP,抽查,改造,Quality & Eval Platform,Human+AI质检,Evaluation,P1,交付+AI,90-150天
+M029,成长报告,PDF/文本,改造,Family Growth Review,Child/Parent/Relationship分开,Review Service,P0,产品+教研,60-120天
+M030,成功案例,营销素材,改造,OutcomeCase,需Evidence与授权,Knowledge/Marketing,P1,运营+教研,90-150天
+M031,内容获客,短视频/直播,保留,Growth Discovery Content,继续做增长入口,Marketing,P0,增长,持续
+M032,私域运营,社群/企微,保留+集成,Family Engagement,事件回传Family,CRM/Community Adapter,P1,增长,90-150天
+M033,裂变/邀请,邀请权益,改造,Growth Referral,围绕真实Milestone分享,Referral Service,P1,增长,120-180天
+M034,积分商城,积分/礼品,降级,Membership Benefit,不能成为成长核心激励,Membership,P2,商业化,120天后
+M035,排行榜,游戏排名,淘汰,N/A,与Family价值观冲突,N/A,禁止,产品,立即
+M036,家庭总分,综合评分,淘汰,GrowthProfile States,改为Strength/Opportunity/Evidence,Family Core,禁止,产品+教研,立即
+M037,订单,订单系统,集成,OrderRef,继续外部成熟系统,Commerce Adapter,P0,平台,0-90天
+M038,支付,支付平台,集成,PaymentRef,不重复研发,Commerce Adapter,P0,平台,0-90天
+M039,直播,直播SaaS,集成,LearningSessionRef,不重复研发,Learning Adapter,P1,平台,60-120天
+M040,教务,教培SaaS,集成,Program/Class Reference,保留成熟SaaS,LMS Adapter,P0,平台,0-120天
+M041,CRM,线索/成交,集成+重构视图,Family CRM View,CRM仍做增长，Family做长期对象,CRM Adapter,P0,平台+产品,0-120天
+M042,客服,售后入口,集成,SupportInteraction,服务记录进入Family Timeline,Support Adapter,P1,运营,90-150天
+M043,会话记录,散落聊天,改造,ServiceInteraction / Perspective,分权限存储，不能全部当Fact,Data Platform,P0,数据+安全,45-120天
+M044,用户画像,标签,改造,GrowthProfile,动态、阶段性、Evidence驱动,Family Core,P0,数据+教研,30-90天
+M045,知识库,文档/向量库,改造,Knowledge Foundry,Claim/Evidence/Review机制,Knowledge Platform,P0,AI+教研,60-120天
+M046,家长顾问Agent,初步Agent,改造,Parent Growth Companion,绑定P-domain和Outcome,AI Platform,P0,AI,75-120天
+M047,孩子陪练Agent,初步Agent,后置,Child Growth Companion,需Consent/独立UX,AI Platform,P2,AI+安全,150天后
+M048,助教助手,初步Agent,升级,Human Copilot,家庭优先级/预警/建议,AI Platform,P0,AI+交付,75-120天
+M049,成长规划师,初步Agent,升级,Growth Planner,Profile→Priority→Plan,AI Platform,P0,AI+产品,75-120天
+M050,经营助手,管理AI,保留+后置,Management Copilot,基于统一数据,Analytics/AI,P1,数据+管理,120-180天
+M051,预警,人工判断,改造,Alert + Safety Gate,安全和执行中断分离,Safety/Workflow,P0,安全+交付,60-120天
+M052,用户数据授权,零散协议,重构,Consent,按purpose管理,Safety Service,P0,法务+安全,0-60天
+M053,历史成长数据,散落业务库,迁移,Family Timeline/Event,分批清洗映射,Data Migration,P0,数据,30-120天
+M054,研究/实验数据,无统一,新建,Causal Evidence Registry,后续世界模型底座,Causal Platform,P1,数据科学,120-180天
+M055,真实干预结果,案例/口碑,新建结构化,CausalEpisode,Context/State/Action/Outcome,Causal Platform,P1,数据科学+交付,90-180天

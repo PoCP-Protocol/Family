@@ -1,0 +1,33 @@
+# 多模态测量卡｜获取家庭真实信号的通道 —— 回答"怎么知道它真的变了"
+# id 前缀必须为 MM-。measures_constructs 指向 CN- 卡。
+#
+# 两条合规红线,缺失直接 error(不是 warn):
+#   minors_handling  涉未成年人时的额外要求
+#   privacy_risk     隐私风险等级与处理要求
+#
+# 这一层在规格里目前没有对应对象。见 ..\..\10_规格_spec\ISSUES.md B3。
+# 「同意做成长追踪」不等于「同意用视频通道采集」—— 粒度差别是实质的。
+
+modalities: []
+
+# 模板:
+#
+# - id: MM-001
+#   name: 家长自评量表
+#   summary: 一句话说清这个通道采什么
+#   channel: 量表                     # 量表 / 语音 / 视频 / 文本 / 行为日志 / 生理
+#   measures_constructs: [CN-001]
+#   instrument: 具体工具或编码体系及其版本
+#   reliability: 已知信效度,例如 Cronbach α=0.86,中文版已验证
+#   cost: 采集成本,例如 家长 8 分钟填写,零边际成本
+#   home_feasible: 家庭场景可行性与阻碍
+#   privacy_risk: 低 —— 不含原始音视频,仅结构化评分;须脱敏入库   # 必填,否则 error
+#   minors_handling: 由监护人代填,不直接向未成年人采集;受限微数据不出本地  # 必填,否则 error
+#   tags: [自评]
+#   open_questions:
+#     - 家长自评的社会赞许性偏差如何校正
+#   evidence:
+#     - claim: 该量表中文版信效度已发表
+#       grade: 6
+#       provenance: third_party_real
+#       source: "10.xxxx/xxxxx"

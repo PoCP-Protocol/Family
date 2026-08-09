@@ -1,0 +1,29 @@
+# 理论卡｜学理根系 —— 回答"为什么会这样"
+# id 前缀必须为 TH-。未知字段会直接报错,不要自行加字段。
+# defines 必须指向 constructs.yaml 里真实存在的 CN- 卡片。
+
+theories: []
+
+# 模板(复制到上面的列表里,去掉注释):
+#
+# - id: TH-001
+#   name: 自我决定理论
+#   summary: 一句话说清这个理论在本项目里用来解释什么
+#   core_claim: 自主、胜任、联结三种基本心理需要被满足时,内在动机才可持续
+#   originators: [Deci, Ryan]
+#   year: "1985"
+#   defines: [CN-001, CN-002]        # 定义了哪些构念
+#   boundary: 适用边界与已知反驳 —— 必填,没有边界的理论等于万能解释
+#   china_fit: 在中国家庭情境下的适配与存疑之处
+#   tags: [动机, 自主支持]
+#   open_questions:
+#     - 在高学业压力情境下自主支持是否仍然有效
+#   evidence:
+#     - claim: 自主支持与青少年内在动机正相关
+#       grade: 7                      # E7 = RCT/元分析
+#       provenance: third_party_real   # 已核验的公开文献
+#       source: "10.xxxx/xxxxx"        # DOI,用 citations.py 核验
+#       year: 2017
+#       sample_n: 12000
+#       population: 青少年,多国
+#       note: 效应量与局限

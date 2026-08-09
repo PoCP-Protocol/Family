@@ -1,0 +1,30 @@
+# 实践卡｜已被外部验证过的成套干预项目 —— 回答"别人已经验证过什么"
+# id 前缀必须为 PG-。targets_constructs 指向 CN- 卡。
+# licensing 直接决定能不能商用 —— 缺失会 warn,别把需要认证的项目当自有方法交付。
+# 最强证据不足时会 warn:不宜宣称为循证项目。
+
+programs: []
+
+# 模板:
+#
+# - id: PG-001
+#   name: 某国际亲子互动训练项目
+#   summary: 一句话说清这套项目做什么
+#   origin: 来源国家/机构
+#   target: 目标人群与年龄段,例如 8-12 岁对立违抗倾向儿童及其家长
+#   dose: 周数 × 每次时长,例如 14 周,每周 1 次 60 分钟
+#   delivery: 团体 / 个体 / 线上 / 视频反馈
+#   targets_constructs: [CN-001]
+#   effect_note: 效应量与已知局限,例如 d=0.45,长期随访效果衰减
+#   licensing: 需认证治疗师 + 官方授权,商用受限   # 必填,否则 warn
+#   transferability: 可迁移到本产品的程度,以及必须改造之处
+#   tags: [亲子互动]
+#   open_questions:
+#     - 去掉现场督导后效果是否保留
+#   evidence:
+#     - claim: 该项目在 RCT 中显著改善亲子冲突
+#       grade: 7
+#       provenance: third_party_real
+#       source: "10.xxxx/xxxxx"
+#       sample_n: 320
+#       population: 学龄儿童家庭,北美
