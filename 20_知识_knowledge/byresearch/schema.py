@@ -97,6 +97,9 @@ class Method(Card):
     observable_signal: str = ""    # 家长自己能看到的变化信号
     contraindication: str = ""     # 禁忌：什么情况下不能用
     failure_mode: str = ""         # 典型做坏的方式
+    risk_level: str = ""           # 风险等级，例如 low / medium / high —— Policy Gate 据此判定
+    human_requirement: str = ""    # 人工要求：none / review / mandatory —— 高风险场景必须 Human Gate
+    # ↑ 与 spec 02 §3.5 Intervention 的 risk_level / human_requirement 同名同义(ISSUES.md B1 裁决)
 
 
 @dataclass

@@ -158,6 +158,8 @@ Professional/Safety/Adversarial达标。
 ## G5 Pilot Gate
 人工支持、回滚、风险流程就绪。
 
+> **【V1.1 裁决｜ISSUES.md C1】** G5 增设前置条件:**`25_研究` 的 BM 线须已出首次裁决**。Pilot 前,商业阶梯(21天→90天→年会员)只作 Hypothesis,不写入 Ontology 的 Fact 层、不作既定前提 —— 否则 Pilot 的商业数字在 BM 线裁决前无法解释归因。当前 BM 线 0 条 supported。
+
 ## G6 Scale Gate
 真实Outcome数据质量达到要求后才能扩量。
 
@@ -186,6 +188,12 @@ Professional/Safety/Adversarial达标。
 
 # 6. 任务级WBS
 
+> **【V1.1 裁决要点｜ISSUES.md A1/A2/A4,详见 `07_Family实施方法论` §6】**
+> - **A1**:`4.1 Model Gateway` 的**最小版**(仅 version+cost+audit+structured output)提前到 **W5(与 `2.1` 同批)**,任何生产 LLM 调用一律经它;全功能路由/fallback 仍留 `4.1`。`2.6 GrowthProfile Engine` 与 `3.3 Intervention Selection` **一期以规则/确定性逻辑为主**,LLM 仅限离线辅助、不进生产路径。
+> - **A2**:DoD **分层生效** —— Phase 1–3 用 **DoD-Core**(功能/契约/Schema/权限/Audit/Evidence/测试/Observability/Rollback/Outcome),Eval 三集(Golden/Safety/Adversarial)自 **Phase 4** 起强制为 **DoD-AI**。
+> - **A4**:新增 `3.0 Journey起点基线测量`(见下表),补齐 `3.7 Outcome` 所需 baseline 来源。
+> - 任务总数由 53 → **54**(新增 3.0)。
+
 | WBS | 阶段 | 周 | 任务 | 关键交付 | 依赖 | Owner | 优先级 | 验收标准 | Gate |
 |---|---|---|---|---|---|---|---|---|---|
 | 1.1 | Foundation | W1 | FGAIM项目启动与治理 | 项目章程/RACI/评审机制 | 无 | PM/架构 | P0 | Owner和Gate明确 | G0 |
@@ -205,6 +213,7 @@ Professional/Safety/Adversarial达标。
 | 2.6 | Family Core | W6-W8 | GrowthProfile Engine V1 | 3类Profile | 2.5/1.7 | Backend/AI | P0 | 三Profile并列输出 | G2 |
 | 2.7 | Family Core | W7-W8 | Family Timeline V0 | 历史服务/成长时间线 | 2.2/2.4 | Backend/FE | P1 | 历史数据可展示来源 | G2 |
 | 2.8 | Family Core | W7-W8 | CRM/LMS/Order适配器 | Integration Adapters | 1.3 | Platform | P0 | 关键数据可同步 | G2 |
+| 3.0 | Vertical Slice | W9 | **Journey起点基线测量(V1.1新增)** | Baseline Outcome | 1.7/2.5 | Data/教研 | P0 | 每重点维度有起点baseline;**禁止从历史打卡推导**;provenance=self_report/primary_real | G3 |
 | 3.1 | Vertical Slice | W9 | Growth Priority | Priority决策 | 2.6 | Backend/AI | P0 | 最多2×3优先项 | G3 |
 | 3.2 | Vertical Slice | W9-W10 | 90-Day Journey Engine | 四阶段Journey | 3.1 | Backend | P0 | 状态转换可审计 | G3 |
 | 3.3 | Vertical Slice | W9-W10 | Intervention Selection | Intervention匹配 | 1.9/3.1 | Domain/AI | P0 | 推荐保留Evidence | G3 |

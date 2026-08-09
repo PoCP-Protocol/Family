@@ -8,6 +8,28 @@
 
 ---
 
+## ✅ V1.1 裁决落地总表(2026-08-09,用户授权执行)
+
+以下裁决已按 `07_Family实施方法论` §6 的推荐落地。**本表为各条最新状态,取代下方各条目末尾的旧「待裁决」标注。** 全部改动已 git 追踪、可 diff/回滚(基线提交 `4171e83`)。
+
+| # | 裁决 | 落地位置 |
+|---|---|---|
+| A1 | `2.6`/`3.3` 一期规则优先;Model Gateway 最小版提前 W5 | `05` §6 要点、`07` §6.1 |
+| A2 | DoD 分层:Phase1–3 用 DoD-Core,Eval 三集 Phase4 起强制 | `07` §3⑥、`05` §6 要点 |
+| A3 | 知识层保持 Python,以服务/CLI 边界对接;业务层 TS(不重写既有代码) | `07` §6.1(过程裁决,无代码改动) |
+| A4 | 新增任务 `3.0 Journey起点基线测量`(禁历史推导);任务总数 53→54 | `05` WBS 表 + `.csv`、`manifest.json` |
+| A5 | FAMILY 域明确为二期,一期只启用三域 | `02` §3.2 |
+| B1 | `Method` 增 `risk_level`/`human_requirement`;高风险无人工要求 → 校验 error | `schema.py`、`library.py`、`methods.yaml` |
+| B2 | `Intervention` 增 `failure_mode`/`derived_from` | `02` §3.5 |
+| B3 | 新增 `MeasurementChannel` 对象(通道级 Consent,强制 privacy_risk/minors_handling) | `02` §3.8 |
+| B4 | 24 维与 `Construct` 在 `1.6` 合并成一套字段(补 measured_by/proxy_risk/direction + 四档状态) | `02` §3.2 标注(实施在 `1.6`) |
+| B5 | E0–E7 + Provenance + `NON_DECISIVE` 门写入规格,代码为其实现 | `02` §3.4 Evidence |
+| C1 | 「BM 线出首次裁决」设为 G5 Pilot Gate 前置 | `05` §4 G5、`07` §6.3 |
+
+> 说明:A1/A2/A3 属过程性裁决,已在方法论与 WBS 要点中生效;A4/A5/B2/B3/B4/B5 已写入规格原文(带「V1.1 裁决」标记);B1 为知识层代码改动并通过校验测试。
+
+---
+
 ## A. 规格内部冲突
 
 ### A1｜模型先于 Model Gateway 被使用 — 违反硬规则

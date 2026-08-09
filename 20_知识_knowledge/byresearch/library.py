@@ -158,6 +158,12 @@ class Library:
                 issues.append(Issue("warn", m.id, "方法缺少剂量，无法执行也无法复核"))
             if not getattr(m, "contraindication", None):
                 issues.append(Issue("warn", m.id, "方法缺少禁忌说明"))
+            # 高风险家庭场景必须 Human Gate(ISSUES.md B1):没有 risk_level,Gate 无从判定
+            if not getattr(m, "risk_level", None):
+                issues.append(Issue("warn", m.id, "方法未声明 risk_level，Policy/Human Gate 无字段可判"))
+            elif str(getattr(m, "risk_level")).strip().lower() in {"high", "高", "medium", "中"} \
+                    and not getattr(m, "human_requirement", None):
+                issues.append(Issue("error", m.id, "中/高风险方法未声明 human_requirement，违反 Human Gate 硬规则"))
 
         # 3. 实践项目必须声明授权要求 —— 商用前的硬约束
         for p in self.layer("programs"):

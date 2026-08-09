@@ -109,10 +109,14 @@ Study、CausalEdge、CausalEpisode。
 - CHILD
 - PARENT
 - RELATIONSHIP
-- FAMILY
+- FAMILY（**二期**）
+
+> **【V1.1 裁决｜ISSUES.md A5】** 一期只启用 CHILD / PARENT / RELATIONSHIP 三域(与 `01` 的 24 维一致);FAMILY 域一期无维度,明确列为二期,避免与 RELATIONSHIP 的 R08「家庭协作与韧性」重叠。`1.6 24维Growth Model确认` 只需覆盖前三域。
 
 ### GrowthDimension
 24个一期维度。
+
+> **【V1.1 裁决｜ISSUES.md B4】** `1.6` 交付物须把 24 维与知识层 `Construct` **合并成一套字段**,一次定清:每个维度补 `measured_by`(测量通道)、`proxy_risk`(代理指标风险)、`direction`(期望改变方向);状态沿用下方 §11 的四档(EMERGING/DEVELOPING/PRACTICING/STABILIZING)。否则 24 维映射 Construct 会因"无测量通道"全部报 error。
 
 ### GrowthProfile
 某主体在某LifeStage某时间段的动态画像。
@@ -161,6 +165,17 @@ Daily / Weekly / Phase Review。
 ### Evidence
 任何重要判断的依据。
 
+> **【V1.1 裁决｜ISSUES.md B5】** 证据等级刻度与结论门为**规格权威定义**,`20_知识_knowledge\byresearch\evidence.py` 是其实现(以本节为准,代码不得自行漂移)。
+>
+> **等级 E0–E7(数值越大越强):**
+> - E0 传闻/个案/无来源｜E1 内部材料主张(自家 PPT、口头共识)｜E2 二手媒体/自媒体
+> - E3 商业机构行业报告/白皮书｜E4 官方统计/监管文件/权威指南
+> - E5 一手运营数据(可复核)｜E6 观察性研究/准实验｜E7 RCT/系统综述与元分析
+>
+> **溯源 Provenance(与等级正交,说明"数字哪来的"):** `primary_real` / `third_party_real` / `self_report` / `unverified` / `inferred` / `simulated` / `unknown`。
+>
+> **结论门(`NON_DECISIVE`):** 溯源为 `inferred / simulated / unverified / unknown` 的证据**不得用于支撑"成立/有效"**,只能生成假设、设定验收门槛。自家素材与自家产出上限 **E1,不得自证**。要支撑结论,须 **E4+ 且真实溯源且有可追溯 source**。
+
 ### Perspective
 某成员对事件/问题的主观视角。
 
@@ -196,6 +211,12 @@ AI/顾问尚未被确认的解释。
 - evidence_grade
 - risk_level
 - human_requirement
+- failure_mode（**V1.1 新增**）
+- derived_from（**V1.1 新增**）
+
+> **【V1.1 裁决｜ISSUES.md B2】** 新增两字段,与知识层 `Method` 对齐:
+> `failure_mode` = 典型做坏方式(交付端据此避坑);`derived_from` = 源自哪个已验证 `Program`。
+> `derived_from` 关联的 `Program.licensing`(版权/认证)直接决定该方法能否商用。
 
 ### InterventionVersion
 所有专业方法必须版本化。
@@ -240,6 +261,27 @@ AI/规则给出的候选建议。
 
 不得默认使用：
 `CAUSES`
+
+---
+
+## 3.8 Measurement Objects（**V1.1 新增**）
+
+> **【V1.1 裁决｜ISSUES.md B3】** 新增测量通道对象,与知识层 `Modality` 对齐。原因:未成年人合规下"同意做成长追踪"**不等于**"同意用视频通道采集" —— `Consent.purpose` 必须能落到具体采集手段。缺这一层,同意的粒度不足以合规。
+
+### MeasurementChannel
+一种获取家庭真实信号的通道。
+
+核心字段：
+- channel_id
+- channel_type（量表 / 语音 / 视频 / 文本 / 行为日志 / 生理）
+- measures_dimensions（对应 GrowthDimension）
+- instrument（具体工具或编码体系）
+- reliability（信效度已知情况）
+- privacy_risk（**必填**：隐私风险等级与处理要求 —— 缺失即不合格)
+- minors_handling（**必填**：涉未成年人时的额外要求 —— 缺失即不合格)
+- linked_consent_purpose（该通道采集须挂到的 Consent.purpose）
+
+`privacy_risk` 与 `minors_handling` 缺失,该通道不得启用(与 `Modality` 校验器一致,二者缺失直接 error)。
 
 ---
 
