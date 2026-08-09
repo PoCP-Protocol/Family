@@ -8,6 +8,16 @@ __pycache__/
 # 纯临时目录
 .tmp/
 
+# Node / 前后端构建产物(50_开发_dev 引导后生成)
+node_modules/
+dist/
+build/
+.turbo/
+coverage/
+*.log
+.env
+.env.local
+
 # 系统文件
 Thumbs.db
 .DS_Store

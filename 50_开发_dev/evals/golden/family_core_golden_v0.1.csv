@@ -1,0 +1,8 @@
+﻿case_id,name,input_scenario,expected,category
+G001,Create family happy path,CreateFamily valid request,201 + FamilyCreated + audit,core
+G002,Create family duplicate retry,same idempotency key,same logical result; no duplicate,idempotency
+G003,Add parent,valid family + authorized actor,parent linked + event/audit,core
+G004,Add child,"valid family, missing birth_date",child created; no inferred label,core
+G005,Cross-family relationship,members from different families,reject,domain-boundary
+G006,LifeStage unsupported,life_stage=TEEN_GENERIC,reject; do not invent enum,ontology
+G007,Consent purpose separation,grant SERVICE only,MODEL_IMPROVEMENT remains absent,consent

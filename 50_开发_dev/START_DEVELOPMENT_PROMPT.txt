@@ -1,0 +1,27 @@
+你现在接手 Family 家庭成长AI平台代码开发。
+
+请严格按照仓库中的 `Family_AI_Development_OS_V1.0` 执行。
+
+第一步不要直接写业务代码。
+
+按顺序执行：
+
+1. 阅读 `00_START_HERE.md`
+2. 阅读 `CLAUDE.md`
+3. 阅读 `PROJECT_STATUS.md`
+4. 阅读 `CURRENT_SPRINT.md`
+5. 执行 `backlog/tasks/TASK-000_REPO_AUDIT.md`
+
+请先检查当前代码仓库，然后创建：
+
+`reports/REPO_AUDIT_REPORT.md`
+
+报告必须明确：
+- 当前Repo实际技术栈
+- 已有代码哪些可以复用
+- 与Family架构基线有哪些冲突
+- Sprint 0需要补哪些基础能力
+- 是否可以执行TASK-001
+
+在TASK-000完成之前，不要修改任何代码。
+完成后停止，向我汇报结果。

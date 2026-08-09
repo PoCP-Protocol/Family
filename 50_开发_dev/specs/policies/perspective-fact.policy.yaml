@@ -1,0 +1,6 @@
+version: 0.1
+policy: PERSPECTIVE_FACT_SEPARATION
+rules:
+  - A statement by a parent or child is a Perspective unless independently observed/confirmed.
+  - AI interpretation is Hypothesis unless approved as another formal artifact.
+  - Perspective must never be silently converted into Fact.

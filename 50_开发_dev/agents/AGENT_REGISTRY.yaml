@@ -1,0 +1,17 @@
+version: "0.1"
+agents:
+  - agent_id: FAMILY_COMPANION
+    spec: registry/FAMILY_COMPANION.yaml
+    status: PLANNED
+  - agent_id: PARENT_GROWTH_COMPANION
+    spec: registry/PARENT_GROWTH_COMPANION.yaml
+    status: PLANNED
+  - agent_id: GROWTH_PLANNER
+    spec: registry/GROWTH_PLANNER.yaml
+    status: PLANNED
+  - agent_id: RELATIONSHIP_COMPANION
+    spec: registry/RELATIONSHIP_COMPANION.yaml
+    status: PLANNED
+  - agent_id: HUMAN_COPILOT
+    spec: registry/HUMAN_COPILOT.yaml
+    status: PLANNED

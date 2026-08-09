@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FamilyImportCommand",
+  "type": "object",
+  "required": [
+    "sourceSystem",
+    "sourceCustomerId",
+    "proposedDisplayName",
+    "lineage"
+  ],
+  "properties": {
+    "sourceSystem": {
+      "type": "string"
+    },
+    "sourceCustomerId": {
+      "type": "string"
+    },
+    "proposedDisplayName": {
+      "type": "string"
+    },
+    "lineage": {
+      "type": "object",
+      "required": [
+        "sourceSystem",
+        "sourceId",
+        "mappingVersion"
+      ],
+      "properties": {
+        "sourceSystem": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "mappingVersion": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

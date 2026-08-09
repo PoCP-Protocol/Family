@@ -1,0 +1,19 @@
+version: 0.1
+action: AssignLifeStage
+purpose: Assign an approved LifeStage to a child.
+input:
+  required: [family_id, child_id, life_stage_code, effective_from, idempotency_key]
+preconditions:
+  - child_belongs_to_family
+  - life_stage_code_is_approved
+effects:
+  - close_previous_active_assignment_if_any
+  - create_life_stage_assignment
+  - emit_LifeStageAssigned
+  - append_audit_record
+allowed_values:
+  life_stage_code:
+    - EARLY_ADOLESCENCE_12_15
+forbidden:
+  - silently_create_new_life_stage
+audit: required

@@ -1,0 +1,24 @@
+version: 0.1
+action: CreateFamily
+purpose: Create the canonical long-term Family root object.
+input:
+  required: [display_name, idempotency_key]
+  fields:
+    display_name: string
+    primary_contact_account_id: string?
+    idempotency_key: string
+preconditions:
+  - actor_is_authenticated
+effects:
+  - create_family
+  - emit_FamilyCreated
+  - append_audit_record
+id_generation:
+  family_id: server_generated_uuid
+idempotency:
+  required: true
+forbidden:
+  - client_supplies_family_id
+  - create_growth_profile
+  - create_membership
+audit: required

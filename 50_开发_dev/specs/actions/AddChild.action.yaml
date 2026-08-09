@@ -1,0 +1,18 @@
+version: 0.1
+action: AddChild
+purpose: Add a child member to Family.
+input:
+  required: [family_id, display_name, idempotency_key]
+  optional: [birth_date]
+preconditions:
+  - family_exists
+  - actor_has_family_manage_permission
+effects:
+  - create_child_person
+  - link_person_to_family
+  - emit_FamilyMemberAdded
+  - append_audit_record
+forbidden:
+  - assign_clinical_label
+  - infer_growth_profile
+audit: required

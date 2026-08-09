@@ -1,0 +1,7 @@
+version: 0.1
+policy: CORE_STATE_WRITE
+rules:
+  - Core state may only change through approved Named Actions.
+  - AI free text cannot directly mutate core state.
+  - Generic PATCH endpoints for Family Growth core are forbidden.
+  - All core writes require audit metadata.

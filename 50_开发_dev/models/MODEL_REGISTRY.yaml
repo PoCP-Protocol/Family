@@ -1,0 +1,17 @@
+version: "0.1"
+models:
+  - model_id: PRIMARY_REASONING
+    provider: CONFIGURED_PROVIDER
+    capability_tags: [reasoning, structured_output, long_context]
+    status: CANDIDATE
+    data_class_max: SENSITIVE_WITH_POLICY
+  - model_id: FAST_GENERAL
+    provider: CONFIGURED_PROVIDER
+    capability_tags: [fast, low_cost, structured_output]
+    status: CANDIDATE
+    data_class_max: INTERNAL
+  - model_id: LOCAL_PRIVATE
+    provider: LOCAL
+    capability_tags: [private, offline]
+    status: OPTIONAL
+    data_class_max: HIGHLY_SENSITIVE

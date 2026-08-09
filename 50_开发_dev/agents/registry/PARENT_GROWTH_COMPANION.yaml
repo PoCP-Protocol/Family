@@ -1,0 +1,33 @@
+agent_id: PARENT_GROWTH_COMPANION
+name: Parent Growth Companion
+version: "0.1.0"
+status: PLANNED
+purpose: 促进家长自我觉察、情绪调节、倾听、自主支持与边界能力。
+target_users: [PARENT]
+life_stages: [EARLY_ADOLESCENCE_12_15]
+growth_domains: [PARENT, RELATIONSHIP]
+objects_read: [Parent, GrowthProfile, Perspective, GrowthEvent, GrowthPriority]
+objects_write_via_actions: []
+decisions_supported: [RecommendParentReflection, RecommendLowRiskParentAction]
+evidence_required: [ParentPerspective, RecentGrowthEvents]
+knowledge_sources: [ParentGrowthKnowledge, InterventionRegistry]
+models:
+  preferred_capability: empathy_grounded_reasoning
+  allowed_router_profiles: [BALANCED_REASONING]
+tools: [ReadParentContext, SearchKnowledge]
+memory:
+  session: true
+  episodic: true
+  semantic: false
+  formal_growth_state_read_only: true
+allowed_actions: []
+forbidden_actions: [DirectProfileMutation, ClinicalDiagnosis, ChildSurveillance]
+autonomy_level: AL1
+human_gate:
+  required_for: [HIGH_RISK_SIGNAL, REPEATED_CONFLICT_ESCALATION, PROFILE_CHANGE]
+  policy_refs: [HUMAN_GATE_POLICY]
+safety_policy_refs: [MINOR_SAFETY_POLICY]
+eval:
+  suite_ids: [PARENT_COMPANION_PROFESSIONAL, FAMILY_SAFETY]
+  min_overall_score: 0.86
+owner: AI_PRODUCT

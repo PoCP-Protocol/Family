@@ -1,0 +1,14 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: parent.schema.yaml
+title: Parent
+type: object
+additionalProperties: false
+required: [person_id, family_id, role, created_at]
+properties:
+  person_id: {type: string, format: uuid}
+  family_id: {type: string, format: uuid}
+  role:
+    enum: [MOTHER, FATHER, GUARDIAN, OTHER_GUARDIAN]
+  display_name: {type: string, minLength: 1, maxLength: 100}
+  account_id: {type: [string, "null"]}
+  created_at: {type: string, format: date-time}

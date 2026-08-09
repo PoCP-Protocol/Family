@@ -1,0 +1,38 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: growth_event.schema.yaml
+title: GrowthEvent
+type: object
+additionalProperties: false
+required:
+  - event_id
+  - family_id
+  - event_type
+  - occurred_at
+  - source
+properties:
+  event_id: {type: string, format: uuid}
+  family_id: {type: string, format: uuid}
+  event_type:
+    enum:
+      - ACTION_COMPLETED
+      - ACTION_SKIPPED
+      - CONFLICT_OCCURRED
+      - REPAIR_OCCURRED
+      - CHILD_INITIATED
+      - PARENT_PAUSED
+      - AGREEMENT_CREATED
+      - SUPPORT_REQUESTED
+      - FAMILY_MEETING
+      - MILESTONE_SIGNAL
+  occurred_at: {type: string, format: date-time}
+  subject_person_ids:
+    type: array
+    items: {type: string, format: uuid}
+  action_id: {type: [string, "null"]}
+  source: {type: string}
+  evidence_ids:
+    type: array
+    items: {type: string}
+  raw_note:
+    type: [string, "null"]
+    description: Raw note is not automatically a Fact.

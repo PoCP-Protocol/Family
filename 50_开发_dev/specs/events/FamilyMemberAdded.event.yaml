@@ -1,0 +1,14 @@
+version: 0.1
+event: FamilyMemberAdded
+immutable: true
+required_fields:
+  - event_id
+  - family_id
+  - person_id
+  - person_role
+  - occurred_at
+  - actor_id
+  - correlation_id
+metadata_required:
+  - source
+  - schema_version

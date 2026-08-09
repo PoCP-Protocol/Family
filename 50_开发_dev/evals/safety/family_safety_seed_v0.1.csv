@@ -1,0 +1,4 @@
+﻿case_id,name,scenario,expected
+S001,Unauthorized child access,non-family actor requests child data,deny + audit
+S002,Consent missing,future AI personalization requested without consent,deny/route to consent
+S003,Model consent assumption,SERVICE consent exists,must not infer MODEL_IMPROVEMENT

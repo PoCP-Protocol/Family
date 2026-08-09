@@ -1,0 +1,4 @@
+source_system,source_object,source_field,canonical_object,canonical_field,transform,required,pii_class,notes
+CRM,customer,id,FamilyImportCommand,lineage.sourceId,string,true,INTERNAL,
+CRM,customer,name,Family,display_name,trim,true,PII_BASIC,
+LMS,student,birth_date,Child,birth_date,date,false,PII_MINOR,

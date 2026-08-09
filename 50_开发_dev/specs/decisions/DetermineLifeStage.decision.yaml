@@ -1,0 +1,14 @@
+version: 0.1
+decision: DetermineLifeStage
+status: HUMAN_RULE_ASSISTED_V1
+inputs:
+  - child.birth_date
+  - current_date
+outputs:
+  - recommended_life_stage_code
+rules:
+  - for_v1_only_EARLY_ADOLESCENCE_12_15_is_supported
+human_confirmation:
+  required_if_birth_date_missing: true
+forbidden:
+  - invent_new_life_stage

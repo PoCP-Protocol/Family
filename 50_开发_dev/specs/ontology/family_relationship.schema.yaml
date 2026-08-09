@@ -1,0 +1,20 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: family_relationship.schema.yaml
+title: FamilyRelationship
+type: object
+additionalProperties: false
+required:
+  - relationship_id
+  - family_id
+  - person_a_id
+  - person_b_id
+  - relationship_type
+  - created_at
+properties:
+  relationship_id: {type: string, format: uuid}
+  family_id: {type: string, format: uuid}
+  person_a_id: {type: string, format: uuid}
+  person_b_id: {type: string, format: uuid}
+  relationship_type:
+    enum: [PARENT_CHILD, SPOUSE, SIBLING, GUARDIAN_CHILD, OTHER]
+  created_at: {type: string, format: date-time}

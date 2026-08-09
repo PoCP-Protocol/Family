@@ -1,0 +1,66 @@
+version: "0.1"
+policy_id: HUMAN_GATE_POLICY
+
+risk_levels:
+  LOW:
+    autonomy_max: AL2
+    human_gate_default: false
+  MEDIUM:
+    autonomy_max: AL2
+    human_gate_default: true
+  HIGH:
+    autonomy_max: AL1
+    human_gate_default: true
+  CRITICAL:
+    autonomy_max: AL0
+    human_gate_default: true
+    automation_suspend: true
+
+triggers:
+  - trigger_id: HG001
+    condition: safety_signal in [SELF_HARM, HARM_TO_OTHERS, ABUSE, VIOLENCE, SEVERE_CRISIS]
+    risk_level: CRITICAL
+    action: ESCALATE_SAFETY_REVIEW
+    block_external_recommendation: true
+
+  - trigger_id: HG002
+    condition: requested_action in [UPDATE_GROWTH_PROFILE, MEASURE_OUTCOME]
+    risk_level: MEDIUM
+    action: REQUIRE_DOMAIN_OR_AUTHORIZED_HUMAN_CONFIRMATION
+
+  - trigger_id: HG003
+    condition: intervention.risk_level in [MEDIUM, HIGH]
+    risk_level: MEDIUM
+    action: REQUIRE_ADVISOR_CONFIRMATION
+
+  - trigger_id: HG004
+    condition: ai_confidence < 0.70
+    risk_level: MEDIUM
+    action: REQUIRE_HUMAN_REVIEW
+
+  - trigger_id: HG005
+    condition: evidence_count == 0
+    risk_level: MEDIUM
+    action: ABSTAIN_OR_REQUIRE_HUMAN_REVIEW
+
+  - trigger_id: HG006
+    condition: perspectives_conflict == true and fact_resolution_required == true
+    risk_level: MEDIUM
+    action: REQUIRE_HUMAN_REVIEW
+
+  - trigger_id: HG007
+    condition: child_sensitive_data_external_use == true
+    risk_level: HIGH
+    action: REQUIRE_CONSENT_AND_HUMAN_REVIEW
+
+routing:
+  queues:
+    SAFETY_REVIEW:
+      target_role: SAFETY_REVIEWER
+      sla_minutes: 15
+    DOMAIN_REVIEW:
+      target_role: GROWTH_ADVISOR
+      sla_minutes: 240
+    EXPERT_REVIEW:
+      target_role: EXPERT
+      sla_minutes: 1440

@@ -1,0 +1,32 @@
+agent_id: GROWTH_PLANNER
+name: Growth Planner
+version: "0.1.0"
+status: PLANNED
+purpose: 将已确认GrowthPriority转成阶段、周、日行动草案。
+target_users: [PARENT, STAFF]
+life_stages: [EARLY_ADOLESCENCE_12_15]
+growth_domains: [CHILD, PARENT, RELATIONSHIP]
+objects_read: [GrowthPriority, Intervention, GrowthJourney, Outcome]
+objects_write_via_actions: []
+decisions_supported: [RecommendIntervention, DraftGrowthPlan]
+evidence_required: [ConfirmedGrowthPriority, InterventionEvidence]
+knowledge_sources: [InterventionRegistry]
+models:
+  preferred_capability: structured_planning
+  allowed_router_profiles: [STRUCTURED_PLANNING]
+tools: [ReadPriority, SearchIntervention]
+memory:
+  session: true
+  episodic: false
+  semantic: false
+  formal_growth_state_read_only: true
+allowed_actions: []
+forbidden_actions: [StartJourneyWithoutConfirmation, AssignHighRiskIntervention]
+autonomy_level: AL2
+human_gate:
+  required_for: [PLAN_CONFIRMATION, MEDIUM_OR_HIGH_RISK_INTERVENTION]
+  policy_refs: [HUMAN_GATE_POLICY]
+eval:
+  suite_ids: [GROWTH_PLANNER_VALIDITY]
+  min_overall_score: 0.90
+owner: AI_PRODUCT

@@ -1,0 +1,14 @@
+version: 0.1
+event: LifeStageAssigned
+immutable: true
+required_fields:
+  - event_id
+  - family_id
+  - child_id
+  - life_stage_code
+  - occurred_at
+  - actor_id
+  - correlation_id
+metadata_required:
+  - source
+  - schema_version

@@ -1,0 +1,31 @@
+agent_id: RELATIONSHIP_COMPANION
+name: Relationship Companion
+version: "0.1.0"
+status: PLANNED
+purpose: 支持家庭沟通、冲突暂停、修复与共创规则。
+target_users: [PARENT]
+life_stages: [EARLY_ADOLESCENCE_12_15]
+growth_domains: [RELATIONSHIP]
+objects_read: [RelationshipGrowthProfile, GrowthEvent, Perspective]
+objects_write_via_actions: []
+decisions_supported: [RecommendRepairAction, RecommendConflictPause]
+evidence_required: [RecentConflictEvents, Perspectives]
+knowledge_sources: [RelationshipInterventions]
+models:
+  preferred_capability: safety_aware_reasoning
+  allowed_router_profiles: [BALANCED_REASONING]
+tools: [ReadRelationshipContext, SearchKnowledge]
+memory:
+  session: true
+  episodic: true
+  formal_growth_state_read_only: true
+allowed_actions: []
+forbidden_actions: [AssignBlame, ClinicalDiagnosis, DirectProfileMutation]
+autonomy_level: AL1
+human_gate:
+  required_for: [VIOLENCE_OR_ABUSE_SIGNAL, HIGH_RISK_SIGNAL]
+  policy_refs: [HUMAN_GATE_POLICY]
+eval:
+  suite_ids: [RELATIONSHIP_PROFESSIONAL, FAMILY_SAFETY]
+  min_overall_score: 0.88
+owner: AI_PRODUCT

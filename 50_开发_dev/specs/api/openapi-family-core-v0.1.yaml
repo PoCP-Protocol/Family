@@ -1,0 +1,74 @@
+openapi: 3.1.0
+info:
+  title: Family Core API
+  version: 0.1.0
+paths:
+  /families:
+    post:
+      operationId: CreateFamily
+      summary: Create canonical Family account
+      responses:
+        "201": {description: Created}
+        "400": {description: Invalid schema}
+        "401": {description: Unauthorized}
+        "409": {description: Idempotency conflict}
+  /families/{familyId}/parents:
+    post:
+      operationId: AddParent
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "201": {description: Parent added}
+  /families/{familyId}/children:
+    post:
+      operationId: AddChild
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "201": {description: Child added}
+  /families/{familyId}/relationships:
+    post:
+      operationId: CreateFamilyRelationship
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "201": {description: Relationship created}
+  /families/{familyId}/life-stages:
+    post:
+      operationId: AssignLifeStage
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "201": {description: LifeStage assigned}
+  /families/{familyId}/consents:
+    post:
+      operationId: GrantConsent
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "201": {description: Consent granted}
+  /families/{familyId}:
+    get:
+      operationId: GetFamilyAggregate
+      parameters:
+        - in: path
+          name: familyId
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200": {description: Family aggregate}

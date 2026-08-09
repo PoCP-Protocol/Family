@@ -1,0 +1,14 @@
+version: 0.1
+event: ConsentGranted
+immutable: true
+required_fields:
+  - event_id
+  - family_id
+  - consent_id
+  - purpose
+  - occurred_at
+  - actor_id
+  - correlation_id
+metadata_required:
+  - source
+  - schema_version

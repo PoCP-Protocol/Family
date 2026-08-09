@@ -1,0 +1,57 @@
+version: 0.1
+enums:
+  FamilyStatus:
+    - ACTIVE
+    - INACTIVE
+    - ARCHIVED
+  PersonRole:
+    - PARENT
+    - CHILD
+  ParentRole:
+    - MOTHER
+    - FATHER
+    - GUARDIAN
+    - OTHER_GUARDIAN
+  RelationshipType:
+    - PARENT_CHILD
+    - SPOUSE
+    - SIBLING
+    - GUARDIAN_CHILD
+    - OTHER
+  LifeStageCode:
+    - EARLY_ADOLESCENCE_12_15
+  GrowthDomain:
+    - CHILD
+    - PARENT
+    - RELATIONSHIP
+  GrowthState:
+    - EMERGING
+    - DEVELOPING
+    - PRACTICING
+    - STABILIZING
+  EvidenceType:
+    - OBSERVATION
+    - ASSESSMENT
+    - PERSPECTIVE
+    - SERVICE_RECORD
+    - ACTION_EVENT
+    - EXTERNAL_RESEARCH
+  ConsentPurpose:
+    - SERVICE
+    - ASSESSMENT
+    - AI_PERSONALIZATION
+    - GROWTH_TRACKING
+    - EXPERT_SERVICE
+    - RESEARCH
+    - MODEL_IMPROVEMENT
+    - CONTENT_PUBLICATION
+  ConsentStatus:
+    - GRANTED
+    - WITHDRAWN
+    - EXPIRED
+  ActorType:
+    - PARENT
+    - CHILD
+    - STAFF
+    - SYSTEM
+    - AI

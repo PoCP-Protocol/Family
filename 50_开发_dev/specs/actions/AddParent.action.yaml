@@ -1,0 +1,18 @@
+version: 0.1
+action: AddParent
+purpose: Add a parent/guardian member to an existing Family.
+input:
+  required: [family_id, role, display_name, idempotency_key]
+preconditions:
+  - family_exists
+  - actor_has_family_manage_permission
+effects:
+  - create_parent_person
+  - link_person_to_family
+  - emit_FamilyMemberAdded
+  - append_audit_record
+idempotency:
+  required: true
+forbidden:
+  - infer_parent_growth_profile
+audit: required

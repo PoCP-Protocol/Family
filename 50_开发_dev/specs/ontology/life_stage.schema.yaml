@@ -1,0 +1,15 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: life_stage.schema.yaml
+title: LifeStageAssignment
+type: object
+additionalProperties: false
+required: [assignment_id, family_id, child_id, life_stage_code, effective_from]
+properties:
+  assignment_id: {type: string, format: uuid}
+  family_id: {type: string, format: uuid}
+  child_id: {type: string, format: uuid}
+  life_stage_code:
+    enum: [EARLY_ADOLESCENCE_12_15]
+  effective_from: {type: string, format: date-time}
+  effective_to: {type: [string, "null"], format: date-time}
+  source: {type: string}

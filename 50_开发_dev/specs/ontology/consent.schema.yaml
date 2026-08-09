@@ -1,0 +1,34 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: consent.schema.yaml
+title: Consent
+type: object
+additionalProperties: false
+required:
+  - consent_id
+  - family_id
+  - subject_person_id
+  - guardian_person_id
+  - purpose
+  - status
+  - policy_version
+  - granted_at
+properties:
+  consent_id: {type: string, format: uuid}
+  family_id: {type: string, format: uuid}
+  subject_person_id: {type: string, format: uuid}
+  guardian_person_id: {type: string, format: uuid}
+  purpose:
+    enum:
+      - SERVICE
+      - ASSESSMENT
+      - AI_PERSONALIZATION
+      - GROWTH_TRACKING
+      - EXPERT_SERVICE
+      - RESEARCH
+      - MODEL_IMPROVEMENT
+      - CONTENT_PUBLICATION
+  status:
+    enum: [GRANTED, WITHDRAWN, EXPIRED]
+  policy_version: {type: string, minLength: 1}
+  granted_at: {type: string, format: date-time}
+  withdrawn_at: {type: [string, "null"], format: date-time}

@@ -1,0 +1,22 @@
+version: 0.1
+action: GrantConsent
+purpose: Record purpose-specific guardian consent for a subject.
+input:
+  required:
+    - family_id
+    - subject_person_id
+    - guardian_person_id
+    - purpose
+    - policy_version
+    - idempotency_key
+preconditions:
+  - subject_belongs_to_family
+  - guardian_belongs_to_family
+  - guardian_is_authorized_for_subject
+effects:
+  - create_or_version_consent
+  - emit_ConsentGranted
+  - append_audit_record
+policy:
+  service_consent_does_not_imply_model_improvement_consent: true
+audit: required

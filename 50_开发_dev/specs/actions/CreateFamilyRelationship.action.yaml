@@ -1,0 +1,15 @@
+version: 0.1
+action: CreateFamilyRelationship
+purpose: Create an explicit relationship between two members of the same Family.
+input:
+  required: [family_id, person_a_id, person_b_id, relationship_type, idempotency_key]
+preconditions:
+  - both_persons_exist
+  - both_persons_belong_to_same_family
+effects:
+  - create_relationship
+  - emit_FamilyRelationshipCreated
+  - append_audit_record
+constraints:
+  - person_a_id != person_b_id
+audit: required

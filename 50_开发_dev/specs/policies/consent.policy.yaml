@@ -1,0 +1,8 @@
+version: 0.1
+policy: PURPOSE_SPECIFIC_CONSENT
+rules:
+  - Consent is purpose-specific.
+  - SERVICE does not imply MODEL_IMPROVEMENT.
+  - RESEARCH does not imply CONTENT_PUBLICATION.
+  - Withdrawal must not delete audit history, but must stop future processing where applicable.
+  - Child-related processing must verify guardian authorization.

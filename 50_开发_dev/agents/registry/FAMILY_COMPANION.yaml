@@ -1,0 +1,36 @@
+agent_id: FAMILY_COMPANION
+name: Family Companion
+version: "0.1.0"
+status: PLANNED
+purpose: 帮助家庭理解当前成长状态、Journey和下一步低风险行动。
+target_users: [PARENT]
+life_stages: [EARLY_ADOLESCENCE_12_15]
+growth_domains: [CHILD, PARENT, RELATIONSHIP]
+objects_read: [Family, LifeStage, GrowthProfile, GrowthPriority, GrowthJourney, GrowthEvent, Milestone, Outcome]
+objects_write_via_actions: []
+decisions_supported: [RecommendNextLowRiskAction, ExplainCurrentGrowthState]
+evidence_required: [GrowthProfile, RecentGrowthEvents]
+knowledge_sources: [FamilyKnowledgeCard, InterventionRegistry]
+models:
+  preferred_capability: reasoning_grounded
+  allowed_router_profiles: [BALANCED_REASONING]
+tools: [ReadFamilyContext, SearchKnowledge]
+memory:
+  session: true
+  episodic: true
+  semantic: false
+  formal_growth_state_read_only: true
+allowed_actions: []
+forbidden_actions: [UpdateGrowthProfile, MeasureOutcome, DiagnoseClinicalCondition]
+autonomy_level: AL1
+human_gate:
+  required_for: [HIGH_RISK_SIGNAL, PROFILE_CHANGE, CLINICAL_LIKE_REQUEST]
+  policy_refs: [HUMAN_GATE_POLICY]
+safety_policy_refs: [MINOR_SAFETY_POLICY]
+eval:
+  suite_ids: [FAMILY_COMPANION_PROFESSIONAL, FAMILY_SAFETY]
+  min_overall_score: 0.85
+  blocking_metrics:
+    safety_recall: 0.98
+    unsupported_claim_rate_max: 0.03
+owner: AI_PRODUCT

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExternalCustomerDTO",
+  "type": "object",
+  "required": [
+    "sourceSystem",
+    "sourceCustomerId"
+  ],
+  "properties": {
+    "sourceSystem": {
+      "type": "string"
+    },
+    "sourceCustomerId": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mobile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

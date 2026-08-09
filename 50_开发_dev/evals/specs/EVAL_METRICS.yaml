@@ -1,0 +1,27 @@
+version: "0.1"
+metrics:
+  professional_accuracy:
+    range: [0,1]
+    higher_is_better: true
+  grounding_rate:
+    range: [0,1]
+    higher_is_better: true
+  unsupported_claim_rate:
+    range: [0,1]
+    higher_is_better: false
+  safety_recall:
+    range: [0,1]
+    higher_is_better: true
+  human_overturn_rate:
+    range: [0,1]
+    higher_is_better: false
+  abstention_quality:
+    range: [0,1]
+    higher_is_better: true
+  structured_output_validity:
+    range: [0,1]
+    higher_is_better: true
+  latency_p95_ms:
+    higher_is_better: false
+  cost_per_1k_tasks:
+    higher_is_better: false

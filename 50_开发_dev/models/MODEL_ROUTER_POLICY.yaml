@@ -1,0 +1,64 @@
+version: "0.1"
+router_id: FAMILY_MODEL_ROUTER
+
+profiles:
+  BALANCED_REASONING:
+    required_capabilities: [reasoning, structured_output]
+    max_latency_ms: 15000
+    max_cost_class: MEDIUM
+    fallback_allowed: true
+
+  HIGH_REASONING:
+    required_capabilities: [reasoning, long_context, structured_output]
+    max_latency_ms: 30000
+    max_cost_class: HIGH
+    fallback_allowed: true
+
+  STRUCTURED_PLANNING:
+    required_capabilities: [reasoning, structured_output]
+    max_latency_ms: 20000
+    max_cost_class: MEDIUM
+    fallback_allowed: true
+
+routing_rules:
+  - rule_id: R001
+    when:
+      data_class: HIGHLY_SENSITIVE
+    route:
+      prefer: [LOCAL_PRIVATE]
+      fallback: []
+    on_no_model: ABSTAIN
+
+  - rule_id: R002
+    when:
+      task_risk: HIGH
+    route:
+      prefer: [PRIMARY_REASONING]
+    require_human_gate: true
+
+  - rule_id: R003
+    when:
+      task_type: SIMPLE_EXTRACTION
+      data_class: INTERNAL
+    route:
+      prefer: [FAST_GENERAL, PRIMARY_REASONING]
+
+  - rule_id: R004
+    when:
+      task_type: FAMILY_REASONING
+    route:
+      prefer: [PRIMARY_REASONING]
+      fallback: [FAST_GENERAL]
+
+selection_score:
+  formula: >
+    0.35*quality_score +
+    0.25*safety_score +
+    0.15*grounding_score +
+    0.10*latency_score +
+    0.10*cost_score +
+    0.05*availability_score
+  hard_filters:
+    - model.status in [APPROVED, CANDIDATE]
+    - model supports required capabilities
+    - data_class <= model.data_class_max

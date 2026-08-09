@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FamilyGoldenCase",
+  "type": "object",
+  "required": [
+    "case_id",
+    "suite_id",
+    "input",
+    "expected",
+    "rubric",
+    "risk_level"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "suite_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "risk_level": {
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "input": {
+      "type": "object"
+    },
+    "context": {
+      "type": "object"
+    },
+    "expected": {
+      "type": "object"
+    },
+    "rubric": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "criterion",
+          "weight"
+        ],
+        "properties": {
+          "criterion": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "blocking": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "forbidden": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
