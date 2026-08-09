@@ -1,3 +1,40 @@
+# Family 180天实施计划 V2.0
+
+> 180天的目标不是交付“大而全平台”，而是让现有家庭教育核心业务进入Family统一账户，跑通第一条真实成长闭环，让AI进入真实交付，并开始产生Causal Episode。
+
+# 1. 六个里程碑
+
+- **M1 Family Core Running**：Family、Parent、Child、Relationship、LifeStage、Consent可运行。
+- **M2 First Growth Loop Running**：Profile→Priority→Intervention→Action→Outcome跑通。
+- **M3 AI in the Loop**：Family/Parent/Human Copilot进入交付。
+- **M4 Real Family Pilot**：30→100家庭真实运行。
+- **M5 Causal Learning Starts**：开始结构化Causal Episode。
+- **M6 World Model Foundation**：具备WM3→WM4基础。
+
+# 2. 六阶段
+
+## Day 0–30｜Foundation
+方法论、现状盘点、Ontology、Growth Model、Outcome、Consent/Safety、第一批Intervention。
+
+## Day 31–60｜Family Core
+Family Account、成员关系、历史客户映射、Growth Onboarding、三张Profile、Timeline、CRM/LMS基础集成。
+
+## Day 61–90｜Growth Vertical Slice
+Priority、90-Day Journey、Intervention、Action、Event、Milestone、Outcome、Family Home、Parent Growth。
+
+## Day 91–120｜AI & Knowledge
+Model Gateway、Family Companion、Parent Companion、Growth Planner、Human Copilot、Knowledge Foundry、Golden Set、Safety Gate。
+
+## Day 121–150｜Platformization & Pilot
+Advisor Workbench、Membership、Expert、Community/Activity、30→100家庭Pilot。
+
+## Day 151–180｜Causal Foundation
+Causal Ontology、Research Registry、24维Crosswalk、Causal Evidence Graph、CausalEpisode、State Model baseline、World Model Roadmap。
+
+---
+
+# 3. 详细WBS
+
 # 05｜Family 180天实施 WBS
 ## 26周实施计划 V1.0
 
@@ -158,8 +195,6 @@ Professional/Safety/Adversarial达标。
 ## G5 Pilot Gate
 人工支持、回滚、风险流程就绪。
 
-> **【V1.1 裁决｜ISSUES.md C1】** G5 增设前置条件:**`25_研究` 的 BM 线须已出首次裁决**。Pilot 前,商业阶梯(21天→90天→年会员)只作 Hypothesis,不写入 Ontology 的 Fact 层、不作既定前提 —— 否则 Pilot 的商业数字在 BM 线裁决前无法解释归因。当前 BM 线 0 条 supported。
-
 ## G6 Scale Gate
 真实Outcome数据质量达到要求后才能扩量。
 
@@ -188,12 +223,6 @@ Professional/Safety/Adversarial达标。
 
 # 6. 任务级WBS
 
-> **【V1.1 裁决要点｜ISSUES.md A1/A2/A4,详见 `07_Family实施方法论` §6】**
-> - **A1**:`4.1 Model Gateway` 的**最小版**(仅 version+cost+audit+structured output)提前到 **W5(与 `2.1` 同批)**,任何生产 LLM 调用一律经它;全功能路由/fallback 仍留 `4.1`。`2.6 GrowthProfile Engine` 与 `3.3 Intervention Selection` **一期以规则/确定性逻辑为主**,LLM 仅限离线辅助、不进生产路径。
-> - **A2**:DoD **分层生效** —— Phase 1–3 用 **DoD-Core**(功能/契约/Schema/权限/Audit/Evidence/测试/Observability/Rollback/Outcome),Eval 三集(Golden/Safety/Adversarial)自 **Phase 4** 起强制为 **DoD-AI**。
-> - **A4**:新增 `3.0 Journey起点基线测量`(见下表),补齐 `3.7 Outcome` 所需 baseline 来源。
-> - 任务总数由 53 → **54**(新增 3.0)。
-
 | WBS | 阶段 | 周 | 任务 | 关键交付 | 依赖 | Owner | 优先级 | 验收标准 | Gate |
 |---|---|---|---|---|---|---|---|---|---|
 | 1.1 | Foundation | W1 | FGAIM项目启动与治理 | 项目章程/RACI/评审机制 | 无 | PM/架构 | P0 | Owner和Gate明确 | G0 |
@@ -213,7 +242,6 @@ Professional/Safety/Adversarial达标。
 | 2.6 | Family Core | W6-W8 | GrowthProfile Engine V1 | 3类Profile | 2.5/1.7 | Backend/AI | P0 | 三Profile并列输出 | G2 |
 | 2.7 | Family Core | W7-W8 | Family Timeline V0 | 历史服务/成长时间线 | 2.2/2.4 | Backend/FE | P1 | 历史数据可展示来源 | G2 |
 | 2.8 | Family Core | W7-W8 | CRM/LMS/Order适配器 | Integration Adapters | 1.3 | Platform | P0 | 关键数据可同步 | G2 |
-| 3.0 | Vertical Slice | W9 | **Journey起点基线测量(V1.1新增)** | Baseline Outcome | 1.7/2.5 | Data/教研 | P0 | 每重点维度有起点baseline;**禁止从历史打卡推导**;provenance=self_report/primary_real | G3 |
 | 3.1 | Vertical Slice | W9 | Growth Priority | Priority决策 | 2.6 | Backend/AI | P0 | 最多2×3优先项 | G3 |
 | 3.2 | Vertical Slice | W9-W10 | 90-Day Journey Engine | 四阶段Journey | 3.1 | Backend | P0 | 状态转换可审计 | G3 |
 | 3.3 | Vertical Slice | W9-W10 | Intervention Selection | Intervention匹配 | 1.9/3.1 | Domain/AI | P0 | 推荐保留Evidence | G3 |
@@ -250,3 +278,102 @@ Professional/Safety/Adversarial达标。
 | 6.7 | Causal | W25-W26 | Intervention Effect Baseline | Effect analysis | 6.4/6.5 | Data Scientist | P1 | 不越权宣称因果 | G6 |
 | 6.8 | Causal | W26 | 180天总验收 | V1 Release Review | 全部 | Steering | P0 | 六大目标完成 | G6 |
 | 6.9 | Causal | W26 | World Model V2 Roadmap | 下一阶段路线 | 6.4-6.7 | AI Architect | P1 | WM4→WM5条件明确 | G6 |
+
+
+---
+
+# 4. 项目门禁与验收
+
+# 06｜FGAIM 项目门禁与验收清单
+
+# Definition of Ready
+
+任何Story进入开发前必须回答：
+
+- [ ] 当前LifeStage是什么？
+- [ ] 属于Child / Parent / Relationship哪个Domain？
+- [ ] 涉及哪个Object？
+- [ ] 支持哪个Decision？
+- [ ] Evidence是什么？
+- [ ] 是否涉及Perspective/Hypothesis？
+- [ ] Recommendation是什么？
+- [ ] 最终Named Action是什么？
+- [ ] Human Gate是什么？
+- [ ] Outcome是什么？
+- [ ] 如何Eval？
+- [ ] 是否涉及Consent/Safety？
+
+关键项缺失不得进入Sprint。
+
+---
+
+# Definition of Done
+
+- [ ] 功能可运行
+- [ ] Domain Contract通过
+- [ ] Schema校验通过
+- [ ] 权限正确
+- [ ] Audit完整
+- [ ] Evidence可追溯
+- [ ] AI版本可追踪
+- [ ] Unit/Integration Test通过
+- [ ] Golden Set通过
+- [ ] Safety Set通过
+- [ ] Adversarial Set通过
+- [ ] Observability可用
+- [ ] Rollback可用
+- [ ] Outcome可记录
+
+---
+
+# Architecture Review
+
+## Value
+- [ ] 有明确家庭价值
+- [ ] 有明确Outcome
+
+## Ontology
+- [ ] Object/Link/State/Event正确
+- [ ] Perspective != Fact
+- [ ] Recommendation != Decision != Action
+
+## Data
+- [ ] 来源合法
+- [ ] Consent明确
+- [ ] 数据最小化
+- [ ] Lineage存在
+
+## AI
+- [ ] Model Gateway
+- [ ] Structured Output
+- [ ] Human Gate
+- [ ] Evaluation
+
+## Platform
+- [ ] 不绑定单一模型
+- [ ] 不绑定单一Ontology平台
+- [ ] Commodity capability优先集成
+
+## Safety
+- [ ] 未成年人数据处理正确
+- [ ] 高风险信号有升级路径
+
+---
+
+# Release Gate
+
+DEV → TEST → EVAL → PILOT → PROD
+
+禁止DEV直发PROD。
+
+每次AI发布检查：
+- Domain
+- Professional
+- Grounding
+- Safety
+- Adversarial
+- Human review
+- Latency
+- Cost
+- Traceability
+- Rollback

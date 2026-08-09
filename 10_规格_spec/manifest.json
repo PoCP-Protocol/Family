@@ -1,15 +1,19 @@
 {
-  "package": "Family_家庭成长AI平台_实施开发包_V1.0",
-  "version": "1.0",
+  "package": "Family_家庭成长AI平台_完整实施资料_V2.0",
+  "version": "2.1",
   "main_documents": [
-    "01_Family总体产品架构.md",
-    "02_Family业务架构与Ontology.md",
-    "03_Family技术架构.md",
-    "04_Family现有业务迁移矩阵.md",
-    "05_Family_180天实施WBS.md",
-    "06_FGAIM项目门禁与验收清单.md",
-    "07_Family实施方法论.md"
+    "01_实施方法论/Family_FGAIM_实施方法论_V2.0.md",
+    "02_总体蓝图/Family_总体蓝图方案_V2.0.md",
+    "03_详细方案/Family_详细实施方案_V2.0.md",
+    "04_实施计划/Family_180天实施计划_V2.0.md"
   ],
-  "migration_rows": 55,
-  "wbs_tasks": 54
+  "attachments": [
+    "05_附件与研发规范/START_HERE_FOR_CLAUDE.md",
+    "05_附件与研发规范/Family_现有业务迁移矩阵.csv",
+    "05_附件与研发规范/FGAIM_项目门禁与验收清单.md",
+    "05_附件与研发规范/Family_技术架构实施规范.md"
+  ],
+  "added": [
+    "02_总体蓝图/Family_整体技术架构_V2.0.md"
+  ]
 }

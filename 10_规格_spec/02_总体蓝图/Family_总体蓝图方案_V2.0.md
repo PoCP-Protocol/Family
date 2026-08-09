@@ -1,3 +1,93 @@
+# Family 家庭成长AI平台总体蓝图 V2.0
+
+> 本文件回答：Family最终建设成什么、各层之间是什么关系、现有业务怎样进入未来平台。它不进入代码细节。
+
+# 1. 战略定义
+
+Family建设的是 **Family Growth AI Platform（家庭成长智能平台）**。经营对象从一次成交的课程客户升级为持续成长的Family。
+
+核心价值主张：
+
+> **陪孩子长大，也陪家长重新成长一次。**
+
+终局能力：
+
+```text
+Family Digital Twin
++ Family Growth OS
++ Intervention Library
++ Human Service OS
++ AI Intelligence
++ Knowledge & Evidence
++ Outcome Database
++ Causal Intelligence
++ Family Growth World Model
+```
+
+# 2. 七层总体架构
+
+```text
+① FAMILY EXPERIENCE
+家长端 / 孩子端 / 顾问端 / 专家端 / 管理端
+        ↓
+② BUSINESS PLATFORM
+课程 / 训练营 / 会员 / 订单 / 社群 / 活动 / 服务
+        ↓
+③ FAMILY GROWTH OS
+Family / Profile / Journey / Intervention / Action / Outcome
+        ↓
+④ FAMILY AI PLATFORM
+Agent / Decision / Model / Memory / Recommendation
+        ↓
+⑤ KNOWLEDGE & DATA PLATFORM
+Knowledge / Evidence / Event / Ontology / Vector / Graph
+        ↓
+⑥ HUMAN SERVICE PLATFORM
+顾问 / 助教 / 专家 / 教研 / 质检 / 调度
+        ↓
+⑦ CAUSAL & WORLD MODEL
+State / Transition / Intervention / Policy / Simulation
+```
+
+# 3. One Family Account
+
+所有系统围绕唯一 `family_id` 工作。CRM中的客户、LMS中的学员、会员、订单、服务、测评、AI对话最终都映射回Family。
+
+Family Digital Twin至少包含：Parent、Child、Relationship、LifeStage、三类Growth Profile、Journey、Intervention、Action、Event、Perspective、Evidence、Milestone、Outcome、Membership、Service、Timeline。
+
+# 4. 现有体系进入Family的基本映射
+
+```text
+课程 → Knowledge + Intervention
+测评 → Growth Onboarding
+训练营 → Growth Program
+21天挑战 → Growth Cycle
+90天陪跑 → Growth Journey
+助教 → Growth Companion
+顾问 → Human Growth Advisor
+专家 → Specialist Intervention
+社群 → Growth Community
+活动 → Family Activity
+会员 → Family Growth Membership
+打卡 → Action Completion Event
+成长报告 → Family Growth Review
+客户后台 → Family Account
+案例 → Outcome Case
+裂变 → Growth Referral
+```
+
+# 5. 三年演进
+
+**Year 1 Family Digitalization**：客户→Family、Profile、Journey、Outcome、现有业务迁移。
+
+**Year 2 Family Intelligence**：Agent、Knowledge、Intervention、会员、Causal Learning。
+
+**Year 3 Family Ecosystem & World Model**：专家/城市/机构生态、Simulation与Adaptive Policy。
+
+---
+
+# 6. 产品蓝图详细结构
+
 # 01｜Family 总体产品架构
 ## Family Growth AI Platform Product Architecture V1.0
 
