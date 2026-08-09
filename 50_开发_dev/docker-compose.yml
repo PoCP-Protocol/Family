@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: family_pg
+    environment:
+      POSTGRES_USER: family
+      POSTGRES_PASSWORD: family
+      POSTGRES_DB: family_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - family_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family -d family_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  family_pg_data:

@@ -18,7 +18,7 @@ as_of: 2026-08-09
 
 ## Engineering Assets Prepared
 
-- AI Development OS V1.0
+- AI Development OS V1.1（工程契约）
 - Core ontology schemas V0.1
 - M1 Action Contracts V0.1
 - API Contract V0.1
@@ -31,8 +31,18 @@ M1 — Family Core Running
 
 ## In Progress
 
-- Repo Audit
-- Engineering Bootstrap
+- Engineering Contract Validation (TASK-002)
+
+## Completed
+
+- TASK-000 Repo Audit → reports/REPO_AUDIT_REPORT.md
+- TASK-001 Engineering Bootstrap → reports/BOOTSTRAP_REPORT.md（monorepo/api/health/audit/迁移机制;build/lint/test/typecheck/启动 实测通过）
+
+## Known Issues
+
+- 本机 Docker 守护未运行、psql 缺失 → 迁移对活库的实跑与集成测试延后至 TASK-002(Docker 启动后)
+- last_completed_task: TASK-001_ENGINEERING_BOOTSTRAP
+- 注:Sprint 0 未 PASS(TASK-002 为门禁),不得进入 TASK-101
 
 ## Not Started
 
