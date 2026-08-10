@@ -3,24 +3,27 @@
 sprint_id: M2-WAVE3
 sprint_name: M2 Wave 3 — Observe & Review
 sprint_goal: Complete the first deterministic Family Growth Loop with Observation, Review, Timeline, and Next-Step Decision
-status: PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
+status: CLOSED
 
-## Active Wave3 Phase B Status
+## Wave3 Closed Status
 
 ```text
-M2_WAVE3 = IN_PROGRESS_NOT_CLOSED
+M2_WAVE3 = CLOSED
 PHASE_A_CONTRACT_FREEZE = PASS
 API_REAL_POSTGRESQL_HTTP_E2E = PASS_12_TESTS
 WEB_UNIT_TESTS = PASS_19_TESTS
 WEB_TYPECHECK = PASS
 BROWSER_F10_F11_GATE = PASS_REAL_API_DESKTOP_MOBILE
-GOVERNANCE_PRE_REVIEW_PACKET = CREATED_NOT_SIGNED
 AI06_INDEPENDENT_GOVERNANCE_REVIEW = PASS
 AI07_INDEPENDENT_ARCHITECTURE_PRODUCT_REVIEW = PASS
-GITHUB_CI = PASS_RUN_31437889629
-GITHUB_REMOTE_CONVERGENCE = PASS_D931927
-READY_FOR_M3 = NO
-START_M3 = NO
+GITHUB_CI = PASS_RUN_31438263608
+GITHUB_REMOTE_CONVERGENCE = PASS_758B1ED_BASELINE
+FINAL_ARCHITECT_SIGNOFF = PASS
+WAVE3_BLOCKERS = 0
+READY_FOR_M3_RUNTIME = NO
+START_M3_RUNTIME = NO
+M3_RUNTIME = NOT_AUTHORIZED
+F12_AI = NOT_STARTED
 ```
 
 Latest Wave3 browser evidence:
@@ -30,10 +33,11 @@ Latest Wave3 browser evidence:
 - `reports/m2/wave3/AI06_GOVERNANCE_REVIEW_REPORT.md`
 - `reports/m2/wave3/AI07_ARCHITECTURE_PRODUCT_REVIEW_REPORT.md`
 
-Current closure blockers:
+Closure record:
 
-1. Final Wave3 closure certificate must be reviewed by the chief architect.
-2. `PROJECT_STATUS.md` has unrelated dirty worktree changes and must be reconciled before final closure commit.
+1. Final Wave3 closure certificate reviewed and signed off by the chief architect: FINAL_ARCHITECT_SIGNOFF = PASS.
+2. `PROJECT_STATUS.md` reconciled from authoritative remote HEAD `758b1ed` with targeted Wave3 closure edits; unrelated dirty worktree files left untouched.
+3. WAVE3_BLOCKERS = 0. Next step is a separate M3 / Famili Principal Intelligence Architecture & Contract Gate; M3 runtime remains NOT_AUTHORIZED.
 
 ---
 
@@ -199,7 +203,7 @@ PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
 Active task:
 
 ```text
-M2-WAVE3-GOVERNANCE-CI-REMOTE-CLOSURE
+none; Wave3 CLOSED; awaiting separate M3 Contract / Architecture Authorization Gate
 ```
 
 Stage ruling:
@@ -248,22 +252,21 @@ Approved Phase A outputs:
 - `reports/m2/wave3/M2_WAVE3_CONTRACT_FREEZE_V1.md`
 - `reports/m2/wave3/M2_WAVE3_SHARED_FILE_MATRIX.md`
 
-Wave3 deterministic F10/F11 implementation and browser validation have passed. Remaining work is governance, CI, and remote convergence; M3 runtime remains closed.
+Wave3 deterministic F10/F11 implementation, browser validation, governance (AI06/AI07), GitHub Required Gates, remote convergence, and final architect signoff have all passed. Wave3 is CLOSED; M3 runtime remains closed and requires a separate authorization gate.
 
 Stage ruling:
 
 ```text
 M2_WAVE_1 = CLOSED
-M2-103 = PASS
 M2_WAVE_2 = CLOSED
-M2-104 = LOCAL_GATE_PASS
-M2-105 = LOCAL_GATE_PASS
-M2_WAVE_2 = PASS
-READY_FOR_WAVE2_INTEGRATION = YES
-M2_WAVE3 = IN_PROGRESS_NOT_CLOSED
-READY_FOR_M3 = NO
-START_M3 = NO
-STATE_ALIGNMENT = PASS_WAVE3_AI06_AI07_DONE_NOT_CLOSED
+M2_WAVE_3 = CLOSED
+M2_DETERMINISTIC_GROWTH_LOOP = CLOSED
+FINAL_ARCHITECT_SIGNOFF = PASS
+WAVE3_BLOCKERS = 0
+READY_FOR_M3_RUNTIME = NO
+START_M3_RUNTIME = NO
+M3_RUNTIME = NOT_AUTHORIZED
+STATE_ALIGNMENT = PASS_WAVE3_CLOSED_M3_NOT_AUTHORIZED
 ```
 
 Historical Wave2 integration streams:

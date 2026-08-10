@@ -1,9 +1,9 @@
 # Family Project Status
 
-status_version: 3
-phase: M2_WAVE_3_OBSERVE_AND_REVIEW
-milestone: PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
-as_of: 2026-08-10
+status_version: 4
+phase: M2_WAVE_3_CLOSED
+milestone: M2_DETERMINISTIC_GROWTH_LOOP_CLOSED
+as_of: 2026-08-11
 
 ## Completed Design Baseline
 
@@ -27,14 +27,12 @@ as_of: 2026-08-10
 
 ## Current Milestone
 
-M2 Wave 3 — OBSERVE & REVIEW / Phase B Product Closure
+M2 Wave 3 — OBSERVE & REVIEW — CLOSED
 
 ## In Progress
 
-- active_task: M2-WAVE3-RUNTIME-VALIDATION
-- current_wave: M2_WAVE_3_OBSERVE_AND_REVIEW
-- current_phase: PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
-- deterministic F10/F11 runtime and browser validation passed; independent governance, CI, and remote convergence remain pending
+- active_task: none; awaiting separate M3 / Famili Principal Intelligence Architecture & Contract Gate authorization
+- M2 Deterministic Growth Loop closed after final architect signoff
 
 ## Completed
 
@@ -69,44 +67,47 @@ M2 Wave 3 — OBSERVE & REVIEW / Phase B Product Closure
 - M2 Wave3 Web tests/typecheck → PASS_LOCAL
 - M2 Wave3 Browser F10/F11 Gate → PASS_REAL_API_DESKTOP_MOBILE
 - M2 Wave3 Governance Pre-Review Packet → CREATED_NOT_SIGNED
-- M2 Wave3 AI06 Independent Governance Review → PASS_NOT_CLOSED
-- M2 Wave3 AI07 Independent Architecture/Product Review → PASS_NOT_CLOSED
+- M2 Wave3 API Real PostgreSQL HTTP E2E = PASS_12_TESTS
+- M2 Wave3 Web = PASS_19_TESTS
+- M2 Wave3 Browser F10/F11 = PASS_REAL_API_DESKTOP_MOBILE
+- M2 Wave3 AI06 Governance = PASS
+- M2 Wave3 AI07 Independent Review = PASS
+- M2 Wave3 GitHub Required Gates = PASS
+- M2 Wave3 Remote Convergence = PASS
+- M2 Wave3 Final Architect Signoff = PASS
+- M2 Wave3 = CLOSED
 
 ## Current Ruling
 
 ```text
 M2_WAVE_1 = CLOSED
-M2-103 = PASS
 M2_WAVE_2 = CLOSED
-M2-104 = LOCAL_GATE_PASS
-M2-105 = LOCAL_GATE_PASS
-M2_WAVE_2 = PASS
-READY_FOR_WAVE2_INTEGRATION = YES
-READY_FOR_WAVE3 = YES
-START_WAVE3 = YES
-WAVE3 = AUTHORIZED
-M2_WAVE_3 = IN_PROGRESS_NOT_CLOSED
+M2_WAVE_3 = CLOSED
+M2_DETERMINISTIC_GROWTH_LOOP = CLOSED
+WAVE3_AI06 = PASS
+WAVE3_AI07 = PASS
+WAVE3_GITHUB_CI = PASS_RUN_31438263608
+WAVE3_REMOTE_CONVERGENCE = PASS_758B1ED_BASELINE
+FINAL_ARCHITECT_SIGNOFF = PASS
+WAVE3_BLOCKERS = 0
+READY_FOR_M3_RUNTIME = NO
+START_M3_RUNTIME = NO
 M3_RUNTIME = NOT_AUTHORIZED
-AI06 = PASS_WAVE2_HISTORICAL_NOT_WAVE3_SIGNOFF
-AI07 = PASS_WAVE2_HISTORICAL_NOT_WAVE3_SIGNOFF
-WAVE3_AI06 = PASS_INDEPENDENT_REVIEW
-WAVE3_AI07 = PASS_INDEPENDENT_REVIEW
-WAVE3_GITHUB_CI = PENDING
-WAVE3_REMOTE_CONVERGENCE = PENDING
-READY_FOR_M3 = NO
-START_M3 = NO
+F12_AI = NOT_STARTED
+MODEL_GATEWAY_RUNTIME = NOT_AUTHORIZED
+AGENT_RUNTIME = NOT_AUTHORIZED
+WORLD_MODEL = NOT_AUTHORIZED
+CAUSAL_ENGINE = NOT_AUTHORIZED
 V3_2_ARCHITECTURE_GATE = PASS
 NEW_TECHNICAL_ARCHITECTURE = V3.2 BUILD-TO-OPERATE
 CORE_ARCHITECTURE_REWRITE = NO
-current_phase = PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
-active_task = M2-WAVE3-RUNTIME-VALIDATION
-STATE_ALIGNMENT = PASS_WAVE3_AI06_AI07_VERIFIED_NOT_CLOSED_M3_NOT_AUTHORIZED
+STATE_ALIGNMENT = PASS_WAVE3_CLOSED_M3_NOT_AUTHORIZED
 ```
 
 ## Known Issues
 
-- last_completed_task: M2_WAVE3_BROWSER_F10_F11_GATE_PASS
-- current_gate_blocker: Wave3 GitHub CI pass and GitHub remote convergence remain pending before closure.
+- last_completed_task: M2_WAVE3_FINAL_ARCHITECT_SIGNOFF_AND_CLOSURE
+- current_gate_blocker: none for Wave3; next step is a separate M3 / Famili Principal Intelligence Architecture & Contract Gate.
 - Wave3 browser F10/F11 gate passed in a continuous fresh real API UI flow; current web app still does not hydrate the full journey after reload, so reload-based proof must not be counted as browser evidence.
 - Contract Freeze is now immutable baseline `M2_WAVE2_CF_V1`; changes require `CONTRACT_CHANGE_REQUEST` and AI-00 approval before any V2.
 - Existing unrelated/unintegrated worktree files must not be reverted during Wave 2 integration.
