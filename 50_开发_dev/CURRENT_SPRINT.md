@@ -17,8 +17,8 @@ BROWSER_F10_F11_GATE = PASS_REAL_API_DESKTOP_MOBILE
 GOVERNANCE_PRE_REVIEW_PACKET = CREATED_NOT_SIGNED
 AI06_INDEPENDENT_GOVERNANCE_REVIEW = PASS
 AI07_INDEPENDENT_ARCHITECTURE_PRODUCT_REVIEW = PASS
-GITHUB_CI = PENDING
-GITHUB_REMOTE_CONVERGENCE = PENDING
+GITHUB_CI = PASS_RUN_31437889629
+GITHUB_REMOTE_CONVERGENCE = PASS_D931927
 READY_FOR_M3 = NO
 START_M3 = NO
 ```
@@ -32,8 +32,8 @@ Latest Wave3 browser evidence:
 
 Current closure blockers:
 
-1. GitHub CI must pass after selective Wave3 commit/push.
-2. GitHub remote convergence must be verified before declaring Wave3 closed.
+1. Final Wave3 closure certificate must be reviewed by the chief architect.
+2. `PROJECT_STATUS.md` has unrelated dirty worktree changes and must be reconciled before final closure commit.
 
 ---
 

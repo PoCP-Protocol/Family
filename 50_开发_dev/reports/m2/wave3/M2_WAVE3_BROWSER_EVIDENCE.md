@@ -12,13 +12,13 @@ BROWSER_F10_F11_GATE = PASS
 M2_WAVE3 = IN_PROGRESS_NOT_CLOSED
 AI06_INDEPENDENT_GOVERNANCE_REVIEW = PASS
 AI07_INDEPENDENT_ARCHITECTURE_PRODUCT_REVIEW = PASS
-GITHUB_CI = PENDING
-GITHUB_REMOTE_CONVERGENCE = PENDING
+GITHUB_CI = PASS_RUN_31437889629
+GITHUB_REMOTE_CONVERGENCE = PASS_D931927
 READY_FOR_M3 = NO
 START_M3 = NO
 ```
 
-This file records browser evidence only. AI06 and AI07 are recorded separately in `AI06_GOVERNANCE_REVIEW_REPORT.md` and `AI07_ARCHITECTURE_PRODUCT_REVIEW_REPORT.md`; this file is not CI pass, remote convergence proof, or a Wave3 closure certificate.
+This file records browser evidence only. AI06 and AI07 are recorded separately in `AI06_GOVERNANCE_REVIEW_REPORT.md` and `AI07_ARCHITECTURE_PRODUCT_REVIEW_REPORT.md`; CI and remote convergence are recorded in `M2_WAVE3_RUNTIME_VALIDATION.md`. This file is not a Wave3 closure certificate.
 
 ## Fresh Browser Context
 

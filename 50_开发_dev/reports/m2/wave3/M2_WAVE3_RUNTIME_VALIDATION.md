@@ -16,8 +16,8 @@ BROWSER_F10_F11_GATE = PASS
 GOVERNANCE_PRE_REVIEW_PACKET = CREATED
 AI06_INDEPENDENT_GOVERNANCE_REVIEW = PASS
 AI07_INDEPENDENT_ARCHITECTURE_PRODUCT_REVIEW = PASS
-GITHUB_CI = PENDING
-GITHUB_REMOTE_CONVERGENCE = PENDING
+GITHUB_CI = PASS_RUN_31437889629
+GITHUB_REMOTE_CONVERGENCE = PASS_D931927
 M2_WAVE3 = IN_PROGRESS_NOT_CLOSED
 READY_FOR_M3 = NO
 START_M3 = NO
@@ -119,7 +119,29 @@ F12 Family AI = NOT_STARTED
 M3 Runtime = NOT_AUTHORIZED
 AI06 Governance Review = PASS_INDEPENDENT_REVIEW
 AI07 Independent Review = PASS_INDEPENDENT_REVIEW
-GitHub CI = PENDING
-GitHub Remote Convergence = PENDING
+GitHub CI = PASS_RUN_31437889629
+GitHub Remote Convergence = PASS_D931927
 M2 Wave3 Closure = NOT_CLOSED
 ```
+
+## GitHub Required Gate
+
+```text
+workflow = Family Required Gates
+run_id = 31437889629
+url = https://github.com/PoCP-Protocol/Family/actions/runs/31437889629
+commit = d931927868b14b90f946481d3cd5de5f8f6f10da
+display_title = Approve esbuild build script for CI
+event = push
+status = completed
+conclusion = success
+```
+
+Remote convergence after the CI policy fix:
+
+```text
+local_HEAD = d931927868b14b90f946481d3cd5de5f8f6f10da
+origin/wave/m2-wave2-integration = d931927868b14b90f946481d3cd5de5f8f6f10da
+```
+
+CI/remote evidence is now complete. Wave3 remains not closed until the closure certificate is committed and independently signed.
