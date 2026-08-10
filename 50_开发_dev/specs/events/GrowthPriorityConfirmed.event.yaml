@@ -1,0 +1,31 @@
+version: 0.2
+event: GrowthPriorityConfirmed
+immutable: true
+wave: M2
+compatibility_status: existing_runtime_event
+semantic_note: This event records completion of ConfirmGrowthPriority, not necessarily creation of a priority row. When decision is NO_PRIORITY_YET, priority must be null.
+required_fields:
+  - event_id
+  - occurred_at
+  - actor_id
+  - correlation_id
+  - family_id
+  - onboarding_id
+  - decision
+  - draft
+nullable_fields:
+  - priority
+payload_rules:
+  - decision_must_be_P03_R03_R04_R05_or_NO_PRIORITY_YET
+  - priority_required_when_decision_is_dimension
+  - priority_must_be_null_when_decision_is_NO_PRIORITY_YET
+  - draft_must_include_profile_refs
+  - draft_boundary_must_be_PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS
+boundaries:
+  - priority_is_not_profile
+  - priority_is_not_diagnosis
+  - priority_is_not_score
+  - recommendation_not_decision_not_action
+metadata_required:
+  - source
+  - schema_version
