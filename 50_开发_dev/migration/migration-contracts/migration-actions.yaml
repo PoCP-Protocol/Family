@@ -1,0 +1,24 @@
+version: 1.0
+status: PROPOSED_ACTION_CONTRACTS
+lm0_scope: design_only
+action_type: Admin-only Migration Action
+actions:
+  - ImportLegacyFamily
+  - ImportLegacyParent
+  - ImportLegacyChild
+  - ImportLegacyRelationship
+  - ImportLegacyEvidence
+  - ImportLegacyHistoricalAction
+  - LinkExternalReference
+requirements:
+  - Idempotency
+  - Audit
+  - Batch
+  - Provenance
+  - Transaction
+  - Validation
+forbidden:
+  - direct_sql_core_table_write
+  - production_loader_during_lm0
+  - action_without_migration_batch
+  - action_without_provenance

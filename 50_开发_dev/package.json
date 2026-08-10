@@ -12,7 +12,16 @@
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev --parallel",
     "db:migrate": "node tools/migrate.mjs up",
-    "db:migrate:status": "node tools/migrate.mjs status"
+    "db:migrate:status": "node tools/migrate.mjs status",
+    "migration": "node tools/legacy-migration/index.mjs",
+    "migration:discover": "node tools/legacy-migration/index.mjs discover",
+    "migration:discover:db": "node tools/legacy-migration/index.mjs discover:db",
+    "migration:discover:file": "node tools/legacy-migration/index.mjs discover:file",
+    "migration:discover:api": "node tools/legacy-migration/index.mjs discover:api",
+    "migration:profile": "node tools/legacy-migration/index.mjs profile",
+    "migration:identity-report": "node tools/legacy-migration/index.mjs identity-report",
+    "migration:consent-report": "node tools/legacy-migration/index.mjs consent-report",
+    "migration:report": "node tools/legacy-migration/index.mjs report"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

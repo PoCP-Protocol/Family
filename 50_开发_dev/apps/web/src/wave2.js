@@ -45,7 +45,7 @@ export function renderWave2Section(wave2) {
           <h2 id="wave2-title">7 天沟通练习工作台</h2>
           <p class="section-description">一次只练习一件小事，每天留下一点真实的过程记录。</p>
         </div>
-        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">已连接 · ${wave2.apiMode}</span>
+        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">${wave2.apiMode === 'real-api' ? '已连接' : '预备模式'} · ${wave2.apiMode}</span>
       </div>
       <p class="boundary-note">数据来自 Wave2 Named Action API；练习重点、行动和记录都不代表结果，也不是对家庭的判定。</p>
       <div class="wave2-grid">

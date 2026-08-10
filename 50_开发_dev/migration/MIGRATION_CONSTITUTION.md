@@ -1,4 +1,4 @@
-# Family Legacy Migration Constitution V1.0
+# Family Legacy Migration Constitution V1.1
 
 status: ACTIVE_FOR_LM0_DISCOVERY
 date: 2026-08-10
@@ -23,6 +23,19 @@ Legacy Systems
 -> Family Canonical Ontology
 ```
 
+The governing method is FLM - Family Legacy Migration Method:
+
+```text
+LM0 Discover
+LM1 Map
+LM2 Shadow
+LM3 Pilot
+LM4 Dual Run
+LM5 Cutover
+```
+
+Every legacy object must be classified as TRANSFORM, MIGRATE, INTEGRATE, RETAIN, or RETIRE. UNKNOWN is allowed only during LM0 discovery and cannot pass LM0 final gate for P0 systems.
+
 ## Red Lines
 
 - Legacy label must not become Fact.
@@ -34,6 +47,11 @@ Legacy Systems
 - Legacy WeChat or WeCom group membership must not become FamilyRelationship.
 - Same phone number must not automatically merge families.
 - Legacy minor data must not become AI training permission.
+- Legacy table shape must not force Family Ontology shape.
+- Legacy customer ID must not become Family ID.
+- Legacy student ID must not become Person ID.
+- Production Family writes are forbidden during LM0.
+- Shadow, Pilot, Dual Run, and Cutover are forbidden during LM0.
 
 ## Semantic Rules
 
@@ -65,4 +83,16 @@ External systems remain systems of record for:
 
 ## LM0 Scope
 
-LM0 may create catalogs, inventories, mapping drafts, control rules, and discovery reports. It must not create import code, mutate core database schema, or claim production migration readiness.
+LM0 may create catalogs, inventories, mapping drafts, control rules, read-only discovery tooling, validators, local or isolated staging models, and discovery reports. It must not create production import code, mutate core database schema, confirm mappings, run Shadow import, or claim production migration readiness.
+
+## Migration Data Zones
+
+- SOURCE: observed legacy system or export source.
+- RAW: immutable original data reference; full sensitive payload must not be copied into audit tables.
+- STAGING: normalized, deduped, identity-resolved, classified, and validated candidates.
+- QUARANTINE: unresolved, ambiguous, invalid, or unsafe records requiring review.
+- CANONICAL: Family domain objects written only through approved migration actions after gate approval.
+
+## Migration Control Model
+
+Future imports must be batch-scoped, idempotent, auditable, provenance-rich, and reversible by batch where domain rules permit. Direct SQL writes into Family core tables are forbidden. Production migration must go through Migration Command, Validation, Named Migration Action, and Family Domain.

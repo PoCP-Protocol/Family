@@ -10,6 +10,9 @@
 /** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
 /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
 import {
+  createFrozenActionFixture,
+  createFrozenInterventionFixture,
+  createFrozenPriorityFixture,
   createInitialWave2State,
   fetchActiveIntervention,
   fetchGrowthPriorityInsight,
@@ -28,10 +31,11 @@ import {
  * @property {string} familyId
  * @property {string} childId
  * @property {string} guardianPersonId
+ * @property {'pre-real-api' | 'real-api'} [wave2ApiMode]
  */
 
 /** @type {AppConfig} */
-const defaultConfig = {
+export const defaultConfig = {
   apiBaseUrl: 'http://localhost:3000',
   actorPersonId: '11111111-1111-4111-8111-111111111111',
   familyId: '22222222-2222-4222-8222-222222222222',
@@ -53,7 +57,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     summary: undefined,
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
-    wave2: createInitialWave2State('real-api'),
+    wave2: createInitialWave2State(config.wave2ApiMode ?? 'real-api'),
   };
 
   const render = () => {
@@ -276,6 +280,31 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
   };
 
+  const hydrateWave2 = async () => {
+    if (!state.onboarding) {
+      return;
+    }
+
+    if (state.wave2.apiMode === 'real-api') {
+      const [priorityInsight, intervention, activeIntervention, todayAction] = await Promise.all([
+        fetchGrowthPriorityInsight(config, state.onboarding.onboarding_id),
+        fetchListenBeforeRespondCard(config),
+        fetchActiveIntervention(config, state.onboarding.onboarding_id),
+        fetchTodayGrowthAction(config),
+      ]);
+      state.wave2.priorityInsight = priorityInsight;
+      state.wave2.intervention = intervention;
+      state.wave2.startedIntervention = activeIntervention ?? undefined;
+      state.wave2.todayAction = todayAction ?? undefined;
+      return;
+    }
+
+    state.wave2.priorityInsight = createFrozenPriorityFixture();
+    state.wave2.intervention = createFrozenInterventionFixture();
+    state.wave2.startedIntervention = undefined;
+    state.wave2.todayAction = undefined;
+  };
+
   const buildProfileDrafts = async () => {
     if (!state.onboarding) {
       return;
@@ -288,6 +317,9 @@ export function createGrowthApp(root, config = defaultConfig) {
     try {
       await submitBuildGrowthProfileDrafts(config, state.onboarding.onboarding_id);
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      if (state.insight.confirmed_profiles.length > 0) {
+        await hydrateWave2();
+      }
       state.status = 'started';
       state.message = '已生成工作画像草稿。它是解释性工作材料，不是事实判定。';
     } catch (error) {
@@ -311,16 +343,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     try {
       await submitConfirmGrowthProfile(config, draftId);
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
-      const [priorityInsight, intervention, activeIntervention, todayAction] = await Promise.all([
-        fetchGrowthPriorityInsight(config, state.onboarding.onboarding_id),
-        fetchListenBeforeRespondCard(config),
-        fetchActiveIntervention(config, state.onboarding.onboarding_id),
-        fetchTodayGrowthAction(config),
-      ]);
-      state.wave2.priorityInsight = priorityInsight;
-      state.wave2.intervention = intervention;
-      state.wave2.startedIntervention = activeIntervention ?? undefined;
-      state.wave2.todayAction = todayAction ?? undefined;
+      await hydrateWave2();
       state.status = 'started';
       state.message = '画像已确认。当前仍没有写入 Growth Priority 或行动。';
     } catch (error) {
@@ -345,8 +368,34 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
-      state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
+      if (state.wave2.apiMode === 'real-api') {
+        const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
+        state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
+      } else {
+        const priorityInsight = createFrozenPriorityFixture();
+        const dimensionId = ['P03', 'R03', 'R04', 'R05'].includes(decision) ? /** @type {import('@family/contracts').M2GrowthDimensionId} */ (decision) : 'R03';
+        state.wave2.priorityInsight = {
+          ...priorityInsight,
+          active_priority: {
+            priority_id: 'priority-R03',
+            family_id: config.familyId,
+            onboarding_id: state.onboarding.onboarding_id,
+            profile_id: 'profile-R03',
+            dimension_id: dimensionId,
+            status: 'ACTIVE',
+            version: 1,
+            boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
+            reason_codes: ['RECENTLY_CONFIRMED_PROFILE', 'PRACTICE_READY'],
+            evidence_refs: ['evidence-PARENT', 'evidence-CHILD'],
+            policy_version: 'M2_104_DETERMINISTIC_V1',
+            confirmed_by_actor_id: config.actorPersonId,
+            confirmed_at: '2026-08-10T00:00:00.000Z',
+            superseded_at: null,
+            previous_priority_id: null,
+            created_at: '2026-08-10T00:00:00.000Z',
+          },
+        };
+      }
       state.status = 'started';
       state.message = '已确认本周练习重点。不会自动开始练习计划。';
     } catch (error) {
@@ -369,9 +418,36 @@ export function createGrowthApp(root, config = defaultConfig) {
     try {
       const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id;
       if (!priorityId) throw new Error('请先确认一个练习重点。');
-      state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
-      state.wave2.intervention = state.wave2.startedIntervention.intervention;
-      state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.startedIntervention.actions[0];
+      if (state.wave2.apiMode === 'real-api') {
+        state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
+        state.wave2.intervention = state.wave2.startedIntervention.intervention;
+        state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.startedIntervention.actions[0];
+      } else {
+        const action = createFrozenActionFixture();
+        state.wave2.startedIntervention = {
+          intervention: state.wave2.intervention ?? createFrozenInterventionFixture(),
+          episode: {
+            episode_id: 'episode-1',
+            family_id: config.familyId,
+            onboarding_id: state.onboarding.onboarding_id,
+            priority_id: priorityId,
+            intervention_id: 'INTERVENTION-001',
+            intervention_code: 'LISTEN_BEFORE_RESPOND',
+            status: 'ACTIVE',
+            started_by_actor_id: config.actorPersonId,
+            planned_days: 7,
+            policy_version: 'M2_105_DETERMINISTIC_V1',
+            started_at: '2026-08-10T00:00:00.000Z',
+            created_at: '2026-08-10T00:00:00.000Z',
+          },
+          actions: /** @type {Array<1 | 2 | 3 | 4 | 5 | 6 | 7>} */ ([1, 2, 3, 4, 5, 6, 7]).map((dayIndex) => ({
+            ...action,
+            action_id: `action-day-${dayIndex}`,
+            day_index: dayIndex,
+          })),
+        };
+        state.wave2.todayAction = action;
+      }
       state.status = 'started';
       state.message = '7 天练习已准备。每天只有具体行动状态，不写结果。';
     } catch (error) {
@@ -399,9 +475,21 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
-      state.wave2.todayAction = response.action;
-      state.wave2.reflectionBoundary = response.reflection_boundary;
+      if (state.wave2.apiMode === 'real-api') {
+        const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
+        state.wave2.todayAction = response.action;
+        state.wave2.reflectionBoundary = response.reflection_boundary;
+      } else {
+        state.wave2.todayAction = {
+          ...action,
+          status: completionStatus,
+          completion_status: completionStatus,
+          completed_at: new Date().toISOString(),
+          reflection,
+          reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
+        };
+        state.wave2.reflectionBoundary = 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME';
+      }
       state.status = 'started';
       state.message = '行动状态已记录；反思只作为原始记录保留。';
     } catch (error) {

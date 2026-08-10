@@ -1,0 +1,20 @@
+version: 1.0
+status: LM0_DESIGN_DRAFT
+counts:
+  - SOURCE_COUNT
+  - EXTRACTED
+  - NORMALIZED
+  - IDENTITY_MATCHED
+  - REVIEW_REQUIRED
+  - QUARANTINED
+  - READY_TO_IMPORT
+  - IMPORTED
+  - RECONCILED
+shadow_minimum_metrics:
+  cross_family_leakage: 0
+  orphan_child: 0
+  invalid_relationship: 0
+  invalid_active_consent: 0
+  missing_provenance: 0
+  duplicate_canonical_identity: 0
+  migration_audit_coverage: 100%

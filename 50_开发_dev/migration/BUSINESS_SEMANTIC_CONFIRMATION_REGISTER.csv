@@ -1,0 +1,4 @@
+system,entity,field,technical_meaning,business_meaning,example,historical_change,business_owner,confirmation_status
+CRM,customer,customer_id,Legacy customer primary identifier,TBD,TBD,TBD,TBD,UNREVIEWED
+Assessment,assessment,score,Legacy assessment score,TBD,TBD,TBD,TBD,UNREVIEWED
+LMS,enrollment,status,Legacy learning enrollment status,TBD,TBD,TBD,TBD,UNREVIEWED

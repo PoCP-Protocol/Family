@@ -214,7 +214,7 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('不会自动生成行动');
   });
 
-  it('renders Wave2 F06-F09 workspace after confirmed profile using real API responses', async () => {
+  it('renders Wave2 F06-F09 workspace in real-api mode by default', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
@@ -247,6 +247,7 @@ describe('M2-102 Family web perspective capture', () => {
 
     expect(root.textContent).toContain('7 天沟通练习工作台');
     expect(root.textContent).toContain('real-api');
+    expect(root.textContent).toContain('已连接');
     expect(root.textContent).toContain('本周练习重点');
     expect(root.textContent).toContain('NO_PRIORITY_YET');
     expect(root.textContent).toContain('先听后回应');
@@ -269,6 +270,38 @@ describe('M2-102 Family web perspective capture', () => {
     root.querySelector<HTMLFormElement>('#wave2-reflection-form')?.requestSubmit();
     await flushPromises();
     expect(root.textContent).toContain('REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME');
+  });
+
+  it('rehydrates Wave2 reads when profile drafts return an already confirmed profile', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspective: perspectiveFixture('PARENT_PERSPECTIVE'), evidence: evidenceFixture('PARENT') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspectives: [perspectiveFixture('PARENT_PERSPECTIVE'), perspectiveFixture('CHILD_PERSPECTIVE')], evidence: [evidenceFixture('PARENT'), evidenceFixture('CHILD')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('R03', 'CONFIRMED')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture().intervention })
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => null });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('main');
+
+    createGrowthApp(root, config);
+    root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('#build-profile-drafts')?.click();
+    await flushPromises();
+
+    expect(root.textContent).toContain('已连接');
+    expect(root.textContent).toContain('本周练习重点');
+    expect(root.textContent).toContain('先听后回应');
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/priority`,
+      expect.objectContaining({ method: 'GET' }),
+    );
   });
 
   it('keeps Wave2 future real API adapters on named-action payload boundaries', async () => {
@@ -514,7 +547,20 @@ function startInterventionFixture() {
       action_template: '先听完，再回应。',
       policy_version: 'M2_105_DETERMINISTIC_V1',
     },
-    episode_id: 'episode-1',
+    episode: {
+      episode_id: 'episode-1',
+      family_id: config.familyId,
+      onboarding_id: 'onboarding-1',
+      priority_id: 'priority-R03',
+      intervention_id: 'INTERVENTION-001',
+      intervention_code: 'LISTEN_BEFORE_RESPOND',
+      status: 'ACTIVE',
+      started_by_actor_id: config.actorPersonId,
+      planned_days: 7,
+      policy_version: 'M2_105_DETERMINISTIC_V1',
+      started_at: '2026-08-10T00:00:00.000Z',
+      created_at: '2026-08-10T00:00:00.000Z',
+    },
     actions: Array.from({ length: 7 }, (_, index) => ({
       ...growthActionFixture('PENDING'),
       action_id: `action-day-${index + 1}`,

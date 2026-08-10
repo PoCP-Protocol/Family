@@ -1,5 +1,4 @@
 import type { AuditMeta, GrowthPriorityDecision } from '@family/contracts';
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { FamilyRepository } from './family.repository';
 import { buildGrowthPriorityDraft, type ConfirmedProfileForPriority } from './growth-priority.policy';
@@ -197,7 +196,6 @@ describe('GrowthPriorityService', () => {
     expect(client.auditActions).toEqual([]);
   });
 });
-
 function createRepository(client: FakePriorityClient): FamilyRepository {
   return {
     withTransaction: async <T>(work: (txClient: FakePriorityClient) => Promise<T>) => work(client),
@@ -241,7 +239,6 @@ function createProfile(input: {
     confirmed_at: meta.occurredAt,
   };
 }
-
 class FakePriorityClient {
   insertedPriority = false;
   supersededActivePriority = false;
@@ -404,29 +401,4 @@ function createPriorityRow(input: {
     previous_priority_id: input.previousPriorityId ?? null,
     created_at: meta.occurredAt,
   };
-}
-
-function hashRequest(idempotencyKey: string): string {
-  if (idempotencyKey === 'idem-no-priority-yet') {
-    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
-    return hashConfirmRequest(draft.draft_id, 'NO_PRIORITY_YET');
-  }
-  if (idempotencyKey === 'idem-replay') {
-    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
-    return hashConfirmRequest(draft.draft_id, 'NO_PRIORITY_YET');
-  }
-  const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
-  const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
-  return hashConfirmRequest(draft.draft_id, 'R03');
-}
-
-function hashConfirmRequest(draftId: string, decision: GrowthPriorityDecision): string {
-  return createHash('sha256')
-    .update(JSON.stringify({
-      family_id: familyId,
-      onboarding_id: onboardingId,
-      draft_id: draftId,
-      decision,
-    }))
-    .digest('hex');
 }
