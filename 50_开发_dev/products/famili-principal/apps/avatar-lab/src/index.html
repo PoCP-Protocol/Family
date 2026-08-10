@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>法咪莉校长 Avatar Lab</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f6f4ff; color: #221c3a; }
+      .panel { background: white; border-radius: 16px; padding: 20px; max-width: 900px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+      .stage { min-height: 220px; border: 2px dashed #8f7bec; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+      .avatar { font-size: 54px; }
+      .controls { display: flex; gap: 8px; margin-top: 12px; }
+      button { border: 0; border-radius: 999px; padding: 10px 14px; cursor: pointer; background: #6c4df6; color: white; }
+      .dev { margin-top: 16px; padding: 12px; background: #f3f0ff; border-radius: 12px; font-size: 13px; }
+      .subtitles { min-height: 24px; margin-top: 8px; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h2>法咪莉校长</h2>
+      <div class="stage">
+        <div id="avatar" class="avatar">◉</div>
+      </div>
+      <div id="state" class="subtitles">状态: 正在听</div>
+      <div id="subtitles" class="subtitles">实时字幕: 等待输入…</div>
+      <div class="controls">
+        <button id="sendBtn">发送</button>
+        <button id="interruptBtn">立即打断</button>
+      </div>
+      <textarea id="input" rows="3" style="width:100%;margin-top:12px;">我儿子每天回来就玩手机，我一说他，他就跟我吵。</textarea>
+      <div class="dev" id="devPanel"></div>
+    </div>
+    <script type="module" src="./client.ts"></script>
+  </body>
+</html>
