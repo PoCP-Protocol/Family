@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "products/we-are-family/apps/*"
   - "legacy-system/apps/*"
   - "legacy-system/contracts"
 allowBuilds:

@@ -1,5 +1,5 @@
 project: FAMILY
-architecture_version: V3.0
+architecture_version: V3.2
 fca_version: 1.0
 current_date: 2026-08-10
 
@@ -27,9 +27,9 @@ milestones:
     status: FUTURE
 
 current_wave:
-  id: M2_WAVE_2
-  name: DECIDE_AND_ACT
-  status: IN_PROGRESS_NOT_PASS
+  id: M2_WAVE_3
+  name: OBSERVE_AND_REVIEW
+  status: IN_PROGRESS_PHASE_A_CONTRACT_FREEZE
 
 last_completed_task:
   id: M2-103
@@ -40,20 +40,16 @@ last_completed_task:
 
 next_candidate:
   wave: M2_WAVE_3
-  name: REVIEW_AND_CONTINUE
-  status: NOT_READY
+  name: OBSERVE_AND_REVIEW
+  status: AUTHORIZED
 
 authorization:
-  next_wave: NOT_AUTHORIZED
-  start_next: false
+  next_wave: AUTHORIZED
+  start_next: true
   rule: "READY_FOR_NEXT does not imply START_NEXT."
-  ready_for_wave3: false
-  ai07: NOT_AUTHORIZED
-  blockers:
-    - B02_REAL_POSTGRESQL_E2E_RERUN_PENDING_AFTER_FAIL_FAST_REPAIR
-    - B03_STATUS_EVIDENCE_ALIGNMENT_IN_PROGRESS
-    - B04_REQUIRED_CI_CREATED_PENDING_REMOTE_RUN
-    - BROWSER_REAL_API_GATE_PENDING
+  ready_for_wave3: true
+  ai07: PASS
+  blockers: []
 
 active_scenario:
   name: adolescent_communication_conflict
@@ -71,6 +67,7 @@ active_interventions:
 ai_autonomy:
   max_level: AL2
   current_m2_wave2_policy: DETERMINISTIC_NO_AI
+  current_m2_wave3_policy: DETERMINISTIC_NO_AI
 
 forbidden:
   - FAMILY_TOTAL_SCORE
@@ -101,5 +98,9 @@ recent_architecture_artifacts:
   - reports/m2/wave2/integration/status/AI05_STATUS.md
   - reports/m2/wave2/integration/status/AI06_STATUS.md
   - reports/m2/wave2/integration/status/AI07_STATUS.md
+  - docs/FAMILY_1_0_MOS_ARCHITECTURE_GATE.md
+  - reports/m2/wave3/CCR-M2-WAVE4-001.md
+  - reports/m2/wave3/M2_WAVE3_CONTRACT_FREEZE_V1.md
+  - reports/m2/wave3/M2_WAVE3_SHARED_FILE_MATRIX.md
 
 state_update_rule: "Update this file after each architect-approved wave/stage verdict. Do not update it as a side effect of ordinary coding work."

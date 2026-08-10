@@ -582,6 +582,147 @@ export interface CompleteGrowthActionResponse {
   reflection_boundary: ReflectionBoundary;
 }
 
+export type Wave3PolicyVersion = 'M2_106_DETERMINISTIC_V1';
+export type OutcomeObservationPerspective = 'PARENT_OBSERVATION' | 'CHILD_OBSERVATION';
+export type OutcomeObservationBoundary = 'OBSERVATION_IS_NOT_FACT_OR_CAUSAL_EFFECT';
+export type GrowthReviewStatus = 'COMPLETED';
+export type GrowthReviewBoundary = 'REVIEW_IS_NOT_PROFILE_MUTATION_OR_DIAGNOSIS';
+export type GrowthReviewLimitation =
+  | 'MISSING_CHECK_INS'
+  | 'PARENT_CHILD_DIVERGENCE'
+  | 'PARENT_OBSERVATION_ONLY'
+  | 'CHILD_OBSERVATION_ONLY'
+  | 'NO_OUTCOME_OBSERVATION'
+  | 'SAFETY_ROUTE_NOT_NORMAL'
+  | 'CONSENT_REQUIRED';
+export type NextStepDecision = 'CONTINUE' | 'ADJUST' | 'PAUSE' | 'REVIEW_REQUIRED';
+export type NextStepDecisionBoundary = 'NEXT_STEP_DECISION_IS_NOT_NEXT_ACTION';
+export type FamilyTimelineEventType =
+  | 'INTERVENTION_STARTED'
+  | 'GROWTH_ACTION_COMPLETED'
+  | 'OUTCOME_OBSERVATION_RECORDED'
+  | 'GROWTH_REVIEW_COMPLETED'
+  | 'NEXT_STEP_DECISION_RECORDED';
+
+export interface OutcomeObservationDto {
+  observation_id: string;
+  family_id: string;
+  subject_person_id: string;
+  observer_person_id: string;
+  intervention_episode_id: string;
+  perspective_type: OutcomeObservationPerspective;
+  observation_text: string;
+  action_refs: string[];
+  reflection_refs: string[];
+  evidence_refs: string[];
+  limitations: string[];
+  observed_at: string;
+  boundary: OutcomeObservationBoundary;
+  policy_version: Wave3PolicyVersion;
+  created_at: string;
+}
+
+export interface RecordOutcomeObservationRequest {
+  family_id: string;
+  subject_person_id: string;
+  observer_person_id: string;
+  intervention_episode_id: string;
+  perspective_type: OutcomeObservationPerspective;
+  observation_text: string;
+  action_refs?: string[];
+  reflection_refs?: string[];
+  evidence_refs?: string[];
+  limitations?: string[];
+  observed_at: string;
+  idempotency_key: string;
+}
+
+export interface RecordOutcomeObservationResponse {
+  observation: OutcomeObservationDto;
+}
+
+export interface GrowthReviewActionSummaryDto {
+  total_actions: 7;
+  completed: number;
+  partial: number;
+  not_completed: number;
+  missing: number;
+}
+
+export interface GrowthReviewDto {
+  review_id: string;
+  family_id: string;
+  onboarding_id: string;
+  intervention_episode_id: string;
+  priority_id: string;
+  dimension_id: M2GrowthDimensionId;
+  status: GrowthReviewStatus;
+  action_summary: GrowthReviewActionSummaryDto;
+  observation_ids: string[];
+  limitations: GrowthReviewLimitation[];
+  boundary: GrowthReviewBoundary;
+  policy_version: Wave3PolicyVersion;
+  completed_by_actor_id: string;
+  completed_at: string;
+  created_at: string;
+}
+
+export interface CompleteGrowthReviewRequest {
+  family_id: string;
+  intervention_episode_id: string;
+  idempotency_key: string;
+}
+
+export interface CompleteGrowthReviewResponse {
+  review: GrowthReviewDto;
+  observations: OutcomeObservationDto[];
+}
+
+export interface NextStepDecisionDto {
+  decision_id: string;
+  family_id: string;
+  review_id: string;
+  intervention_episode_id: string;
+  decision: NextStepDecision;
+  rationale: string | null;
+  boundary: NextStepDecisionBoundary;
+  policy_version: Wave3PolicyVersion;
+  decided_by_actor_id: string;
+  decided_at: string;
+  created_at: string;
+}
+
+export interface RecordNextStepDecisionRequest {
+  family_id: string;
+  review_id: string;
+  decision: NextStepDecision;
+  rationale?: string;
+  idempotency_key: string;
+}
+
+export interface RecordNextStepDecisionResponse {
+  decision: NextStepDecisionDto;
+}
+
+export interface FamilyTimelineEventDto {
+  event_id: string;
+  family_id: string;
+  intervention_episode_id: string;
+  event_type: FamilyTimelineEventType;
+  occurred_at: string;
+  source: 'INTERVENTION_EPISODE' | 'GROWTH_ACTION' | 'OUTCOME_OBSERVATION' | 'GROWTH_REVIEW' | 'NEXT_STEP_DECISION';
+  resource_id: string;
+  title: string;
+  payload: Record<string, unknown>;
+  boundary: 'TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING';
+}
+
+export interface FamilyTimelineResponse {
+  family_id: string;
+  intervention_episode_id: string;
+  events: FamilyTimelineEventDto[];
+}
+
 /** 审计元数据:每个关键写 Action 必带(CLAUDE C06)。 */
 export interface AuditMeta {
   actor: string;

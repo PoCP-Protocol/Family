@@ -1,0 +1,58 @@
+# FPAI FP1 Text Intelligence Gate
+
+Date: 2026-08-10
+Phase: FP1_TEXT_INTELLIGENCE_MVP
+Status: IN_PROGRESS_CORE_SLICE_PASS
+
+## Authorization
+
+```text
+FPAI_FP0_FOUNDATION = PASS_INTERNAL
+FPAI_FP1 = AUTHORIZED
+FP1_NAME = TEXT_INTELLIGENCE_MVP
+FP1_GOAL = REAL_MODEL + SOUL + REVIEWED_RETRIEVAL + STRUCTURED_OUTPUT + SAFETY + EVAL
+FAMILY_M2_RUNTIME_INTEGRATION = NO
+FAMILY_M2_WAVE3_DEPENDENCY = 0
+MODEL_TRAINING = NOT_AUTHORIZED
+VOICE = NOT_AUTHORIZED
+AVATAR = NOT_AUTHORIZED
+DIGITAL_HUMAN = NOT_AUTHORIZED
+FP2_21_DAY_COMPANION = NOT_AUTHORIZED
+```
+
+## Implemented Core Slice
+
+```text
+AI_GATEWAY_FAKE = IMPLEMENTED
+AI_GATEWAY_OPENAI_COMPATIBLE_ADAPTER = IMPLEMENTED
+FPAI_RUNTIME_SCHEMA_ALIGNMENT = IMPLEMENTED_FOR_PRINCIPAL_AI_PACKAGE
+REVIEWED_RETRIEVAL_BOUNDARY = IMPLEMENTED_IN_PACKAGE_TESTS
+STRUCTURED_OUTPUT_FAIL_CLOSED = IMPLEMENTED_IN_PACKAGE_TESTS
+SAFETY_PRE_AND_POST_GENERATION = IMPLEMENTED_IN_PACKAGE_TESTS
+NO_FAMILY_DB_MUTATION = GUARDED_IN_PACKAGE_TESTS
+NO_M2_RUNTIME_INTEGRATION = REQUIRED
+```
+
+## Validation Evidence
+
+```text
+pnpm --dir "d:\Family\50_开发_dev" --filter @family/ai-gateway typecheck = PASS
+pnpm --dir "d:\Family\50_开发_dev" --filter @family/ai-gateway build = PASS
+pnpm --dir "d:\Family\50_开发_dev" --filter @family/principal-ai typecheck = PASS
+pnpm --dir "d:\Family\50_开发_dev" --filter @family/principal-ai test = PASS
+principal_ai_tests = 14/14 PASS
+```
+
+## Remaining Before FP1 Product Gate
+
+```text
+LIVE_MODEL_ENV_VALIDATION = PENDING
+GOLD_EVAL_RUN = PENDING
+RIGHTS_REVIEW_FOR_ANY_PRODUCTION_RETRIEVAL_CARD = REQUIRED
+PUBLIC_ATTRIBUTION_COPY_DECISION = PENDING
+M2_RUNTIME_IMPORT_SCAN = REQUIRED_BEFORE_MERGE
+```
+
+## Gate Verdict
+
+The FP1 core package slice passes local typecheck and behavior tests. This is not a full FP1 product release gate. It authorizes continuing FP1 Text Intelligence MVP work inside the independent FPAI product boundary only.

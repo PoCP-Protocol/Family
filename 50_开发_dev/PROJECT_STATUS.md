@@ -1,8 +1,8 @@
 # Family Project Status
 
 status_version: 3
-phase: M2_WAVE_2_DECIDE_AND_ACT
-milestone: PHASE_B2_INTEGRATION_CONVERGENCE
+phase: M2_WAVE_3_OBSERVE_AND_REVIEW
+milestone: PHASE_A_CONTRACT_FREEZE
 as_of: 2026-08-10
 
 ## Completed Design Baseline
@@ -27,14 +27,14 @@ as_of: 2026-08-10
 
 ## Current Milestone
 
-M2 Wave 2 — DECIDE & ACT / Phase B2 Integration Convergence
+M2 Wave 3 — OBSERVE & REVIEW / Phase A Contract Freeze
 
 ## In Progress
 
-- active_task: M2-WAVE2-INTEGRATION
-- current_wave: M2_WAVE_2_DECIDE_AND_ACT
-- current_phase: WAVE2_INTEGRATION_CONVERGENCE
-- AI-00 integration lead coordinating Schema/Contract, API, Frontend, Real PostgreSQL, E2E, Governance, and Independent Review
+- active_task: M2-WAVE3-PHASE-A-CONTRACT-FREEZE
+- current_wave: M2_WAVE_3_OBSERVE_AND_REVIEW
+- current_phase: PHASE_A_CONTRACT_FREEZE
+- AI-00 contract lead freezing Observation, Review, Timeline, Next-Step Decision, and Wave4 deferral boundaries before runtime implementation
 
 ## Completed
 
@@ -55,13 +55,16 @@ M2 Wave 2 — DECIDE & ACT / Phase B2 Integration Convergence
 - B01 M2 runtime future Principal AI/FPAI rendering isolation → PASS_LOCAL_WEB_UNIT
 - B02 Wave2 E2E fail-fast repair → PATCHED_AND_FAIL_FAST_VALIDATED_WITHOUT_TEST_DATABASE_URL
 - B04 Required GitHub Actions workflow → CREATED_PENDING_CI_RUN
-- Technical Architecture Rebaseline V3.2 SSOT → CREATED_PENDING_REVIEW
+- Technical Architecture Rebaseline V3.2 SSOT → APPROVED
 - M2 Wave2 real PostgreSQL HTTP E2E → PASS_REAL_POSTGRESQL_HTTP_55_TESTS
 - M2 Wave2 local required gate → PASS_BUILD_TYPECHECK_UNIT_INTEGRATION_E2E
 - M2 Wave2 Browser Gate → PASS_REAL_API_F06_F09
 - AI-06 Governance Final Signoff → PASS
 - AI-07 Independent Architecture / Product Review → PASS
-- M2 Wave2 Final Gate → PASS_WITH_WAVE3_CLOSED
+- M2 Wave2 Final Gate → PASS
+- V3.2 Architecture Gate → PASS
+- CCR-M2-WAVE4-001 → APPROVED; M2 Wave4 Intelligence deferred to M3/FPAI
+- M2 Wave3 Phase A Contract Freeze → CREATED_LOCAL_BASELINE
 
 ## Current Ruling
 
@@ -73,24 +76,25 @@ M2-104 = LOCAL_GATE_PASS
 M2-105 = LOCAL_GATE_PASS
 M2_WAVE_2 = PASS
 READY_FOR_WAVE2_INTEGRATION = YES
-READY_FOR_WAVE3 = NO
-START_WAVE3 = NO
-WAVE3 = CLOSED_NOT_AUTHORIZED
+READY_FOR_WAVE3 = YES
+START_WAVE3 = YES
+WAVE3 = AUTHORIZED
+M2_WAVE_3 = IN_PROGRESS_PHASE_A_CONTRACT_FREEZE
 M3_RUNTIME = NOT_AUTHORIZED
 AI06 = PASS
 AI07 = PASS_COMPLETED
-TECH_ARCH_REBASELINE_REQUIRED = YES
+V3_2_ARCHITECTURE_GATE = PASS
 NEW_TECHNICAL_ARCHITECTURE = V3.2 BUILD-TO-OPERATE
 CORE_ARCHITECTURE_REWRITE = NO
-current_phase = WAVE2_INTEGRATION_CONVERGENCE
-active_task = NONE_M2_WAVE2_CLOSED
-STATE_ALIGNMENT = PASS_WITH_WAVE3_CLOSED
+current_phase = PHASE_A_CONTRACT_FREEZE
+active_task = M2-WAVE3-PHASE-A-CONTRACT-FREEZE
+STATE_ALIGNMENT = PASS_WAVE3_AUTHORIZED_M3_NOT_AUTHORIZED
 ```
 
 ## Known Issues
 
-- last_completed_task: M2_WAVE2_FINAL_GATE_PASS_WITH_WAVE3_CLOSED
-- current_gate_blocker: none for M2 Wave2 local closeout; Wave3/M3 runtime remains closed and requires separate explicit authorization.
+- last_completed_task: M2_WAVE2_FINAL_GATE_PASS
+- current_gate_blocker: none for Wave3 Phase A; M3 runtime remains closed and requires separate explicit authorization.
 - Contract Freeze is now immutable baseline `M2_WAVE2_CF_V1`; changes require `CONTRACT_CHANGE_REQUEST` and AI-00 approval before any V2.
 - Existing unrelated/unintegrated worktree files must not be reverted during Wave 2 integration.
 - `growth_journeys.subject_person_id` must not be added for convenience; subject/consent resolution must converge through canonical relations or a minimal `GrowthSubjectResolver`.
@@ -98,7 +102,7 @@ STATE_ALIGNMENT = PASS_WITH_WAVE3_CLOSED
 
 ## Not Started
 
-- V3.2 Architecture Gate review and approval before next 30-day MOS plan
+- Wave3 runtime implementation after contract gate validation
 - GrowthReview implementation
 - 90-Day Journey implementation
 - AI Model Gateway
@@ -117,6 +121,7 @@ STATE_ALIGNMENT = PASS_WITH_WAVE3_CLOSED
 - Family ranking
 - Reinforcement learning
 - World Model training
+- M2 Wave4 Intelligence runtime; deferred to M3/FPAI by CCR-M2-WAVE4-001
 
 ## Architecture Decisions
 

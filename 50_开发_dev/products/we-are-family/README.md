@@ -69,3 +69,4 @@ The authoritative WF0 boundary is this directory: `products/we-are-family`.
 - `backlog/WAF-000_TASKS.md` - WF0 definition task record.
 - `backlog/WAF-001_WF1_CONTENT_CHALLENGE_MVP_SPEC.md` - WF1 content and challenge MVP scope for Family 1.0 MOS.
 - `docs/COMMERCIAL_VALIDATION_TRACK_V1.md` - commercial thesis, flywheel, revenue hypotheses, risk model, and validation metrics.
+- `reports/WAF_WF1_PLATFORM_UI_IMPLEMENTATION.md` - Family consumer entry, multimodal UI, motion system, challenge interaction, and visual evidence.

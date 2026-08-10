@@ -1,7 +1,7 @@
 # FPAI-000 Task List
 
-Status: FP0_AUTHORIZED
-FP1 status: NOT_YET_AUTHORIZED
+Status: FP0_FOUNDATION_PASS_INTERNAL
+FP1 status: AUTHORIZED_TEXT_INTELLIGENCE_MVP
 
 ## Approved FP0 Tasks
 
@@ -24,4 +24,17 @@ FPAI work is independent from Family M2 runtime. Family M2 keeps deterministic/n
 
 ## First Implementation Gate
 
-FP1 cannot begin until FPAI-000 is reviewed and marked PASS.
+FPAI-000 is reviewed and marked `PASS_INTERNAL` for implementation purposes.
+
+FP1 may proceed only inside this authorized scope:
+
+```text
+FP1_NAME = TEXT_INTELLIGENCE_MVP
+FP1_GOAL = REAL_MODEL + SOUL + REVIEWED_RETRIEVAL + STRUCTURED_OUTPUT + SAFETY + EVAL
+FAMILY_M2_RUNTIME_INTEGRATION = NO
+MODEL_TRAINING = NOT_AUTHORIZED
+VOICE = NOT_AUTHORIZED
+AVATAR = NOT_AUTHORIZED
+DIGITAL_HUMAN = NOT_AUTHORIZED
+FP2_21_DAY_COMPANION = NOT_AUTHORIZED
+```

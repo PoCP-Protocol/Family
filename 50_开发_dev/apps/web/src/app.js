@@ -77,6 +77,7 @@ export function createGrowthApp(root, config = defaultConfig) {
             <span class="brand-name">Family <small>家庭成长陪伴</small></span>
           </div>
           <div class="header-meta">
+            <a class="product-switch-link" href="?product=waf">We are 伐木累</a>
             <span class="privacy-chip"><span aria-hidden="true">●</span> 仅家庭可见</span>
             <span class="avatar" aria-label="监护人账户">家</span>
           </div>

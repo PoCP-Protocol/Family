@@ -1,21 +1,25 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
 import { validateBuildGrowthProfileDraftsRequest } from './build-growth-profile-drafts.dto';
 import { validateCompleteGrowthActionRequest } from './complete-growth-action.dto';
+import { validateCompleteGrowthReviewRequest } from './complete-growth-review.dto';
 import { validateConfirmGrowthPriorityRequest } from './confirm-growth-priority.dto';
 import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dto';
 import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
+import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
+import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
 import { validateStartGrowthOnboardingRequest } from './start-growth-onboarding.dto';
 import { validateStartInterventionRequest } from './start-intervention.dto';
 import { FamilyService } from './family.service';
 import { GrowthActionService } from './growth-action.service';
 import { GrowthPriorityService } from './growth-priority.service';
+import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
 
 @Controller('families')
@@ -25,6 +29,7 @@ export class FamilyController {
     @Inject(GrowthPriorityService) private readonly growthPriorityService: GrowthPriorityService,
     @Inject(InterventionService) private readonly interventionService: InterventionService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
+    @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
   ) {}
 
   @Get(':familyId')
@@ -389,6 +394,72 @@ export class FamilyController {
     const request = validateCompleteGrowthActionRequest(familyId, actionId, idempotencyKey, body);
     const meta = buildAuditMeta(actorId, correlationId, source);
     return this.growthActionService.completeGrowthAction(request, meta);
+  }
+
+  @Post(':familyId/growth/outcome-observations')
+  async recordOutcomeObservation(
+    @Param('familyId') familyId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<RecordOutcomeObservationResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateRecordOutcomeObservationRequest(familyId, idempotencyKey, body);
+    const meta = buildAuditMeta(actorId, correlationId, source);
+    return this.growthReviewService.recordOutcomeObservation(request, meta);
+  }
+
+  @Post(':familyId/growth/intervention-episodes/:episodeId/review/complete')
+  async completeGrowthReview(
+    @Param('familyId') familyId: string,
+    @Param('episodeId') episodeId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<CompleteGrowthReviewResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateCompleteGrowthReviewRequest(familyId, episodeId, idempotencyKey, body);
+    const meta = buildAuditMeta(actorId, correlationId, source);
+    return this.growthReviewService.completeGrowthReview(request, meta);
+  }
+
+  @Post(':familyId/growth/reviews/:reviewId/next-step')
+  async recordNextStepDecision(
+    @Param('familyId') familyId: string,
+    @Param('reviewId') reviewId: string,
+    @Body() body: unknown,
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<RecordNextStepDecisionResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateRecordNextStepDecisionRequest(familyId, reviewId, idempotencyKey, body);
+    const meta = buildAuditMeta(actorId, correlationId, source);
+    return this.growthReviewService.recordNextStepDecision(request, meta);
+  }
+
+  @Get(':familyId/growth/intervention-episodes/:episodeId/timeline')
+  async getGrowthTimeline(
+    @Param('familyId') familyId: string,
+    @Param('episodeId') episodeId: string,
+    @Headers('x-actor-id') actorId?: string,
+  ): Promise<FamilyTimelineResponse> {
+    assertReadContext(familyId, actorId, episodeId);
+    return this.growthReviewService.getTimeline(familyId, episodeId, actorId!);
   }
 
   @Post(':familyId/growth/profile-drafts/:draftId/confirm')

@@ -2,7 +2,9 @@
 
 ## Mission
 
-Build `法咪莉校长` as an independent family-growth AI principal: warm, intellectually clear, practical, bounded, and grounded in source-traceable education methods rather than identity mimicry.
+Build `法咪莉校长` as an independent family-growth AI principal and long-horizon multimodal digital-human IP: warm, intellectually clear, practical, bounded, interactive, able to teach and converse, and grounded in source-traceable education methods rather than identity mimicry.
+
+The destination is a Family-owned AI person, not a chatbot skin and not a cloned real person. Text intelligence is the foundation; voice, avatar, classroom-style teaching, and digital-human presentation are later layers that require separate authorization.
 
 ## Non-Negotiables
 
@@ -11,7 +13,10 @@ METHOD_INHERITANCE = YES
 IDENTITY_CLONING = NO
 FAMILY_M2_DEPENDENCY = NONE
 TRAINING_STARTED = NO
-FP1 = NOT_AUTHORIZED
+FP0 = PASS_INTERNAL
+FP1 = AUTHORIZED_TEXT_INTELLIGENCE_MVP
+MULTIMODAL_DIGITAL_HUMAN_IP = LONG_TERM_PRODUCT_DIRECTION
+VOICE_AVATAR_DIGITAL_HUMAN = NOT_AUTHORIZED_IN_FP1
 ```
 
 - Bobo source material may inform method extraction only through lineage-preserving distillation.

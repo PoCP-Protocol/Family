@@ -1,15 +1,17 @@
 # Family 1.0 MOS Architecture Gate
 
-Status: ACTIVE_GATE
+Status: PASS
 Date: 2026-08-10
 Parent: `docs/FAMILY_TECH_ARCH_V3.2.md`
 
 ## 1. Gate Ruling
 
 ```text
-READY_FOR_100_FAMILY_PILOT = NO_UNTIL_GATE_PASS
+V3_2_ARCHITECTURE_REBASELINE = APPROVED
+V3_2_ARCHITECTURE_GATE = PASS
+READY_FOR_100_FAMILY_PILOT = NO
 START_100_FAMILY_PILOT = NO
-ARCHITECTURE_REBASELINE_REQUIRED_BEFORE_NEXT_30_DAY_MOS = YES
+M3_RUNTIME = NOT_AUTHORIZED
 ```
 
 This gate prevents Family Core, Famili Principal, We are Famili, Operations, Analytics, FELS, and FLM from collapsing into one unbounded implementation.
@@ -89,15 +91,15 @@ PRODUCT_EVENT_AS_GROWTH_EVENT = FORBIDDEN
 
 | Check | Required Evidence | Status |
 |---|---|---|
-| V3.2 SSOT exists | Six required documents present | PENDING_REVIEW |
-| Product boundaries frozen | Product Boundary Map approved | PENDING_REVIEW |
-| Data ownership frozen | Data Ownership Matrix approved | PENDING_REVIEW |
-| Event taxonomy frozen | Product/Growth/Audit/Outbox separation approved | PENDING_REVIEW |
-| AI integration frozen | Context Broker and Action Bridge approved | PENDING_REVIEW |
-| Frontend migration route frozen | Consumer Shell + Strangler plan approved | PENDING_REVIEW |
-| Operations P0 accepted | Human Handoff and Ops Console minimum scope approved | PENDING_REVIEW |
-| Analytics P0 accepted | Product Event Ledger and minimum metrics approved | PENDING_REVIEW |
-| FELS/FLM isolation accepted | No direct Family-to-legacy table access | PENDING_REVIEW |
+| V3.2 SSOT exists | Six required documents present | APPROVED |
+| Product boundaries frozen | Product Boundary Map approved | APPROVED |
+| Data ownership frozen | Data Ownership Matrix approved | APPROVED |
+| Event taxonomy frozen | Product/Growth/Audit/Outbox separation approved | APPROVED |
+| AI integration frozen | Context Broker and Action Bridge approved | APPROVED |
+| Frontend migration route frozen | Consumer Shell + Strangler plan approved | APPROVED |
+| Operations P0 accepted | Human Handoff and Ops Console minimum scope approved | APPROVED |
+| Analytics P0 accepted | Product Event Ledger and minimum metrics approved | APPROVED |
+| FELS/FLM isolation accepted | No direct Family-to-legacy table access | APPROVED |
 
 ## 7. Pass Criteria
 

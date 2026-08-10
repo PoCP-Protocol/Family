@@ -26,13 +26,13 @@ FP0 deliverables:
 
 ## 2. Product Positioning
 
-法咪莉校长 is a separate AI education companion product on the shared Family platform. It turns family education knowledge into small executable actions, direct wording, daily check-ins, and longer companion loops.
+法咪莉校长 is a separate AI education companion product on the shared Family platform and the seed of a Family-owned multimodal digital-human IP. It turns family education knowledge into small executable actions, direct wording, daily check-ins, longer companion loops, and eventually interactive teaching/conversation experiences across text, voice, and visual presentation layers.
 
 It is not:
 
 - a Family M2 deterministic runtime capability
 - a direct writer of GrowthProfile, GrowthPriority, Intervention, GrowthAction, or Outcome
-- a digital-human-first product
+- a digital-human-first implementation project
 - a real-person imitation product
 - a generic family education chatbot
 
@@ -64,7 +64,7 @@ FP1 candidate entry points:
 4. 21-Day Companion
 5. Principal Micro Lesson
 
-Digital human and voice are presentation layers for FP4 after text value is validated.
+Digital human and voice are presentation layers after text value is validated. The product destination is multimodal, but FP1 remains text intelligence only.
 
 ## 5. Principal Soul Engine
 

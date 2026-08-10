@@ -1,9 +1,9 @@
 # Current Sprint
 
-sprint_id: M2-WAVE2
-sprint_name: M2 Wave 2 — Decide & Act
-sprint_goal: Help a family act through confirmed priority, Intervention-001, and daily growth action
-status: PHASE_B2_INTEGRATION_CONVERGENCE
+sprint_id: M2-WAVE3
+sprint_name: M2 Wave 3 — Observe & Review
+sprint_goal: Complete the first deterministic Family Growth Loop with Observation, Review, Timeline, and Next-Step Decision
+status: PHASE_A_CONTRACT_FREEZE
 
 ---
 
@@ -157,20 +157,66 @@ M2-WAVE2-PHASE-B
 Current wave:
 
 ```text
-M2_WAVE_2_DECIDE_AND_ACT
+M2_WAVE_3_OBSERVE_AND_REVIEW
 ```
 
 Current phase:
 
 ```text
-WAVE2_INTEGRATION_CONVERGENCE
+PHASE_A_CONTRACT_FREEZE
 ```
 
 Active task:
 
 ```text
-M2-WAVE2-INTEGRATION
+M2-WAVE3-PHASE-A-CONTRACT-FREEZE
 ```
+
+Stage ruling:
+
+```text
+M2_WAVE_1 = CLOSED
+M2_WAVE_2_DECIDE_AND_ACT = PASS
+M2_WAVE_2 = CLOSED
+AI05_REAL_SYSTEM = PASS
+AI06_FINAL_GOVERNANCE = PASS
+AI07_INDEPENDENT_REVIEW = PASS
+BLOCKERS = 0
+V3_2_ARCHITECTURE_REBASELINE = APPROVED
+V3_2_ARCHITECTURE_GATE = PASS
+M2_WAVE_3 = AUTHORIZED
+READY_FOR_WAVE3 = YES
+START_WAVE3 = YES
+M3_RUNTIME = NOT_AUTHORIZED
+```
+
+Wave3 product scope:
+
+```text
+F10 Family Timeline = YES
+F11 Growth Review = YES
+F12 Family AI = NO
+```
+
+Wave3 runtime scope:
+
+```text
+DETERMINISTIC = YES
+LLM_RUNTIME = NO
+MODEL_GATEWAY = NO
+AGENT_RUNTIME = NO
+FPAI_RUNTIME = NO
+WORLD_MODEL = NO
+CAUSAL_ENGINE = NO
+```
+
+Approved Phase A outputs:
+
+- `reports/m2/wave3/CCR-M2-WAVE4-001.md`
+- `reports/m2/wave3/M2_WAVE3_CONTRACT_FREEZE_V1.md`
+- `reports/m2/wave3/M2_WAVE3_SHARED_FILE_MATRIX.md`
+
+Next implementation must start only after the local Wave3 contract gate is validated.
 
 Stage ruling:
 
