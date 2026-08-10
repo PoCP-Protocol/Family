@@ -75,6 +75,27 @@ export interface AiGateway {
   rerank?(request: RerankRequest): Promise<RerankResult>;
 }
 
+/** A5 失败分类(业务层不得直接接收 provider 异常;一律映射为此类)。 */
+export type AiGatewayErrorKind =
+  | 'TIMEOUT'
+  | 'NETWORK_ERROR'
+  | 'PROVIDER_4XX'
+  | 'PROVIDER_5XX'
+  | 'INVALID_JSON'
+  | 'SCHEMA_INVALID'
+  | 'POLICY_REJECTED';
+
+export class AiGatewayError extends Error {
+  constructor(
+    readonly kind: AiGatewayErrorKind,
+    message: string,
+    readonly status?: number,
+  ) {
+    super(`[${kind}] ${message}`);
+    this.name = 'AiGatewayError';
+  }
+}
+
 export class FakeAiGateway implements AiGateway {
   constructor(private readonly responseByUseCase: Record<string, object> = {}) {}
 
@@ -124,7 +145,7 @@ interface JsonHttpResponse {
   json(): Promise<unknown>;
 }
 
-type JsonFetch = (url: string, init: { method: string; headers: Record<string, string>; body: string }) => Promise<JsonHttpResponse>;
+type JsonFetch = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) => Promise<JsonHttpResponse>;
 
 export class OpenAICompatibleAiGateway implements AiGateway {
   constructor(private readonly config: AiGatewayModelConfig, private readonly httpFetch: JsonFetch = getGlobalFetch()) {}
@@ -133,42 +154,80 @@ export class OpenAICompatibleAiGateway implements AiGateway {
     request: StructuredGenerationRequest<TInput, TOutput>,
   ): Promise<StructuredGenerationResult<TOutput>> {
     const startedAt = Date.now();
-    const response = await this.httpFetch(`${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${this.config.apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: [
-              `use_case=${request.use_case}`,
-              `prompt_version=${request.prompt_version}`,
-              `schema_version=${request.schema_version}`,
-              'Return only one JSON object matching the provided schema. Do not include markdown.',
-              `output_schema=${JSON.stringify(request.output_schema)}`,
-            ].join('\n'),
-          },
-          { role: 'user', content: JSON.stringify(request.input) },
-        ],
-      }),
+    // A5: 真实超时 = AbortController + Promise.race(即使注入的 fetch 忽略 signal 也能中止)。retry=0,无 fallback。
+    const timeoutMs = this.config.timeoutMs > 0 ? this.config.timeoutMs : 30000;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AiGatewayError('TIMEOUT', `provider timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI-compatible gateway failed: ${response.status} ${response.statusText}`);
+    let response: JsonHttpResponse;
+    try {
+      response = await Promise.race([
+        this.httpFetch(`${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            authorization: `Bearer ${this.config.apiKey}`,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: this.config.model,
+            response_format: { type: 'json_object' },
+            messages: [
+              {
+                role: 'system',
+                content: [
+                  `use_case=${request.use_case}`,
+                  `prompt_version=${request.prompt_version}`,
+                  `schema_version=${request.schema_version}`,
+                  'Return only one JSON object matching the provided schema. Do not include markdown.',
+                  `output_schema=${JSON.stringify(request.output_schema)}`,
+                ].join('\n'),
+              },
+              { role: 'user', content: JSON.stringify(request.input) },
+            ],
+          }),
+          signal: controller.signal,
+        }),
+        timeout,
+      ]);
+    } catch (err) {
+      if (err instanceof AiGatewayError) throw err; // TIMEOUT
+      if (controller.signal.aborted) throw new AiGatewayError('TIMEOUT', 'request aborted');
+      throw new AiGatewayError('NETWORK_ERROR', (err as Error)?.message ?? 'network error');
+    } finally {
+      if (timer) clearTimeout(timer);
     }
 
-    const payload = (await response.json()) as {
+    if (!response.ok) {
+      const kind: AiGatewayErrorKind = response.status >= 500 ? 'PROVIDER_5XX' : 'PROVIDER_4XX';
+      throw new AiGatewayError(kind, `provider ${response.status} ${response.statusText}`, response.status);
+    }
+
+    let payload: {
       model?: string;
       choices?: Array<{ message?: { content?: string } }>;
       usage?: StructuredGenerationMetadata['token_usage'];
     };
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      throw new AiGatewayError('INVALID_JSON', 'provider response body is not JSON');
+    }
     const content = payload.choices?.[0]?.message?.content;
-    if (!content) throw new Error('OpenAI-compatible gateway returned no message content');
+    if (!content) throw new AiGatewayError('INVALID_JSON', 'provider returned no message content');
+
+    let parsed: TOutput;
+    try {
+      parsed = JSON.parse(content) as TOutput;
+    } catch {
+      // FAIL CLOSED:模型内容非合法 JSON 时,绝不把原始文本返回给用户。
+      throw new AiGatewayError('INVALID_JSON', 'model content is not valid JSON');
+    }
 
     return {
       model: payload.model ?? this.config.model,
@@ -178,7 +237,7 @@ export class OpenAICompatibleAiGateway implements AiGateway {
       generated_at: new Date().toISOString(),
       validation_status: 'valid',
       human_status: 'draft',
-      output: JSON.parse(content) as TOutput,
+      output: parsed,
       metadata: {
         model_provider: 'openai-compatible',
         latency_ms: Date.now() - startedAt,
@@ -218,4 +277,10 @@ export const AI_GATEWAY_POLICY = {
   structured_output_required: true,
   schema_validation_required: true,
   human_confirmation_required: true,
+  // A5 hardening
+  on_failure: 'fail_closed',
+  automatic_retry: 0,
+  cross_provider_fallback: 'forbidden',
+  schema_failure_returns_raw_text: false,
+  timeout_enforced: true,
 } as const;

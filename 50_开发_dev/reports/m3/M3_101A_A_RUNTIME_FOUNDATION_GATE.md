@@ -17,10 +17,10 @@ CONTEXT_MINIMIZATION        = PASS           # allowlist;deny→null(输出=0);�
 CROSS_PROVIDER_FALLBACK     = NO             # 未建 Model Router
 REAL_MODEL_CALLS            = 0
 
-GATEWAY_TIMEOUT             = PENDING(A5)     # 未实现:OpenAICompatibleAiGateway 的 timeoutMs 仍只配置不生效,需 AbortController
-GATEWAY_FAILURE_MAPPING     = PENDING(A5)     # 未实现:TIMEOUT/NETWORK/4XX/5XX/INVALID_JSON/SCHEMA_INVALID/POLICY_REJECTED 分类
+GATEWAY_TIMEOUT             = PASS(A5)        # AbortController + Promise.race 真实超时 → PROVIDER TIMEOUT FAIL_CLOSED
+GATEWAY_FAILURE_MAPPING     = PASS(A5)        # AiGatewayError 分类 TIMEOUT/NETWORK_ERROR/PROVIDER_4XX/5XX/INVALID_JSON/(SCHEMA_INVALID/POLICY_REJECTED 预留);retry=0;无 fallback;schema/invalid-json 绝不返原始文本
 
-M3_101A_A                   = IN_PROGRESS     # A5 未完成 → A-Gate 尚未 PASS
+M3_101A_A                   = PASS            # A1/A2/A3/A4/A5 + CI 全部 PASS
 ```
 
 ## 证据(本轮实测)
@@ -28,12 +28,17 @@ M3_101A_A                   = IN_PROGRESS     # A5 未完成 → A-Gate 尚未 P
 - `node tools/validate-contracts.mjs` / `node tools/m3-dangerous-authorization-scan.mjs`:见提交前运行结果(0 hits)。
 - 新增/改动文件:`packages/principal-runtime/**`、`products/famili-principal/architecture/FPAI_API_CONTRACT_V1.md`(A1)、`.../FPAI_CONTEXT_FIELD_MATRIX_V1.md`、`.github/workflows/family-required.yml`(m3/** + m3-foundation)、`pnpm-lock.yaml`。
 
-## 剩余(关闭 A-Gate 的唯一阻塞)
-- **A5 Gateway Hardening**(在 `@family/ai-gateway`,单一网关不新建):真实 AbortController timeout → `PROVIDER_TIMEOUT` FAIL_CLOSED;失败分类;`AUTOMATIC_RETRY=0`;`CROSS_PROVIDER_FALLBACK=NO`;schema/invalid-json 失败 **绝不返回原始模型文本** → FAIL_CLOSED/REVIEW;+ 单元测试。
+## A5 证据(本轮补齐)
+- `@family/ai-gateway`:tsc build PASS;**vitest 8/8 PASS**(success / TIMEOUT(hung fetch 20ms 中止)/ PROVIDER_4XX(404)/ PROVIDER_5XX(503)/ NETWORK_ERROR / INVALID_JSON(内容非 JSON,不返原始文本)/ INVALID_JSON(无 content)/ 错误均为 AiGatewayError)。
+- `AI_GATEWAY_POLICY` 补:`on_failure=fail_closed / automatic_retry=0 / cross_provider_fallback=forbidden / schema_failure_returns_raw_text=false / timeout_enforced=true`。
+- 仍是唯一网关,未新建第二个 Gateway。
 
 ## 结论
 ```
-M3_101A_A = IN_PROGRESS（A1/A2/A3/A4 + CI PASS;A5 待做)
-下一步 = 完成 A5 → A-Gate PASS → 方可进入 101A-B(PrincipalModule/PG/HTTP/E2E)
-不进入 B/C。REAL_MODEL_RUNTIME 仍 NOT_AUTHORIZED。
+M3_101A_A = PASS（A1/A2/A3/A4/A5 + CI 全部 PASS)
+下一步 = 101A-B(建 PrincipalModule/PG 表与迁移/HTTP/NORMAL·REVIEW·HIGH_RISK 真实 E2E/ModelRun·ProductEvent 落库,Provider 仍 Fake)
+REAL_MODEL_RUNTIME / REAL_EXTERNAL_MODEL_CALL 仍 NOT_AUTHORIZED;REAL_MODEL_CALLS=0;M2 core 未改。
 ```
+
+## Provider 接入说明(cc switch / CCR)
+`ai-gateway` 已 env 驱动(`FPAI_MODEL_BASE_URL/API_KEY/NAME`),接 cc switch/CCR **零代码改动**。但按本阶段裁决 `PRODUCTION_API_KEY=NO / REAL_EXTERNAL_MODEL_CALL=NOT_AUTHORIZED`:**101A 不设置真实 key、运行时 Provider 保持 FakeAiGateway**;真实 key 只在 **101A-B 之后经架构师授权**、放本地 `.env`(gitignored),**绝不入库**。`.env.example` 仅提供占位。
