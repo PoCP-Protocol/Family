@@ -1,9 +1,11 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { AuditMeta, CompleteGrowthActionRequest, CompleteGrowthActionResponse, GrowthActionDto } from '@family/contracts';
 import { FamilyRepository } from './family.repository';
 import { REFLECTION_BOUNDARY, assertCompletableGrowthActionStatus } from './growth-action.policy';
+import { assertNormalSafetyRoute } from './normal-safety-route.policy';
+import { GrowthSubjectResolver } from './growth-subject.resolver';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const COMPLETE_GROWTH_ACTION_ACTION = 'CompleteGrowthAction';
@@ -13,7 +15,29 @@ type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response
 
 @Injectable()
 export class GrowthActionService {
-  constructor(private readonly repository: FamilyRepository) {}
+  constructor(
+    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
+    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
+  ) {}
+
+  async getTodayAction(familyId: string, actorId: string): Promise<GrowthActionDto | null> {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      const result = await client.query<GrowthActionRow>(
+        `select ga.action_id, ga.family_id, ga.onboarding_id, ga.priority_id, ga.intervention_episode_id,
+                ga.day_index, ga.status, ga.assignment_text, ga.due_date, ga.completed_at,
+                ga.completion_status, ga.reflection, ga.reflection_boundary, ga.boundary, ga.created_at
+         from growth_actions ga
+         join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
+         where ga.family_id = $1 and ie.status = 'ACTIVE' and ga.status = 'PENDING'
+         order by ga.due_date, ga.day_index
+         limit 1`,
+        [familyId],
+      );
+      return result.rows[0] ? mapGrowthAction(result.rows[0]) : null;
+    });
+  }
 
   async completeGrowthAction(request: CompleteGrowthActionRequest, meta: AuditMeta): Promise<CompleteGrowthActionResponse> {
     assertCompletableGrowthActionStatus(request.completion_status);
@@ -27,8 +51,13 @@ export class GrowthActionService {
       await ensureFamilyExists(client, request.family_id);
       await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const existing = await getCompletableGrowthAction(client, request.family_id, request.action_id);
-      const consentSubjectId = await getConsentSubjectForPriority(client, existing.priority_id);
-      await assertRequiredGrowthConsents(client, request.family_id, consentSubjectId);
+      const subject = await this.growthSubjectResolver.resolve(client, {
+        familyId: request.family_id,
+        onboardingId: existing.onboarding_id,
+        priorityId: existing.priority_id,
+      });
+      await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
+      await assertNormalSafetyRoute(client, request.family_id, existing.onboarding_id);
       const action = await updateGrowthActionCompletion(client, request);
       const response: CompleteGrowthActionResponse = {
         action,
@@ -130,9 +159,9 @@ async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: str
   }
 }
 
-async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; priority_id: string }> {
-  const result = await client.query<{ action_id: string; priority_id: string }>(
-    `select ga.action_id, ga.priority_id
+async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; onboarding_id: string; priority_id: string }> {
+  const result = await client.query<{ action_id: string; onboarding_id: string; priority_id: string }>(
+    `select ga.action_id, ga.onboarding_id, ga.priority_id
      from growth_actions ga
      join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
      where ga.family_id = $1
@@ -147,38 +176,6 @@ async function getCompletableGrowthAction(client: pg.PoolClient, familyId: strin
     throw new NotFoundException('growth_action_not_found');
   }
   return row;
-}
-
-async function getConsentSubjectForPriority(client: pg.PoolClient, priorityId: string): Promise<string> {
-  const result = await client.query<{ subject_person_id: string | null; subject_relationship_id: string | null }>(
-    `select profile.subject_person_id, profile.subject_relationship_id
-     from growth_priorities priority
-     join growth_profiles profile on profile.profile_id = priority.profile_id
-     where priority.priority_id = $1
-     for share`,
-    [priorityId],
-  );
-  const profile = result.rows[0];
-  if (!profile) {
-    throw new NotFoundException('growth_priority_not_found');
-  }
-  if (profile.subject_person_id) {
-    return profile.subject_person_id;
-  }
-  if (profile.subject_relationship_id) {
-    const relationship = await client.query<{ person_b_id: string }>(
-      `select person_b_id
-       from family_relationships
-       where relationship_id = $1
-       for share`,
-      [profile.subject_relationship_id],
-    );
-    const row = relationship.rows[0];
-    if (row) {
-      return row.person_b_id;
-    }
-  }
-  throw new ConflictException('growth_action_consent_subject_unresolved');
 }
 
 async function updateGrowthActionCompletion(client: pg.PoolClient, request: CompleteGrowthActionRequest): Promise<GrowthActionDto> {

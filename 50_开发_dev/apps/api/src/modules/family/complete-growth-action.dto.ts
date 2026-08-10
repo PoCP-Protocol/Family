@@ -3,6 +3,7 @@ import type { CompleteGrowthActionRequest } from '@family/contracts';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COMPLETION_STATUSES = new Set(['COMPLETED', 'PARTIAL', 'NOT_COMPLETED']);
+const ALLOWED_FIELDS = new Set(['completion_status', 'reflection', 'occurred_at']);
 
 type JsonObject = Record<string, unknown>;
 
@@ -25,6 +26,12 @@ export function validateCompleteGrowthActionRequest(
   }
 
   const input = body as JsonObject;
+  for (const field of Object.keys(input)) {
+    if (!ALLOWED_FIELDS.has(field)) {
+      throw new BadRequestException('Invalid schema');
+    }
+  }
+
   if (typeof input.completion_status !== 'string' || !COMPLETION_STATUSES.has(input.completion_status)) {
     throw new BadRequestException('Invalid schema');
   }

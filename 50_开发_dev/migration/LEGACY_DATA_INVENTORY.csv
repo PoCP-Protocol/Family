@@ -1,0 +1,14 @@
+inventory_id,source_system,data_domain,source_asset,matrix_ids,route,priority,estimated_volume,time_range,sensitivity,owner,status,notes
+LDI-001,legacy_crm,identity,customer records,M001,TRANSFORM,P0,UNKNOWN,UNKNOWN,PII,产品+数据,DISCOVERY_REQUIRED,Customer becomes Family/Family CRM View via adapter.
+LDI-002,legacy_crm,identity,parent/contact records,M002,TRANSFORM,P0,UNKNOWN,UNKNOWN,PII,数据,DISCOVERY_REQUIRED,Separate identity role and consent.
+LDI-003,legacy_family_identity,identity,child/student records,M003,TRANSFORM,P0,UNKNOWN,UNKNOWN,MINOR_PII,产品+数据,DISCOVERY_REQUIRED,Guardian relation required.
+LDI-004,legacy_family_identity,relationship,family member links,M004,TRANSFORM,P0,UNKNOWN,UNKNOWN,PII,Ontology,DISCOVERY_REQUIRED,Relationship review required when weak.
+LDI-005,legacy_assessment,assessment,assessment records and reports,M005,MIGRATE_AS_EVIDENCE,P0,UNKNOWN,UNKNOWN,SENSITIVE_GROWTH_DATA,产品+教研,DISCOVERY_REQUIRED,No direct GrowthProfile writes.
+LDI-006,legacy_assessment,ai,legacy AI diagnoses,M006,TRANSFORM_AS_HYPOTHESIS,P0,UNKNOWN,UNKNOWN,SENSITIVE_AI_OUTPUT,AI+教研,DISCOVERY_REQUIRED,fact_status must be NOT_FACT.
+LDI-007,legacy_learning,content,courses and courseware,M008,RETAIN_AND_REORGANIZE,P0,UNKNOWN,UNKNOWN,CONTENT,教研,DISCOVERY_REQUIRED,First slice P03/R03/R04/R05.
+LDI-008,legacy_learning,journey,training camps and 21/90 day programs,"M009;M010;M011",RETAIN_AND_REORGANIZE,P0,UNKNOWN,UNKNOWN,OPERATIONAL,产品+交付,DISCOVERY_REQUIRED,Do not infer Journey Outcome.
+LDI-009,legacy_learning,action,tasks and check-ins,"M013;M014",MIGRATE_HISTORICAL_ACTION_EVENT,P0,UNKNOWN,UNKNOWN,GROWTH_EVENT_DATA,产品+数据,DISCOVERY_REQUIRED,Completion does not imply Outcome.
+LDI-010,legacy_service,service,advisor/assistant/support notes,"M015;M018;M043",TRANSFORM_WITH_REVIEW,P0,UNKNOWN,UNKNOWN,SENSITIVE_FREE_TEXT,数据+安全,DISCOVERY_REQUIRED,Free text classification required.
+LDI-011,legacy_commerce,commerce,orders and payments,"M037;M038",INTEGRATE,P0,UNKNOWN,UNKNOWN,FINANCIAL,平台,DISCOVERY_REQUIRED,Reference only.
+LDI-012,legacy_crm,consent,legacy authorization records,M052,VERIFY_OR_RECONSENT,P0,UNKNOWN,UNKNOWN,CONSENT,法务+安全,DISCOVERY_REQUIRED,Default LEGACY_CONSENT_UNVERIFIED.
+LDI-013,legacy_business_metrics,retired_metrics,leaderboard and family total score,"M035;M036",RETIRE,禁止,UNKNOWN,UNKNOWN,SENSITIVE_DERIVED,产品,DISCOVERY_REQUIRED,Do not enter Family.

@@ -1,0 +1,123 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+source: Family_现有业务迁移矩阵.csv
+systems:
+  - id: legacy_crm
+    name: Legacy CRM / 客户经营系统
+    category: crm
+    strategy: INTEGRATE_AND_TRANSFORM_VIEW
+    system_of_record_for:
+      - lead
+      - opportunity
+      - sales_follow_up
+    family_targets:
+      - Family CRM View
+      - external_entity_refs
+    priority: P0
+    adapter: CRM Adapter
+    notes: Customer identity maps to Family, but CRM remains master for commercial pipeline.
+  - id: legacy_family_identity
+    name: Legacy customer/contact/student identity sources
+    category: identity
+    strategy: TRANSFORM
+    system_of_record_for:
+      - legacy_customer_id
+      - legacy_contact_id
+      - legacy_student_id
+    family_targets:
+      - Family
+      - Parent
+      - Child
+      - FamilyRelationship
+      - external_entity_refs
+    priority: P0
+    adapter: CRM/User
+    notes: Identity resolution is the first migration dependency.
+  - id: legacy_assessment
+    name: Legacy assessment and report systems
+    category: assessment
+    strategy: TRANSFORM_AND_MIGRATE_HISTORY
+    system_of_record_for:
+      - legacy_assessment_record
+      - legacy_report_text
+    family_targets:
+      - Assessment
+      - Historical Assessment Evidence
+      - Growth Onboarding input
+    priority: P0
+    adapter: Assessment Adapter
+    notes: Scores and labels remain evidence or perspective; they do not directly set GrowthProfile.
+  - id: legacy_learning
+    name: Legacy course, camp, challenge, and journey systems
+    category: learning
+    strategy: RETAIN_AND_REORGANIZE
+    system_of_record_for:
+      - legacy_course_content
+      - legacy_program_record
+      - legacy_class_record
+    family_targets:
+      - Course
+      - KnowledgeCard
+      - Intervention
+      - GrowthProgram
+      - GrowthJourney
+      - GrowthAction
+    priority: P0
+    adapter: Learning Adapter / LMS Adapter
+    notes: First migration slice is use-case driven around P03, R03, R04, and R05.
+  - id: legacy_service
+    name: Legacy advisor, assistant, support, and service notes
+    category: service
+    strategy: TRANSFORM_WITH_SAFETY_REVIEW
+    system_of_record_for:
+      - legacy_service_record
+      - legacy_human_note
+    family_targets:
+      - ServiceInteraction
+      - HumanObservation
+      - ParentPerspective
+      - OperationalNote
+    priority: P0
+    adapter: Staff Platform / Support Adapter
+    notes: Free text is not Fact and may require privacy or safety classification.
+  - id: legacy_commerce
+    name: Legacy order and payment systems
+    category: commerce
+    strategy: INTEGRATE
+    system_of_record_for:
+      - order
+      - payment
+      - refund
+      - invoice
+    family_targets:
+      - OrderRef
+      - PaymentRef
+    priority: P0
+    adapter: Commerce Adapter
+    notes: Family does not rebuild payment clearing, refund, invoice, or transaction ledger.
+  - id: legacy_live
+    name: Live SaaS
+    category: live
+    strategy: INTEGRATE
+    system_of_record_for:
+      - live_session_delivery
+    family_targets:
+      - LearningSessionRef
+      - Timeline Event
+    priority: P1
+    adapter: Learning Adapter
+    notes: Live technology remains external.
+  - id: legacy_community
+    name: WeChat / WeCom / community channels
+    category: community
+    strategy: INTEGRATE_AND_TRANSFORM
+    system_of_record_for:
+      - channel_membership
+      - communication_record
+    family_targets:
+      - GrowthCommunity
+      - ServiceInteraction
+      - ParentPerspective
+    priority: P1
+    adapter: Community Adapter
+    notes: Group membership is not FamilyRelationship or Consent.

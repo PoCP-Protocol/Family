@@ -4,6 +4,10 @@ import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyController } from './family.controller';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
+import { GrowthActionService } from './growth-action.service';
+import { GrowthPriorityService } from './growth-priority.service';
+import { InterventionService } from './intervention.service';
+import { GrowthSubjectResolver } from './growth-subject.resolver';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -13,6 +17,6 @@ import { FamilyService } from './family.service';
  */
 @Module({
 	controllers: [FamilyController],
-	providers: [FamilyRepository, FamilyAggregateRepository, EvidenceSynthesisService, FamilyService],
+	providers: [FamilyRepository, FamilyAggregateRepository, EvidenceSynthesisService, FamilyService, GrowthSubjectResolver, GrowthPriorityService, InterventionService, GrowthActionService],
 })
 export class FamilyModule {}

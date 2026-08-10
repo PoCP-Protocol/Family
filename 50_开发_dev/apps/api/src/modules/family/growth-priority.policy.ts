@@ -90,9 +90,8 @@ export function buildGrowthPriorityDraft(input: BuildGrowthPriorityDraftInput): 
 
 export function assertDecisionMatchesDraft(draft: GrowthPriorityDraftDto, decision: GrowthPriorityDecision): void {
   if (decision === 'NO_PRIORITY_YET') {
-    if (draft.decision !== 'NO_PRIORITY_YET') {
-      throw new Error('growth_priority_decision_not_eligible');
-    }
+    // A guardian may explicitly defer even when a deterministic candidate exists.
+    // This writes no hidden priority state and keeps human confirmation authoritative.
     return;
   }
 

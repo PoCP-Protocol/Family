@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type {
@@ -18,24 +18,29 @@ import {
   GROWTH_PRIORITY_BOUNDARY,
   GROWTH_PRIORITY_POLICY_VERSION,
 } from './growth-priority.policy';
+import { GrowthSubjectResolver } from './growth-subject.resolver';
+import { assertNormalSafetyRoute } from './normal-safety-route.policy';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const CONFIRM_GROWTH_PRIORITY_ACTION = 'ConfirmGrowthPriority';
 const GROWTH_PRIORITY_CONFIRMED_EVENT = 'GrowthPriorityConfirmed';
-const M2_ONBOARDING_JOURNEY_TYPE = 'M2_FIRST_GROWTH_ONBOARDING';
+const M2_ONBOARDING_JOURNEY_TYPE = 'PARENT_CHILD_COMMUNICATION_CONFLICT';
 
 type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response: TResponse };
 
 @Injectable()
 export class GrowthPriorityService {
-  constructor(private readonly repository: FamilyRepository) {}
+  constructor(
+    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
+    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
+  ) {}
 
   async getGrowthPriorityInsight(familyId: string, onboardingId: string, actorId: string): Promise<GrowthPriorityInsightResponse> {
     return this.repository.withTransaction(async (client) => {
       await ensureFamilyExists(client, familyId);
       await assertFamilyManagePermission(client, familyId, actorId);
       await assertActiveOnboarding(client, familyId, onboardingId);
-      const profiles = await listConfirmedProfiles(client, familyId);
+      const profiles = await listConfirmedProfiles(client, familyId, onboardingId);
       const draft = buildGrowthPriorityDraft({
         familyId,
         onboardingId,
@@ -67,11 +72,11 @@ export class GrowthPriorityService {
 
       await ensureFamilyExists(client, request.family_id);
       await assertFamilyManagePermission(client, request.family_id, meta.actor);
-      const childId = await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
-      await assertRequiredGrowthConsents(client, request.family_id, childId);
+      await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
+      await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
 
-      const profiles = await listConfirmedProfiles(client, request.family_id);
+      const profiles = await listConfirmedProfiles(client, request.family_id, request.onboarding_id);
       const draft = buildGrowthPriorityDraft({
         familyId: request.family_id,
         onboardingId: request.onboarding_id,
@@ -93,6 +98,12 @@ export class GrowthPriorityService {
         if (!candidate || candidate.dimension_id !== request.decision) {
           throw new ConflictException('growth_priority_decision_not_eligible');
         }
+        const subject = await this.growthSubjectResolver.resolve(client, {
+          familyId: request.family_id,
+          onboardingId: request.onboarding_id,
+          profileId: candidate.profile_id,
+        });
+        await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
         const previousPriority = await getActivePriority(client, request.family_id, request.onboarding_id);
         await supersedeActivePriority(client, request.family_id, request.onboarding_id);
         priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority?.priority_id ?? null, meta);
@@ -195,22 +206,21 @@ async function assertFamilyManagePermission(client: pg.PoolClient, familyId: str
   }
 }
 
-async function assertActiveOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<string> {
-  const result = await client.query<{ subject_person_id: string | null }>(
-    `select subject_person_id
+async function assertActiveOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
+  const result = await client.query(
+    `select journey_id
      from growth_journeys
      where family_id = $1
        and journey_id = $2
        and journey_type = $3
+       and phase = 'ONBOARDING'
        and status = 'ACTIVE'
      for share`,
     [familyId, onboardingId, M2_ONBOARDING_JOURNEY_TYPE],
   );
-  const row = result.rows[0];
-  if (!row || !row.subject_person_id) {
+  if (result.rowCount !== 1) {
     throw new NotFoundException('active_growth_onboarding_not_found');
   }
-  return row.subject_person_id;
 }
 
 async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: string, childId: string): Promise<void> {
@@ -247,7 +257,7 @@ async function assertNoActiveInterventionEpisode(client: pg.PoolClient, familyId
   }
 }
 
-async function listConfirmedProfiles(client: pg.PoolClient, familyId: string): Promise<ConfirmedProfileForPriority[]> {
+async function listConfirmedProfiles(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<ConfirmedProfileForPriority[]> {
   const result = await client.query<{
     profile_id: string;
     family_id: string;
@@ -267,8 +277,15 @@ async function listConfirmedProfiles(client: pg.PoolClient, familyId: string): P
        and gp.status = 'WORKING'
        and gp.confirmed_at is not null
        and gpd.dimension_id = any($2::varchar[])
+       and exists (
+         select 1
+         from jsonb_array_elements_text(coalesce(gp.evidence_snapshot->'evidence_ids', '[]'::jsonb)) as evidence_ref(value)
+         join evidence_records er on er.evidence_id::text = evidence_ref.value
+         join perspectives p on p.perspective_id = er.perspective_id
+         where p.onboarding_id = $3
+       )
      order by gp.confirmed_at desc`,
-    [familyId, ['P03', 'R03', 'R04', 'R05']],
+    [familyId, ['P03', 'R03', 'R04', 'R05'], onboardingId],
   );
 
   return result.rows.map((row) => ({

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type {
@@ -19,6 +19,8 @@ import {
   buildGrowthActionAssignments,
   getListenBeforeRespondCard,
 } from './intervention.policy';
+import { assertNormalSafetyRoute } from './normal-safety-route.policy';
+import { GrowthSubjectResolver } from './growth-subject.resolver';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const START_INTERVENTION_ACTION = 'StartIntervention';
@@ -28,7 +30,37 @@ type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response
 
 @Injectable()
 export class InterventionService {
-  constructor(private readonly repository: FamilyRepository) {}
+  constructor(
+    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
+    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
+  ) {}
+
+  async getInterventionCard(familyId: string, actorId: string) {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      return getListenBeforeRespondCard();
+    });
+  }
+
+  async getActiveIntervention(familyId: string, onboardingId: string, actorId: string): Promise<StartInterventionResponse | null> {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      const episodeResult = await client.query<InterventionEpisodeRow>(
+        `select episode_id, family_id, onboarding_id, priority_id, intervention_id, intervention_code,
+                status, started_by_actor_id, started_at, planned_days, policy_version, created_at
+         from intervention_episodes
+         where family_id = $1 and onboarding_id = $2 and status = 'ACTIVE'
+         limit 1`,
+        [familyId, onboardingId],
+      );
+      const episode = episodeResult.rows[0];
+      if (!episode) return null;
+      const actions = await listEpisodeActions(client, episode.episode_id);
+      return { intervention: getListenBeforeRespondCard(), episode: mapInterventionEpisode(episode), actions };
+    });
+  }
 
   async startIntervention(request: StartInterventionRequest, meta: AuditMeta): Promise<StartInterventionResponse> {
     const requestHash = hashStartInterventionRequest(request);
@@ -41,8 +73,13 @@ export class InterventionService {
       await ensureFamilyExists(client, request.family_id);
       await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const activePriority = await getActivePriorityForStart(client, request);
-      const consentSubjectId = await getConsentSubjectForPriority(client, activePriority.profile_id);
-      await assertRequiredGrowthConsents(client, request.family_id, consentSubjectId);
+      const subject = await this.growthSubjectResolver.resolve(client, {
+        familyId: request.family_id,
+        onboardingId: request.onboarding_id,
+        priorityId: request.priority_id,
+      });
+      await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
+      await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
 
       const episode = await insertInterventionEpisode(client, request, meta);
@@ -175,37 +212,6 @@ async function getActivePriorityForStart(client: pg.PoolClient, request: StartIn
   return row;
 }
 
-async function getConsentSubjectForPriority(client: pg.PoolClient, profileId: string): Promise<string> {
-  const result = await client.query<{ subject_person_id: string | null; subject_relationship_id: string | null }>(
-    `select subject_person_id, subject_relationship_id
-     from growth_profiles
-     where profile_id = $1
-     for share`,
-    [profileId],
-  );
-  const profile = result.rows[0];
-  if (!profile) {
-    throw new NotFoundException('growth_profile_not_found');
-  }
-  if (profile.subject_person_id) {
-    return profile.subject_person_id;
-  }
-  if (profile.subject_relationship_id) {
-    const relationship = await client.query<{ person_b_id: string }>(
-      `select person_b_id
-       from family_relationships
-       where relationship_id = $1
-       for share`,
-      [profile.subject_relationship_id],
-    );
-    const row = relationship.rows[0];
-    if (row) {
-      return row.person_b_id;
-    }
-  }
-  throw new ConflictException('growth_priority_consent_subject_unresolved');
-}
-
 async function assertNoActiveInterventionEpisode(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
   const result = await client.query(
     `select episode_id
@@ -270,6 +276,19 @@ async function insertGrowthActions(
     actions.push(mapGrowthAction(result.rows[0]));
   }
   return actions;
+}
+
+async function listEpisodeActions(client: pg.PoolClient, episodeId: string): Promise<GrowthActionDto[]> {
+  const result = await client.query<GrowthActionRow>(
+    `select action_id, family_id, onboarding_id, priority_id, intervention_episode_id,
+            day_index, status, assignment_text, due_date, completed_at,
+            completion_status, reflection, reflection_boundary, boundary, created_at
+     from growth_actions
+     where intervention_episode_id = $1
+     order by day_index`,
+    [episodeId],
+  );
+  return result.rows.map(mapGrowthAction);
 }
 
 async function insertAudit(

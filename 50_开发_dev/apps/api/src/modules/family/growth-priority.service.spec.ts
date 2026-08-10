@@ -4,10 +4,13 @@ import { describe, expect, it } from 'vitest';
 import type { FamilyRepository } from './family.repository';
 import { buildGrowthPriorityDraft, type ConfirmedProfileForPriority } from './growth-priority.policy';
 import { GrowthPriorityService } from './growth-priority.service';
+import type { GrowthSubjectResolver } from './growth-subject.resolver';
 
 const familyId = '11111111-1111-4111-8111-111111111111';
 const onboardingId = '22222222-2222-4222-8222-222222222222';
 const childId = '33333333-3333-4333-8333-333333333333';
+const relationshipId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const relationshipChildId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const actorId = 'actor-parent-1';
 const meta: AuditMeta = {
   actor: actorId,
@@ -63,7 +66,7 @@ describe('GrowthPriority policy', () => {
 describe('GrowthPriorityService', () => {
   it('confirms NO_PRIORITY_YET without inserting an active priority', async () => {
     const client = new FakePriorityClient({ profiles: [] });
-    const service = new GrowthPriorityService(createRepository(client));
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
     const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
 
     const response = await service.confirmGrowthPriority({
@@ -84,7 +87,7 @@ describe('GrowthPriorityService', () => {
   it('creates one active priority and supersedes the previous active priority', async () => {
     const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
     const client = new FakePriorityClient({ profiles: [profile], activePriorityId: '88888888-8888-4888-8888-888888888888' });
-    const service = new GrowthPriorityService(createRepository(client));
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
     const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
 
     const response = await service.confirmGrowthPriority({
@@ -108,12 +111,78 @@ describe('GrowthPriorityService', () => {
     expect(client.supersededActivePriority).toBe(true);
     expect(response.priority?.reason_codes).toContain('PRACTICE_READY');
     expect(response.priority?.evidence_refs).toEqual(['ev-R03']);
+    expect(client.consentSubjectIds).toEqual([childId]);
+    expect(client.relationshipLookupCount).toBe(0);
+  });
+
+  it('blocks confirmation when normal safety route cannot be verified', async () => {
+    const client = new FakePriorityClient({ profiles: [], normalRouteVerified: false });
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
+    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
+
+    await expect(service.confirmGrowthPriority({
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      draft_id: draft.draft_id,
+      decision: 'NO_PRIORITY_YET',
+      idempotency_key: 'idem-normal-route-blocked',
+    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
+
+    expect(client.insertedPriority).toBe(false);
+    expect(client.auditActions).toEqual([]);
+    expect(client.outboxEvents).toEqual([]);
+  });
+
+  it('uses the unified onboarding subject resolution for a relationship profile', async () => {
+    const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
+    const client = new FakePriorityClient({
+      profiles: [profile],
+      profileSubjectPersonId: null,
+      profileSubjectRelationshipId: relationshipId,
+      relationshipSubjectPersonId: relationshipChildId,
+    });
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver(relationshipChildId));
+    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
+
+    await service.confirmGrowthPriority({
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      draft_id: draft.draft_id,
+      decision: 'R03',
+      idempotency_key: 'idem-confirm-r03',
+    }, meta);
+
+    expect(client.consentSubjectIds).toEqual([relationshipChildId]);
+    expect(client.relationshipLookupCount).toBe(0);
+  });
+
+  it('uses the same resolved onboarding child even when profile provenance has two subject fields', async () => {
+    const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
+    const client = new FakePriorityClient({
+      profiles: [profile],
+      profileSubjectPersonId: childId,
+      profileSubjectRelationshipId: relationshipId,
+      relationshipSubjectPersonId: relationshipChildId,
+    });
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
+    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
+
+    await service.confirmGrowthPriority({
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      draft_id: draft.draft_id,
+      decision: 'R03',
+      idempotency_key: 'idem-confirm-r03',
+    }, meta);
+
+    expect(client.consentSubjectIds).toEqual([childId]);
+    expect(client.relationshipLookupCount).toBe(0);
   });
 
   it('replays an idempotent response without rewriting priority state', async () => {
     const replayResponse = { priority: null, decision: 'NO_PRIORITY_YET' as GrowthPriorityDecision, draft: buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt }) };
     const client = new FakePriorityClient({ profiles: [], replayResponse });
-    const service = new GrowthPriorityService(createRepository(client));
+    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
 
     const response = await service.confirmGrowthPriority({
       family_id: familyId,
@@ -133,6 +202,17 @@ function createRepository(client: FakePriorityClient): FamilyRepository {
   return {
     withTransaction: async <T>(work: (txClient: FakePriorityClient) => Promise<T>) => work(client),
   } as unknown as FamilyRepository;
+}
+
+function createSubjectResolver(resolvedChildId = childId): GrowthSubjectResolver {
+  return {
+    resolve: async () => ({
+      childPersonId: resolvedChildId,
+      guardianPersonIds: [actorId],
+      subjectRelationshipId: relationshipId,
+      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
+    }),
+  } as GrowthSubjectResolver;
 }
 
 function createProfile(input: {
@@ -167,12 +247,20 @@ class FakePriorityClient {
   supersededActivePriority = false;
   auditActions: string[] = [];
   outboxEvents: string[] = [];
+  consentSubjectIds: string[] = [];
+  relationshipLookupCount = 0;
+  private actionName = '';
+  private requestHash = '';
   private storedResponse: unknown | null;
 
   constructor(private readonly state: {
     profiles: ConfirmedProfileForPriority[];
     activePriorityId?: string;
     replayResponse?: unknown;
+    profileSubjectPersonId?: string | null;
+    profileSubjectRelationshipId?: string | null;
+    relationshipSubjectPersonId?: string;
+    normalRouteVerified?: boolean;
   }) {
     this.storedResponse = state.replayResponse ?? null;
   }
@@ -181,12 +269,14 @@ class FakePriorityClient {
     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
 
     if (normalized.startsWith('insert into idempotency_keys')) {
+      this.actionName = params[1] as string;
+      this.requestHash = params[2] as string;
       return { rowCount: 1, rows: [] };
     }
     if (normalized.startsWith('select action_name, request_hash, response_body')) {
       return {
         rowCount: 1,
-        rows: [{ action_name: 'ConfirmGrowthPriority', request_hash: hashRequest(params[0] as string), response_body: this.storedResponse }],
+        rows: [{ action_name: this.actionName, request_hash: this.requestHash, response_body: this.storedResponse }],
       };
     }
     if (normalized.startsWith('select family_id from families')) {
@@ -195,11 +285,38 @@ class FakePriorityClient {
     if (normalized.startsWith('select audit_id from audit_logs')) {
       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
     }
-    if (normalized.startsWith('select subject_person_id from growth_journeys')) {
-      return { rowCount: 1, rows: [{ subject_person_id: childId }] };
+    if (normalized.includes('growth_journeys') && normalized.includes('subject_person_id')) {
+      throw new Error('growth_journeys.subject_person_id must not be queried');
+    }
+    if (normalized.startsWith('select journey_id from growth_journeys')) {
+      return { rowCount: 1, rows: [{ journey_id: onboardingId }] };
+    }
+    if (normalized.startsWith('select family_id, subject_person_id, subject_relationship_id from growth_profiles')) {
+      return {
+        rowCount: 1,
+        rows: [{
+          family_id: familyId,
+          subject_person_id: this.state.profileSubjectPersonId === undefined ? childId : this.state.profileSubjectPersonId,
+          subject_relationship_id: this.state.profileSubjectRelationshipId ?? null,
+        }],
+      };
+    }
+    if (normalized.startsWith('select person_b_id from family_relationships')) {
+      this.relationshipLookupCount += 1;
+      return { rowCount: 1, rows: [{ person_b_id: this.state.relationshipSubjectPersonId ?? childId }] };
     }
     if (normalized.startsWith('select purpose from consents')) {
+      this.consentSubjectIds.push(params[1] as string);
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+    }
+    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+      if (this.state.normalRouteVerified === false) {
+        return { rowCount: 0, rows: [] };
+      }
+      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+    }
+    if (normalized.startsWith('select perspective_id from perspectives')) {
+      return { rowCount: 0, rows: [] };
     }
     if (normalized.startsWith('select episode_id from intervention_episodes')) {
       return { rowCount: 0, rows: [] };

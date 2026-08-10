@@ -1,0 +1,46 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+identity_rules:
+  match_levels:
+    - EXACT_MATCH
+    - HIGH_CONFIDENCE_MATCH
+    - REVIEW_REQUIRED
+    - REJECTED
+  forbidden_auto_match:
+    - same child name plus age only
+    - same phone number only across conflicting child records
+    - legacy group membership to family relationship
+quality_checks:
+  - id: CROSS_FAMILY_LEAKAGE
+    severity: CRITICAL
+    expected: 0
+  - id: ORPHAN_CHILD
+    severity: CRITICAL
+    expected: 0
+  - id: INVALID_FAMILY_RELATIONSHIP
+    severity: CRITICAL
+    expected: 0
+  - id: INVALID_ACTIVE_CONSENT
+    severity: CRITICAL
+    expected: 0
+  - id: MISSING_PROVENANCE
+    severity: CRITICAL
+    expected: 0
+  - id: DUPLICATE_CANONICAL_IDENTITY
+    severity: CRITICAL
+    expected: 0
+  - id: UNKNOWN_ASSESSMENT_INSTRUMENT
+    severity: MAJOR
+    action: REVIEW_REQUIRED
+  - id: UNMAPPED_COURSE
+    severity: MAJOR
+    action: CONTENT_MAPPING_REVIEW
+reconciliation_counts:
+  - SOURCE_COUNT
+  - EXTRACTED
+  - NORMALIZED
+  - MATCHED
+  - REVIEW_REQUIRED
+  - REJECTED
+  - IMPORTED
+  - RECONCILED

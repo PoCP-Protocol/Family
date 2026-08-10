@@ -17,24 +17,24 @@ READY_FOR_WAVE2_INTEGRATION = YES
 
 | Stream | Owner | State | Local Gate | Integration Blocker | Notes |
 |---|---|---|---|---|---|
-| Schema / Contract | AI-03 | NOT_STARTED | PENDING | subject semantics; legacy action schema | Must produce `SCHEMA_COMPATIBILITY_AUDIT.md`. |
+| Schema / Contract | AI-03 | READY | PASS | waits real PG validation | `SCHEMA_COMPATIBILITY_AUDIT.md` updated; GrowthSubjectResolver boundary implemented. |
 | Priority | AI-01 | LOCAL_DONE | PASS | waits integration | Domain fix owner only. |
 | Intervention / Action | AI-02 | LOCAL_DONE | PASS | legacy schema compatibility audit | Domain fix owner only. |
-| API Integration | AI-00 | RUNNING | PENDING | waits Schema/Contract | Owns controller/module/shared wiring. |
-| Frontend | AI-04 | NOT_STARTED | PENDING | waits API for final real mode | May start with frozen-contract fixtures. |
-| E2E / Real PG | AI-05 | NOT_STARTED | PENDING | waits migration readiness | May prepare harness now. |
-| Governance | AI-06 | NOT_STARTED | PENDING | none | Pre-review can begin before final gate. |
-| Independent | AI-07 | NOT_STARTED | PENDING | Barrier 1-5 required | No implementation participation. |
+| API Integration | AI-00 | READY_LOCAL | PASS | waits real HTTP E2E | Wave2 services registered; HTTP routes wired and typechecked. |
+| Frontend | AI-04 | PRE_REAL_API_READY | PASS | waits API for final real mode | Frozen-contract fixture mode validated. |
+| E2E / Real PG | AI-05 | HARNESS_READY | PENDING | waits API integration | Skeleton validated; final real tests still pending. |
+| Governance | AI-06 | LOCAL_REMEDIATION_COMPLETE | PENDING | final E2E evidence | Safety/DTO blockers locally remediated. |
+| Independent | AI-07 | WAITING_FOR_BARRIERS | PENDING | Barrier 1-5 required | No implementation participation. |
 
 ## Barriers
 
 | Barrier | Name | State | Required Evidence |
 |---|---|---|---|
-| BARRIER-1 | SCHEMA_CONTRACT_READY | PENDING | AI-03 PASS; `REAL_MIGRATION_READY = YES`. |
-| BARRIER-2 | DOMAIN_API_READY | PENDING | AI-01 PASS; AI-02 PASS; AI-00 wiring PASS. |
+| BARRIER-1 | SCHEMA_CONTRACT_READY | PASS_LOCAL | AI-03 PASS; `REAL_MIGRATION_READY = YES`; final evidence still needs AI-05 real PG run. |
+| BARRIER-2 | DOMAIN_API_READY | PASS_LOCAL | AI-01 PASS; AI-02 PASS; AI-00 wiring PASS; final confirmation waits AI-05 HTTP E2E. |
 | BARRIER-3 | FRONTEND_REAL_API_READY | PENDING | AI-04 real API gate PASS. |
 | BARRIER-4 | REAL_E2E_READY | PENDING | AI-05 real PG + HTTP E2E + browser QA PASS. |
-| BARRIER-5 | GOVERNANCE_READY | PENDING | AI-06 governance review PASS. |
+| BARRIER-5 | GOVERNANCE_READY | PENDING | AI-06 local remediation complete; final E2E evidence required. |
 
 ## Current Non-Capabilities
 
@@ -47,8 +47,7 @@ READY_FOR_WAVE2_INTEGRATION = YES
 
 ## Next Immediate Actions
 
-1. AI-03: run schema/contract compatibility audit and classify `growth_actions` fields.
-2. AI-00: keep state aligned and prepare API/module integration without editing frozen contracts.
-3. AI-05: prepare Real PostgreSQL and HTTP E2E harness, waiting for `REAL_MIGRATION_READY = YES` for final gate.
-4. AI-04: prepare F01/F06/F07/F08/F09 using frozen-contract fixtures before real API switch.
-5. AI-06: start pre-review of subject resolution, consent, safety, and semantic boundaries.
+1. AI-05: convert Wave2 E2E skeleton to real PostgreSQL + HTTP tests using the confirmed route surface.
+2. AI-04: switch from frozen-contract fixture mode to real API mode after AI-05 confirms HTTP response shape.
+3. AI-06: rerun governance review after AI-05 provides revoked consent, safety escalation, no Outcome, and no AI side-effect evidence.
+4. AI-07: begin independent review only after Barrier 1-5 are complete.

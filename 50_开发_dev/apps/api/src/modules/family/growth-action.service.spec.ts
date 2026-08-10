@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FamilyRepository } from './family.repository';
 import { REFLECTION_BOUNDARY } from './growth-action.policy';
 import { GrowthActionService } from './growth-action.service';
+import type { GrowthSubjectResolver } from './growth-subject.resolver';
 
 const familyId = '11111111-1111-4111-8111-111111111111';
 const onboardingId = '22222222-2222-4222-8222-222222222222';
@@ -22,7 +23,7 @@ const meta: AuditMeta = {
 describe('GrowthActionService', () => {
   it('stores completion and reflection as raw material without profile or outcome writes', async () => {
     const client = new FakeGrowthActionClient();
-    const service = new GrowthActionService(createRepository(client));
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
 
     const response = await service.completeGrowthAction({
       family_id: familyId,
@@ -47,10 +48,28 @@ describe('GrowthActionService', () => {
     expect(client.profileOrOutcomeWrites).toEqual([]);
   });
 
+  it('blocks completion when normal safety route cannot be verified', async () => {
+    const client = new FakeGrowthActionClient(null, false);
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+
+    await expect(service.completeGrowthAction({
+      family_id: familyId,
+      action_id: actionId,
+      completion_status: 'COMPLETED',
+      reflection: '已完成。',
+      occurred_at: meta.occurredAt,
+      idempotency_key: 'idem-complete-normal-route-blocked',
+    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
+
+    expect(client.updatedActionCount).toBe(0);
+    expect(client.auditActions).toEqual([]);
+    expect(client.outboxEvents).toEqual([]);
+  });
+
   it('replays an idempotent completion without rewriting the action', async () => {
     const replayResponse = createReplayResponse();
     const client = new FakeGrowthActionClient(replayResponse);
-    const service = new GrowthActionService(createRepository(client));
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
 
     const response = await service.completeGrowthAction({
       family_id: familyId,
@@ -104,7 +123,7 @@ class FakeGrowthActionClient {
   private actionName = '';
   private requestHash = '';
 
-  constructor(private readonly replayResponse: CompleteGrowthActionResponse | null = null) {}
+  constructor(private readonly replayResponse: CompleteGrowthActionResponse | null = null, private readonly normalRouteVerified = true) {}
 
   async query(sql: string, params: unknown[] = []): Promise<{ rowCount: number; rows: unknown[] }> {
     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -126,14 +145,23 @@ class FakeGrowthActionClient {
     if (normalized.startsWith('select audit_id from audit_logs')) {
       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
     }
-    if (normalized.startsWith('select ga.action_id, ga.priority_id')) {
-      return { rowCount: 1, rows: [{ action_id: actionId, priority_id: priorityId }] };
+    if (normalized.startsWith('select ga.action_id, ga.onboarding_id, ga.priority_id')) {
+      return { rowCount: 1, rows: [{ action_id: actionId, onboarding_id: onboardingId, priority_id: priorityId }] };
     }
     if (normalized.startsWith('select profile.subject_person_id')) {
       return { rowCount: 1, rows: [{ subject_person_id: childId, subject_relationship_id: null }] };
     }
     if (normalized.startsWith('select purpose from consents')) {
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+    }
+    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+      if (!this.normalRouteVerified) {
+        return { rowCount: 0, rows: [] };
+      }
+      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+    }
+    if (normalized.startsWith('select perspective_id from perspectives')) {
+      return { rowCount: 0, rows: [] };
     }
     if (normalized.startsWith('update growth_actions')) {
       this.updatedActionCount += 1;
@@ -174,4 +202,15 @@ class FakeGrowthActionClient {
     }
     throw new Error(`unexpected query: ${normalized}`);
   }
+}
+
+function createSubjectResolver(): GrowthSubjectResolver {
+  return {
+    resolve: async () => ({
+      childPersonId: childId,
+      guardianPersonIds: [actorId],
+      subjectRelationshipId: null,
+      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
+    }),
+  } as GrowthSubjectResolver;
 }

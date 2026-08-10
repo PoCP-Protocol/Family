@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
-import { submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
+import { fetchGrowthPriorityInsight, submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
 
 import type { AppConfig } from './app.js';
 
@@ -214,7 +214,7 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('不会自动生成行动');
   });
 
-  it('renders Wave2 F06-F09 workspace after confirmed profile using pre-real-api fixtures', async () => {
+  it('renders Wave2 F06-F09 workspace after confirmed profile using real API responses', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
@@ -223,7 +223,15 @@ describe('M2-102 Family web perspective capture', () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('P03', 'DRAFT'), growthDraftFixture('R03', 'DRAFT'), growthDraftFixture('R05', 'REVIEW_REQUIRED')] }) })
       .mockResolvedValueOnce({ ok: true, json: async () => growthInsightFixture() })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ draft: growthDraftFixture('R03', 'CONFIRMED'), profile: growthProfileFixture('R03') }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture().intervention })
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => growthActionFixture('PENDING') })
+      .mockResolvedValueOnce({ ok: true, json: async () => completeActionFixture() });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('main');
 
@@ -238,70 +246,74 @@ describe('M2-102 Family web perspective capture', () => {
     await flushPromises();
 
     expect(root.textContent).toContain('7 天沟通练习工作台');
-    expect(root.textContent).toContain('pre-real-api');
+    expect(root.textContent).toContain('real-api');
     expect(root.textContent).toContain('本周练习重点');
     expect(root.textContent).toContain('NO_PRIORITY_YET');
     expect(root.textContent).toContain('先听后回应');
-    expect(root.textContent).toContain('今天的具体练习');
-    expect(root.textContent).toContain('行动后的记录');
-    expect(root.textContent).toContain('这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。');
+    expect(root.textContent).toContain('当前没有待完成的今日行动');
+    expect(root.textContent).toContain('开始练习后可记录行动反思');
     expect(root.textContent).not.toContain('总分');
     expect(root.textContent).not.toContain('排名');
     expect(root.textContent).not.toContain('诊断');
     expect(root.textContent).not.toContain('AI 推荐');
 
+    root.querySelector<HTMLButtonElement>('button[data-wave2-action="confirm-priority"]')?.click();
+    await flushPromises();
     root.querySelector<HTMLButtonElement>('button[data-wave2-action="start-intervention"]')?.click();
     await flushPromises();
     expect(root.textContent).toContain('已生成 7 个每日练习');
+    expect(root.textContent).toContain('今天的具体练习');
+    expect(root.textContent).toContain('行动后的记录');
+    expect(root.textContent).toContain('这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。');
 
     root.querySelector<HTMLFormElement>('#wave2-reflection-form')?.requestSubmit();
     await flushPromises();
-    expect(root.textContent).toContain('只记录行动完成情况，不声明结果已经发生。');
+    expect(root.textContent).toContain('REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME');
   });
 
   it('keeps Wave2 future real API adapters on named-action payload boundaries', async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
       .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
       .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
       .mockResolvedValueOnce({ ok: true, json: async () => completeActionFixture() });
     vi.stubGlobal('fetch', fetchMock);
 
+    await fetchGrowthPriorityInsight(config, 'onboarding-1');
     await submitConfirmGrowthPriority(config, 'onboarding-1', 'priority-draft-R03', 'R03');
     await submitStartIntervention(config, 'onboarding-1', 'priority-R03');
     await submitCompleteGrowthAction(config, 'action-day-1', 'PARTIAL', '今天先听后回应了一次。');
 
     expect(fetchMock).toHaveBeenNthCalledWith(1,
-      `http://api.test/families/${config.familyId}/growth/priorities/confirm`,
-      expect.objectContaining({ method: 'POST' }),
+      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/priority`,
+      expect.objectContaining({ method: 'GET' }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(2,
-      `http://api.test/families/${config.familyId}/growth/interventions/start`,
+      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/priority/confirm`,
       expect.objectContaining({ method: 'POST' }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(3,
+      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/interventions/start`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(4,
       `http://api.test/families/${config.familyId}/growth/actions/action-day-1/complete`,
       expect.objectContaining({ method: 'POST' }),
     );
 
-    const priorityBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-    const interventionBody = JSON.parse(fetchMock.mock.calls[1][1].body);
-    const actionBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+    const priorityBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    const interventionBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+    const actionBody = JSON.parse(fetchMock.mock.calls[3][1].body);
     expect(priorityBody).toEqual({
-      family_id: config.familyId,
-      onboarding_id: 'onboarding-1',
       draft_id: 'priority-draft-R03',
       decision: 'R03',
     });
     expect(interventionBody).toEqual({
-      family_id: config.familyId,
-      onboarding_id: 'onboarding-1',
       priority_id: 'priority-R03',
       intervention_code: 'LISTEN_BEFORE_RESPOND',
     });
     expect(actionBody).toMatchObject({
-      family_id: config.familyId,
-      action_id: 'action-day-1',
       completion_status: 'PARTIAL',
       reflection: '今天先听后回应了一次。',
     });
@@ -503,14 +515,27 @@ function startInterventionFixture() {
       policy_version: 'M2_105_DETERMINISTIC_V1',
     },
     episode_id: 'episode-1',
-    actions: [growthActionFixture('PENDING')],
+    actions: Array.from({ length: 7 }, (_, index) => ({
+      ...growthActionFixture('PENDING'),
+      action_id: `action-day-${index + 1}`,
+      day_index: index + 1,
+    })),
   };
 }
 
 function completeActionFixture() {
   return {
     action: growthActionFixture('PARTIAL'),
-    reflection_boundary: '只记录行动完成情况，不声明结果已经发生。',
+    reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
+  };
+}
+
+function priorityInsightFixture() {
+  return {
+    onboarding_id: 'onboarding-1',
+    family_id: config.familyId,
+    draft: priorityConfirmFixture().draft,
+    active_priority: null,
   };
 }
 

@@ -2,7 +2,8 @@
 
 owner: AI-04 Frontend F01/F06/F07/F08/F09 Real Integration Owner
 phase: Phase B2 Wave2
-state: PRE_REAL_API_READY
+state: REAL_API_ADAPTER_PREP_READY
+frontend_real_api_ready: NO
 contract: M2_WAVE2_CF_V1
 
 ## Scope
@@ -16,9 +17,20 @@ Implemented the static web Wave2 UI surface for:
 
 ## Integration Mode
 
-Current mode is `pre-real-api`.
+Current mode is `pre-real-api` by default, with real API adapter prep aligned to the AI-00 confirmed Wave2 route surface.
 
-The UI uses frozen contract fixtures from `apps/web/src/wave2.js` because the visible backend API surface is not yet confirmed for Wave2 named-action routes. The adapter functions are present in the same module so the switch to real API is localized to `Wave2State.apiMode === 'real-api'` and the existing handlers.
+The UI uses frozen contract fixtures from `apps/web/src/wave2.js` unless `Wave2State.apiMode === 'real-api'`. The adapter functions are present in the same module so the switch remains localized to existing handlers, but final real API readiness is not claimed until a running backend and browser/demo evidence are available.
+
+The app config now accepts optional `wave2ApiMode`. Default remains `pre-real-api`; setting `real-api` makes the confirmed Growth Profile flow fetch `priority-insight` from the prepared route before rendering Wave2 priority state.
+
+Prepared route surface:
+
+- `GET /families/:familyId/growth/onboardings/:onboardingId/priority-insight`
+- `POST /families/:familyId/growth/onboardings/:onboardingId/priority-drafts/:draftId/confirm`
+- `POST /families/:familyId/growth/onboardings/:onboardingId/priorities/:priorityId/interventions`
+- `POST /families/:familyId/growth/actions/:actionId/complete`
+
+Request body boundary: IDs carried by route path are not duplicated in POST bodies. Bodies contain only action inputs accepted by backend DTO validation: `decision`, `intervention_code`, and `completion_status/reflection/occurred_at`.
 
 ## Guardrails
 
@@ -33,4 +45,6 @@ The UI uses frozen contract fixtures from `apps/web/src/wave2.js` because the vi
 
 - Focused web test covers rendering of F06-F09 after confirmed profile flow.
 - Focused web test covers `pre-real-api` marker.
-- Focused web test covers named-action adapter payloads for priority confirmation, intervention start, and action completion.
+- Focused web test covers named-action adapter routes and payloads for priority insight, priority confirmation, intervention start, and action completion.
+- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck` PASS.
+- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test` PASS, 9 tests.

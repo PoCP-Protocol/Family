@@ -6,7 +6,7 @@ owner: AI-05 Real PostgreSQL / HTTP E2E / Browser QA
 ## Current Verdict
 
 ```text
-BROWSER_DEMO_GATE: NOT_RUN_WAITING_FRONTEND_AND_API
+BROWSER_DEMO_GATE: NOT_RUN_WAITING_RUNNING_BACKEND_AND_REAL_API_MODE
 REAL_BROWSER_HTTP_POSTGRESQL_DEMO: PENDING
 ```
 
@@ -37,9 +37,9 @@ Required screenshots or observations:
 ## Current Blockers
 
 ```text
-PENDING_API_INTEGRATION: Wave2 HTTP routes are not fully wired.
-PENDING_FRONTEND_REAL_API: Browser flow cannot be validated until AI-04 real API mode is available.
-PENDING_REAL_MIGRATION_READY: final PostgreSQL gate waits for AI-03.
+PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set for local E2E execution.
+PENDING_FRONTEND_REAL_API: AI-04 adapter prep is ready, but browser flow has not been run against a live backend.
+PENDING_BROWSER_CAPTURE: no screenshot or browser observations have been captured for real Browser + HTTP + PostgreSQL.
 ```
 
 ## Runbook

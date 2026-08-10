@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FamilyRepository } from './family.repository';
 import { buildGrowthActionAssignments, getListenBeforeRespondCard } from './intervention.policy';
 import { InterventionService } from './intervention.service';
+import type { GrowthSubjectResolver } from './growth-subject.resolver';
 
 const familyId = '11111111-1111-4111-8111-111111111111';
 const onboardingId = '22222222-2222-4222-8222-222222222222';
@@ -42,7 +43,7 @@ describe('Intervention policy', () => {
 describe('InterventionService', () => {
   it('starts one active episode and exactly seven pending growth actions', async () => {
     const client = new FakeInterventionClient();
-    const service = new InterventionService(createRepository(client));
+    const service = new InterventionService(createRepository(client), createSubjectResolver());
 
     const response = await service.startIntervention({
       family_id: familyId,
@@ -72,10 +73,27 @@ describe('InterventionService', () => {
     expect(client.profileOrOutcomeWrites).toEqual([]);
   });
 
+  it('blocks start when normal safety route cannot be verified', async () => {
+    const client = new FakeInterventionClient(null, false);
+    const service = new InterventionService(createRepository(client), createSubjectResolver());
+
+    await expect(service.startIntervention({
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      priority_id: priorityId,
+      intervention_code: 'LISTEN_BEFORE_RESPOND',
+      idempotency_key: 'idem-start-normal-route-blocked',
+    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
+
+    expect(client.insertedEpisodeCount).toBe(0);
+    expect(client.insertedActions).toEqual([]);
+    expect(client.auditActions).toEqual([]);
+  });
+
   it('replays an idempotent response without creating another episode or actions', async () => {
     const replayResponse = createReplayResponse();
     const client = new FakeInterventionClient(replayResponse);
-    const service = new InterventionService(createRepository(client));
+    const service = new InterventionService(createRepository(client), createSubjectResolver());
 
     const response = await service.startIntervention({
       family_id: familyId,
@@ -128,7 +146,7 @@ class FakeInterventionClient {
   private actionName = '';
   private requestHash = '';
 
-  constructor(private readonly replayResponse: StartInterventionResponse | null = null) {}
+  constructor(private readonly replayResponse: StartInterventionResponse | null = null, private readonly normalRouteVerified = true) {}
 
   async query(sql: string, params: unknown[] = []): Promise<{ rowCount: number; rows: unknown[] }> {
     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -161,6 +179,15 @@ class FakeInterventionClient {
     }
     if (normalized.startsWith('select purpose from consents')) {
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+    }
+    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+      if (!this.normalRouteVerified) {
+        return { rowCount: 0, rows: [] };
+      }
+      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+    }
+    if (normalized.startsWith('select perspective_id from perspectives')) {
+      return { rowCount: 0, rows: [] };
     }
     if (normalized.startsWith('select episode_id from intervention_episodes')) {
       return { rowCount: 0, rows: [] };
@@ -225,4 +252,15 @@ class FakeInterventionClient {
     }
     throw new Error(`unexpected query: ${normalized}`);
   }
+}
+
+function createSubjectResolver(): GrowthSubjectResolver {
+  return {
+    resolve: async () => ({
+      childPersonId: childId,
+      guardianPersonIds: [actorId],
+      subjectRelationshipId: null,
+      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
+    }),
+  } as GrowthSubjectResolver;
 }

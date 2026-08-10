@@ -1,0 +1,30 @@
+version: 1.0
+status: DESIGN_DRAFT_NO_SCHEMA_CHANGE
+object: external_entity_refs
+purpose: Preserve legacy IDs without polluting Family canonical IDs.
+fields:
+  - external_ref_id
+  - source_system
+  - source_entity_type
+  - source_entity_id
+  - family_id
+  - person_id
+  - relationship_id
+  - journey_id
+  - mapping_status
+  - mapping_version
+  - created_at
+  - verified_at
+idempotency_key:
+  - source_system
+  - source_entity_type
+  - source_entity_id
+  - mapping_version
+mapping_status_values:
+  - EXACT_MATCH
+  - HIGH_CONFIDENCE_MATCH
+  - REVIEW_REQUIRED
+  - REJECTED
+  - LINKED
+  - SUPERSEDED
+lm0_note: This is a design catalog only. No database schema is changed in LM0.

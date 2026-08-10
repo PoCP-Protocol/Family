@@ -1,0 +1,29 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+default: LEGACY_CONSENT_UNVERIFIED
+active_consent_required_fields:
+  - subject
+  - guardian
+  - purpose
+  - policy_version
+  - timestamp
+  - proof
+non_equivalence_rules:
+  - legacy_user_registration != SERVICE Consent
+  - legacy_course_purchase != ASSESSMENT Consent
+  - legacy_assessment_submission != GROWTH_TRACKING Consent
+  - legacy_ai_chat != AI_PERSONALIZATION Consent
+  - legacy_community_membership != MODEL_IMPROVEMENT Consent
+review_queues:
+  - Consent Review
+  - Minor Data Review
+  - Purpose Limitation Review
+  - Proof Gap Review
+allowed_lm0_actions:
+  - inventory consent sources
+  - classify consent proof gaps
+  - draft re-consent requirements
+forbidden_lm0_actions:
+  - activate Family Consent
+  - infer consent from relationship or payment
+  - grant model improvement permission from old minor data

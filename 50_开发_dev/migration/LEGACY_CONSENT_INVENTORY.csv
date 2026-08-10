@@ -1,0 +1,7 @@
+inventory_id,source_system,consent_source,purpose_claimed,required_proof,status,risk,notes
+LCI-001,legacy_user_system,user registration,SERVICE,"subject;guardian;purpose;policy_version;timestamp;proof",UNVERIFIED,HIGH,Registration alone is not service consent.
+LCI-002,legacy_commerce,course purchase,ASSESSMENT,"subject;guardian;purpose;policy_version;timestamp;proof",UNVERIFIED,HIGH,Purchase alone is not assessment consent.
+LCI-003,legacy_assessment,assessment submission,GROWTH_TRACKING,"subject;guardian;purpose;policy_version;timestamp;proof",UNVERIFIED,HIGH,Submission alone is not broad growth tracking consent.
+LCI-004,legacy_ai_chat,AI chat usage,AI_PERSONALIZATION,"subject;guardian;purpose;policy_version;timestamp;proof",UNVERIFIED,HIGH,Chat usage alone is not AI personalization consent.
+LCI-005,legacy_community,community membership,MODEL_IMPROVEMENT,"subject;guardian;purpose;policy_version;timestamp;proof",UNVERIFIED,CRITICAL,Community membership is not model improvement consent.
+LCI-006,legacy_crm,explicit consent artifact,UNKNOWN,"subject;guardian;purpose;policy_version;timestamp;proof",DISCOVERY_REQUIRED,MEDIUM,May become valid only after proof review.

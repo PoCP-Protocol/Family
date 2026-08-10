@@ -10,10 +10,11 @@
 /** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
 /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
 import {
-  createFrozenActionFixture,
-  createFrozenInterventionFixture,
-  createFrozenPriorityFixture,
   createInitialWave2State,
+  fetchActiveIntervention,
+  fetchGrowthPriorityInsight,
+  fetchListenBeforeRespondCard,
+  fetchTodayGrowthAction,
   renderWave2Section,
   submitCompleteGrowthAction,
   submitConfirmGrowthPriority,
@@ -52,65 +53,108 @@ export function createGrowthApp(root, config = defaultConfig) {
     summary: undefined,
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
-    wave2: createInitialWave2State(),
+    wave2: createInitialWave2State('real-api'),
   };
 
   const render = () => {
+    const journeyStage = state.insight?.confirmed_profiles.length
+      ? 4
+      : state.insight
+        ? 3
+        : state.summary
+          ? 2
+          : state.onboarding
+            ? 1
+            : 0;
     root.innerHTML = `
       <section class="shell" aria-labelledby="family-home-title">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Family Core · M2-102</p>
-            <h1 id="family-home-title">成长视角记录台</h1>
+        <header class="app-header">
+          <div class="brand" aria-label="Family 家庭成长陪伴">
+            <span class="brand-mark" aria-hidden="true">F</span>
+            <span class="brand-name">Family <small>家庭成长陪伴</small></span>
           </div>
-          <span class="slice-badge">青春期亲子沟通</span>
+          <div class="header-meta">
+            <span class="privacy-chip"><span aria-hidden="true">●</span> 仅家庭可见</span>
+            <span class="avatar" aria-label="监护人账户">家</span>
+          </div>
         </header>
+
+        <section class="topbar" aria-label="成长旅程介绍">
+          <div class="hero-copy">
+            <p class="eyebrow">Family Core · M2-102</p>
+            <h1 id="family-home-title">让沟通，<br><span>从被听见开始</span></h1>
+            <p class="hero-lead">不急着下结论。先记录彼此的视角，再找到这一周最值得练习的一件小事。</p>
+            <div class="hero-meta" aria-label="当前主题">
+              <span class="slice-badge">青春期亲子沟通</span>
+              <span class="gentle-badge">约 2 分钟开始</span>
+            </div>
+          </div>
+          <div class="hero-art" role="img" aria-label="家庭沿着成长路径同行的抽象插画"></div>
+        </section>
 
         <section class="workspace" aria-label="成长工作台">
           <aside class="family-panel" aria-label="家庭上下文">
-            <h2>F01 家庭上下文</h2>
-            <dl>
-              <div><dt>家庭</dt><dd>${config.familyId}</dd></div>
-              <div><dt>监护人</dt><dd>${config.guardianPersonId}</dd></div>
-              <div><dt>孩子</dt><dd>${config.childId}</dd></div>
-              <div><dt>阶段</dt><dd>12-15 岁早期青春期</dd></div>
-            </dl>
+            <p class="eyebrow">F01 家庭上下文</p>
+            <h2>我们的成长旅程</h2>
+            <div class="stage-card">
+              <span class="stage-icon" aria-hidden="true">芽</span>
+              <div><small>当前成长阶段</small><strong>12–15 岁 · 早期青春期</strong></div>
+            </div>
+            <nav class="journey-nav" aria-label="成长旅程进度">
+              <ol>
+                <li class="${journeyStage === 0 ? 'active' : journeyStage > 0 ? 'done' : ''}"><span>1</span><div><strong>建立起点</strong><small>确认安全与使用范围</small></div></li>
+                <li class="${journeyStage === 1 ? 'active' : journeyStage > 1 ? 'done' : ''}"><span>2</span><div><strong>听见彼此</strong><small>记录父母与孩子视角</small></div></li>
+                <li class="${journeyStage === 2 || journeyStage === 3 ? 'active' : journeyStage > 3 ? 'done' : ''}"><span>3</span><div><strong>形成理解</strong><small>查看有限的工作画像</small></div></li>
+                <li class="${journeyStage === 4 ? 'active' : ''}"><span>4</span><div><strong>开始练习</strong><small>一次只改变一件小事</small></div></li>
+              </ol>
+            </nav>
+            <p class="privacy-note"><span aria-hidden="true">◇</span> 记录只用于本次家庭成长旅程，并遵循同意范围。</p>
+            <details class="technical-details">
+              <summary>查看数据标识</summary>
+              <dl>
+                <div><dt>家庭</dt><dd>${config.familyId}</dd></div>
+                <div><dt>监护人</dt><dd>${config.guardianPersonId}</dd></div>
+                <div><dt>孩子</dt><dd>${config.childId}</dd></div>
+              </dl>
+            </details>
           </aside>
 
           <main class="flow-panel">
             <section class="onboarding-panel" aria-labelledby="onboarding-title">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">F02 成长入口</p>
+                  <p class="eyebrow"><span class="step-number">01</span> F02 成长入口</p>
                   <h2 id="onboarding-title">启动亲子沟通成长旅程</h2>
+                  <p class="section-description">先完成一个简短确认，系统会根据安全规则决定接下来的记录方式。</p>
                 </div>
                 <output class="status-pill" data-status="${state.status}">${statusLabel(state.status)}</output>
               </div>
 
               <form id="growth-onboarding-form">
                 <label>
-                  安全初筛
+                  <span>当前是否存在需要优先处理的安全情况？ <small>必选</small></span>
                   <select name="safetyScreeningResult" aria-label="安全初筛">
-                    ${safetyOption('LOW', 'LOW · 可以进入普通记录')}
-                    ${safetyOption('MEDIUM', 'MEDIUM · 需要人工门')}
-                    ${safetyOption('HIGH', 'HIGH · 需要人工门')}
-                    ${safetyOption('CRITICAL', 'CRITICAL · 需要人工门')}
+                    ${safetyOption('LOW', '没有，可以进入普通记录（LOW）')}
+                    ${safetyOption('MEDIUM', '可能存在，希望获得人工协助（MEDIUM）')}
+                    ${safetyOption('HIGH', '存在明显风险，需要人工协助（HIGH）')}
+                    ${safetyOption('CRITICAL', '情况紧急，需要立即转人工（CRITICAL）')}
                   </select>
                 </label>
 
                 <div class="consent-strip" aria-label="同意范围">
-                  <span>SERVICE</span>
-                  <span>ASSESSMENT</span>
-                  <span>GROWTH_TRACKING</span>
-                  <span class="optional">确定性流程</span>
+                  <span><strong>基础服务</strong><small>SERVICE</small></span>
+                  <span><strong>视角整理</strong><small>ASSESSMENT</small></span>
+                  <span><strong>成长记录</strong><small>GROWTH_TRACKING</small></span>
+                  <span class="optional"><strong>规则保障</strong><small>确定性流程</small></span>
                 </div>
 
-                <button type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
-                  ${state.status === 'submitting' ? '启动中...' : '启动成长入口'}
+                <button class="primary-action" type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
+                  ${state.status === 'submitting' ? '正在准备旅程…' : '开始 2 分钟记录'}
+                  <span aria-hidden="true">→</span>
                 </button>
               </form>
 
-              <p class="message" role="status">${state.message}</p>
+              <p class="message status-message" role="status"><span aria-hidden="true">i</span>${state.message}</p>
               ${state.onboarding ? renderOnboarding(state.onboarding) : ''}
             </section>
 
@@ -267,9 +311,16 @@ export function createGrowthApp(root, config = defaultConfig) {
     try {
       await submitConfirmGrowthProfile(config, draftId);
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
-      state.wave2.priorityInsight = createFrozenPriorityFixture();
-      state.wave2.intervention = createFrozenInterventionFixture();
-      state.wave2.todayAction = createFrozenActionFixture();
+      const [priorityInsight, intervention, activeIntervention, todayAction] = await Promise.all([
+        fetchGrowthPriorityInsight(config, state.onboarding.onboarding_id),
+        fetchListenBeforeRespondCard(config),
+        fetchActiveIntervention(config, state.onboarding.onboarding_id),
+        fetchTodayGrowthAction(config),
+      ]);
+      state.wave2.priorityInsight = priorityInsight;
+      state.wave2.intervention = intervention;
+      state.wave2.startedIntervention = activeIntervention ?? undefined;
+      state.wave2.todayAction = todayAction ?? undefined;
       state.status = 'started';
       state.message = '画像已确认。当前仍没有写入 Growth Priority 或行动。';
     } catch (error) {
@@ -290,16 +341,12 @@ export function createGrowthApp(root, config = defaultConfig) {
     }
 
     state.status = 'submitting';
-    state.message = '正在提交 ConfirmGrowthPriority；当前前端仍标记为 pre-real-api。';
+    state.message = '正在提交 ConfirmGrowthPriority Named Action。';
     render();
 
     try {
-      if (state.wave2.apiMode === 'real-api') {
-        const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
-        state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
-      } else {
-        state.wave2.priorityInsight = createFrozenPriorityFixture();
-      }
+      const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
+      state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
       state.status = 'started';
       state.message = '已确认本周练习重点。不会自动开始练习计划。';
     } catch (error) {
@@ -320,32 +367,11 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      if (state.wave2.apiMode === 'real-api') {
-        const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id ?? 'priority-R03';
-        state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
-      } else {
-        const firstAction = createFrozenActionFixture();
-        state.wave2.startedIntervention = {
-          intervention: createFrozenInterventionFixture(),
-          episode: {
-            episode_id: 'episode-1',
-            family_id: config.familyId,
-            onboarding_id: state.onboarding.onboarding_id,
-            priority_id: firstAction.priority_id,
-            intervention_id: 'INTERVENTION-001',
-            intervention_code: 'LISTEN_BEFORE_RESPOND',
-            status: 'ACTIVE',
-            started_by_actor_id: config.actorPersonId,
-            started_at: '2026-08-10T00:00:00.000Z',
-            planned_days: 7,
-            policy_version: 'M2_105_DETERMINISTIC_V1',
-            created_at: '2026-08-10T00:00:00.000Z',
-          },
-          actions: createFrozenActionPlan(firstAction),
-        };
-      }
+      const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id;
+      if (!priorityId) throw new Error('请先确认一个练习重点。');
+      state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
       state.wave2.intervention = state.wave2.startedIntervention.intervention;
-      state.wave2.todayAction = state.wave2.startedIntervention.actions[0];
+      state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.startedIntervention.actions[0];
       state.status = 'started';
       state.message = '7 天练习已准备。每天只有具体行动状态，不写结果。';
     } catch (error) {
@@ -361,27 +387,21 @@ export function createGrowthApp(root, config = defaultConfig) {
    * @param {string} reflection
    */
   const completeWave2Action = async (completionStatus, reflection) => {
-    const action = state.wave2.todayAction ?? createFrozenActionFixture();
+    const action = state.wave2.todayAction;
+    if (!action) {
+      state.status = 'error';
+      state.message = '当前没有可记录的今日行动。';
+      render();
+      return;
+    }
     state.status = 'submitting';
     state.message = '正在提交 CompleteGrowthAction。';
     render();
 
     try {
-      if (state.wave2.apiMode === 'real-api') {
-        const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
-        state.wave2.todayAction = response.action;
-        state.wave2.reflectionBoundary = response.reflection_boundary;
-      } else {
-        state.wave2.todayAction = {
-          ...action,
-          status: completionStatus,
-          completion_status: completionStatus,
-          completed_at: '2026-08-10T00:00:00.000Z',
-          reflection,
-          reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
-        };
-        state.wave2.reflectionBoundary = '只记录行动完成情况，不声明结果已经发生。';
-      }
+      const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
+      state.wave2.todayAction = response.action;
+      state.wave2.reflectionBoundary = response.reflection_boundary;
       state.status = 'started';
       state.message = '行动状态已记录；反思只作为原始记录保留。';
     } catch (error) {
@@ -620,30 +640,6 @@ function createIdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
 }
 
-/** @param {import('@family/contracts').GrowthActionDto} firstAction */
-function createFrozenActionPlan(firstAction) {
-  return /** @type {import('@family/contracts').GrowthActionDto[]} */ ([1, 2, 3, 4, 5, 6, 7].map((dayIndex) => ({
-    ...firstAction,
-    action_id: `action-day-${dayIndex}`,
-    day_index: /** @type {1 | 2 | 3 | 4 | 5 | 6 | 7} */ (dayIndex),
-    assignment_text: frozenAssignmentText(dayIndex),
-  })));
-}
-
-/** @param {number} dayIndex */
-function frozenAssignmentText(dayIndex) {
-  const assignments = [
-    '今天在一次沟通中，先停顿 3 秒，邀请孩子把话说完，再回应。',
-    '回应前，先复述一句你听到的内容。',
-    '提出解决办法前，先问一个澄清问题。',
-    '先说出你听到的感受，再说自己的看法。',
-    '把倾听和纠正分开，不在同一句话里完成。',
-    '如果中途打断了，补一句“我刚才急了，你继续说”。',
-    '回看这 7 天的练习体验，只记录过程。',
-  ];
-  return assignments[dayIndex - 1] ?? assignments[0];
-}
-
 /**
  * @param {SafetyScreeningResult} value
  * @param {string} label
@@ -698,18 +694,20 @@ function renderPerspectiveForms() {
  */
 function renderPerspectiveForm(kind, title, label, value, signalValue) {
   return `
-    <form class="perspective-card" data-perspective-form="${kind}">
+    <form class="perspective-card perspective-card--${kind}" data-perspective-form="${kind}">
       <input type="hidden" name="perspectiveKind" value="${kind}">
-      <div>
-        <p class="eyebrow">${title}</p>
+      <div class="perspective-heading">
+        <span class="perspective-icon" aria-hidden="true">${kind === 'child' ? '孩' : '亲'}</span>
+        <div><p class="eyebrow">${title}</p>
         <h2>${label}</h2>
+        </div>
       </div>
       <label>
-        视角文本
+        <span>用自己的话描述 <small>这是一段视角记录，不是事实判定</small></span>
         <textarea name="responseText" rows="5" required>${value}</textarea>
       </label>
       <label>
-        结构化观察标签
+        <span>观察关键词 <small>可选，用逗号分隔</small></span>
         <input name="selectedSignals" value="${signalValue}" aria-label="结构化观察标签">
       </label>
       <div class="contract-strip" aria-label="记录边界">
@@ -717,7 +715,7 @@ function renderPerspectiveForm(kind, title, label, value, signalValue) {
         <span>E1 Self Report</span>
         <span>服务端安全策略</span>
       </div>
-      <button type="submit">记录${kind === 'child' ? '孩子' : '父母'}视角</button>
+      <button class="secondary-action" type="submit">保存${kind === 'child' ? '孩子' : '父母'}视角 <span aria-hidden="true">→</span></button>
     </form>
   `;
 }

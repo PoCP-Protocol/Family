@@ -4,22 +4,23 @@ role: Schema / Contract Compatibility Owner
 phase: WAVE2_INTEGRATION_CONVERGENCE
 
 ```text
-STATE: STREAM_A_AUDIT_COMPLETE_BLOCKED
-LAST_CHANGESET: Produced SCHEMA_COMPATIBILITY_AUDIT.md with REAL_MIGRATION_READY = NO.
+STATE: STREAM_A_SCHEMA_COMPATIBILITY_READY
+LAST_CHANGESET: Removed GrowthPriorityService dependency on growth_journeys.subject_person_id and updated schema audit to REAL_MIGRATION_READY = YES.
 DONE:
 - Contract Freeze and Shared File Conflict Matrix remain frozen and binding.
 - Audited Wave2 migrations, shared contracts, API DTOs, priority/intervention/action policies and services.
 - Confirmed no approved schema path adds growth_journeys.subject_person_id.
 - Classified growth_actions fields across CANONICAL_WAVE2 / LEGACY_EQUIVALENT / LEGACY_AMBIGUOUS.
-- Identified one schema semantic blocker in subject resolution.
+- Implemented GrowthSubjectResolver boundary for ConfirmGrowthPriority consent subject resolution.
+- ConfirmGrowthPriority now validates onboarding via growth_journeys.journey_id only.
+- Consent subject resolution uses profile.subject_person_id first, then profile.subject_relationship_id -> family_relationships.person_b_id.
+- Focused API tests and API typecheck passed.
 NEXT:
-- AI-00 / domain owners should route a minimal GrowthSubjectResolver or submit a CONTRACT_CHANGE_REQUEST if journey subject ownership is asserted as domain-required.
-- Re-run Stream-A audit after subject resolution no longer depends on growth_journeys.subject_person_id.
-BLOCKER: GrowthPriorityService.assertActiveOnboarding reads growth_journeys.subject_person_id, but no audited migration creates that column and Phase B2 forbids adding it for convenience.
+- AI-05 can include ConfirmGrowthPriority in real PostgreSQL migration-backed E2E validation.
+BLOCKER: none for AI-03 schema/contract compatibility.
 NEEDS_FROM:
-- AI-00: ruling path for blocker resolution.
-- AI-01: priority confirmation subject-resolution fix or owner proposal.
-- AI-02: keep intervention/action consent lookup on canonical priority/profile/relationship provenance.
+- AI-05: real PostgreSQL migration-backed Wave2 E2E result.
 CONTRACT_VERSION: M2_WAVE2_CF_V1
-GATES: SCHEMA_CHAIN_VALID=FAIL; GROWTH_JOURNEY_SEMANTICS=PASS; SUBJECT_RESOLUTION=FAIL; GROWTH_ACTION_COMPATIBILITY=PASS; CONTRACT_DB_ALIGNMENT=FAIL; REAL_MIGRATION_READY=NO; BLOCKERS=1
+GATES: SCHEMA_CHAIN_VALID=PASS; GROWTH_JOURNEY_SEMANTICS=PASS; SUBJECT_RESOLUTION=PASS; GROWTH_ACTION_COMPATIBILITY=PASS; CONTRACT_DB_ALIGNMENT=PASS; REAL_MIGRATION_READY=YES; BLOCKERS=0
+VALIDATION: pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts --reporter=verbose => PASS 8/8; pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck => PASS TYPECHECK_OK
 ```

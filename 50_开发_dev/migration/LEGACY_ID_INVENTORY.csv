@@ -1,0 +1,10 @@
+inventory_id,source_system,id_type,source_entity,example_format,target_ref,match_level_allowed,auto_merge_allowed,review_required,notes
+LID-001,legacy_crm,customer_id,Customer,CUST-*,external_entity_refs,EXACT_MATCH,false,false,Maps to Family candidate but does not become family_id.
+LID-002,legacy_crm,contact_id,Contact,CONTACT-*,external_entity_refs,EXACT_MATCH,false,false,Maps to Parent candidate.
+LID-003,legacy_family_identity,student_id,Student,STU-*,external_entity_refs,EXACT_MATCH,false,false,Maps to Child candidate.
+LID-004,legacy_user_system,user_id,User,USER-*,external_entity_refs,HIGH_CONFIDENCE_MATCH,false,true,May represent parent or staff; needs entity type validation.
+LID-005,legacy_crm,phone,Contact,+86*,Parent contact method,HIGH_CONFIDENCE_MATCH,false,true,Phone alone cannot merge families.
+LID-006,legacy_identity,real_name_id,Person,UNKNOWN,Parent/Child identity evidence,HIGH_CONFIDENCE_MATCH,false,true,Use only if legally present and authorized.
+LID-007,legacy_learning,class_id,Class,CLASS-*,Program/Class Reference,EXACT_MATCH,false,false,LMS remains master.
+LID-008,legacy_commerce,order_id,Order,ORDER-*,OrderRef,EXACT_MATCH,false,false,Order system remains master.
+LID-009,legacy_commerce,payment_id,Payment,PAY-*,PaymentRef,EXACT_MATCH,false,false,Payment system remains master.

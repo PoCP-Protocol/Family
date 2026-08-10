@@ -17,10 +17,13 @@
  * @property {string | undefined} reflectionBoundary
  */
 
-/** @returns {Wave2State} */
-export function createInitialWave2State() {
+/**
+ * @param {'pre-real-api' | 'real-api'} apiMode
+ * @returns {Wave2State}
+ */
+export function createInitialWave2State(apiMode = 'real-api') {
   return {
-    apiMode: 'pre-real-api',
+    apiMode,
     priorityInsight: undefined,
     intervention: undefined,
     startedIntervention: undefined,
@@ -34,24 +37,22 @@ export function createInitialWave2State() {
  * @returns {string}
  */
 export function renderWave2Section(wave2) {
-  const priorityInsight = wave2.priorityInsight ?? createFrozenPriorityFixture();
-  const intervention = wave2.intervention ?? createFrozenInterventionFixture();
-  const todayAction = wave2.todayAction ?? createFrozenActionFixture();
   return `
     <section class="wave2-panel" aria-labelledby="wave2-title" data-api-mode="${wave2.apiMode}">
       <div class="panel-heading">
         <div>
           <p class="eyebrow">F01 / F06-F09 Wave2</p>
           <h2 id="wave2-title">7 天沟通练习工作台</h2>
+          <p class="section-description">一次只练习一件小事，每天留下一点真实的过程记录。</p>
         </div>
-        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">${wave2.apiMode}</span>
+        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">已连接 · ${wave2.apiMode}</span>
       </div>
-      <p class="boundary-note">当前前端使用冻结合同 fixture，可在后端路由可用后切换到真实 API。</p>
+      <p class="boundary-note">数据来自 Wave2 Named Action API；练习重点、行动和记录都不代表结果，也不是对家庭的判定。</p>
       <div class="wave2-grid">
-        ${renderPriorityPanel(priorityInsight)}
-        ${renderInterventionPanel(intervention, wave2.startedIntervention)}
-        ${renderTodayActionPanel(todayAction)}
-        ${renderReflectionPanel(todayAction, wave2.reflectionBoundary)}
+        ${wave2.priorityInsight ? renderPriorityPanel(wave2.priorityInsight) : renderUnavailablePanel('F06 Priority', '练习重点尚未加载')}
+        ${wave2.intervention ? renderInterventionPanel(wave2.intervention, wave2.startedIntervention) : renderUnavailablePanel('F07 Intervention Detail', '干预卡尚未加载')}
+        ${wave2.todayAction ? renderTodayActionPanel(wave2.todayAction) : renderUnavailablePanel('F08 Today Action', '当前没有待完成的今日行动')}
+        ${wave2.todayAction ? renderReflectionPanel(wave2.todayAction, wave2.reflectionBoundary) : renderUnavailablePanel('F09 Reflection', '开始练习后可记录行动反思')}
       </div>
     </section>
   `;
@@ -101,7 +102,7 @@ function renderInterventionPanel(intervention, startedIntervention) {
         <div><dt>目标</dt><dd>${intervention.target}</dd></div>
       </dl>
       <p>${intervention.behavior}</p>
-      <p class="limitation">${intervention.safety_notes[0]}</p>
+      <p class="limitation">${intervention.safety_notes?.[0] ?? '如出现安全相关内容，停止普通练习并转入人工处理。'}</p>
       ${startedIntervention ? `<span class="confirmed-strip">已生成 ${startedIntervention.actions.length} 个每日练习</span>` : '<button type="button" data-wave2-action="start-intervention">开始 7 天练习</button>'}
     </article>
   `;
@@ -110,7 +111,7 @@ function renderInterventionPanel(intervention, startedIntervention) {
 /** @param {GrowthActionDto} action */
 function renderTodayActionPanel(action) {
   return `
-    <article class="wave2-card" aria-labelledby="today-action-title">
+    <article class="wave2-card today-card" aria-labelledby="today-action-title">
       <p class="eyebrow">F08 Today Action</p>
       <h3 id="today-action-title">今天的具体练习</h3>
       <dl>
@@ -120,9 +121,9 @@ function renderTodayActionPanel(action) {
       </dl>
       <p>${action.assignment_text}</p>
       <div class="action-row" aria-label="行动状态">
-        <button type="button" data-wave2-complete="COMPLETED">已完成</button>
-        <button type="button" data-wave2-complete="PARTIAL">部分完成</button>
-        <button type="button" data-wave2-complete="NOT_COMPLETED">未完成</button>
+        <button class="primary-action" type="button" data-wave2-complete="COMPLETED">已完成</button>
+        <button class="secondary-action" type="button" data-wave2-complete="PARTIAL">部分完成</button>
+        <button class="ghost-action" type="button" data-wave2-complete="NOT_COMPLETED">未完成</button>
       </div>
     </article>
   `;
@@ -151,7 +152,7 @@ function renderReflectionPanel(action, reflectionBoundary) {
             <option value="NOT_COMPLETED">未完成</option>
           </select>
         </label>
-        <button type="submit">保存记录</button>
+        <button class="secondary-action" type="submit">保存今天的记录</button>
       </form>
       <p class="boundary-note">这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。</p>
       ${reflectionBoundary ? `<span class="confirmed-strip">${reflectionBoundary}</span>` : ''}
@@ -187,7 +188,7 @@ export async function fetchGrowthPriorityInsight(config, onboardingId) {
  * @returns {Promise<ConfirmGrowthPriorityResponse>}
  */
 export async function submitConfirmGrowthPriority(config, onboardingId, draftId, decision) {
-  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/priorities/confirm`, {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/priority/confirm`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -195,8 +196,6 @@ export async function submitConfirmGrowthPriority(config, onboardingId, draftId,
       'Idempotency-Key': createWave2IdempotencyKey('m2-104-confirm-priority', config.familyId, draftId),
     },
     body: JSON.stringify({
-      family_id: config.familyId,
-      onboarding_id: onboardingId,
       draft_id: draftId,
       decision,
     }),
@@ -218,7 +217,7 @@ export async function submitConfirmGrowthPriority(config, onboardingId, draftId,
  * @returns {Promise<StartInterventionResponse>}
  */
 export async function submitStartIntervention(config, onboardingId, priorityId) {
-  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/interventions/start`, {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/interventions/start`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -226,8 +225,6 @@ export async function submitStartIntervention(config, onboardingId, priorityId) 
       'Idempotency-Key': createWave2IdempotencyKey('m2-105-start-intervention', config.familyId, priorityId),
     },
     body: JSON.stringify({
-      family_id: config.familyId,
-      onboarding_id: onboardingId,
       priority_id: priorityId,
       intervention_code: 'LISTEN_BEFORE_RESPOND',
     }),
@@ -239,6 +236,29 @@ export async function submitStartIntervention(config, onboardingId, priorityId) 
   if (!body || !('intervention' in body) || !('actions' in body)) {
     throw new Error('StartIntervention returned an invalid response.');
   }
+  return body;
+}
+
+/** @param {AppConfig} config @returns {Promise<InterventionCardDto>} */
+export async function fetchListenBeforeRespondCard(config) {
+  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/interventions/LISTEN_BEFORE_RESPOND`, config, 'Intervention card');
+}
+
+/** @param {AppConfig} config @param {string} onboardingId @returns {Promise<StartInterventionResponse | null>} */
+export async function fetchActiveIntervention(config, onboardingId) {
+  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/interventions/active`, config, 'Active intervention');
+}
+
+/** @param {AppConfig} config @returns {Promise<GrowthActionDto | null>} */
+export async function fetchTodayGrowthAction(config) {
+  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/actions/today`, config, 'Today action');
+}
+
+/** @param {string} url @param {AppConfig} config @param {string} label @returns {Promise<any>} */
+async function fetchWave2Json(url, config, label) {
+  const response = await fetch(url, { method: 'GET', headers: { 'X-Actor-Id': config.actorPersonId } });
+  const body = await response.json().catch(() => undefined);
+  if (!response.ok) throw new Error(body?.message ?? `${label} read failed with ${response.status}`);
   return body;
 }
 
@@ -258,8 +278,6 @@ export async function submitCompleteGrowthAction(config, actionId, completionSta
       'Idempotency-Key': createWave2IdempotencyKey('m2-105-complete-action', config.familyId, actionId),
     },
     body: JSON.stringify({
-      family_id: config.familyId,
-      action_id: actionId,
       completion_status: completionStatus,
       reflection,
       occurred_at: new Date().toISOString(),
@@ -362,4 +380,9 @@ export function createFrozenActionFixture() {
  */
 function createWave2IdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
+}
+
+/** @param {string} eyebrow @param {string} message */
+function renderUnavailablePanel(eyebrow, message) {
+  return `<article class="wave2-card"><p class="eyebrow">${eyebrow}</p><p>${message}</p></article>`;
 }
