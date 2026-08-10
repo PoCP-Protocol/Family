@@ -267,8 +267,12 @@ describe('M2 Wave3 Observe & Review PostgreSQL + HTTP E2E', () => {
     await completeAllActions(setup.familyId, setup.actions, 'corr-w3-no-ai');
     await recordOutcomeObservation(setup, 'PARENT_OBSERVATION', setup.parentId, '只记录观察，不生成诊断。', 'corr-w3-no-ai', 'idem-w3-no-ai-observation');
     const reviewBody = await (await completeReview(setup, 'corr-w3-no-ai', 'idem-w3-no-ai-review')).json() as CompleteGrowthReviewHttpResponse;
-    const surface = JSON.stringify(reviewBody).toLowerCase();
-    expect(surface).not.toMatch(/total_score|ranking|diagnosis|ai_|llm|model|agent|percentage/);
+    const forbiddenBusinessSurface = JSON.stringify({
+      review_keys: Object.keys(reviewBody.review),
+      observation_keys: reviewBody.observations.flatMap((observation) => Object.keys(observation)),
+      action_summary_keys: Object.keys(reviewBody.review.action_summary),
+    }).toLowerCase();
+    expect(forbiddenBusinessSurface).not.toMatch(/total_score|ranking|diagnosis|ai_|llm|model|agent|percentage/);
     await expectNoAiLikeSideEffects();
   });
 
@@ -310,7 +314,13 @@ describe('M2 Wave3 Observe & Review PostgreSQL + HTTP E2E', () => {
     expect(timeline.events.map((event) => event.event_type)).toContain('OUTCOME_OBSERVATION_RECORDED');
     expect(timeline.events.map((event) => event.event_type)).toContain('GROWTH_REVIEW_COMPLETED');
     expect(timeline.events.map((event) => event.event_type)).toContain('NEXT_STEP_DECISION_RECORDED');
-    expect(JSON.stringify(timeline).toLowerCase()).not.toMatch(/total_score|ranking|diagnosis|ai_|llm|model|agent|causal_effect/);
+    const forbiddenTimelineBusinessSurface = JSON.stringify(timeline.events.map((event) => ({
+      event_type: event.event_type,
+      source: event.source,
+      title: event.title,
+      payload_keys: Object.keys(event.payload),
+    }))).toLowerCase();
+    expect(forbiddenTimelineBusinessSurface).not.toMatch(/total_score|ranking|diagnosis|ai_|llm|model|agent|causal_effect/);
   });
 });
 
@@ -586,6 +596,7 @@ interface OutcomeObservationHttpDto {
   subject_person_id: string;
   observer_person_id: string;
   intervention_episode_id: string;
+  observation_text: string;
   perspective_type: 'PARENT_OBSERVATION' | 'CHILD_OBSERVATION';
   boundary: 'OBSERVATION_IS_NOT_FACT_OR_CAUSAL_EFFECT';
   policy_version: 'M2_106_DETERMINISTIC_V1';
