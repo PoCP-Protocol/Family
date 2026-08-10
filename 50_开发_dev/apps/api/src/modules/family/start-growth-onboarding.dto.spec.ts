@@ -11,12 +11,12 @@ describe('validateStartGrowthOnboardingRequest', () => {
     expect(validateStartGrowthOnboardingRequest(familyId, 'idem-onboarding-1', {
       childId,
       guardianPersonId,
-      safetyScreeningResult: 'LOW',
+      structuredSafetySignals: ['NONE'],
     })).toEqual({
       family_id: familyId,
       child_id: childId,
       guardian_person_id: guardianPersonId,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-onboarding-1',
     });
   });
@@ -25,24 +25,25 @@ describe('validateStartGrowthOnboardingRequest', () => {
     expect(() => validateStartGrowthOnboardingRequest(familyId, undefined, {
       childId,
       guardianPersonId,
-      safetyScreeningResult: 'LOW',
+      structuredSafetySignals: ['NONE'],
     })).toThrow(BadRequestException);
   });
 
-  it('rejects unknown fields that imply later M2 behavior', () => {
+  it('rejects unknown fields including client-derived safety severity', () => {
     expect(() => validateStartGrowthOnboardingRequest(familyId, 'idem-onboarding-2', {
       childId,
       guardianPersonId,
+      structuredSafetySignals: ['NONE'],
       safetyScreeningResult: 'LOW',
       aiPersonalization: true,
     })).toThrow(BadRequestException);
   });
 
-  it('rejects invalid safety screening results', () => {
+  it('rejects invalid structured safety signals', () => {
     expect(() => validateStartGrowthOnboardingRequest(familyId, 'idem-onboarding-3', {
       childId,
       guardianPersonId,
-      safetyScreeningResult: 'NONE',
+      structuredSafetySignals: ['LOW'],
     })).toThrow(BadRequestException);
   });
 });

@@ -70,6 +70,56 @@ importers:
         specifier: ^2.1.5
         version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
 
+  apps/fes-api:
+    dependencies:
+      '@family/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
+      '@family/fes-contracts':
+        specifier: workspace:*
+        version: link:../../packages/fes-contracts
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.0.0
+        version: 11.1.28(@nestjs/common@11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.28)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/platform-express':
+        specifier: ^11.0.0
+        version: 11.1.28(@nestjs/common@11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+      rxjs:
+        specifier: ^7.8.1
+        version: 7.8.2
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
+
+  apps/fes-web:
+    dependencies:
+      '@family/fes-contracts':
+        specifier: workspace:*
+        version: link:../../packages/fes-contracts
+    devDependencies:
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
+
   apps/web:
     dependencies:
       '@family/contracts':
@@ -86,11 +136,80 @@ importers:
         specifier: ^2.1.5
         version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
 
+  legacy-system/apps/api:
+    dependencies:
+      '@family/fels-contracts':
+        specifier: workspace:*
+        version: link:../../contracts
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
+
+  legacy-system/apps/web:
+    dependencies:
+      '@family/fels-contracts':
+        specifier: workspace:*
+        version: link:../../contracts
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
+
+  legacy-system/contracts:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.9.0
+        version: 22.20.1
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
+
+  packages/ai-gateway:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   packages/contracts:
     devDependencies:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+
+  packages/fes-contracts:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/principal-ai:
+    dependencies:
+      '@family/ai-gateway':
+        specifier: workspace:*
+        version: link:../ai-gateway
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
 
 packages:
 

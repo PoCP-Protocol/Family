@@ -176,7 +176,7 @@ export interface StartGrowthOnboardingRequest {
   family_id: string;
   child_id: string;
   guardian_person_id: string;
-  safety_screening_result: SafetyScreeningResult;
+  structured_safety_signals: StructuredSafetySignal[];
   idempotency_key: string;
 }
 
@@ -190,7 +190,7 @@ export interface GrowthOnboardingDto {
   target_dimensions: ['P03', 'R03', 'R04', 'R05'];
   status: GrowthOnboardingStatus;
   phase: GrowthOnboardingPhase;
-  safety_screening_result: SafetyScreeningResult;
+  safety_disposition: SafetyDispositionDto;
   ai_personalization_enabled: false;
   started_at: string;
   created_at: string;
@@ -395,7 +395,7 @@ export interface ConfirmGrowthProfileResponse {
   draft: GrowthProfileDraftDto;
 }
 
-export type GrowthPriorityPolicyVersion = 'M2_104_DETERMINISTIC_V1';
+export type GrowthPriorityPolicyVersion = 'M2_104_DETERMINISTIC_V2';
 export type GrowthPriorityStatus = 'ACTIVE' | 'SUPERSEDED';
 export type GrowthPriorityDecision = M2GrowthDimensionId | 'NO_PRIORITY_YET';
 export type GrowthPriorityEligibility = 'ELIGIBLE' | 'REVIEW_REQUIRED' | 'NO_PRIORITY_YET';

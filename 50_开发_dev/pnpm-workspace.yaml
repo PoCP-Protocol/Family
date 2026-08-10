@@ -1,6 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "legacy-system/apps/*"
+  - "legacy-system/contracts"
 allowBuilds:
   esbuild: set this to true or false
 onlyBuiltDependencies:

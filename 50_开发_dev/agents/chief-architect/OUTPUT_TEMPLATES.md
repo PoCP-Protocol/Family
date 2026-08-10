@@ -1,6 +1,6 @@
 # FCA Output Templates
 
-version: 1.0
+version: 1.1
 status: ACTIVE
 last_updated: 2026-08-10
 
@@ -118,6 +118,11 @@ Mode: ARCHITECT EXECUTION
 START_NEXT: YES | NO | CONDITIONAL
 Authorized scope:
 Non-goals:
+
+## Evidence Ledger
+
+| Evidence | Path | Status | Finding | Effect on Authorization |
+|---|---|---|---|---|
 
 ## Contract Freeze
 

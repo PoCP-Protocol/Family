@@ -1,0 +1,48 @@
+import {
+  FELS_DATABASE_CONTRACT,
+  FELS_DOMAINS,
+  FELS_ENTITY_TABLES,
+  FELS_EXPORT_ENDPOINTS,
+  FELS_TRUTH,
+  getFels0Gate,
+} from '@family/fels-contracts';
+export {
+  Fels1Runtime,
+  classifyMigrationMatrixForFels1,
+  createCleanSmallDataset,
+  createDirtyCoreDataset,
+  discoverFelsReadOnly,
+  getFels1Gate,
+  runFelsVerticalSliceE2E,
+  runLegacyAmbiguityE2E,
+} from './fels1-core';
+
+export const felsApiBoundary = {
+  runtime: 'FELS_1_CORE_EDUCATION_BUSINESS',
+  auth: 'DEV_ROLE_AUTH_ONLY',
+  architecture: 'MODULAR_MONOLITH',
+  database: FELS_DATABASE_CONTRACT,
+  truth: FELS_TRUTH,
+  exportEndpoints: FELS_EXPORT_ENDPOINTS,
+} as const;
+
+export function getFelsHealth() {
+  return {
+    status: 'ok',
+    service: 'fels-api',
+    referenceImplementation: FELS_TRUTH.referenceImplementation,
+    realBangyangSource: FELS_TRUTH.realBangyangSource,
+    domains: FELS_DOMAINS.length,
+    entityTables: FELS_ENTITY_TABLES.length,
+    gate: getFels0Gate(),
+  } as const;
+}
+
+export function createLegacySourceSnapshot() {
+  return {
+    legacy_snapshot_id: 'fels-snapshot-contract',
+    source_system: 'FELS',
+    schema_version: 'fels-1',
+    record_counts: Object.fromEntries(FELS_ENTITY_TABLES.map((table) => [table, 0])),
+  } as const;
+}

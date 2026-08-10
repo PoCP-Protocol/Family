@@ -587,7 +587,7 @@ components:
           type: array
           items: {type: string, format: uuid}
         confidence: {type: string, enum: [LOW, MEDIUM, HIGH]}
-        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V1]}
+        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V2]}
         profile_snapshot: {type: object, additionalProperties: true}
         created_at: {type: string, format: date-time}
 
@@ -601,7 +601,7 @@ components:
         profile_version: {type: integer, minimum: 1}
         eligibility: {type: string, enum: [ELIGIBLE, REVIEW_REQUIRED, NO_PRIORITY_YET]}
         boundary: {type: string, enum: [PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS]}
-        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V1]}
+        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V2]}
 
     GrowthPriority:
       type: object
@@ -622,7 +622,7 @@ components:
         evidence_refs:
           type: array
           items: {type: string, format: uuid}
-        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V1]}
+        policy_version: {type: string, enum: [M2_104_DETERMINISTIC_V2]}
         confirmed_by_actor_id: {type: string}
         confirmed_at: {type: string, format: date-time}
         superseded_at:

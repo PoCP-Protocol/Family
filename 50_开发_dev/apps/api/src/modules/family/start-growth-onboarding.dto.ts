@@ -1,9 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
-import type { SafetyScreeningResult, StartGrowthOnboardingRequest } from '@family/contracts';
+import type { StartGrowthOnboardingRequest, StructuredSafetySignal } from '@family/contracts';
 
 type JsonObject = Record<string, unknown>;
 
-const SAFETY_SCREENING_RESULTS = new Set<SafetyScreeningResult>(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']);
+const SAFETY_SIGNALS = new Set<StructuredSafetySignal>(['NONE', 'SELF_HARM', 'HARM_TO_OTHERS', 'ABUSE', 'VIOLENCE', 'SEVERE_CRISIS']);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function validateStartGrowthOnboardingRequest(familyId: string, idempotencyKey: string | undefined, body: unknown): StartGrowthOnboardingRequest {
@@ -20,7 +20,7 @@ export function validateStartGrowthOnboardingRequest(familyId: string, idempoten
   }
 
   const input = body as JsonObject;
-  const allowedFields = new Set(['childId', 'guardianPersonId', 'safetyScreeningResult']);
+  const allowedFields = new Set(['childId', 'guardianPersonId', 'structuredSafetySignals']);
   for (const field of Object.keys(input)) {
     if (!allowedFields.has(field)) {
       throw new BadRequestException('Invalid schema');
@@ -35,15 +35,25 @@ export function validateStartGrowthOnboardingRequest(familyId: string, idempoten
     throw new BadRequestException('Invalid schema');
   }
 
-  if (typeof input.safetyScreeningResult !== 'string' || !SAFETY_SCREENING_RESULTS.has(input.safetyScreeningResult as SafetyScreeningResult)) {
-    throw new BadRequestException('Invalid schema');
-  }
+  const structuredSafetySignals = parseSafetySignals(input.structuredSafetySignals);
 
   return {
     family_id: familyId,
     child_id: input.childId,
     guardian_person_id: input.guardianPersonId,
-    safety_screening_result: input.safetyScreeningResult as SafetyScreeningResult,
+    structured_safety_signals: structuredSafetySignals,
     idempotency_key: idempotencyKey,
   };
+}
+
+function parseSafetySignals(value: unknown): StructuredSafetySignal[] {
+  if (!Array.isArray(value) || value.length < 1) {
+    throw new BadRequestException('Invalid schema');
+  }
+  return value.map((item) => {
+    if (typeof item !== 'string' || !SAFETY_SIGNALS.has(item as StructuredSafetySignal)) {
+      throw new BadRequestException('Invalid schema');
+    }
+    return item as StructuredSafetySignal;
+  });
 }

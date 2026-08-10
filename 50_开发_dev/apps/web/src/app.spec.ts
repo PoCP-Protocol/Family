@@ -24,6 +24,26 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('确定性流程');
   });
 
+  it('renders Famili principal AI-person soul entry without unsafe product claims', () => {
+    const root = document.createElement('main');
+
+    createGrowthApp(root, config);
+
+    expect(root.textContent).toContain('法咪莉校长 AI人');
+    expect(root.textContent).toContain('知性邻家姐姐');
+    expect(root.textContent).toContain('今晚怎么说');
+    expect(root.textContent).toContain('互动交流');
+    expect(root.textContent).toContain('讲课模式');
+    expect(root.textContent).toContain('家庭对话陪练');
+    expect(root.textContent).toContain('字幕 · 语音 · 数字人舞台同步输出');
+    expect(root.textContent).toContain('Soul 蒸馏样本');
+    expect(root.textContent).toContain('不写入核心事实');
+    expect(root.textContent).not.toContain('仿真人');
+    expect(root.textContent).not.toContain('总分');
+    expect(root.textContent).not.toContain('排名');
+    expect(root.textContent).not.toContain('保证有效');
+  });
+
   it('submits StartGrowthOnboarding with named-action headers and no AI personalization payload', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -33,7 +53,7 @@ describe('M2-102 Family web perspective capture', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const response = await submitStartGrowthOnboarding(config, 'LOW');
+    const response = await submitStartGrowthOnboarding(config, ['NONE']);
 
     expect(response.onboarding.status).toBe('ACTIVE');
     expect(fetchMock).toHaveBeenCalledWith(
@@ -50,7 +70,7 @@ describe('M2-102 Family web perspective capture', () => {
     expect(body).toEqual({
       childId: config.childId,
       guardianPersonId: config.guardianPersonId,
-      safetyScreeningResult: 'LOW',
+      structuredSafetySignals: ['NONE'],
     });
     expect(body).not.toHaveProperty('aiPersonalization');
   });
@@ -125,7 +145,7 @@ describe('M2-102 Family web perspective capture', () => {
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('main');
 
-    createGrowthApp(root, config);
+    createGrowthApp(root, { ...config, wave2ApiMode: 'real-api' });
     root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
     await flushPromises();
 
@@ -214,7 +234,7 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('不会自动生成行动');
   });
 
-  it('renders Wave2 F06-F09 workspace in real-api mode by default', async () => {
+  it('renders Wave2 F06-F09 workspace in pre-real-api mode by default', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
@@ -246,8 +266,8 @@ describe('M2-102 Family web perspective capture', () => {
     await flushPromises();
 
     expect(root.textContent).toContain('7 天沟通练习工作台');
-    expect(root.textContent).toContain('real-api');
-    expect(root.textContent).toContain('已连接');
+    expect(root.textContent).toContain('pre-real-api');
+    expect(root.textContent).toContain('预备模式');
     expect(root.textContent).toContain('本周练习重点');
     expect(root.textContent).toContain('NO_PRIORITY_YET');
     expect(root.textContent).toContain('先听后回应');
@@ -287,7 +307,7 @@ describe('M2-102 Family web perspective capture', () => {
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('main');
 
-    createGrowthApp(root, config);
+    createGrowthApp(root, { ...config, wave2ApiMode: 'real-api' });
     root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
     await flushPromises();
     root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
@@ -370,7 +390,12 @@ function onboardingFixture() {
     life_stage_code: 'EARLY_ADOLESCENCE_12_15',
     journey_type: 'PARENT_CHILD_COMMUNICATION_CONFLICT',
     target_dimensions: ['P03', 'R03', 'R04', 'R05'],
-    safety_screening_result: 'LOW',
+    safety_disposition: {
+      severity: 'LOW',
+      disposition: 'NORMAL',
+      policy_version: 'M2_101_DETERMINISTIC_V1',
+      signals: ['NONE'],
+    },
     ai_personalization_enabled: false,
     started_at: '2026-08-09T00:00:00.000Z',
     created_at: '2026-08-09T00:00:00.000Z',
@@ -509,7 +534,7 @@ function priorityConfirmFixture() {
       profile_refs: [{ profile_id: 'profile-R03', version: 1, dimension_id: 'R03' }],
       evidence_refs: ['evidence-PARENT', 'evidence-CHILD'],
       confidence: 'MEDIUM',
-      policy_version: 'M2_104_DETERMINISTIC_V1',
+      policy_version: 'M2_104_DETERMINISTIC_V2',
       profile_snapshot: {},
       created_at: '2026-08-10T00:00:00.000Z',
     },

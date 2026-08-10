@@ -13,17 +13,10 @@ import type {
   ProfileLimitation,
 } from '@family/contracts';
 
-export const GROWTH_PRIORITY_POLICY_VERSION = 'M2_104_DETERMINISTIC_V1' as const;
+export const GROWTH_PRIORITY_POLICY_VERSION = 'M2_104_DETERMINISTIC_V2' as const;
 export const GROWTH_PRIORITY_BOUNDARY = 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS' as const;
 export const GROWTH_PRIORITY_DIMENSIONS: M2GrowthDimensionId[] = ['P03', 'R03', 'R04', 'R05'];
-
-const stateOrder: Record<GrowthState | 'UNRESOLVED', number> = {
-  DEVELOPING: 0,
-  EMERGING: 1,
-  PRACTICING: 2,
-  UNRESOLVED: 3,
-  STABILIZING: 4,
-};
+const PRIMARY_GROWTH_PRIORITY_DIMENSION: M2GrowthDimensionId = 'R03';
 
 export interface ConfirmedProfileForPriority {
   profile_id: string;
@@ -56,8 +49,8 @@ export function buildGrowthPriorityDraft(input: BuildGrowthPriorityDraftInput): 
   const candidates = input.profiles
     .filter((profile) => GROWTH_PRIORITY_DIMENSIONS.includes(profile.dimension_id))
     .map((profile) => buildCandidate(profile, input.createdAt));
-  const eligibleCandidates = candidates.filter((candidate) => candidate.eligibility === 'ELIGIBLE');
-  const selected = eligibleCandidates.sort(compareCandidates)[0] ?? null;
+  const selected = candidates.find((candidate) => candidate.dimension_id === PRIMARY_GROWTH_PRIORITY_DIMENSION && candidate.eligibility === 'ELIGIBLE') ?? null;
+  const eligibleCandidates = candidates.filter((candidate) => candidate.dimension_id === PRIMARY_GROWTH_PRIORITY_DIMENSION && candidate.eligibility === 'ELIGIBLE');
   const allEvidenceRefs = Array.from(new Set(candidates.flatMap((candidate) => candidate.evidence_summary.supporting_evidence_count > 0
     ? getEvidenceRefsForCandidate(candidate, input.profiles)
     : [])));
@@ -129,6 +122,9 @@ function buildCandidate(profile: ConfirmedProfileForPriority, createdAt: string)
 }
 
 function determineEligibility(profile: ConfirmedProfileForPriority, evidenceCount: number): GrowthPriorityEligibility {
+  if (profile.dimension_id !== PRIMARY_GROWTH_PRIORITY_DIMENSION) {
+    return 'NO_PRIORITY_YET';
+  }
   if (evidenceCount < 1) {
     return 'NO_PRIORITY_YET';
   }
@@ -168,15 +164,6 @@ function mapLimitations(profile: ConfirmedProfileForPriority): GrowthPriorityLim
     limitations.add('PERSPECTIVE_DIVERGENCE');
   }
   return Array.from(limitations);
-}
-
-function compareCandidates(left: GrowthPriorityCandidateDto, right: GrowthPriorityCandidateDto): number {
-  const leftState = stateOrder[left.state_snapshot] ?? stateOrder.UNRESOLVED;
-  const rightState = stateOrder[right.state_snapshot] ?? stateOrder.UNRESOLVED;
-  if (leftState !== rightState) {
-    return leftState - rightState;
-  }
-  return GROWTH_PRIORITY_DIMENSIONS.indexOf(left.dimension_id) - GROWTH_PRIORITY_DIMENSIONS.indexOf(right.dimension_id);
 }
 
 function getEvidenceRefsForCandidate(candidate: GrowthPriorityCandidateDto, profiles: ConfirmedProfileForPriority[]): string[] {

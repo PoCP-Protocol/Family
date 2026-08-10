@@ -169,7 +169,7 @@ describe('POST /families E2E', () => {
       body: JSON.stringify({
         childId: childBody.child.person_id,
         guardianPersonId: parentBody.parent.person_id,
-        safetyScreeningResult: 'LOW',
+        structuredSafetySignals: ['NONE'],
       }),
     });
     const onboardingBody = await onboardingResponse.json() as StartGrowthOnboardingHttpResponse;
@@ -184,7 +184,12 @@ describe('POST /families E2E', () => {
       target_dimensions: ['P03', 'R03', 'R04', 'R05'],
       status: 'ACTIVE',
       phase: 'ONBOARDING',
-      safety_screening_result: 'LOW',
+      safety_disposition: {
+        severity: 'LOW',
+        disposition: 'NORMAL',
+        policy_version: 'M2_102_DETERMINISTIC_V1',
+        signals: ['NONE'],
+      },
       ai_personalization_enabled: false,
     });
 
@@ -464,7 +469,7 @@ describe('POST /families E2E', () => {
       body: JSON.stringify({
         childId: childBody.child.person_id,
         guardianPersonId: parentBody.parent.person_id,
-        safetyScreeningResult: 'LOW',
+        structuredSafetySignals: ['NONE'],
       }),
     });
     const onboardingBody = await onboardingResponse.json() as StartGrowthOnboardingHttpResponse;
@@ -557,7 +562,12 @@ interface StartGrowthOnboardingHttpResponse {
     target_dimensions: ['P03', 'R03', 'R04', 'R05'];
     status: 'ACTIVE';
     phase: 'ONBOARDING';
-    safety_screening_result: 'LOW';
+    safety_disposition: {
+      severity: 'LOW';
+      disposition: 'NORMAL';
+      policy_version: string;
+      signals: ['NONE'];
+    };
     ai_personalization_enabled: false;
   };
 }

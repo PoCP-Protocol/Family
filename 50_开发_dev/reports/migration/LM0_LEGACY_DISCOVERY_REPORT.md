@@ -1,15 +1,15 @@
 # LM0 Legacy Discovery Report
 
-status: DRAFT_FOR_ARCHITECT_REVIEW
+status: SOURCE_UNAVAILABLE_REBASELINED
 date: 2026-08-10
 track: FAMILY_LEGACY_MIGRATION_PROGRAM
-phase: LM0_LEGACY_DISCOVERY
+phase: LM0_REAL_DISCOVERY_SUSPENDED_FES_SOURCE_TRACK_ENABLED
 
 ## Scope
 
-LM0 is a read-only discovery and classification phase that runs in parallel with M2. It does not modify M2 business semantics, Family core Ontology, GrowthProfile semantics, production data, or cutover state.
+LM0 is a read-only discovery and classification phase when a real external source exists. The real Bangyang source system is currently unavailable, so LM0-B real discovery is suspended rather than failed. This does not modify M2 business semantics, Family core Ontology, GrowthProfile semantics, production data, or cutover state.
 
-Allowed actions: READ, DISCOVER, CLASSIFY, MAP, REPORT.
+Allowed actions now: preserve read-only FLM controls, freeze FES-M0/M1 contracts, design synthetic data, and prepare future adapter/migration-readiness boundaries.
 
 Forbidden actions:
 
@@ -20,6 +20,7 @@ Forbidden actions:
 - Formal Cutover
 - Old system data deletion
 - Legacy label/score/AI diagnosis promotion to Fact, Growth State, Diagnosis, or active Consent
+- Fabricated Bangyang database, table, API, runtime, or migration evidence
 
 ## Sources Read
 
@@ -31,6 +32,8 @@ Forbidden actions:
 - `50_开发_dev/agents/chief-architect/CURRENT_ARCHITECT_STATE.yaml`
 - `50_开发_dev/agents/chief-architect/DECISION_REGISTRY.md`
 
+No Bangyang production codebase, database, API contract, table structure, export, or runtime environment was available for verification.
+
 ## Local Findings
 
 - The migration matrix already defines 55 legacy assets and separates them into transform, migrate, integrate, retain/reorganize, retire, and deferred routes.
@@ -40,6 +43,7 @@ Forbidden actions:
 - FGAIM requires Data Gate clarity for source, consent, permission, and migration rules.
 - The architect state says M2 is running, M3/M4 are future, and next wave start remains pending approval.
 - The decision registry enforces Family Ontology ownership, Perspective != Fact, no Family Total Score, AI cannot directly modify core Ontology, and Relationship != Consent.
+- FES has been selected as the real education business source system to build now, separate from Family Core, and later consumed through FLM adapters and anti-corruption boundaries.
 
 ## LM0 Artifacts Created
 
@@ -118,7 +122,13 @@ Semantic risks:
 ## LM0 Status
 
 ```text
-LEGACY_SYSTEMS_DISCOVERED = 8 draft system groups
+LM0_A_FOUNDATION = PASS_CLOSED
+LEGACY_SOURCE_SYSTEM_AVAILABLE = NO
+REAL_LM0_DISCOVERY = DEFERRED_SOURCE_UNAVAILABLE
+LM0_B_REAL_SOURCE_DISCOVERY = SUSPENDED_NOT_BLOCKED
+FES_SOURCE_SYSTEM_TRACK = ACTIVE
+READY_FOR_FES_M1_IMPLEMENTATION = YES
+LEGACY_SYSTEMS_DISCOVERED = 0 verified systems; 8 draft system groups exist as planning scaffold
 SOURCE_ENTITIES = 15 draft source entity groups
 P0_ENTITIES = Customer, Contact, Student, FamilyLink, AssessmentRecord, AIDiagnosis, LegacyProfileOrTag, Course, ProgramOrCamp, Task, CheckIn, ServiceNote, Order, Payment, ConsentRecord
 INTEGRATE_ENTITIES = Order, Payment, CRM Lead/Opportunity, LMS Class/Program, Live Session, Support Ticket, Community Channel
@@ -129,14 +139,22 @@ RETIRE_ENTITIES = Leaderboard, Family Total Score
 UNKNOWN_SEMANTICS = exact legacy schemas, real table counts, actual API contracts, consent proof formats, assessment instruments, course-to-dimension evidence
 CONSENT_RISKS = HIGH
 IDENTITY_RISKS = HIGH
-BLOCKERS = source system access and real schema inventory not yet performed; business owner validation pending; architect review pending
+BLOCKERS = none for FES-M0/M1 contract freeze; real discovery blockers remain recorded only if a real Bangyang source appears later
 
-LM0 = FAIL
+LM0_STATUS = SUSPENDED_SOURCE_UNAVAILABLE
+LM0_GATE = SUSPENDED_NOT_BLOCKED
 READY_FOR_LM1 = NO
+START_LM1 = NO
+```
+
+Executable gate evidence:
+
+```text
+pnpm migration:report
 ```
 
 ## Verdict
 
-LM0 program structure is created, but discovery is not complete. It remains blocked pending real source system inventory, schema/API/file discovery, consent proof inspection, and business owner review.
+LM0-A program structure is closed as a foundation artifact. LM0-B real Bangyang discovery is suspended because the real source is unavailable. The gate is `SUSPENDED_NOT_BLOCKED`, not a pass for LM1 and not a failure blocking FES. FES-M0 + FES-M1 contract freeze is ready as the next executable source-system track.
 
-STOP: Wait for chief architect review before LM1 Semantic Mapping execution.
+STOP: Do not execute LM1 Semantic Mapping, Shadow Import, Pilot, Dual Run, or Cutover until a real source system exists and a new approval is issued.

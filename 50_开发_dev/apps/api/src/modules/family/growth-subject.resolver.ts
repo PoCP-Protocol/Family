@@ -32,15 +32,22 @@ export class GrowthSubjectResolver {
       event_child_id: string | null;
       event_guardian_id: string | null;
       perspective_child_id: string | null;
+      perspective_type: string | null;
+      perspective_subject_type: string | null;
     }>(
       `select
          ge.payload->>'child_id' as event_child_id,
          ge.payload->>'guardian_person_id' as event_guardian_id,
-         p.subject_person_id::text as perspective_child_id
+         p.subject_person_id::text as perspective_child_id,
+         p.perspective_type::text as perspective_type,
+         ps.person_type::text as perspective_subject_type
        from growth_events ge
        left join perspectives p
          on p.family_id = ge.family_id
         and p.onboarding_id = $2::uuid
+       left join persons ps
+         on ps.family_id = p.family_id
+        and ps.person_id = p.subject_person_id
        where ge.family_id = $1
          and ge.event_type = $3
          and ge.payload->>'onboarding_id' = $2::text
@@ -52,7 +59,9 @@ export class GrowthSubjectResolver {
     const eventGuardians = new Set<string>();
     for (const row of provenance.rows) {
       if (row.event_child_id) childCandidates.add(row.event_child_id);
-      if (row.perspective_child_id) childCandidates.add(row.perspective_child_id);
+      if (row.perspective_child_id && row.perspective_type === 'CHILD_PERSPECTIVE' && row.perspective_subject_type === 'CHILD') {
+        childCandidates.add(row.perspective_child_id);
+      }
       if (row.event_guardian_id) eventGuardians.add(row.event_guardian_id);
     }
     if (childCandidates.size !== 1) {

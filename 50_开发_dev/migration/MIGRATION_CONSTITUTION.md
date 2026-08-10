@@ -1,11 +1,13 @@
 # Family Legacy Migration Constitution V1.1
 
-status: ACTIVE_FOR_LM0_DISCOVERY
+status: SOURCE_UNAVAILABLE_FES_SOURCE_SYSTEM_TRACK
 date: 2026-08-10
 
 ## Mission
 
-Family owns family-growth semantics. Legacy systems retain professional transaction capabilities where they are already mature. The migration program links them through Adapter contracts and moves only bounded, provenance-rich, reviewed data into Family canonical objects.
+Family owns family-growth semantics. Education business systems retain professional transaction capabilities where they are already mature. The migration program links them through Adapter contracts and moves only bounded, provenance-rich, reviewed data into Family canonical objects.
+
+Current ruling: the real Bangyang source system is not available. No real source code, database, API, table structure, export, or runtime may be claimed as verified. FES - Family Education System - is the real AI Native education business operations system to build now; it is not Family Core, not a mock old database, and not evidence of Bangyang production data.
 
 ## Core Principle
 
@@ -34,7 +36,7 @@ LM4 Dual Run
 LM5 Cutover
 ```
 
-Every legacy object must be classified as TRANSFORM, MIGRATE, INTEGRATE, RETAIN, or RETIRE. UNKNOWN is allowed only during LM0 discovery and cannot pass LM0 final gate for P0 systems.
+Every real external-source object must be classified as TRANSFORM, MIGRATE, INTEGRATE, RETAIN, or RETIRE. UNKNOWN is allowed only during LM0 discovery and cannot pass LM0 final gate for a real P0 source. When the real source is unavailable, `LM0_B_REAL_SOURCE_DISCOVERY = SUSPENDED_NOT_BLOCKED` and no fabricated schema may be promoted to evidence.
 
 ## Red Lines
 
@@ -81,17 +83,26 @@ External systems remain systems of record for:
 - Live delivery technology
 - Support channel operations
 
+FES is the future owned source system for education business operations:
+
+- Customer / Contact / Student
+- Assessment / Course / Enrollment / Task / CheckIn
+- Advisor / ServiceNote / business service workflow
+- AI-assisted assessment draft and advisor summary with human confirmation
+
 ## LM0 Scope
 
-LM0 may create catalogs, inventories, mapping drafts, control rules, read-only discovery tooling, validators, local or isolated staging models, and discovery reports. It must not create production import code, mutate core database schema, confirm mappings, run Shadow import, or claim production migration readiness.
+LM0 may create catalogs, inventories, mapping drafts, control rules, read-only discovery tooling, validators, local or isolated staging models, and discovery reports when a real source exists. In the current source-unavailable state, work shifts to FES-M0/M1 contract freeze and FLM compatibility design. It must not create production import code, mutate core database schema, confirm mappings against a nonexistent source, run Shadow import, or claim production migration readiness.
 
-## Migration Data Zones
+## Source And Migration Data Zones
 
-- SOURCE: observed legacy system or export source.
+- SOURCE: observed external origin outside Family management, or the future FES source boundary when FES is implemented and run as a separate education business system.
 - RAW: immutable original data reference; full sensitive payload must not be copied into audit tables.
 - STAGING: normalized, deduped, identity-resolved, classified, and validated candidates.
 - QUARANTINE: unresolved, ambiguous, invalid, or unsafe records requiring review.
 - CANONICAL: Family domain objects written only through approved migration actions after gate approval.
+
+The four managed migration zones are RAW, STAGING, QUARANTINE, and CANONICAL.
 
 ## Migration Control Model
 

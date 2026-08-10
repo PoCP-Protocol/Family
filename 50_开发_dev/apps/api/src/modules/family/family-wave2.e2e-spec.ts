@@ -268,7 +268,7 @@ function skipIfPostgresUnavailable(context: { skip: (note?: string) => void }): 
   }
 }
 
-async function seedConfirmedProfile(correlationId: string, options: { grantGrowthTrackingConsent?: boolean; safetyScreeningResult?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' } = {}): Promise<SeededWave2State> {
+async function seedConfirmedProfile(correlationId: string, options: { grantGrowthTrackingConsent?: boolean; structuredSafetySignals?: Array<'NONE' | 'SELF_HARM' | 'HARM_TO_OTHERS' | 'ABUSE' | 'VIOLENCE' | 'SEVERE_CRISIS'> } = {}): Promise<SeededWave2State> {
   const grantGrowthTrackingConsent = options.grantGrowthTrackingConsent ?? true;
   const family = await postFamily({ display_name: 'Wave2 E2E 家庭', idempotency_key: `idem-${correlationId}-family` }, correlationId);
   const familyBody = await family.json() as CreateFamilyHttpResponse;
@@ -315,7 +315,7 @@ async function seedConfirmedProfile(correlationId: string, options: { grantGrowt
   const onboarding = await postJsonExpect<StartGrowthOnboardingHttpResponse>(`/families/${familyBody.family.family_id}/growth/onboarding`, {
     childId: child.child.person_id,
     guardianPersonId: parent.parent.person_id,
-    safetyScreeningResult: options.safetyScreeningResult ?? 'LOW',
+    structuredSafetySignals: options.structuredSafetySignals ?? ['NONE'],
   }, correlationId, `idem-${correlationId}-onboarding`);
 
   await seedPerspectivePair(familyBody.family.family_id, onboarding.onboarding.onboarding_id, parent.parent.person_id, child.child.person_id, correlationId);

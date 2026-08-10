@@ -7,13 +7,13 @@ contract: M2_WAVE2_CF_V1
 ## Current Verdict
 
 ```text
-E2E_GATE: HARNESS_READY_POSTGRESQL_SKIPPED
-REAL_POSTGRESQL_GATE: NOT_RUN_TEST_DATABASE_URL_MISSING
-BROWSER_DEMO_GATE: NOT_RUN_WAITING_RUNNING_BACKEND_AND_REAL_API_MODE
+E2E_GATE: PASS_6_OF_6_REAL_HTTP_POSTGRESQL
+REAL_POSTGRESQL_GATE: PASS_ISOLATED_POSTGRESQL_15_MIGRATIONS_0001_TO_0008
+BROWSER_DEMO_GATE: PASS_REAL_BROWSER_HTTP_POSTGRESQL
 FINAL_WAVE2_GATE: NOT_PASS
 ```
 
-AI-05/AI-00 do not declare final Real PostgreSQL PASS. The current E2E spec collects and runs, but the real scenarios are skipped because `TEST_DATABASE_URL` is not set in this local environment.
+AI-05 evidence gates now pass. Final Wave2 PASS is still withheld until governance rerun and independent AI-07 review are complete.
 
 ## Existing Pattern Checked
 
@@ -25,22 +25,39 @@ AI-05/AI-00 do not declare final Real PostgreSQL PASS. The current E2E spec coll
 ## E2E-W2 Coverage Plan
 
 ```text
-E2E-W2-01 happy path confirms priority, starts intervention, completes action, and checks no outcome-like or AI side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-05 no-priority decision and stale draft do not create hidden state: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
+E2E-W2-01 happy path confirms priority, starts intervention, completes action, and checks no outcome-like or AI side effects: PASS
+E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects: PASS
+E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects: PASS
+E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state: PASS
+E2E-W2-05 no-priority decision and stale draft do not create hidden state: PASS
+E2E-W2-06 migration/schema and event-side-effect boundary assertions: PASS
 ```
 
 ## Named Action Rule
 
 The Wave2 E2E skeleton does not SQL-insert `growth_priorities`, `interventions`, or `growth_actions`. Final E2E must create priority, intervention, action, and reflection state only through HTTP routes backed by the approved Named Actions.
 
-## Blocking Evidence
+## Real PostgreSQL Evidence
 
 ```text
-PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set.
-PENDING_BROWSER_DEMO: no running backend + real API frontend browser run has been captured.
+CONTAINER: family_pg_test (PostgreSQL 15, isolated host port 56432)
+DATABASE: family_test
+MIGRATIONS: 0001 through 0008 applied successfully
+HTTP_E2E: 6 passed, 0 skipped, 0 failed
+BROWSER_RUNTIME: web 5178 -> API 3100 -> PostgreSQL 56432
+```
+
+Browser-created state for family `ad30ac76-b3cd-4947-9416-dd5548034e40`:
+
+```text
+growth_priorities = 1
+intervention_episodes = 1
+growth_actions = 7
+completed_or_partial_actions = 1
+outcomes = 0
+milestones = 0
+growth_reviews = TABLE_ABSENT
+prohibited Outcome/Milestone/AI/LLM/Model/Agent event side effects = 0
 ```
 
 ## Validation Commands
@@ -55,12 +72,12 @@ RESULT: FAIL_EXPECTED_CONFIG_MISMATCH
 REASON: default api Vitest config includes src/**/*.spec.ts and reports no test files found for e2e-spec.
 
 pnpm --filter @family/api exec vitest run --config vitest.e2e.config.ts src/modules/family/family-wave2.e2e-spec.ts --reporter verbose
-RESULT: PASS_HARNESS_POSTGRESQL_SKIPPED
-SUMMARY: 1 passed, 5 skipped. The skipped tests are the real PostgreSQL + HTTP scenarios and do not claim Wave2 E2E PASS.
+RESULT: PASS
+SUMMARY: 6 passed against real PostgreSQL + HTTP.
 
 pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck && pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test
 RESULT: PASS
-SUMMARY: 1 file, 9 tests. Real API adapter prep is validated, but browser demo remains pending.
+SUMMARY: 1 file, 10 tests. Includes regression coverage for restoring Wave2 reads after reload when a confirmed profile already exists.
 
 pnpm --filter @family/api exec tsc -p tsconfig.json --noEmit --pretty false
 RESULT: PASS

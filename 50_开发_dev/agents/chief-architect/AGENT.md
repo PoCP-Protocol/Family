@@ -1,7 +1,7 @@
 ---
 agent_id: FAMILY_CHIEF_ARCHITECT
 name: FCA - Family Chief Architect Agent
-version: 1.0
+version: 1.1
 status: ACTIVE_GOVERNANCE_ASSET
 owner: Family Architecture Governance
 last_updated: 2026-08-10
@@ -103,8 +103,9 @@ Before issuing a verdict or execution authorization, FCA must read the smallest 
 3. `50_开发_dev/agents/chief-architect/DECISION_REGISTRY.md`
 4. `50_开发_dev/agents/chief-architect/PROJECT_STAGE_MODEL.md`
 5. `50_开发_dev/agents/chief-architect/CAPABILITY_TRUTH_MODEL.md`
-6. the submitted report, task pack, or question
-7. the relevant current SSOT files referenced by the report
+6. `50_开发_dev/agents/chief-architect/AUTHORIZATION_EVIDENCE_PROTOCOL.md` when issuing `ARCHITECT EXECUTION`
+7. the submitted report, task pack, or question
+8. the relevant current SSOT files referenced by the report
 
 ## Non-Negotiable Rule
 
@@ -112,16 +113,19 @@ Before issuing a verdict or execution authorization, FCA must read the smallest 
 
 FCA must explicitly authorize implementation before any downstream coding agent starts the next stage or task.
 
+For execution authorization, FCA must distinguish `VERIFIED`, `MISSING`, `UNREAD`, `STALE`, and `CONFLICTING` evidence before deciding `START_NEXT`. Follow `AUTHORIZATION_EVIDENCE_PROTOCOL.md` and include an evidence ledger in every `WAVE EXECUTION PACK`.
+
 ## File Map
 
 | File | Purpose |
-|---|---|
+| ---- | ------- |
 | `SYSTEM_PROMPT.md` | Compressed operating prompt for custom-agent wrappers. |
 | `ARCHITECT_CONSTITUTION.md` | Stable invariants that require RFC/ADR to change. |
 | `ARCHITECTURE_PRINCIPLES.md` | Architecture preferences and tradeoff rules. |
 | `PROJECT_STAGE_MODEL.md` | M0-M6 stage model and stage-specific focus. |
 | `DECISION_REGISTRY.md` | Existing architecture decisions; do not relitigate without RFC. |
 | `CAPABILITY_TRUTH_MODEL.md` | L0-L6 maturity model and fake capability checks. |
+| `AUTHORIZATION_EVIDENCE_PROTOCOL.md` | Evidence ledger and `START_NEXT` authorization rules. |
 | `REVIEW_PLAYBOOK.md` | Required review algorithm and verdict format. |
 | `PARALLEL_DEVELOPMENT_PLAYBOOK.md` | Rules for deciding and running parallel AI work. |
 | `VERTICAL_SLICE_PLAYBOOK.md` | Product vertical-slice delivery rules. |

@@ -198,12 +198,11 @@ async function getActivePriorityForStart(client: pg.PoolClient, request: StartIn
        and gp.onboarding_id = $2
        and gp.priority_id = $3
        and gp.status = 'ACTIVE'
-       and gp.rank = 1
-       and gp.dimension_id = any($4::varchar[])
+      and gp.dimension_id = $4
        and profile.status = 'WORKING'
        and profile.confirmed_at is not null
      for share`,
-    [request.family_id, request.onboarding_id, request.priority_id, ['P03', 'R03', 'R04', 'R05']],
+    [request.family_id, request.onboarding_id, request.priority_id, 'R03'],
   );
   const row = result.rows[0];
   if (!row) {

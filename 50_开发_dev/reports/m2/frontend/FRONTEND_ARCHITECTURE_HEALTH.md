@@ -19,7 +19,7 @@ No frontend framework migration is required for Wave2. The current static ES mod
 
 - Build/typecheck path remains `pnpm --filter @family/web typecheck`.
 - Test path remains `pnpm --filter @family/web test -- app.spec.ts`.
-- `pre-real-api` is visible in the UI while Wave2 backend route availability is pending.
+- `pre-real-api` remains the safe default; explicit runtime query configuration enables verified `real-api` mode.
 - No migration RFC is requested at this time.
 
 ## Real API Boundary
@@ -31,4 +31,4 @@ The following functions are the intended real API boundary:
 - `submitStartIntervention`
 - `submitCompleteGrowthAction`
 
-The app currently uses frozen fixtures unless `Wave2State.apiMode` is switched to `real-api` after AI-00 confirms route availability.
+The app uses frozen fixtures unless `Wave2State.apiMode` is switched to `real-api`. The real mode has been verified in a live Browser + HTTP + PostgreSQL flow, including reload/resume and a 390x844 mobile viewport.

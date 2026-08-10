@@ -84,6 +84,24 @@ describe('GrowthActionService', () => {
     expect(client.updatedActionCount).toBe(0);
     expect(client.auditActions).toEqual([]);
   });
+
+  it('rejects a different idempotency key after the action is terminal', async () => {
+    const client = new FakeGrowthActionClient(null, true, 'COMPLETED');
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+
+    await expect(service.completeGrowthAction({
+      family_id: familyId,
+      action_id: actionId,
+      completion_status: 'PARTIAL',
+      reflection: '第二次试图改写。',
+      occurred_at: meta.occurredAt,
+      idempotency_key: 'idem-complete-different-key',
+    }, meta)).rejects.toThrow('growth_action_already_checked_in');
+
+    expect(client.updatedActionCount).toBe(0);
+    expect(client.auditActions).toEqual([]);
+    expect(client.outboxEvents).toEqual([]);
+  });
 });
 
 function createRepository(client: FakeGrowthActionClient): FamilyRepository {
@@ -123,7 +141,11 @@ class FakeGrowthActionClient {
   private actionName = '';
   private requestHash = '';
 
-  constructor(private readonly replayResponse: CompleteGrowthActionResponse | null = null, private readonly normalRouteVerified = true) {}
+  constructor(
+    private readonly replayResponse: CompleteGrowthActionResponse | null = null,
+    private readonly normalRouteVerified = true,
+    private readonly currentActionStatus = 'PENDING',
+  ) {}
 
   async query(sql: string, params: unknown[] = []): Promise<{ rowCount: number; rows: unknown[] }> {
     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -146,7 +168,7 @@ class FakeGrowthActionClient {
       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
     }
     if (normalized.startsWith('select ga.action_id, ga.onboarding_id, ga.priority_id')) {
-      return { rowCount: 1, rows: [{ action_id: actionId, onboarding_id: onboardingId, priority_id: priorityId }] };
+      return { rowCount: 1, rows: [{ action_id: actionId, onboarding_id: onboardingId, priority_id: priorityId, status: this.currentActionStatus }] };
     }
     if (normalized.startsWith('select profile.subject_person_id')) {
       return { rowCount: 1, rows: [{ subject_person_id: childId, subject_relationship_id: null }] };
@@ -154,11 +176,11 @@ class FakeGrowthActionClient {
     if (normalized.startsWith('select purpose from consents')) {
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
     }
-    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+    if (normalized.startsWith("select payload->'safety_disposition'->>'severity'")) {
       if (!this.normalRouteVerified) {
         return { rowCount: 0, rows: [] };
       }
-      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+      return { rowCount: 1, rows: [{ severity: 'LOW', disposition: 'NORMAL' }] };
     }
     if (normalized.startsWith('select perspective_id from perspectives')) {
       return { rowCount: 0, rows: [] };

@@ -2,8 +2,8 @@
 
 owner: AI-04 Frontend F01/F06/F07/F08/F09 Real Integration Owner
 phase: Phase B2 Wave2
-state: REAL_API_ADAPTER_PREP_READY
-frontend_real_api_ready: NO
+state: REAL_API_BROWSER_GATE_PASS
+frontend_real_api_ready: YES
 contract: M2_WAVE2_CF_V1
 
 ## Scope
@@ -17,9 +17,9 @@ Implemented the static web Wave2 UI surface for:
 
 ## Integration Mode
 
-Current mode is `pre-real-api` by default, with real API adapter prep aligned to the AI-00 confirmed Wave2 route surface.
+Current mode is `pre-real-api` by default, with an explicit and browser-verified `real-api` runtime mode aligned to the AI-00 confirmed Wave2 route surface.
 
-The UI uses frozen contract fixtures from `apps/web/src/wave2.js` unless `Wave2State.apiMode === 'real-api'`. The adapter functions are present in the same module so the switch remains localized to existing handlers, but final real API readiness is not claimed until a running backend and browser/demo evidence are available.
+The UI uses frozen contract fixtures from `apps/web/src/wave2.js` unless `Wave2State.apiMode === 'real-api'`. The switch remains localized to the adapter boundary. A real browser completed the end-to-end flow against the live API and PostgreSQL, including confirmed-profile reload hydration.
 
 The app config now accepts optional `wave2ApiMode`. Default remains `pre-real-api`; setting `real-api` makes the confirmed Growth Profile flow fetch `priority-insight` from the prepared route before rendering Wave2 priority state.
 
@@ -47,4 +47,6 @@ Request body boundary: IDs carried by route path are not duplicated in POST bodi
 - Focused web test covers `pre-real-api` marker.
 - Focused web test covers named-action adapter routes and payloads for priority insight, priority confirmation, intervention start, and action completion.
 - `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck` PASS.
-- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test` PASS, 9 tests.
+- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test` PASS, 10 tests.
+- Real browser + HTTP + PostgreSQL flow PASS; console warnings/errors: 0.
+- 390x844 mobile layout PASS with no horizontal overflow.

@@ -4,8 +4,9 @@ import type pg from 'pg';
 const GROWTH_ONBOARDING_STARTED_EVENT = 'GrowthOnboardingStarted';
 
 export async function assertNormalSafetyRoute(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
-  const onboarding = await client.query<{ safety_screening_result: string | null }>(
-    `select payload->>'safety_screening_result' as safety_screening_result
+  const onboarding = await client.query<{ severity: string | null; disposition: string | null }>(
+    `select payload->'safety_disposition'->>'severity' as severity,
+            payload->'safety_disposition'->>'disposition' as disposition
      from growth_events
      where family_id = $1
        and event_type = $2
@@ -15,7 +16,7 @@ export async function assertNormalSafetyRoute(client: pg.PoolClient, familyId: s
      for share`,
     [familyId, GROWTH_ONBOARDING_STARTED_EVENT, onboardingId],
   );
-  if (onboarding.rowCount !== 1 || onboarding.rows[0].safety_screening_result !== 'LOW') {
+  if (onboarding.rowCount !== 1 || onboarding.rows[0].severity !== 'LOW' || onboarding.rows[0].disposition !== 'NORMAL') {
     throw new ForbiddenException('normal_safety_route_not_verified');
   }
 

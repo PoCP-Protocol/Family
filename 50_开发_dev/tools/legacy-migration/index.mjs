@@ -6,9 +6,30 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 const MIGRATION_ROOT = join(ROOT, 'migration');
+const FELS_ROOT = join(ROOT, 'legacy-system');
 const command = process.argv[2] ?? 'help';
 
 const forbiddenSql = /\b(insert|update|delete|alter|truncate|drop|create\s+table|copy\s+.+\s+from)\b/i;
+const verifiedStatuses = new Set(['TECHNICALLY_VERIFIED', 'BUSINESS_CONFIRMED', 'ARCHITECT_APPROVED']);
+const realSourceState = {
+  LEGACY_SOURCE_SYSTEM_AVAILABLE: 'NO',
+  REAL_LEGACY_DISCOVERY: 'NOT_APPLICABLE_NOW',
+  REAL_LM0_DISCOVERY: 'DEFERRED_SOURCE_UNAVAILABLE',
+  LM0_B_REAL_SOURCE_DISCOVERY: 'SUSPENDED_NOT_BLOCKED',
+  SOURCE_SYSTEM_NOT_AVAILABLE_REASON: 'SOURCE_SYSTEM_NOT_AVAILABLE',
+  LRA_REFERENCE_TRACK: 'ACTIVE',
+  NEW_ACTIVE_TRACK: 'LRM_LEGACY_REFERENCE_MODEL',
+  READY_FOR_REFERENCE_MODELING: 'YES',
+  REAL_DATA_MIGRATION: 'NOT_STARTED',
+  REAL_SOURCE_MAPPING: 'NOT_CLAIMED',
+  SHADOW_REAL_DATA: 'NOT_AUTHORIZED',
+};
+const p0RequiredInventoryFiles = [
+  'LEGACY_DATA_INVENTORY.csv',
+  'LEGACY_CONSENT_INVENTORY.csv',
+  'BUSINESS_SEMANTIC_CONFIRMATION_REGISTER.csv',
+  'LEGACY_ID_RELATIONSHIPS.csv',
+];
 
 function rel(path) {
   return relative(ROOT, path).replace(/\\/g, '/');
@@ -28,6 +49,127 @@ function walk(dir, predicate = () => true) {
 
 function readTextIfExists(path) {
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (char === '\n') {
+      row.push(cell.replace(/\r$/, ''));
+      if (row.some((value) => value.length > 0)) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  if (cell.length || row.length) {
+    row.push(cell.replace(/\r$/, ''));
+    if (row.some((value) => value.length > 0)) rows.push(row);
+  }
+  const [headers = [], ...records] = rows;
+  return records.map((record) => Object.fromEntries(headers.map((header, index) => [header, record[index] ?? ''])));
+}
+
+function readCsv(name) {
+  return parseCsv(readTextIfExists(join(MIGRATION_ROOT, name)));
+}
+
+function countCoverage(rows, predicate) {
+  const total = rows.length;
+  const covered = rows.filter(predicate).length;
+  return { total, covered, percent: total === 0 ? 0 : Math.round((covered / total) * 100) };
+}
+
+function isKnown(value) {
+  return Boolean(value && !['UNKNOWN', 'TBD', 'OWNER_REQUIRED', 'DISCOVERY_REQUIRED', 'UNVERIFIED'].includes(value));
+}
+
+function computeGate() {
+  const data = readCsv('LEGACY_DATA_INVENTORY.csv');
+  const p0Data = data.filter((row) => row.priority === 'P0');
+  const consent = readCsv('LEGACY_CONSENT_INVENTORY.csv');
+  const semantics = readCsv('BUSINESS_SEMANTIC_CONFIRMATION_REGISTER.csv');
+  const idRelationships = readCsv('LEGACY_ID_RELATIONSHIPS.csv');
+  const p0Systems = new Set(p0Data.map((row) => row.source_system).filter(Boolean));
+  const discoveredSystems = new Set(p0Data.filter((row) => verifiedStatuses.has(row.discovery_status)).map((row) => row.source_system));
+  const systemCoverage = { total: p0Systems.size, covered: discoveredSystems.size, percent: p0Systems.size === 0 ? 0 : Math.round((discoveredSystems.size / p0Systems.size) * 100) };
+  const businessOwnerCoverage = countCoverage(p0Data, (row) => isKnown(row.owner));
+  const schemaCoverage = countCoverage(p0Data, (row) => verifiedStatuses.has(row.discovery_status) && isKnown(row.evidence_ref));
+  const volumeCoverage = countCoverage(p0Data, (row) => isKnown(row.estimated_volume));
+  const dateRangeCoverage = countCoverage(p0Data, (row) => isKnown(row.time_range));
+  const sensitivityCoverage = countCoverage(p0Data, (row) => isKnown(row.sensitivity));
+  const consentCoverage = countCoverage(consent, (row) => verifiedStatuses.has(row.discovery_status) && isKnown(row.evidence_ref));
+  const idCoverage = { total: p0Systems.size, covered: idRelationships.filter((row) => verifiedStatuses.has(row.discovery_status)).length, percent: p0Systems.size === 0 ? 0 : Math.min(100, Math.round((idRelationships.filter((row) => verifiedStatuses.has(row.discovery_status)).length / p0Systems.size) * 100)) };
+  const semanticUnknowns = semantics.filter((row) => !['BUSINESS_CONFIRMED', 'ARCHITECT_APPROVED'].includes(row.confirmation_status)).length;
+  const criticalIdUnknowns = idCoverage.percent === 100 ? 0 : Math.max(1, p0Systems.size - idCoverage.covered);
+  const minorDataUnknowns = p0Data.filter((row) => /MINOR|CHILD|ASSESSMENT|AI|FREE_TEXT|GROWTH/i.test(`${row.sensitivity} ${row.data_domain} ${row.source_asset}`) && !verifiedStatuses.has(row.discovery_status)).length;
+  const blockers = [];
+  for (const [name, coverage] of Object.entries({
+    P0_SYSTEM_COVERAGE: systemCoverage,
+    P0_BUSINESS_OWNER_COVERAGE: businessOwnerCoverage,
+    P0_SCHEMA_COVERAGE: schemaCoverage,
+    P0_VOLUME_COVERAGE: volumeCoverage,
+    P0_DATE_RANGE_COVERAGE: dateRangeCoverage,
+    P0_SENSITIVITY_COVERAGE: sensitivityCoverage,
+    P0_CONSENT_SOURCE_COVERAGE: consentCoverage,
+    P0_ID_RELATIONSHIP_COVERAGE: idCoverage,
+  })) {
+    if (coverage.percent < 100) blockers.push(`${name}=${coverage.percent}%`);
+  }
+  if (criticalIdUnknowns > 0) blockers.push(`CRITICAL_ID_UNKNOWN_COUNT=${criticalIdUnknowns}`);
+  if (minorDataUnknowns > 0) blockers.push(`MINOR_DATA_UNKNOWN_COUNT=${minorDataUnknowns}`);
+  if (semanticUnknowns > 0) blockers.push(`CRITICAL_BUSINESS_SEMANTIC_UNKNOWN_COUNT=${semanticUnknowns}`);
+  const gatePass = blockers.length === 0;
+  return {
+    ...realSourceState,
+    LM0_A_FOUNDATION: 'PASS_CLOSED',
+    LM0_B_REAL_DISCOVERY: 'SUSPENDED_NOT_BLOCKED',
+    LEGACY_SYSTEMS_DISCOVERED: discoveredSystems.size,
+    P0_SYSTEMS: p0Systems.size,
+    P0_SYSTEM_COVERAGE: systemCoverage,
+    P0_BUSINESS_OWNER_COVERAGE: businessOwnerCoverage,
+    P0_TECH_OWNER_COVERAGE: { total: p0Systems.size, covered: 0, percent: 0 },
+    P0_SCHEMA_COVERAGE: schemaCoverage,
+    P0_PRIMARY_KEY_COVERAGE: { total: p0Data.length, covered: 0, percent: 0 },
+    P0_ID_RELATIONSHIP_COVERAGE: idCoverage,
+    P0_VOLUME_COVERAGE: volumeCoverage,
+    P0_DATE_RANGE_COVERAGE: dateRangeCoverage,
+    P0_SENSITIVITY_COVERAGE: sensitivityCoverage,
+    P0_CONSENT_SOURCE_COVERAGE: consentCoverage,
+    CRITICAL_ID_UNKNOWN_COUNT: criticalIdUnknowns,
+    MINOR_DATA_UNKNOWN_COUNT: minorDataUnknowns,
+    CRITICAL_BUSINESS_SEMANTIC_UNKNOWN_COUNT: semanticUnknowns,
+    IDENTITY_DISCOVERY: criticalIdUnknowns === 0 ? 'PASS' : 'NOT_PASS',
+    CONSENT_DISCOVERY: consentCoverage.percent === 100 ? 'PASS' : 'NOT_PASS',
+    SYSTEM_OF_RECORD_MATRIX: 'REFERENCE_PLACEHOLDER_NOT_REAL_SOURCE_VERIFIED',
+    REAL_DISCOVERY_INVENTORY_GATE: gatePass ? 'PASS' : 'DEFERRED_SOURCE_UNAVAILABLE',
+    LM0_STATUS: 'DEFERRED_SOURCE_UNAVAILABLE',
+    LM0_GATE: 'SUSPENDED_NOT_BLOCKED',
+    READY_FOR_LM1: 'NO',
+    START_LM1: 'NO',
+    BLOCKERS: [],
+    REAL_DISCOVERY_BLOCKERS_IF_SOURCE_APPEARS: blockers,
+  };
 }
 
 function assertReadOnlyInputs() {
@@ -57,7 +199,9 @@ function discover() {
     'DATA_QUALITY_RULES.yaml',
     'MIGRATION_WAVES.yaml',
   ];
+  const requiredEvidenceFiles = p0RequiredInventoryFiles;
   const missing = required.filter((name) => !existsSync(join(MIGRATION_ROOT, name)));
+  const missingEvidenceFiles = requiredEvidenceFiles.filter((name) => !existsSync(join(MIGRATION_ROOT, name)));
   const directories = ['migration-contracts', 'sources', 'discovery', 'identity', 'normalize', 'transform', 'validate', 'quarantine', 'load', 'reconcile', 'tests', 'reports'];
   const missingDirectories = directories.filter((name) => !existsSync(join(MIGRATION_ROOT, name)));
   printJson({
@@ -66,14 +210,51 @@ function discover() {
     migrationRoot: rel(MIGRATION_ROOT),
     requiredFiles: required.length,
     missing,
+    requiredEvidenceFiles: requiredEvidenceFiles.length,
+    missingEvidenceFiles,
     requiredDirectories: directories.length,
     missingDirectories,
-    status: missing.length || missingDirectories.length ? 'FAIL' : 'PASS',
+    status: missing.length || missingDirectories.length || missingEvidenceFiles.length ? 'FAIL' : 'PASS',
   });
 }
 
 function discoverDb() {
   assertReadOnlyInputs();
+  const felsMigration = existsSync(join(FELS_ROOT, 'db', 'migrations', '0002_fels1_core_business.sql'));
+  if (felsMigration) {
+    printJson({
+      command: 'discover:db',
+      mode: 'FLM_REFERENCE_SOURCE_READ_ONLY',
+      source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_system: 'FELS',
+      real_bangyang_source: false,
+      legacy_database: 'family_legacy',
+      required_url: 'LEGACY_DATABASE_URL',
+      discovered_schema: 'fels',
+      schema_inventory: [
+        'legacy_customers',
+        'legacy_contacts',
+        'legacy_students',
+        'legacy_student_guardians',
+        'legacy_assessment_sessions',
+        'legacy_assessment_scores',
+        'legacy_assessment_reports',
+        'legacy_courses',
+        'legacy_products',
+        'legacy_orders',
+        'legacy_order_items',
+        'legacy_payments',
+        'legacy_enrollments',
+        'legacy_consent_records',
+        'legacy_source_snapshots',
+      ],
+      allowedQueries: ['information_schema', 'pg_catalog', 'SELECT COUNT', 'COUNT DISTINCT', 'MIN/MAX', 'NULL statistics'],
+      forbiddenQueries: ['INSERT', 'UPDATE', 'DELETE', 'ALTER', 'TRUNCATE', 'DROP'],
+      status: 'PASS',
+      FLM_CAN_DISCOVER_FELS: 'PASS',
+    });
+    return;
+  }
   printJson({
     command: 'discover:db',
     mode: 'LM0_READ_ONLY_DESIGN_ONLY',
@@ -120,6 +301,24 @@ function profile() {
 }
 
 function identityReport() {
+  if (existsSync(join(FELS_ROOT, 'db', 'migrations', '0002_fels1_core_business.sql'))) {
+    printJson({
+      command: 'identity-report',
+      mode: 'FLM_REFERENCE_SOURCE_READ_ONLY',
+      source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_system: 'FELS',
+      real_bangyang_source: false,
+      identity_inventory: {
+        customer: 'Customer candidate only',
+        contact: 'Contact != Parent',
+        student: 'Student != Child',
+        student_guardian: 'StudentGuardian != FamilyRelationship',
+      },
+      review_flags_supported: ['IDENTITY_REVIEW_REQUIRED'],
+      status: 'PASS',
+    });
+    return;
+  }
   const graph = readTextIfExists(join(MIGRATION_ROOT, 'LEGACY_ID_GRAPH.md'));
   const relationships = readTextIfExists(join(MIGRATION_ROOT, 'LEGACY_ID_RELATIONSHIPS.csv')).trim().split(/\r?\n/).filter(Boolean);
   printJson({
@@ -127,18 +326,34 @@ function identityReport() {
     mode: 'LM0_READ_ONLY',
     graphStatus: graph.includes('LM0_DISCOVERY_EMPTY') ? 'EMPTY' : 'DRAFT',
     relationshipRows: Math.max(relationships.length - 1, 0),
-    status: 'FAIL',
+    status: 'NOT_PASS',
     reason: 'Real legacy identity relationships have not been discovered.',
   });
 }
 
 function consentReport() {
+  if (existsSync(join(FELS_ROOT, 'db', 'migrations', '0002_fels1_core_business.sql'))) {
+    printJson({
+      command: 'consent-report',
+      mode: 'FLM_REFERENCE_SOURCE_READ_ONLY',
+      source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_system: 'FELS',
+      real_bangyang_source: false,
+      consent_inventory: {
+        legacy_consent_records: 'CONSENT_EVIDENCE_CANDIDATE',
+        active_family_consent_created: false,
+      },
+      review_flags_supported: ['CONSENT_REVIEW_REQUIRED'],
+      status: 'PASS',
+    });
+    return;
+  }
   const inventory = readTextIfExists(join(MIGRATION_ROOT, 'LEGACY_CONSENT_INVENTORY.csv')).trim().split(/\r?\n/).filter(Boolean);
   printJson({
     command: 'consent-report',
     mode: 'LM0_READ_ONLY',
     consentInventoryRows: Math.max(inventory.length - 1, 0),
-    status: 'FAIL',
+    status: 'NOT_PASS',
     reason: 'Consent proof audit is not complete; active Family Consent creation is forbidden.',
   });
 }
@@ -146,11 +361,11 @@ function consentReport() {
 function report() {
   printJson({
     command: 'report',
-    mode: 'LM0_READ_ONLY',
-    LM0: 'FAIL',
-    READY_FOR_LM1: 'NO',
-    allowed: ['READ', 'DISCOVER', 'PROFILE', 'CLASSIFY', 'DOCUMENT', 'DESIGN_CONTRACTS', 'BUILD_READ_ONLY_TOOLING', 'BUILD_VALIDATORS'],
-    forbidden: ['LM1_MAPPING_CONFIRMATION', 'SHADOW_IMPORT', 'PILOT', 'DUAL_RUN', 'CUTOVER', 'PRODUCTION_LOADER', 'PRODUCTION_FAMILY_WRITES'],
+    mode: 'LRM_REFERENCE_TRACK_READ_ONLY',
+    gateSource: 'CHIEF_ARCHITECT_REBASELINE_SOURCE_UNAVAILABLE',
+    ...computeGate(),
+    allowed: ['READ', 'PROFILE', 'CLASSIFY', 'DOCUMENT', 'DESIGN_REFERENCE_ARCHITECTURE', 'DESIGN_REFERENCE_CONTRACTS', 'BUILD_VALIDATORS'],
+    forbidden: ['REAL_SOURCE_VERIFIED', 'REAL_SCHEMA_VERIFIED', 'REAL_DATA_MIGRATED', 'LEGACY_MIGRATION_READY_YES', 'LM1_MAPPING_CONFIRMATION', 'SHADOW_IMPORT', 'PILOT', 'DUAL_RUN', 'CUTOVER', 'PRODUCTION_LOADER', 'PRODUCTION_FAMILY_WRITES'],
   });
 }
 

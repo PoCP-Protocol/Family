@@ -21,7 +21,7 @@
  * @param {'pre-real-api' | 'real-api'} apiMode
  * @returns {Wave2State}
  */
-export function createInitialWave2State(apiMode = 'real-api') {
+export function createInitialWave2State(apiMode = 'pre-real-api') {
   return {
     apiMode,
     priorityInsight: undefined,
@@ -321,13 +321,13 @@ export function createFrozenPriorityFixture() {
         why: '父母和孩子的记录都提到“先听完再回应”会让沟通更容易继续，因此本周只选择一个可练习重点。',
         expected_change: '只记录练习过程，不声明改变已经发生。',
         limitations: [],
-        policy_version: 'M2_104_DETERMINISTIC_V1',
+        policy_version: 'M2_104_DETERMINISTIC_V2',
         created_at: createdAt,
       },
       profile_refs: [{ profile_id: 'profile-R03', version: 1, dimension_id: 'R03' }],
       evidence_refs: ['evidence-PARENT', 'evidence-CHILD'],
       confidence: 'MEDIUM',
-      policy_version: 'M2_104_DETERMINISTIC_V1',
+      policy_version: 'M2_104_DETERMINISTIC_V2',
       profile_snapshot: {},
       created_at: createdAt,
     },

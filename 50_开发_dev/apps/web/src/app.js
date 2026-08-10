@@ -1,4 +1,3 @@
-/** @typedef {import('@family/contracts').SafetyScreeningResult} SafetyScreeningResult */
 /** @typedef {import('@family/contracts').GrowthOnboardingDto} GrowthOnboardingDto */
 /** @typedef {import('@family/contracts').StartGrowthOnboardingResponse} StartGrowthOnboardingResponse */
 /** @typedef {import('@family/contracts').RecordPerspectiveRequest} RecordPerspectiveRequest */
@@ -57,7 +56,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     summary: undefined,
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
-    wave2: createInitialWave2State(config.wave2ApiMode ?? 'real-api'),
+    wave2: createInitialWave2State(config.wave2ApiMode ?? 'pre-real-api'),
   };
 
   const render = () => {
@@ -95,6 +94,8 @@ export function createGrowthApp(root, config = defaultConfig) {
           </div>
           <div class="hero-art" role="img" aria-label="家庭沿着成长路径同行的抽象插画"></div>
         </section>
+
+        ${renderPrincipalAiSoulSection()}
 
         <section class="workspace" aria-label="成长工作台">
           <aside class="family-panel" aria-label="家庭上下文">
@@ -136,13 +137,15 @@ export function createGrowthApp(root, config = defaultConfig) {
 
               <form id="growth-onboarding-form">
                 <label>
-                  <span>当前是否存在需要优先处理的安全情况？ <small>必选</small></span>
-                  <select name="safetyScreeningResult" aria-label="安全初筛">
-                    ${safetyOption('LOW', '没有，可以进入普通记录（LOW）')}
-                    ${safetyOption('MEDIUM', '可能存在，希望获得人工协助（MEDIUM）')}
-                    ${safetyOption('HIGH', '存在明显风险，需要人工协助（HIGH）')}
-                    ${safetyOption('CRITICAL', '情况紧急，需要立即转人工（CRITICAL）')}
-                  </select>
+                  <span>当前观察到的安全事实信号 <small>必选</small></span>
+                  <div class="safety-signal-group" aria-label="安全事实信号">
+                    ${safetySignalCheckbox('NONE', '未观察到安全风险信号', true)}
+                    ${safetySignalCheckbox('SELF_HARM', '提到自伤')}
+                    ${safetySignalCheckbox('HARM_TO_OTHERS', '提到伤害他人')}
+                    ${safetySignalCheckbox('ABUSE', '提到虐待或侵害')}
+                    ${safetySignalCheckbox('VIOLENCE', '提到暴力')}
+                    ${safetySignalCheckbox('SEVERE_CRISIS', '存在严重危机')}
+                  </div>
                 </label>
 
                 <div class="consent-strip" aria-label="同意范围">
@@ -175,8 +178,8 @@ export function createGrowthApp(root, config = defaultConfig) {
     onboardingForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = new FormData(onboardingForm);
-      const safetyScreeningResult = /** @type {SafetyScreeningResult} */ (formData.get('safetyScreeningResult'));
-      await startOnboarding(safetyScreeningResult);
+      const structuredSafetySignals = /** @type {StructuredSafetySignal[]} */ (formData.getAll('structuredSafetySignals'));
+      await startOnboarding(structuredSafetySignals.length ? structuredSafetySignals : ['NONE']);
     });
 
     root.querySelectorAll('form[data-perspective-form]').forEach((formElement) => {
@@ -226,8 +229,8 @@ export function createGrowthApp(root, config = defaultConfig) {
     });
   };
 
-  /** @param {SafetyScreeningResult} safetyScreeningResult */
-  const startOnboarding = async (safetyScreeningResult) => {
+  /** @param {StructuredSafetySignal[]} structuredSafetySignals */
+  const startOnboarding = async (structuredSafetySignals) => {
     state.status = 'submitting';
     state.message = '正在提交 StartGrowthOnboarding Named Action...';
     state.onboarding = undefined;
@@ -236,7 +239,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      const response = await submitStartGrowthOnboarding(config, safetyScreeningResult);
+      const response = await submitStartGrowthOnboarding(config, structuredSafetySignals);
       state.onboarding = response.onboarding;
       state.status = 'started';
       state.message = '成长入口已启动。下一步分别记录父母视角和孩子视角。';
@@ -387,7 +390,7 @@ export function createGrowthApp(root, config = defaultConfig) {
             boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
             reason_codes: ['RECENTLY_CONFIRMED_PROFILE', 'PRACTICE_READY'],
             evidence_refs: ['evidence-PARENT', 'evidence-CHILD'],
-            policy_version: 'M2_104_DETERMINISTIC_V1',
+            policy_version: 'M2_104_DETERMINISTIC_V2',
             confirmed_by_actor_id: config.actorPersonId,
             confirmed_at: '2026-08-10T00:00:00.000Z',
             superseded_at: null,
@@ -505,10 +508,10 @@ export function createGrowthApp(root, config = defaultConfig) {
 
 /**
  * @param {AppConfig} config
- * @param {SafetyScreeningResult} safetyScreeningResult
+ * @param {StructuredSafetySignal[]} structuredSafetySignals
  * @returns {Promise<StartGrowthOnboardingResponse>}
  */
-export async function submitStartGrowthOnboarding(config, safetyScreeningResult) {
+export async function submitStartGrowthOnboarding(config, structuredSafetySignals) {
   const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboarding`, {
     method: 'POST',
     headers: {
@@ -519,7 +522,7 @@ export async function submitStartGrowthOnboarding(config, safetyScreeningResult)
     body: JSON.stringify({
       childId: config.childId,
       guardianPersonId: config.guardianPersonId,
-      safetyScreeningResult,
+      structuredSafetySignals,
     }),
   });
 
@@ -729,11 +732,12 @@ function createIdempotencyKey(prefix, familyId, resourceId) {
 }
 
 /**
- * @param {SafetyScreeningResult} value
+ * @param {StructuredSafetySignal} value
  * @param {string} label
+ * @param {boolean} checked
  */
-function safetyOption(value, label) {
-  return `<option value="${value}">${label}</option>`;
+function safetySignalCheckbox(value, label, checked = false) {
+  return `<label class="safety-signal-option"><input type="checkbox" name="structuredSafetySignals" value="${value}" ${checked ? 'checked' : ''}> <span>${label}</span></label>`;
 }
 
 /** @param {string} status */
@@ -760,6 +764,7 @@ function renderOnboarding(onboarding) {
       <div><dt>旅程</dt><dd>${onboarding.journey_type}</dd></div>
       <div><dt>阶段</dt><dd>${onboarding.phase}</dd></div>
       <div><dt>维度</dt><dd>${onboarding.target_dimensions.join(', ')}</dd></div>
+      <div><dt>安全路径</dt><dd>${onboarding.safety_disposition.disposition} / ${onboarding.safety_disposition.severity}</dd></div>
     </dl>
   `;
 }
@@ -769,6 +774,61 @@ function renderPerspectiveForms() {
     <section class="perspective-grid" aria-label="视角记录">
       ${renderPerspectiveForm('parent', 'F03 父母视角', '我看到的亲子沟通摩擦', '我觉得我们最近一说学习就容易吵起来。', 'interrupts, argues')}
       ${renderPerspectiveForm('child', 'F04 孩子视角', '孩子表达的沟通体验', '我希望妈妈先听我说完再评价。', 'wants-to-be-heard')}
+    </section>
+  `;
+}
+
+function renderPrincipalAiSoulSection() {
+  return `
+    <section class="principal-ai-panel" aria-labelledby="principal-ai-title">
+      <div class="principal-ai-copy">
+        <p class="eyebrow">Famili Principal Soul · v0.1</p>
+        <h2 id="principal-ai-title">法咪莉校长 AI人</h2>
+        <p class="principal-ai-persona">知性邻家姐姐：温柔但不松散，有判断力但不居高临下，把复杂亲子冲突翻译成今晚能练的一件小事。</p>
+        <div class="principal-avatar-stage" aria-label="法咪莉校长多模态数字人舞台">
+          <div class="principal-avatar" aria-hidden="true">
+            <span>法</span>
+            <i></i>
+          </div>
+          <div class="principal-avatar-feed">
+            <span class="voice-wave" aria-label="语音回应中"><i></i><i></i><i></i><i></i></span>
+            <strong>“你可以直接说今晚最卡的一件事，我先听懂，再给一个能练的小动作。”</strong>
+            <small>字幕 · 语音 · 数字人舞台同步输出</small>
+          </div>
+        </div>
+        <div class="contract-strip" aria-label="AI人边界">
+          <span>结构化草稿</span>
+          <span>不写入核心事实</span>
+          <span>人工确认后行动</span>
+          <span>Soul 蒸馏样本</span>
+        </div>
+      </div>
+      <div class="principal-ai-grid" aria-label="法咪莉校长演示">
+        <article class="principal-ai-card principal-ai-card--avatar">
+          <p class="eyebrow">互动交流</p>
+          <h3>随时问法咪莉校长</h3>
+          <p>文字输入、语音提问、数字人字幕同步回应。先复述你的处境，再给一句今晚可以说的话。</p>
+          <small>模式：TEXT · VOICE · AVATAR_STAGE</small>
+        </article>
+        <article class="principal-ai-card principal-ai-card--lesson">
+          <p class="eyebrow">讲课模式</p>
+          <h3>10 分钟亲子沟通微课</h3>
+          <p>像小课一样讲清楚：先复述孩子感受，再说清家长担心，最后约一个能试的小规则。</p>
+          <small>板书：听见感受 / 说清担心 / 约小规则</small>
+        </article>
+        <article class="principal-ai-card principal-ai-card--script">
+          <p class="eyebrow">今晚怎么说</p>
+          <h3>先听见，再定一个小规则</h3>
+          <p>“我想先听听你回家后最需要放松的是什么，然后我们一起定一个明天能试的小规则。”</p>
+          <small>训练偏好：接住情绪，不贴标签，不承诺效果。</small>
+        </article>
+        <article class="principal-ai-card">
+          <p class="eyebrow">家庭对话陪练</p>
+          <h3>家长一句，孩子一句</h3>
+          <p>家庭成员轮流输入或语音说一句，法咪莉校长只做复述、降温和下一句话建议。</p>
+          <small>不评价谁对谁错，只帮助对话继续。</small>
+        </article>
+      </div>
     </section>
   `;
 }

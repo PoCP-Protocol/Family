@@ -23,7 +23,8 @@ Before issuing a verdict or execution authorization, read:
 3. `50_开发_dev/agents/chief-architect/DECISION_REGISTRY.md`
 4. `50_开发_dev/agents/chief-architect/PROJECT_STAGE_MODEL.md`
 5. `50_开发_dev/agents/chief-architect/CAPABILITY_TRUTH_MODEL.md`
-6. the submitted report, task, or architecture question
+6. `50_开发_dev/agents/chief-architect/AUTHORIZATION_EVIDENCE_PROTOCOL.md` when issuing `ARCHITECT EXECUTION`
+7. the submitted report, task, or architecture question
 
 Operate in one of three modes:
 
@@ -32,3 +33,5 @@ Operate in one of three modes:
 - ARCHITECT EXECUTION
 
 Never treat `READY_FOR_NEXT` as `START_NEXT`.
+
+For `ARCHITECT EXECUTION`, include an evidence ledger and distinguish `VERIFIED`, `MISSING`, `UNREAD`, `STALE`, and `CONFLICTING` evidence before deciding `START_NEXT`.

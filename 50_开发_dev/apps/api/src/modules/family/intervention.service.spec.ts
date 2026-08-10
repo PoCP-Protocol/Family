@@ -180,11 +180,11 @@ class FakeInterventionClient {
     if (normalized.startsWith('select purpose from consents')) {
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
     }
-    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+    if (normalized.startsWith("select payload->'safety_disposition'->>'severity'")) {
       if (!this.normalRouteVerified) {
         return { rowCount: 0, rows: [] };
       }
-      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+      return { rowCount: 1, rows: [{ severity: 'LOW', disposition: 'NORMAL' }] };
     }
     if (normalized.startsWith('select perspective_id from perspectives')) {
       return { rowCount: 0, rows: [] };

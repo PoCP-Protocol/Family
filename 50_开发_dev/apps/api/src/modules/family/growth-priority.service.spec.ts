@@ -19,7 +19,7 @@ const meta: AuditMeta = {
 };
 
 describe('GrowthPriority policy', () => {
-  it('selects one deterministic practice focus without exposing score or ranking', () => {
+  it('selects R03 as the only primary practice focus without exposing score or ranking', () => {
     const draft = buildGrowthPriorityDraft({
       familyId,
       onboardingId,
@@ -35,10 +35,27 @@ describe('GrowthPriority policy', () => {
       dimension_id: 'R03',
       eligibility: 'ELIGIBLE',
       boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
-      policy_version: 'M2_104_DETERMINISTIC_V1',
+      policy_version: 'M2_104_DETERMINISTIC_V2',
     });
     expect(draft.draft_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(JSON.stringify(draft)).not.toMatch(/score|rank|diagnosis|recommendation/i);
+  });
+
+  it('does not let supporting context compete through hidden ordinal ordering', () => {
+    const draft = buildGrowthPriorityDraft({
+      familyId,
+      onboardingId,
+      createdAt: meta.occurredAt,
+      profiles: [
+        createProfile({ profileId: '44444444-4444-4444-8444-444444444444', dimensionId: 'P03', state: 'DEVELOPING' }),
+        createProfile({ profileId: '55555555-5555-4555-8555-555555555555', dimensionId: 'R03', state: 'PRACTICING' }),
+        createProfile({ profileId: '66666666-6666-4666-8666-666666666666', dimensionId: 'R04', state: 'DEVELOPING' }),
+      ],
+    });
+
+    expect(draft.decision).toBe('R03');
+    expect(draft.candidate?.dimension_id).toBe('R03');
+    expect(draft.profile_snapshot).toMatchObject({ candidate_count: 3, eligible_candidate_count: 1 });
   });
 
   it('returns NO_PRIORITY_YET when confirmed profile evidence is insufficient', () => {
@@ -103,8 +120,9 @@ describe('GrowthPriorityService', () => {
       profile_id: profile.profile_id,
       dimension_id: 'R03',
       status: 'ACTIVE',
+      version: 2,
       boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
-      policy_version: 'M2_104_DETERMINISTIC_V1',
+      policy_version: 'M2_104_DETERMINISTIC_V2',
       previous_priority_id: '88888888-8888-4888-8888-888888888888',
     });
     expect(client.supersededActivePriority).toBe(true);
@@ -306,11 +324,11 @@ class FakePriorityClient {
       this.consentSubjectIds.push(params[1] as string);
       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
     }
-    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
+    if (normalized.startsWith("select payload->'safety_disposition'->>'severity'")) {
       if (this.state.normalRouteVerified === false) {
         return { rowCount: 0, rows: [] };
       }
-      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
+      return { rowCount: 1, rows: [{ severity: 'LOW', disposition: 'NORMAL' }] };
     }
     if (normalized.startsWith('select perspective_id from perspectives')) {
       return { rowCount: 0, rows: [] };
@@ -338,9 +356,10 @@ class FakePriorityClient {
         status: 'ACTIVE',
         profileId: params[2] as string,
         dimensionId: params[3] as ConfirmedProfileForPriority['dimension_id'],
-        reasonCodes: JSON.parse(params[6] as string),
-        evidenceRefs: JSON.parse(params[7] as string),
-        previousPriorityId: params[9] as string | null,
+        version: params[5] as number,
+        reasonCodes: JSON.parse(params[7] as string),
+        evidenceRefs: JSON.parse(params[8] as string),
+        previousPriorityId: params[10] as string | null,
       })] };
     }
     if (normalized.startsWith('insert into audit_logs')) {
@@ -379,6 +398,7 @@ function createPriorityRow(input: {
   status: 'ACTIVE' | 'SUPERSEDED';
   profileId?: string;
   dimensionId?: ConfirmedProfileForPriority['dimension_id'];
+  version?: number;
   reasonCodes?: string[];
   evidenceRefs?: string[];
   previousPriorityId?: string | null;
@@ -390,11 +410,11 @@ function createPriorityRow(input: {
     profile_id: input.profileId ?? '77777777-7777-4777-8777-777777777777',
     dimension_id: input.dimensionId ?? 'R03',
     status: input.status,
-    version: 1,
+    version: input.version ?? 1,
     boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
     reason_codes: input.reasonCodes ?? ['RECENTLY_CONFIRMED_PROFILE'],
     evidence_refs: input.evidenceRefs ?? ['ev-R03'],
-    policy_version: 'M2_104_DETERMINISTIC_V1',
+    policy_version: 'M2_104_DETERMINISTIC_V2',
     confirmed_by_actor_id: actorId,
     confirmed_at: meta.occurredAt,
     superseded_at: null,

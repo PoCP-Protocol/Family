@@ -106,7 +106,7 @@ export class GrowthPriorityService {
         await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
         const previousPriority = await getActivePriority(client, request.family_id, request.onboarding_id);
         await supersedeActivePriority(client, request.family_id, request.onboarding_id);
-        priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority?.priority_id ?? null, meta);
+        priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority, meta);
       }
 
       const response: ConfirmGrowthPriorityResponse = {
@@ -330,14 +330,15 @@ async function insertPriority(
   request: ConfirmGrowthPriorityRequest,
   candidate: GrowthPriorityCandidateDto,
   evidenceRefs: string[],
-  previousPriorityId: string | null,
+  previousPriority: GrowthPriorityDto | null,
   meta: AuditMeta,
 ): Promise<GrowthPriorityDto> {
+  const nextVersion = previousPriority ? previousPriority.version + 1 : 1;
   const result = await client.query<GrowthPriorityRow>(
     `insert into growth_priorities(
        family_id, onboarding_id, profile_id, dimension_id, rank, confirmed_by_actor_id,
        status, version, boundary, reason_codes, evidence_refs, policy_version, previous_priority_id
-     ) values ($1, $2, $3, $4, 1, $5, 'ACTIVE', 1, $6, $7::jsonb, $8::jsonb, $9, $10)
+     ) values ($1, $2, $3, $4, 1, $5, 'ACTIVE', $6, $7, $8::jsonb, $9::jsonb, $10, $11)
      returning priority_id, family_id, onboarding_id, profile_id, dimension_id, status, version,
                boundary, reason_codes, evidence_refs, policy_version, confirmed_by_actor_id,
                confirmed_at, superseded_at, previous_priority_id, created_at`,
@@ -347,11 +348,12 @@ async function insertPriority(
       candidate.profile_id,
       request.decision,
       meta.actor,
+      nextVersion,
       GROWTH_PRIORITY_BOUNDARY,
       JSON.stringify(candidate.reason_codes),
       JSON.stringify(evidenceRefs),
       GROWTH_PRIORITY_POLICY_VERSION,
-      previousPriorityId,
+      previousPriority?.priority_id ?? null,
     ],
   );
   return mapGrowthPriority(result.rows[0]);

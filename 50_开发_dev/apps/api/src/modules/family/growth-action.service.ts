@@ -159,21 +159,24 @@ async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: str
   }
 }
 
-async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; onboarding_id: string; priority_id: string }> {
-  const result = await client.query<{ action_id: string; onboarding_id: string; priority_id: string }>(
+async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; onboarding_id: string; priority_id: string; status: string }> {
+  const result = await client.query<{ action_id: string; onboarding_id: string; priority_id: string; status: string }>(
     `select ga.action_id, ga.onboarding_id, ga.priority_id
+            , ga.status
      from growth_actions ga
      join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
      where ga.family_id = $1
        and ga.action_id = $2
        and ie.status = 'ACTIVE'
-       and ga.status in ('PENDING', 'COMPLETED', 'PARTIAL', 'NOT_COMPLETED')
      for update of ga`,
     [familyId, actionId],
   );
   const row = result.rows[0];
   if (!row) {
     throw new NotFoundException('growth_action_not_found');
+  }
+  if (row.status !== 'PENDING') {
+    throw new ConflictException('growth_action_already_checked_in');
   }
   return row;
 }

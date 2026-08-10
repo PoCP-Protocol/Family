@@ -6,16 +6,16 @@ reviewer: AI-06 Consent / Safety / Domain Governance Pre-Review Owner
 contract_version: M2_WAVE2_CF_V1
 scope: M2-104 GrowthPriority, M2-105 Intervention/GrowthAction, Phase B2 directive
 
-## Gate Result
+## Gate Result (Rerun)
 
 ```text
-GOVERNANCE_PRE_REVIEW = FAIL
-GOVERNANCE_READY = NO
-BARRIER-5 = BLOCKED_ON_FINAL_E2E
-BLOCKERS = 1
+GOVERNANCE_PRE_REVIEW = PASS
+GOVERNANCE_READY = YES
+BARRIER-5 = PASS
+BLOCKERS = 0
 ```
 
-This is a pre-review result, not a final Wave2 gate. The locally fixable Wave2 write blockers for deterministic safety recheck and strict DTO rejection are remediated. Governance still cannot pass until final real PostgreSQL + HTTP E2E evidence is available.
+The governance gate was rerun after real PostgreSQL + HTTP E2E and browser evidence became available. This PASS clears Barrier 5 but is not the final Wave2 gate; AI-07 independent review is still required.
 
 ## PASS / FAIL / PENDING Matrix
 
@@ -36,7 +36,7 @@ This is a pre-review result, not a final Wave2 gate. The locally fixable Wave2 w
 | NO_AI | PASS | No M2-104/M2-105 code path calls LLM, ModelGateway, Agent Runtime, or AI recommendation. |
 | NO_WAVE3_SIDE_EFFECT | PASS | M2-104/M2-105 services/tests do not create Milestone, Outcome, GrowthReview, Causal Episode, World Model, or Wave3 state. |
 | STRICT_DTO_REJECTION | PASS | `confirm-growth-priority.dto.ts`, `start-intervention.dto.ts`, and `complete-growth-action.dto.ts` now enforce strict body allowlists and reject any extra client field. Focused DTO specs cover approved shape, unknown fields, and client-supplied safety fields. |
-| PRIORITY_RECONFIRMATION | PENDING | Local service rechecks draft id and active intervention conflict; final HTTP/API and E2E stale-priority behavior not yet available. |
+| PRIORITY_RECONFIRMATION | PASS | Real HTTP E2E rejects stale priority drafts and asserts no hidden Wave2 state is created. |
 | INTERVENTION_NOT_COURSE | PASS | Intervention policy defines a 7-day behavior practice card for `LISTEN_BEFORE_RESPOND`, not course content. |
 
 ## Blocking Items
@@ -46,7 +46,7 @@ This is a pre-review result, not a final Wave2 gate. The locally fixable Wave2 w
 | GOV-BLOCKER-01 | locally remediated with evidence gap | AI-06 | Wave2 named actions previously rechecked consent but not server-side safety state before mutating priority/intervention/action. | `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction` now call deterministic `assertNormalSafetyRoute` before mutation. Focused service specs prove missing normal route evidence blocks writes. Remaining gap: no canonical active safety-state table yet. |
 | GOV-BLOCKER-02 | resolved by AI-03 evidence | AI-03 / AI-00 | Minor subject resolution was not contract-clean in the earlier audit. | Current AI-03 report shows `SUBJECT_RESOLUTION = PASS`, `CONTRACT_DB_ALIGNMENT = PASS`, and `REAL_MIGRATION_READY = YES`. Final PostgreSQL E2E still required. |
 | GOV-BLOCKER-03 | locally remediated | AI-06 | Wave2 write DTO validators previously did not reject unknown client-supplied fields. | Strict body allowlists are implemented for ConfirmGrowthPriority, StartIntervention, and CompleteGrowthAction. Focused DTO specs pass. |
-| GOV-BLOCKER-04 | blocking | AI-05 / AI-00 | No final real PostgreSQL + HTTP E2E evidence yet for revoked consent, safety escalation block, no Outcome side effect, and no AI side effect. | Run required E2E cases E2E-W2-12 through E2E-W2-15 after schema/API integration. |
+| GOV-BLOCKER-04 | resolved | AI-05 / AI-00 | Real PostgreSQL + HTTP E2E now covers revoked/missing consent, safety escalation, forbidden DTO fields, stale drafts, no Outcome side effect, and no AI side effect. | 6/6 tests passed; browser-created state was also inspected directly in PostgreSQL. |
 
 ## Evidence Notes
 
@@ -57,12 +57,17 @@ This is a pre-review result, not a final Wave2 gate. The locally fixable Wave2 w
 - Current AI-03 `SCHEMA_COMPATIBILITY_AUDIT.md` reports `SCHEMA_CHAIN_VALID = PASS`, `SUBJECT_RESOLUTION = PASS`, `CONTRACT_DB_ALIGNMENT = PASS`, and `REAL_MIGRATION_READY = YES`.
 - Focused regression passed: `pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts intervention.service.spec.ts growth-action.service.spec.ts confirm-growth-priority.dto.spec.ts start-intervention.dto.spec.ts complete-growth-action.dto.spec.ts` => 6 files, 24 tests passed.
 - API typecheck passed on rerun with diagnostics disabled for pretty output: `pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck -- --pretty false`.
+- Real PostgreSQL + HTTP E2E passed: 6 tests, 0 skipped, 0 failed.
+- Real browser + HTTP + PostgreSQL flow passed through PARTIAL reflection; browser console had zero warnings/errors.
+- Direct PostgreSQL inspection for the demo family found 1 priority, 1 intervention, 7 actions, 0 outcomes, 0 milestones, no `growth_reviews` table, and 0 prohibited event side effects.
 
 ## Current Ruling
 
 ```text
-GOVERNANCE_READY = NO
-AI07_CAN_START = NO
+GOVERNANCE_READY = YES
+AI07_READY_FOR_USER_AUTHORIZATION = YES
+AI07_AUTHORIZED_BY_USER = NO
+AI07_STARTED = NO
 M2_WAVE_2_CAN_PASS = NO
-REMAINING_BLOCKER = GOV-BLOCKER-04_FINAL_REAL_DB_HTTP_E2E_EVIDENCE
+REMAINING_BLOCKER = AI07_INDEPENDENT_REVIEW
 ```
