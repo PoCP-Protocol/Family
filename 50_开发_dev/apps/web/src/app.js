@@ -422,7 +422,12 @@ export function createGrowthApp(root, config = defaultConfig) {
       if (state.wave2.apiMode === 'real-api') {
         state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
         state.wave2.intervention = state.wave2.startedIntervention.intervention;
-        state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.startedIntervention.actions[0];
+        state.wave2.todayAction = state.wave2.startedIntervention.actions[0];
+        try {
+          state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.todayAction;
+        } catch {
+          state.message = '7 天练习已准备，今日行动使用 StartIntervention 返回的 Day 1。';
+        }
       } else {
         const action = createFrozenActionFixture();
         state.wave2.startedIntervention = {
@@ -450,7 +455,7 @@ export function createGrowthApp(root, config = defaultConfig) {
         state.wave2.todayAction = action;
       }
       state.status = 'started';
-      state.message = '7 天练习已准备。每天只有具体行动状态，不写结果。';
+      state.message = state.message.startsWith('7 天练习已准备') ? state.message : '7 天练习已准备。每天只有具体行动状态，不写结果。';
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '开始练习失败。';

@@ -325,6 +325,42 @@ describe('M2-102 Family web perspective capture', () => {
     );
   });
 
+  it('keeps Day 1 visible when the post-start Today Action refresh fails', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspective: perspectiveFixture('PARENT_PERSPECTIVE'), evidence: evidenceFixture('PARENT') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspectives: [perspectiveFixture('PARENT_PERSPECTIVE'), perspectiveFixture('CHILD_PERSPECTIVE')], evidence: [evidenceFixture('PARENT'), evidenceFixture('CHILD')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('R03', 'CONFIRMED')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture().intervention })
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => null })
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
+      .mockRejectedValueOnce(new Error('Today Action refresh failed'));
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('main');
+
+    createGrowthApp(root, { ...config, wave2ApiMode: 'real-api' });
+    root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('#build-profile-drafts')?.click();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('button[data-wave2-action="confirm-priority"]')?.click();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('button[data-wave2-action="start-intervention"]')?.click();
+    await flushPromises();
+
+    expect(root.textContent).toContain('已生成 7 个每日练习');
+    expect(root.textContent).toContain('今天的具体练习');
+    expect(root.textContent).toContain('行动后的记录');
+    expect(root.textContent).toContain('7 天练习已准备，今日行动使用 StartIntervention 返回的 Day 1。');
+  });
+
   it('keeps Wave2 future real API adapters on named-action payload boundaries', async () => {
     const fetchMock = vi
       .fn()

@@ -3,7 +3,7 @@
 date: 2026-08-10
 owner: AI-00 Wave2 Integration Lead
 contract: M2_WAVE2_CF_V1
-gate_state: PENDING_INDEPENDENT_REVIEW
+gate_state: PASS_WAVE3_CLOSED
 
 ## Gate Matrix
 
@@ -23,23 +23,25 @@ gate_state: PENDING_INDEPENDENT_REVIEW
 | BROWSER_DEMO | PASS | NO |
 | MOBILE_LAYOUT | PASS | NO |
 | GOVERNANCE_REVIEW | PASS | NO |
-| AI07_INDEPENDENT_REVIEW | PENDING | YES |
+| AI07_INDEPENDENT_REVIEW | PASS | NO |
 
 ## Current Ruling
 
 ```text
 BARRIERS_1_TO_5 = PASS
-INDEPENDENT_REVIEW = PENDING
-BLOCKERS = 1
-BLOCKER_01 = AI07_INDEPENDENT_REVIEW_NOT_YET_COMPLETED
+INDEPENDENT_REVIEW = PASS
+BLOCKERS = 0
+BLOCKER_01 = NONE
 
-M2_WAVE_2_DECIDE_AND_ACT = NOT_PASS
+M2_WAVE_2_DECIDE_AND_ACT = PASS
 READY_FOR_M2_WAVE_3 = NO
 START_M2_WAVE_3 = NO
+WAVE3 = CLOSED_NOT_AUTHORIZED
+M3_RUNTIME = NOT_AUTHORIZED
 ```
 
 ## Finalization Rule
 
-If AI-07 returns PASS with zero blockers, AI-00 may replace the pending independent-review row, recompute the blocker count, and issue a new final gate revision according to the Phase B2 directive.
+AI-07 returned PASS with zero blockers. The Wave2 gate is finalized for the M2 Wave2 F06-F09 scope.
 
-Even after a future readiness declaration, Wave3 implementation remains separately authorized. F10-F12 must not start from this draft.
+Wave3 implementation is closed by this gate. F10-F12 and M3 runtime must not start without a separate architecture decision, task pack, and explicit user authorization.

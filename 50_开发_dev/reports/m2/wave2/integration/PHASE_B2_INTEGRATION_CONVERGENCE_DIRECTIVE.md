@@ -398,21 +398,19 @@ may the project state become:
 
 ```text
 M2_WAVE_2_DECIDE_AND_ACT = PASS
-READY_FOR_M2_WAVE_3 = YES
+READY_FOR_M2_WAVE_3 = NO
+WAVE3 = CLOSED_NOT_AUTHORIZED
 ```
 
-Wave3 may only be planned after Wave2 passes. Wave3 coding remains forbidden until separately authorized.
+Wave3 must remain closed after Wave2 completion. Planning or coding Wave3 requires a new architecture decision, task pack, and explicit user authorization.
 
 ## 17. Ending Rule
 
 When Wave2 Final Gate completes, stop.
 
 ```text
-READY_FOR_M2_WAVE_3 = YES
-```
-
-must not be treated as:
-
-```text
-START_M2_WAVE_3 = YES
+READY_FOR_M2_WAVE_3 = NO
+START_M2_WAVE_3 = NO
+WAVE3 = CLOSED_NOT_AUTHORIZED
+M3_RUNTIME = NOT_AUTHORIZED
 ```

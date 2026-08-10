@@ -1,9 +1,11 @@
 # We are Famili
 
-We are Famili is an independent frontend product track for `We are 伐木累`.
+We are Famili is an independent product domain and community track for `We are 伐木累`.
 
 ```text
 WAF_PROGRAM = COMMUNITY_PRODUCT_TRACK
+WAF_PRODUCT_DOMAIN = INDEPENDENT
+WAF_CONSUMER_DEPLOYMENT = ONE_CONSUMER_APP_SLICE
 WF0 = AUTHORIZED_PRODUCT_DEFINITION
 WF1 = AUTHORIZED_CONTENT_CHALLENGE_MVP
 FAMILY_M2_RUNTIME_DEPENDENCY = FORBIDDEN
@@ -38,7 +40,7 @@ Authorized work:
 - Consent and safety boundary.
 - Challenge loop design.
 - WF1 candidate MVP scope.
-- Independent WAF community prototype.
+- WAF community prototype as a Family 1.0 consumer slice.
 - Commercial validation track from first real families.
 
 Not authorized in WF1:
@@ -55,7 +57,8 @@ Not authorized in WF1:
 FAMILY_M2 = PRIMARY PRODUCT TRACK
 FPAI = INDEPENDENT AI PRODUCT TRACK
 FELS = REFERENCE LEGACY SYSTEM TRACK
-WAF = INDEPENDENT COMMUNITY PRODUCT TRACK
+WAF = INDEPENDENT COMMUNITY PRODUCT DOMAIN
+CONSUMER_DEPLOYMENT = ONE_CONSUMER_APP
 ```
 
 The authoritative WF0 boundary is this directory: `products/we-are-family`.
@@ -64,4 +67,5 @@ The authoritative WF0 boundary is this directory: `products/we-are-family`.
 
 - `WAF0_PRODUCT_ARCHITECTURE_FREEZE.md` - product role, platform boundary, consent, and state ownership.
 - `backlog/WAF-000_TASKS.md` - WF0 definition task record.
+- `backlog/WAF-001_WF1_CONTENT_CHALLENGE_MVP_SPEC.md` - WF1 content and challenge MVP scope for Family 1.0 MOS.
 - `docs/COMMERCIAL_VALIDATION_TRACK_V1.md` - commercial thesis, flywheel, revenue hypotheses, risk model, and validation metrics.

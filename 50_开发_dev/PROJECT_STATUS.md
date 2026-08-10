@@ -59,32 +59,38 @@ M2 Wave 2 — DECIDE & ACT / Phase B2 Integration Convergence
 - M2 Wave2 real PostgreSQL HTTP E2E → PASS_REAL_POSTGRESQL_HTTP_55_TESTS
 - M2 Wave2 local required gate → PASS_BUILD_TYPECHECK_UNIT_INTEGRATION_E2E
 - M2 Wave2 Browser Gate → PASS_REAL_API_F06_F09
+- AI-06 Governance Final Signoff → PASS
+- AI-07 Independent Architecture / Product Review → PASS
+- M2 Wave2 Final Gate → PASS_WITH_WAVE3_CLOSED
 
 ## Current Ruling
 
 ```text
 M2_WAVE_1 = CLOSED
 M2-103 = PASS
-M2_WAVE_2 = IN_PROGRESS
+M2_WAVE_2 = CLOSED
 M2-104 = LOCAL_GATE_PASS
 M2-105 = LOCAL_GATE_PASS
-M2_WAVE_2 = NOT_PASS
+M2_WAVE_2 = PASS
 READY_FOR_WAVE2_INTEGRATION = YES
 READY_FOR_WAVE3 = NO
 START_WAVE3 = NO
-AI07 = NOT_AUTHORIZED
+WAVE3 = CLOSED_NOT_AUTHORIZED
+M3_RUNTIME = NOT_AUTHORIZED
+AI06 = PASS
+AI07 = PASS_COMPLETED
 TECH_ARCH_REBASELINE_REQUIRED = YES
 NEW_TECHNICAL_ARCHITECTURE = V3.2 BUILD-TO-OPERATE
 CORE_ARCHITECTURE_REWRITE = NO
 current_phase = WAVE2_INTEGRATION_CONVERGENCE
-active_task = M2-WAVE2-INTEGRATION
-STATE_ALIGNMENT = PASS_AFTER_BROWSER_GATE_WITH_GOVERNANCE_PENDING
+active_task = NONE_M2_WAVE2_CLOSED
+STATE_ALIGNMENT = PASS_WITH_WAVE3_CLOSED
 ```
 
 ## Known Issues
 
-- last_completed_task: M2-105_INTERVENTION_001_AND_GROWTH_ACTION
-- current_gate_blocker: AI-06 final governance signoff and AI-07 authorization remain pending; required CI workflow has been created but not yet run in GitHub Actions.
+- last_completed_task: M2_WAVE2_FINAL_GATE_PASS_WITH_WAVE3_CLOSED
+- current_gate_blocker: none for M2 Wave2 local closeout; Wave3/M3 runtime remains closed and requires separate explicit authorization.
 - Contract Freeze is now immutable baseline `M2_WAVE2_CF_V1`; changes require `CONTRACT_CHANGE_REQUEST` and AI-00 approval before any V2.
 - Existing unrelated/unintegrated worktree files must not be reverted during Wave 2 integration.
 - `growth_journeys.subject_person_id` must not be added for convenience; subject/consent resolution must converge through canonical relations or a minimal `GrowthSubjectResolver`.
@@ -92,12 +98,6 @@ STATE_ALIGNMENT = PASS_AFTER_BROWSER_GATE_WITH_GOVERNANCE_PENDING
 
 ## Not Started
 
-- F06/F07/F08/F09 Wave 2 frontend implementation
-- Wave2 HTTP Controller/Module integration
-- GrowthAction Schema Compatibility Audit
-- GrowthSubjectResolver integration boundary
-- Real PostgreSQL migration chain validation
-- Governance Review and Independent Review based on current AI-05 evidence
 - V3.2 Architecture Gate review and approval before next 30-day MOS plan
 - GrowthReview implementation
 - 90-Day Journey implementation

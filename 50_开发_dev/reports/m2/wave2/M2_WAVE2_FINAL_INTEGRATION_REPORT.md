@@ -3,16 +3,19 @@
 date: 2026-08-10
 owner: AI-00 Wave2 Integration Lead
 contract: M2_WAVE2_CF_V1
-status: DRAFT_READY_FOR_INDEPENDENT_REVIEW
+status: FINAL_PASS_WAVE3_CLOSED
 
 ## Executive Verdict
 
 ```text
 REAL_PRODUCT_SLICE = PASS
 BARRIERS_1_TO_5 = PASS
-AI07_INDEPENDENT_REVIEW = PENDING
-M2_WAVE_2_DECIDE_AND_ACT = NOT_PASS
+AI07_INDEPENDENT_REVIEW = PASS
+M2_WAVE_2_DECIDE_AND_ACT = PASS
 READY_FOR_M2_WAVE_3 = NO
+START_M2_WAVE_3 = NO
+WAVE3 = CLOSED_NOT_AUTHORIZED
+M3_RUNTIME = NOT_AUTHORIZED
 ```
 
 The integrated product slice runs end to end through a real browser, real HTTP API, and real PostgreSQL database:
@@ -25,7 +28,7 @@ PROFILE
 -> REFLECTION
 ```
 
-No final Wave2 PASS is claimed in this draft. The only remaining gate is an independent AI-07 architecture/product review performed by a reviewer who did not participate in implementation.
+Final Wave2 PASS is claimed for the M2 Wave2 F06-F09 scope only. AI-07 independent review has completed with zero remaining blockers. Wave3 and M3 runtime remain closed and unauthorized.
 
 ## Integrated Capability
 
@@ -41,17 +44,18 @@ No final Wave2 PASS is claimed in this draft. The only remaining gate is an inde
 | Browser | PASS | Complete user flow passed with zero console warnings/errors. |
 | Mobile | PASS | 390x844 viewport had no horizontal overflow. |
 | Governance | PASS | Consent, safety, semantic, and side-effect review passed. |
-| Independent review | PENDING | AI-07 has not yet issued an independent verdict. |
+| Independent review | PASS | AI-07 issued PASS with zero remaining blockers. |
 
 ## Validation Summary
 
 ```text
 API_TYPECHECK = PASS
 WEB_TYPECHECK = PASS
-WEB_TESTS = PASS_10_OF_10
-FOCUSED_WAVE2_API_TESTS = PASS_24_OF_24
-REAL_POSTGRESQL_HTTP_E2E = PASS_6_OF_6
-BROWSER_CONSOLE = PASS_0_WARNINGS_0_ERRORS
+WEB_TESTS = PASS_13_OF_13
+FOCUSED_WAVE2_API_TESTS = PASS_19_OF_19
+REAL_POSTGRESQL_HTTP_E2E = PASS_55_OF_55
+BROWSER_REAL_API_F08_F09 = PASS
+BROWSER_SCREENSHOT = reports/m2/wave2/integration/evidence/ai07-browser-gate-f08-f09-complete-20260810-1408.jpg
 MOBILE_390x844 = PASS_NO_HORIZONTAL_OVERFLOW
 ```
 
@@ -103,6 +107,15 @@ This integration does not approve or implement:
 - Causal Engine or World Model.
 - Wave3/F10-F12 implementation.
 
-## Remaining Decision
+## Closure Decision
 
-AI-07 must independently review the architecture, product semantics, real-system evidence, governance truthfulness, and final gate draft. Only a PASS verdict with zero blockers permits AI-00 to change the final Wave2 state.
+AI-07 independently reviewed the architecture, product semantics, real-system evidence, governance truthfulness, and final gate draft. The result is PASS with zero blockers.
+
+This closes M2 Wave2. It also explicitly closes Wave3 for now:
+
+```text
+READY_FOR_M2_WAVE_3 = NO
+START_M2_WAVE_3 = NO
+WAVE3 = CLOSED_NOT_AUTHORIZED
+M3_RUNTIME = NOT_AUTHORIZED
+```

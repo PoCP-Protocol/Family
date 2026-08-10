@@ -6,7 +6,17 @@ Owner: Family Chief Architect track
 
 ## 1. Freeze Scope
 
-WF0 freezes product positioning and architecture boundaries. It does not authorize WF1 implementation, community runtime, membership runtime, or Family M2 runtime integration.
+WF0 freezes product positioning and architecture boundaries. It originally did not authorize WF1 implementation, community runtime, membership runtime, or Family M2 runtime integration.
+
+WF1 is now authorized separately by `backlog/WAF-001_WF1_CONTENT_CHALLENGE_MVP_SPEC.md` as a content and challenge MVP spec/prototype only.
+
+```text
+WAF_PRODUCT_DOMAIN = INDEPENDENT
+WAF_CONSUMER_DEPLOYMENT = ONE_CONSUMER_APP_SLICE
+WF1 = AUTHORIZED_CONTENT_CHALLENGE_MVP
+WF2 = DEFERRED
+WF3 = DEFERRED
+```
 
 WF0 deliverables:
 
@@ -257,12 +267,15 @@ WF3 - Membership & Offline
   membership, advisor, expert services, Family Day, family camp.
 ```
 
-WF1, WF2, and WF3 remain not authorized until a later owner decision.
+WF1 is now authorized only as the content and challenge MVP defined by `backlog/WAF-001_WF1_CONTENT_CHALLENGE_MVP_SPEC.md`.
+
+WF2 and WF3 remain not authorized until a later owner decision.
 
 ## 12. Formal Architecture Ruling
 
 ```text
-WE_ARE_FAMILY = INDEPENDENT_FRONTEND_PRODUCT
+WE_ARE_FAMILY = INDEPENDENT_PRODUCT_DOMAIN
+WAF_CONSUMER_DEPLOYMENT = ONE_CONSUMER_APP_SLICE
 PRODUCT_ROLE = COMMUNITY_CONTENT_CHALLENGE_BRAND
 PLATFORM = FAMILY
 AI = FAMILI_PRINCIPAL
@@ -272,7 +285,7 @@ COMMUNITY_STATE_OWNER = WE_ARE_FAMILY
 AI_STATE_OWNER = FPAI
 DIRECT_CORE_WRITE = FORBIDDEN
 FAMILY_M2_RUNTIME_DEPENDENCY = FORBIDDEN
-WF1_STATUS = NOT_YET_AUTHORIZED
+WF1_STATUS = AUTHORIZED_CONTENT_CHALLENGE_MVP_SPEC
 INTEGRATION = API + NAMED_ACTION + EVENT
 ```
 
@@ -286,4 +299,5 @@ WF0 passes only when these are present and reviewed:
 - Family Account relationship.
 - Challenge loop definition.
 - WF1 candidate MVP scope.
-- Explicit non-authorization of runtime implementation.
+- WF1 content and challenge MVP handoff.
+- Explicit non-authorization of WF2/WF3 runtime implementation.
