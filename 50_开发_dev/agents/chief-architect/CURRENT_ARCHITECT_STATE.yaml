@@ -27,9 +27,9 @@ milestones:
     status: FUTURE
 
 current_wave:
-  id: M2_WAVE_1
-  name: UNDERSTAND
-  status: CLOSED
+  id: M2_WAVE_2
+  name: DECIDE_AND_ACT
+  status: IN_PROGRESS_NOT_PASS
 
 last_completed_task:
   id: M2-103
@@ -39,14 +39,21 @@ last_completed_task:
   note: "Real DB/API/frontend/demo evidence exists for limited deterministic GrowthProfile draft and confirmation flow. No outcome or pilot validation claimed."
 
 next_candidate:
-  wave: M2_WAVE_2
-  name: DECIDE_AND_ACT
-  status: CONTRACT_FREEZE_PREPARED
+  wave: M2_WAVE_3
+  name: REVIEW_AND_CONTINUE
+  status: NOT_READY
 
 authorization:
-  next_wave: PENDING_ARCHITECT_APPROVAL
+  next_wave: NOT_AUTHORIZED
   start_next: false
   rule: "READY_FOR_NEXT does not imply START_NEXT."
+  ready_for_wave3: false
+  ai07: NOT_AUTHORIZED
+  blockers:
+    - B02_REAL_POSTGRESQL_E2E_RERUN_PENDING_AFTER_FAIL_FAST_REPAIR
+    - B03_STATUS_EVIDENCE_ALIGNMENT_IN_PROGRESS
+    - B04_REQUIRED_CI_CREATED_PENDING_REMOTE_RUN
+    - BROWSER_REAL_API_GATE_PENDING
 
 active_scenario:
   name: adolescent_communication_conflict
@@ -91,5 +98,8 @@ recent_architecture_artifacts:
   - reports/m2/demo/M2_WAVE1_REAL_DEMO_RUNBOOK.md
   - reports/m2/wave2/M2_WAVE2_CONTRACT_FREEZE.md
   - reports/m2/wave2/SHARED_FILE_CONFLICT_MATRIX.md
+  - reports/m2/wave2/integration/status/AI05_STATUS.md
+  - reports/m2/wave2/integration/status/AI06_STATUS.md
+  - reports/m2/wave2/integration/status/AI07_STATUS.md
 
 state_update_rule: "Update this file after each architect-approved wave/stage verdict. Do not update it as a side effect of ordinary coding work."

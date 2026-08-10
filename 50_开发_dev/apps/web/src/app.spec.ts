@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
-import { fetchGrowthPriorityInsight, submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
+import { fetchGrowthPriorityInsight, fetchTodayGrowthAction, submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
 
 import type { AppConfig } from './app.js';
 
@@ -24,21 +24,22 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('确定性流程');
   });
 
-  it('renders Famili principal AI-person soul entry without unsafe product claims', () => {
+  it('does not render future Principal AI prototype capabilities in M2 runtime', () => {
     const root = document.createElement('main');
 
     createGrowthApp(root, config);
 
-    expect(root.textContent).toContain('法咪莉校长 AI人');
-    expect(root.textContent).toContain('知性邻家姐姐');
-    expect(root.textContent).toContain('今晚怎么说');
-    expect(root.textContent).toContain('互动交流');
-    expect(root.textContent).toContain('讲课模式');
-    expect(root.textContent).toContain('家庭对话陪练');
-    expect(root.textContent).toContain('字幕 · 语音 · 数字人舞台同步输出');
-    expect(root.textContent).toContain('Soul 蒸馏样本');
-    expect(root.textContent).toContain('不写入核心事实');
-    expect(root.textContent).not.toContain('仿真人');
+    expect(root.textContent).toContain('Family Core · M2-102');
+    expect(root.textContent).toContain('确定性流程');
+    expect(root.textContent).not.toContain('Principal AI');
+    expect(root.textContent).not.toContain('法咪莉校长');
+    expect(root.textContent).not.toContain('波波校长 AI');
+    expect(root.textContent).not.toContain('AI人');
+    expect(root.textContent).not.toContain('AI 对话');
+    expect(root.textContent).not.toContain('语音提问');
+    expect(root.textContent).not.toContain('数字人');
+    expect(root.textContent).not.toContain('讲课模式');
+    expect(root.textContent).not.toContain('Soul 蒸馏');
     expect(root.textContent).not.toContain('总分');
     expect(root.textContent).not.toContain('排名');
     expect(root.textContent).not.toContain('保证有效');
@@ -376,6 +377,16 @@ describe('M2-102 Family web perspective capture', () => {
     expect(interventionBody).not.toHaveProperty('milestone');
     expect(actionBody).not.toHaveProperty('outcome');
     expect(actionBody).not.toHaveProperty('safetySeverity');
+  });
+
+  it('treats an empty successful Today Action response as no action for today', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => '',
+    }));
+
+    await expect(fetchTodayGrowthAction(config)).resolves.toBeNull();
   });
 });
 

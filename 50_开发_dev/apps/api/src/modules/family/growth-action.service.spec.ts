@@ -21,6 +21,15 @@ const meta: AuditMeta = {
 };
 
 describe('GrowthActionService', () => {
+  it('returns only an action due today and does not roll forward to a future day', async () => {
+    const client = new FakeGrowthActionClient();
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+
+    await expect(service.getTodayAction(familyId, actorId)).resolves.toBeNull();
+
+    expect(client.todayActionQuery).toContain('ga.due_date = current_date');
+  });
+
   it('stores completion and reflection as raw material without profile or outcome writes', async () => {
     const client = new FakeGrowthActionClient();
     const service = new GrowthActionService(createRepository(client), createSubjectResolver());
@@ -60,6 +69,24 @@ describe('GrowthActionService', () => {
       occurred_at: meta.occurredAt,
       idempotency_key: 'idem-complete-normal-route-blocked',
     }, meta)).rejects.toThrow('normal_safety_route_not_verified');
+
+    expect(client.updatedActionCount).toBe(0);
+    expect(client.auditActions).toEqual([]);
+    expect(client.outboxEvents).toEqual([]);
+  });
+
+  it('blocks a safety-sensitive new reflection without completing or emitting normal side effects', async () => {
+    const client = new FakeGrowthActionClient();
+    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+
+    await expect(service.completeGrowthAction({
+      family_id: familyId,
+      action_id: actionId,
+      completion_status: 'PARTIAL',
+      reflection: '我不想活了，想伤害自己。',
+      occurred_at: meta.occurredAt,
+      idempotency_key: 'idem-sensitive-reflection',
+    }, meta)).rejects.toThrow('reflection_requires_safety_support');
 
     expect(client.updatedActionCount).toBe(0);
     expect(client.auditActions).toEqual([]);
@@ -138,6 +165,7 @@ class FakeGrowthActionClient {
   auditActions: string[] = [];
   outboxEvents: string[] = [];
   profileOrOutcomeWrites: string[] = [];
+  todayActionQuery = '';
   private actionName = '';
   private requestHash = '';
 
@@ -158,14 +186,18 @@ class FakeGrowthActionClient {
     if (normalized.startsWith('select action_name, request_hash, response_body')) {
       return { rowCount: 1, rows: [{ action_name: this.actionName, request_hash: this.requestHash, response_body: this.replayResponse }] };
     }
-    if (this.replayResponse) {
-      throw new Error(`unexpected query after idempotency replay: ${normalized}`);
-    }
     if (normalized.startsWith('select family_id from families')) {
       return { rowCount: 1, rows: [{ family_id: familyId }] };
     }
     if (normalized.startsWith('select audit_id from audit_logs')) {
       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
+    }
+    if (this.replayResponse) {
+      throw new Error(`unexpected query after idempotency replay: ${normalized}`);
+    }
+    if (normalized.startsWith('select ga.action_id, ga.family_id')) {
+      this.todayActionQuery = normalized;
+      return { rowCount: 0, rows: [] };
     }
     if (normalized.startsWith('select ga.action_id, ga.onboarding_id, ga.priority_id')) {
       return { rowCount: 1, rows: [{ action_id: actionId, onboarding_id: onboardingId, priority_id: priorityId, status: this.currentActionStatus }] };

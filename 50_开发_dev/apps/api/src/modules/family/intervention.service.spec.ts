@@ -159,14 +159,14 @@ class FakeInterventionClient {
     if (normalized.startsWith('select action_name, request_hash, response_body')) {
       return { rowCount: 1, rows: [{ action_name: this.actionName, request_hash: this.requestHash, response_body: this.replayResponse }] };
     }
-    if (this.replayResponse) {
-      throw new Error(`unexpected query after idempotency replay: ${normalized}`);
-    }
     if (normalized.startsWith('select family_id from families')) {
       return { rowCount: 1, rows: [{ family_id: familyId }] };
     }
     if (normalized.startsWith('select audit_id from audit_logs')) {
       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
+    }
+    if (this.replayResponse) {
+      throw new Error(`unexpected query after idempotency replay: ${normalized}`);
     }
     if (normalized.startsWith('select gp.priority_id')) {
       return {

@@ -63,15 +63,15 @@ export class InterventionService {
   }
 
   async startIntervention(request: StartInterventionRequest, meta: AuditMeta): Promise<StartInterventionResponse> {
-    const requestHash = hashStartInterventionRequest(request);
+    const requestHash = hashStartInterventionRequest(request, meta.actor);
     return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const idempotency = await lockIdempotencyKey<StartInterventionResponse>(client, START_INTERVENTION_ACTION, request.idempotency_key, requestHash);
       if (idempotency.replay) {
         return idempotency.response;
       }
 
-      await ensureFamilyExists(client, request.family_id);
-      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const activePriority = await getActivePriorityForStart(client, request);
       const subject = await this.growthSubjectResolver.resolve(client, {
         familyId: request.family_id,
@@ -99,13 +99,14 @@ export class InterventionService {
   }
 }
 
-function hashStartInterventionRequest(request: StartInterventionRequest): string {
+function hashStartInterventionRequest(request: StartInterventionRequest, actorId: string): string {
   return createHash('sha256')
     .update(JSON.stringify({
       family_id: request.family_id,
       onboarding_id: request.onboarding_id,
       priority_id: request.priority_id,
       intervention_code: request.intervention_code,
+      actor_id: actorId,
     }))
     .digest('hex');
 }

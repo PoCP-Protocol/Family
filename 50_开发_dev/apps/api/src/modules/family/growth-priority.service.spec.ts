@@ -98,6 +98,7 @@ describe('GrowthPriorityService', () => {
     expect(client.insertedPriority).toBe(false);
     expect(client.auditActions).toContain('ConfirmGrowthPriority');
     expect(client.outboxEvents).toContain('GrowthPriorityConfirmed');
+    expect(client.consentSubjectIds).toEqual([childId]);
   });
 
   it('creates one active priority and supersedes the previous active priority', async () => {

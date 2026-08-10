@@ -19,8 +19,7 @@ let pool: pg.Pool | undefined;
 beforeAll(async () => {
   const testDatabaseUrl = process.env.TEST_DATABASE_URL;
   if (!testDatabaseUrl) {
-    pgAvailability.reason = 'PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set';
-    return;
+    throw new Error('REQUIRED_REAL_POSTGRESQL: TEST_DATABASE_URL is not set');
   }
 
   try {
@@ -34,11 +33,12 @@ beforeAll(async () => {
     pgAvailability.reason = 'REAL_POSTGRESQL_READY';
   } catch (error) {
     pgAvailability.ready = false;
-    pgAvailability.reason = `PENDING_REAL_POSTGRESQL: ${(error as Error).message}`;
+    pgAvailability.reason = `REQUIRED_REAL_POSTGRESQL_FAILED: ${(error as Error).message}`;
     await app?.close();
     await pool?.end();
     app = undefined;
     pool = undefined;
+    throw new Error(pgAvailability.reason);
   }
 });
 
@@ -56,13 +56,12 @@ afterAll(async () => {
 
 describe('M2 Wave2 PostgreSQL + HTTP E2E readiness', () => {
   it('reports real PostgreSQL availability without faking PASS', () => {
-    expect(pgAvailability.reason).toMatch(/REAL_POSTGRESQL_READY|PENDING_REAL_POSTGRESQL/);
+    expect(pgAvailability).toEqual({ ready: true, reason: 'REAL_POSTGRESQL_READY' });
   });
 });
 
 describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
-  it('E2E-W2-01 happy path confirms priority, starts intervention, completes action, and creates no outcome-like or AI side effects', async (context) => {
-    skipIfPostgresUnavailable(context);
+  it('E2E-W2-01 happy path confirms priority, starts intervention, completes action, and creates no outcome-like or AI side effects', async () => {
     const setup = await seedConfirmedProfile('corr-w2-happy');
 
     const insightResponse = await getPriorityInsight(setup.familyId, setup.onboardingId);
@@ -149,8 +148,7 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     await expectOutboxEvents(['GrowthPriorityConfirmed', 'InterventionStarted', 'GrowthActionCompleted']);
   });
 
-  it('E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects', async (context) => {
-    skipIfPostgresUnavailable(context);
+  it('E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects', async () => {
     const missingConsentSetup = await seedConfirmedProfile('corr-w2-missing-consent');
     await pool!.query(
       `delete from consents where family_id = $1 and subject_person_id = $2 and purpose = 'GROWTH_TRACKING'`,
@@ -188,8 +186,7 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     await expectOutcomeLikeTablesEmpty();
   });
 
-  it('E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects', async (context) => {
-    skipIfPostgresUnavailable(context);
+  it('E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects', async () => {
     const setup = await seedConfirmedProfile('corr-w2-safety');
     await pool!.query(
       `update perspectives
@@ -205,10 +202,24 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     await expectCount('intervention_episodes', 0);
     await expectCount('growth_actions', 0);
     await expectOutcomeLikeTablesEmpty();
+
+    await cleanFamilyCoreTables(pool!);
+    const reflectionSetup = await seedConfirmedProfile('corr-w2-sensitive-reflection');
+    const reflectionInsight = await (await getPriorityInsight(reflectionSetup.familyId, reflectionSetup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+    const reflectionPriority = await (await confirmPriority(reflectionSetup.familyId, reflectionSetup.onboardingId, reflectionInsight.draft.draft_id, 'R03', 'corr-w2-sensitive-reflection', 'idem-w2-sensitive-confirm')).json() as ConfirmGrowthPriorityHttpResponse;
+    const reflectionPlan = await (await startIntervention(reflectionSetup.familyId, reflectionSetup.onboardingId, reflectionPriority.priority!.priority_id, 'corr-w2-sensitive-reflection', 'idem-w2-sensitive-start')).json() as StartInterventionHttpResponse;
+    const sensitiveReflection = await completeAction(reflectionSetup.familyId, reflectionPlan.actions[0].action_id, 'corr-w2-sensitive-reflection', 'idem-w2-sensitive-complete', {
+      completion_status: 'PARTIAL',
+      reflection: '我不想活了，想伤害自己。',
+      occurred_at: new Date().toISOString(),
+    });
+
+    expect(sensitiveReflection.status).toBe(403);
+    await expectCompletedActionCount(0);
+    await expectOutboxEventCount('GrowthActionCompleted', 0);
   });
 
-  it('E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state', async (context) => {
-    skipIfPostgresUnavailable(context);
+  it('E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state', async () => {
     const setup = await seedConfirmedProfile('corr-w2-forbidden');
     const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
 
@@ -243,10 +254,25 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     await expectOutcomeLikeTablesEmpty();
   });
 
-  it('E2E-W2-05 no-priority decision and stale draft do not create hidden state', async (context) => {
-    skipIfPostgresUnavailable(context);
+  it('E2E-W2-05 no-priority decision and stale draft do not create hidden state', async () => {
     const setup = await seedConfirmedProfile('corr-w2-no-priority');
     const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+
+    await pool!.query(
+      `delete from consents where family_id = $1 and subject_person_id = $2 and purpose = 'GROWTH_TRACKING'`,
+      [setup.familyId, setup.childId],
+    );
+    const missingConsent = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'NO_PRIORITY_YET', 'corr-w2-no-priority', 'idem-w2-no-priority-missing-consent');
+    expect(missingConsent.status).toBe(403);
+    await expectAuditActionCount('ConfirmGrowthPriority', 0);
+    await expectOutboxEventCount('GrowthPriorityConfirmed', 0);
+
+    await postJsonExpect(`/families/${setup.familyId}/consents`, {
+      subjectPersonId: setup.childId,
+      guardianPersonId: setup.parentId,
+      purpose: 'GROWTH_TRACKING',
+      policyVersion: 'policy-w2-no-priority-restored',
+    }, 'corr-w2-no-priority', 'idem-w2-no-priority-restore-consent');
 
     const noPriority = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'NO_PRIORITY_YET', 'corr-w2-no-priority', 'idem-w2-no-priority');
     const noPriorityBody = await noPriority.json() as ConfirmGrowthPriorityHttpResponse;
@@ -255,18 +281,88 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     await expectCount('growth_priorities', 0);
     await expectCount('intervention_episodes', 0);
     await expectCount('growth_actions', 0);
+    await expectAuditActionCount('ConfirmGrowthPriority', 1);
+    await expectOutboxEventCount('GrowthPriorityConfirmed', 1);
+
+    await revokeConsent(setup.familyId, setup.childId, 'GROWTH_TRACKING');
+    const revokedConsent = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'NO_PRIORITY_YET', 'corr-w2-no-priority', 'idem-w2-no-priority-revoked-consent');
+    expect(revokedConsent.status).toBe(403);
+    await expectAuditActionCount('ConfirmGrowthPriority', 1);
+    await expectOutboxEventCount('GrowthPriorityConfirmed', 1);
 
     const stale = await confirmPriority(setup.familyId, setup.onboardingId, '11111111-1111-4111-8111-111111111111', 'R03', 'corr-w2-no-priority', 'idem-w2-stale-priority');
     expect(stale.status).toBe(409);
     await expectCount('growth_priorities', 0);
   });
-});
 
-function skipIfPostgresUnavailable(context: { skip: (note?: string) => void }): void {
-  if (!pgAvailability.ready) {
-    context.skip(pgAvailability.reason);
-  }
-}
+  it('E2E-W2-06 keeps idempotent replay behind current actor authorization for all Wave2 writes', async () => {
+    const setup = await seedConfirmedProfile('corr-w2-replay-auth');
+    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+    const confirmBody = { draft_id: insight.draft.draft_id, decision: 'R03' };
+    const confirmPath = `/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/priority/confirm`;
+    const confirmedResponse = await postJson(confirmPath, confirmBody, 'corr-w2-replay-auth', 'idem-w2-replay-confirm');
+    const confirmed = await confirmedResponse.json() as ConfirmGrowthPriorityHttpResponse;
+    expect(confirmedResponse.status).toBe(201);
+    expect((await postJsonAsActor(confirmPath, confirmBody, 'corr-w2-replay-auth-intruder', 'idem-w2-replay-confirm', 'intruder-actor')).status).toBe(403);
+
+    const startBody = { priority_id: confirmed.priority!.priority_id, intervention_code: 'LISTEN_BEFORE_RESPOND' };
+    const startPath = `/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/interventions/start`;
+    const startResponse = await postJson(startPath, startBody, 'corr-w2-replay-auth', 'idem-w2-replay-start');
+    const started = await startResponse.json() as StartInterventionHttpResponse;
+    expect(startResponse.status).toBe(201);
+    expect((await postJsonAsActor(startPath, startBody, 'corr-w2-replay-auth-intruder', 'idem-w2-replay-start', 'intruder-actor')).status).toBe(403);
+
+    const completeBody = {
+      completion_status: 'COMPLETED',
+      reflection: '今天先听完了。',
+      occurred_at: new Date().toISOString(),
+    };
+    const completePath = `/families/${setup.familyId}/growth/actions/${started.actions[0].action_id}/complete`;
+    const completeResponse = await postJson(completePath, completeBody, 'corr-w2-replay-auth', 'idem-w2-replay-complete');
+    expect(completeResponse.status).toBe(201);
+    expect((await postJsonAsActor(completePath, completeBody, 'corr-w2-replay-auth-intruder', 'idem-w2-replay-complete', 'intruder-actor')).status).toBe(403);
+
+    await expectCount('growth_priorities', 1);
+    await expectCount('intervention_episodes', 1);
+    await expectCompletedActionCount(1);
+  });
+
+  it('E2E-W2-07 returns no future action after today action is completed', async () => {
+    const setup = await seedConfirmedProfile('corr-w2-today-boundary');
+    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+    const confirmed = await (await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-w2-today-boundary', 'idem-w2-today-confirm')).json() as ConfirmGrowthPriorityHttpResponse;
+    const started = await (await startIntervention(setup.familyId, setup.onboardingId, confirmed.priority!.priority_id, 'corr-w2-today-boundary', 'idem-w2-today-start')).json() as StartInterventionHttpResponse;
+
+    const before = await fetch(`${baseUrl}/families/${setup.familyId}/growth/actions/today`, { headers: baseHeaders('corr-w2-today-before') });
+    expect((await before.json() as GrowthActionHttpDto).day_index).toBe(1);
+
+    const completed = await completeAction(setup.familyId, started.actions[0].action_id, 'corr-w2-today-boundary', 'idem-w2-today-complete', {
+      completion_status: 'COMPLETED',
+      reflection: '今天的练习已经完成。',
+      occurred_at: new Date().toISOString(),
+    });
+    expect(completed.status).toBe(201);
+
+    const after = await fetch(`${baseUrl}/families/${setup.familyId}/growth/actions/today`, { headers: baseHeaders('corr-w2-today-after') });
+    expect(after.status).toBe(200);
+    expect(await after.text()).toBe('');
+  });
+
+  it('E2E-W2-08 resolves the onboarding child in a multi-child family without a first-child shortcut', async () => {
+    const setup = await seedConfirmedProfile('corr-w2-multi-child');
+    await postJsonExpect(`/families/${setup.familyId}/children`, {
+      display_name: '另一个孩子',
+      birth_date: '2013-06-01',
+      idempotency_key: 'idem-w2-multi-child-second-child',
+    }, 'corr-w2-multi-child');
+
+    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+    const confirmed = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-w2-multi-child', 'idem-w2-multi-child-confirm');
+
+    expect(confirmed.status).toBe(201);
+    await expectCount('growth_priorities', 1);
+  });
+});
 
 async function seedConfirmedProfile(correlationId: string, options: { grantGrowthTrackingConsent?: boolean; structuredSafetySignals?: Array<'NONE' | 'SELF_HARM' | 'HARM_TO_OTHERS' | 'ABUSE' | 'VIOLENCE' | 'SEVERE_CRISIS'> } = {}): Promise<SeededWave2State> {
   const grantGrowthTrackingConsent = options.grantGrowthTrackingConsent ?? true;
@@ -390,9 +486,13 @@ async function completeAction(familyId: string, actionId: string, correlationId:
 }
 
 async function postJson(path: string, body: Record<string, unknown>, correlationId: string, idempotencyKey?: string): Promise<Response> {
+  return postJsonAsActor(path, body, correlationId, idempotencyKey, 'architect-1');
+}
+
+async function postJsonAsActor(path: string, body: Record<string, unknown>, correlationId: string, idempotencyKey: string | undefined, actorId: string): Promise<Response> {
   return fetch(`${baseUrl}${path}`, {
     method: 'POST',
-    headers: baseHeaders(correlationId, idempotencyKey),
+    headers: baseHeaders(correlationId, idempotencyKey, actorId),
     body: JSON.stringify(body),
   });
 }
@@ -403,11 +503,11 @@ async function postJsonExpect<TBody>(path: string, body: Record<string, unknown>
   return await response.json() as TBody;
 }
 
-function baseHeaders(correlationId: string, idempotencyKey?: string): Record<string, string> {
+function baseHeaders(correlationId: string, idempotencyKey?: string, actorId = 'architect-1'): Record<string, string> {
   return {
     authorization: 'Bearer test-token',
     'content-type': 'application/json',
-    'x-actor-id': 'architect-1',
+    'x-actor-id': actorId,
     'x-correlation-id': correlationId,
     'x-source': 'vitest-e2e',
     ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
@@ -493,6 +593,22 @@ async function expectOutboxEvents(eventNames: string[]): Promise<void> {
     [eventNames],
   );
   expect(result.rows.map((row) => row.event_name)).toEqual(eventNames);
+}
+
+async function expectAuditActionCount(actionName: string, expected: number): Promise<void> {
+  const result = await pool!.query<{ count: number }>(
+    `select count(*)::int as count from audit_logs where action_name = $1`,
+    [actionName],
+  );
+  expect(result.rows[0].count).toBe(expected);
+}
+
+async function expectOutboxEventCount(eventName: string, expected: number): Promise<void> {
+  const result = await pool!.query<{ count: number }>(
+    `select count(*)::int as count from outbox_events where event_name = $1`,
+    [eventName],
+  );
+  expect(result.rows[0].count).toBe(expected);
 }
 
 interface SeededWave2State {

@@ -14,6 +14,7 @@ const config = {
   familyId: searchParams.get('familyId') ?? defaultConfig.familyId,
   childId: searchParams.get('childId') ?? defaultConfig.childId,
   guardianPersonId: searchParams.get('guardianPersonId') ?? defaultConfig.guardianPersonId,
+  wave2ApiMode: searchParams.get('wave2ApiMode') === 'real-api' ? 'real-api' : defaultConfig.wave2ApiMode,
 };
 
 createGrowthApp(root, config);

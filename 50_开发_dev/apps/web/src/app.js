@@ -95,8 +95,6 @@ export function createGrowthApp(root, config = defaultConfig) {
           <div class="hero-art" role="img" aria-label="家庭沿着成长路径同行的抽象插画"></div>
         </section>
 
-        ${renderPrincipalAiSoulSection()}
-
         <section class="workspace" aria-label="成长工作台">
           <aside class="family-panel" aria-label="家庭上下文">
             <p class="eyebrow">F01 家庭上下文</p>
@@ -774,61 +772,6 @@ function renderPerspectiveForms() {
     <section class="perspective-grid" aria-label="视角记录">
       ${renderPerspectiveForm('parent', 'F03 父母视角', '我看到的亲子沟通摩擦', '我觉得我们最近一说学习就容易吵起来。', 'interrupts, argues')}
       ${renderPerspectiveForm('child', 'F04 孩子视角', '孩子表达的沟通体验', '我希望妈妈先听我说完再评价。', 'wants-to-be-heard')}
-    </section>
-  `;
-}
-
-function renderPrincipalAiSoulSection() {
-  return `
-    <section class="principal-ai-panel" aria-labelledby="principal-ai-title">
-      <div class="principal-ai-copy">
-        <p class="eyebrow">Famili Principal Soul · v0.1</p>
-        <h2 id="principal-ai-title">法咪莉校长 AI人</h2>
-        <p class="principal-ai-persona">知性邻家姐姐：温柔但不松散，有判断力但不居高临下，把复杂亲子冲突翻译成今晚能练的一件小事。</p>
-        <div class="principal-avatar-stage" aria-label="法咪莉校长多模态数字人舞台">
-          <div class="principal-avatar" aria-hidden="true">
-            <span>法</span>
-            <i></i>
-          </div>
-          <div class="principal-avatar-feed">
-            <span class="voice-wave" aria-label="语音回应中"><i></i><i></i><i></i><i></i></span>
-            <strong>“你可以直接说今晚最卡的一件事，我先听懂，再给一个能练的小动作。”</strong>
-            <small>字幕 · 语音 · 数字人舞台同步输出</small>
-          </div>
-        </div>
-        <div class="contract-strip" aria-label="AI人边界">
-          <span>结构化草稿</span>
-          <span>不写入核心事实</span>
-          <span>人工确认后行动</span>
-          <span>Soul 蒸馏样本</span>
-        </div>
-      </div>
-      <div class="principal-ai-grid" aria-label="法咪莉校长演示">
-        <article class="principal-ai-card principal-ai-card--avatar">
-          <p class="eyebrow">互动交流</p>
-          <h3>随时问法咪莉校长</h3>
-          <p>文字输入、语音提问、数字人字幕同步回应。先复述你的处境，再给一句今晚可以说的话。</p>
-          <small>模式：TEXT · VOICE · AVATAR_STAGE</small>
-        </article>
-        <article class="principal-ai-card principal-ai-card--lesson">
-          <p class="eyebrow">讲课模式</p>
-          <h3>10 分钟亲子沟通微课</h3>
-          <p>像小课一样讲清楚：先复述孩子感受，再说清家长担心，最后约一个能试的小规则。</p>
-          <small>板书：听见感受 / 说清担心 / 约小规则</small>
-        </article>
-        <article class="principal-ai-card principal-ai-card--script">
-          <p class="eyebrow">今晚怎么说</p>
-          <h3>先听见，再定一个小规则</h3>
-          <p>“我想先听听你回家后最需要放松的是什么，然后我们一起定一个明天能试的小规则。”</p>
-          <small>训练偏好：接住情绪，不贴标签，不承诺效果。</small>
-        </article>
-        <article class="principal-ai-card">
-          <p class="eyebrow">家庭对话陪练</p>
-          <h3>家长一句，孩子一句</h3>
-          <p>家庭成员轮流输入或语音说一句，法咪莉校长只做复述、降温和下一句话建议。</p>
-          <small>不评价谁对谁错，只帮助对话继续。</small>
-        </article>
-      </div>
     </section>
   `;
 }

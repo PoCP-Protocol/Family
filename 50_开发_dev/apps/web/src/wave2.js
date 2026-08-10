@@ -110,6 +110,7 @@ function renderInterventionPanel(intervention, startedIntervention) {
 
 /** @param {GrowthActionDto} action */
 function renderTodayActionPanel(action) {
+  const isCheckedIn = action.status !== 'PENDING';
   return `
     <article class="wave2-card today-card" aria-labelledby="today-action-title">
       <p class="eyebrow">F08 Today Action</p>
@@ -120,11 +121,11 @@ function renderTodayActionPanel(action) {
         <div><dt>边界</dt><dd>行动不是结果</dd></div>
       </dl>
       <p>${action.assignment_text}</p>
-      <div class="action-row" aria-label="行动状态">
+      ${isCheckedIn ? '<span class="confirmed-strip">今日行动已记录</span>' : `<div class="action-row" aria-label="行动状态">
         <button class="primary-action" type="button" data-wave2-complete="COMPLETED">已完成</button>
         <button class="secondary-action" type="button" data-wave2-complete="PARTIAL">部分完成</button>
         <button class="ghost-action" type="button" data-wave2-complete="NOT_COMPLETED">未完成</button>
-      </div>
+      </div>`}
     </article>
   `;
 }
@@ -134,11 +135,12 @@ function renderTodayActionPanel(action) {
  * @param {string | undefined} reflectionBoundary
  */
 function renderReflectionPanel(action, reflectionBoundary) {
+  const isCheckedIn = action.status !== 'PENDING';
   return `
     <article class="wave2-card" aria-labelledby="reflection-title">
       <p class="eyebrow">F09 Reflection</p>
       <h3 id="reflection-title">行动后的记录</h3>
-      <form id="wave2-reflection-form">
+      ${isCheckedIn ? `<p>${action.reflection ?? '今天的行动记录已保存。'}</p>` : `<form id="wave2-reflection-form">
         <input type="hidden" name="actionId" value="${action.action_id}">
         <label>
           今天的记录
@@ -153,7 +155,7 @@ function renderReflectionPanel(action, reflectionBoundary) {
           </select>
         </label>
         <button class="secondary-action" type="submit">保存今天的记录</button>
-      </form>
+      </form>`}
       <p class="boundary-note">这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。</p>
       ${reflectionBoundary ? `<span class="confirmed-strip">${reflectionBoundary}</span>` : ''}
     </article>
@@ -257,7 +259,9 @@ export async function fetchTodayGrowthAction(config) {
 /** @param {string} url @param {AppConfig} config @param {string} label @returns {Promise<any>} */
 async function fetchWave2Json(url, config, label) {
   const response = await fetch(url, { method: 'GET', headers: { 'X-Actor-Id': config.actorPersonId } });
-  const body = await response.json().catch(() => undefined);
+  const body = typeof response.text === 'function'
+    ? await response.text().then((rawBody) => rawBody.length > 0 ? JSON.parse(rawBody) : null)
+    : await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.message ?? `${label} read failed with ${response.status}`);
   return body;
 }
@@ -270,12 +274,13 @@ async function fetchWave2Json(url, config, label) {
  * @returns {Promise<CompleteGrowthActionResponse>}
  */
 export async function submitCompleteGrowthAction(config, actionId, completionStatus, reflection) {
+  const completionResourceId = `${actionId}-${completionStatus}-${createStableTextHash(reflection)}`;
   const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/actions/${actionId}/complete`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
-      'Idempotency-Key': createWave2IdempotencyKey('m2-105-complete-action', config.familyId, actionId),
+      'Idempotency-Key': createWave2IdempotencyKey('m2-105-complete-action', config.familyId, completionResourceId),
     },
     body: JSON.stringify({
       completion_status: completionStatus,
@@ -380,6 +385,15 @@ export function createFrozenActionFixture() {
  */
 function createWave2IdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
+}
+
+/** @param {string} value */
+function createStableTextHash(value) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash.toString(16);
 }
 
 /** @param {string} eyebrow @param {string} message */

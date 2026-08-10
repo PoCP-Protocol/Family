@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://family.local/fpai/say-it-tonight.schema.json",
+  "title": "Say It Tonight",
+  "type": "object",
+  "required": ["original_parent_impulse", "warm_version", "boundary_version", "child_age_note", "avoid"],
+  "additionalProperties": false,
+  "properties": {
+    "original_parent_impulse": { "type": "string" },
+    "warm_version": { "type": "string" },
+    "boundary_version": { "type": "string" },
+    "child_age_note": { "type": "string" },
+    "avoid": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

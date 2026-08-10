@@ -6,6 +6,7 @@ import { FamilyRepository } from './family.repository';
 import { REFLECTION_BOUNDARY, assertCompletableGrowthActionStatus } from './growth-action.policy';
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
+import { assertReflectionSafetyRoute } from './reflection-safety.policy';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const COMPLETE_GROWTH_ACTION_ACTION = 'CompleteGrowthAction';
@@ -31,6 +32,7 @@ export class GrowthActionService {
          from growth_actions ga
          join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
          where ga.family_id = $1 and ie.status = 'ACTIVE' and ga.status = 'PENDING'
+           and ga.due_date = current_date
          order by ga.due_date, ga.day_index
          limit 1`,
         [familyId],
@@ -41,15 +43,15 @@ export class GrowthActionService {
 
   async completeGrowthAction(request: CompleteGrowthActionRequest, meta: AuditMeta): Promise<CompleteGrowthActionResponse> {
     assertCompletableGrowthActionStatus(request.completion_status);
-    const requestHash = hashCompleteGrowthActionRequest(request);
+    const requestHash = hashCompleteGrowthActionRequest(request, meta.actor);
     return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const idempotency = await lockIdempotencyKey<CompleteGrowthActionResponse>(client, COMPLETE_GROWTH_ACTION_ACTION, request.idempotency_key, requestHash);
       if (idempotency.replay) {
         return idempotency.response;
       }
 
-      await ensureFamilyExists(client, request.family_id);
-      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const existing = await getCompletableGrowthAction(client, request.family_id, request.action_id);
       const subject = await this.growthSubjectResolver.resolve(client, {
         familyId: request.family_id,
@@ -58,6 +60,7 @@ export class GrowthActionService {
       });
       await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
       await assertNormalSafetyRoute(client, request.family_id, existing.onboarding_id);
+      assertReflectionSafetyRoute(request.reflection);
       const action = await updateGrowthActionCompletion(client, request);
       const response: CompleteGrowthActionResponse = {
         action,
@@ -71,7 +74,7 @@ export class GrowthActionService {
   }
 }
 
-function hashCompleteGrowthActionRequest(request: CompleteGrowthActionRequest): string {
+function hashCompleteGrowthActionRequest(request: CompleteGrowthActionRequest, actorId: string): string {
   return createHash('sha256')
     .update(JSON.stringify({
       family_id: request.family_id,
@@ -79,6 +82,7 @@ function hashCompleteGrowthActionRequest(request: CompleteGrowthActionRequest): 
       completion_status: request.completion_status,
       reflection: request.reflection,
       occurred_at: request.occurred_at,
+      actor_id: actorId,
     }))
     .digest('hex');
 }

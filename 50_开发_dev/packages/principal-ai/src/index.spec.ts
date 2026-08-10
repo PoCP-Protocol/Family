@@ -7,8 +7,14 @@ import {
   buildPrincipalAiGatewayRequest,
   createActionCard,
   createDistillationDataset,
+  createPrincipalSoulGoldenSet,
+  createPrincipalSoulTrainingRecords,
   createPrincipalAvatarScene,
+  evaluatePrincipalSoulGoldenSet,
+  evaluatePrincipalSoulTrainingRecords,
   evaluatePrincipalOutput,
+  exportPrincipalSoulGoldenSetJsonl,
+  exportPrincipalSoulTrainingJsonl,
   getPrincipalSoulProfile,
   rewriteParentMessage,
 } from './index';
@@ -93,6 +99,63 @@ describe('@family/principal-ai', () => {
     expect(dialogue.user_affordance).toContain('轮流输入或语音');
     expect(dialogue.boundary_notice).toContain('不写入核心事实');
     expect(dialogue.boundary_notice).not.toContain('保证');
+  });
+
+  it('creates a review-gated soul golden set for distillation and evaluation', () => {
+    const goldenSet = createPrincipalSoulGoldenSet();
+    const report = evaluatePrincipalSoulGoldenSet(goldenSet);
+
+    expect(goldenSet).toHaveLength(10);
+    expect(goldenSet.every((item) => item.source_evidence_level === 'E1_DESIGN_ASSET')).toBe(true);
+    expect(goldenSet.every((item) => item.review_status === 'NEEDS_HUMAN_REVIEW')).toBe(true);
+    expect(goldenSet.some((item) => item.kind === 'safety_gate' && item.expected_response?.human_gate)).toBe(true);
+    expect(report).toMatchObject({
+      pass: true,
+      total_items: 10,
+      positive_items: 3,
+      negative_items: 3,
+      safety_gate_items: 1,
+      avatar_scene_items: 3,
+    });
+    expect(report.covered_avatar_modes).toEqual(['INTERACTIVE_CHAT', 'MICRO_LESSON', 'FAMILY_DIALOGUE']);
+  });
+
+  it('exports the soul golden set as JSONL for future training pipelines', () => {
+    const jsonl = exportPrincipalSoulGoldenSetJsonl();
+    const lines = jsonl.trim().split('\n').map((line) => JSON.parse(line));
+
+    expect(lines).toHaveLength(10);
+    expect(lines[0].kind).toBe('positive_sft');
+    expect(lines.some((line) => line.kind === 'negative_preference' && line.rejected_response)).toBe(true);
+    expect(lines.some((line) => line.kind === 'avatar_scene' && line.scene.modalities.includes('AVATAR_STAGE'))).toBe(true);
+  });
+
+  it('converts reviewed golden set items into SFT and preference training records', () => {
+    const records = createPrincipalSoulTrainingRecords();
+    const report = evaluatePrincipalSoulTrainingRecords(records);
+
+    expect(records).toHaveLength(10);
+    expect(report).toEqual({
+      pass: true,
+      total_records: 10,
+      sft_records: 7,
+      preference_records: 3,
+      failed_checks: [],
+    });
+    expect(records.filter((record) => record.record_type === 'sft')).toHaveLength(7);
+    expect(records.filter((record) => record.record_type === 'preference')).toHaveLength(3);
+    expect(records.every((record) => record.review_status === 'NEEDS_HUMAN_REVIEW')).toBe(true);
+  });
+
+  it('exports separate JSONL streams for SFT and preference training', () => {
+    const sftLines = exportPrincipalSoulTrainingJsonl('sft').trim().split('\n').map((line) => JSON.parse(line));
+    const preferenceLines = exportPrincipalSoulTrainingJsonl('preference').trim().split('\n').map((line) => JSON.parse(line));
+
+    expect(sftLines).toHaveLength(7);
+    expect(preferenceLines).toHaveLength(3);
+    expect(sftLines.every((line) => line.record_type === 'sft' && line.messages.at(-1).role === 'assistant')).toBe(true);
+    expect(preferenceLines.every((line) => line.record_type === 'preference' && line.chosen && line.rejected)).toBe(true);
+    expect(preferenceLines.some((line) => line.rejected_reason.includes('rejected'))).toBe(true);
   });
 
   it('defines the Famili principal soul as a sisterly mentor training profile', () => {

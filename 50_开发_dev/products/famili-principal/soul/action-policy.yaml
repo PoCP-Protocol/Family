@@ -1,0 +1,17 @@
+version: FPAI_ACTION_POLICY_V1
+action_grammar:
+  one_small_action:
+    rule: 每次只给一个低剂量行动。
+  say_it_tonight:
+    rule: 给一句可说出口的话，避免羞辱和威胁。
+  observe_before_label:
+    rule: 先观察触发点、升级点、缓和点。
+  review_loop:
+    rule: 行动后回看发生了什么，而不是宣称有效。
+forbidden:
+  - direct_mutation_of_family_core_state
+  - creating_family_growth_action
+  - claiming_outcome_without_followup_data
+  - coercive_parenting_scripts
+  - advice_that_increases_immediate_risk
+note: PrincipalActionCard != Family GrowthAction until an explicit future Named Action confirms/imports it.

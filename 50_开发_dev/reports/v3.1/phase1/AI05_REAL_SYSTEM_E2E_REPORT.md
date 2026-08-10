@@ -8,14 +8,14 @@ depends_on: AI-03 OpenAPI / TS Contracts, AI-04 Frontend Real API Boundary
 ## Verdict
 
 ```text
-AI05_REAL_SYSTEM_E2E = BLOCKED_BY_MISSING_TEST_DATABASE_URL
+AI05_REAL_SYSTEM_E2E = REAL_POSTGRESQL_HTTP_AND_BROWSER_REAL_API_PASS
 E2E_HARNESS_COLLECTION = PASS
-REAL_POSTGRESQL_HTTP_SCENARIOS = NOT_RUN_TEST_DATABASE_URL_MISSING
-BROWSER_REAL_API_DEMO = NOT_RUN_WAITING_LIVE_BACKEND_AND_REAL_API_MODE
+REAL_POSTGRESQL_HTTP_SCENARIOS = PASS_55_OF_55
+BROWSER_REAL_API_DEMO = PASS_REAL_API_F06_F09
 API_WAVE2_SERVICE_TESTS = PASS
 API_TYPECHECK = PASS
-FINAL_BARRIER_4_REAL_SYSTEM = NOT_PASS
-FINAL_BARRIER_5_REAL_PRODUCT = NOT_PASS
+FINAL_BARRIER_4_REAL_SYSTEM = PASS_LOCAL_REQUIRED_AND_BROWSER_REAL_API
+FINAL_BARRIER_5_REAL_PRODUCT = PASS_FOR_AI05_SCOPE_PENDING_GOVERNANCE_SIGNOFF
 BUSINESS_CODE_MODIFIED = NO
 WAVE3_STARTED = NO
 ```
@@ -27,23 +27,32 @@ WAVE3_STARTED = NO
 - Existing AI-05 status and validation evidence under `reports/m2/wave2/`.
 - Current local runtime prerequisites: `TEST_DATABASE_URL`, Docker, and Node.js availability.
 - Wave2 service tests for Growth Priority, Intervention, and Growth Action.
+- Browser real-api flow on live local API + real PostgreSQL: F02/F03/F04/F05/F06/F07/F08/F09.
 
 ## Findings
 
-- `TEST_DATABASE_URL` is not set in the current local environment.
+- Missing `TEST_DATABASE_URL` now fails fast with `REQUIRED_REAL_POSTGRESQL: TEST_DATABASE_URL is not set` instead of producing skip-based false green evidence.
 - Docker is available and responding.
 - Node.js is available: `v24.15.0`.
 - The default API test script does not discover `*.e2e-spec.ts`; this is a test-entry mismatch, not a Wave2 business failure.
 - The dedicated E2E config collects the Wave2 harness correctly.
-- Without `TEST_DATABASE_URL`, the readiness test passes and five real PostgreSQL + HTTP scenarios are skipped explicitly.
-- No Real PostgreSQL PASS or browser PASS is claimed.
+- `pnpm run test:e2e` now runs through `tools/testdb.mjs` with real PostgreSQL and passes 8 E2E files / 55 tests.
+- `pnpm run test:required` passed locally after B02/B03/B04 repairs: build, typecheck, unit, testdb reset, integration, and E2E.
+- Browser Gate now passes in `wave2ApiMode=real-api` against live API `http://localhost:3110`, web `http://localhost:5178`, and real PostgreSQL test database.
+- Browser Gate verifies `data-api-mode="real-api"`, `已连接 · real-api`, F06/F07/F08/F09, 7 generated daily actions, completed today action, and `REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME`.
+- Browser Gate verifies forbidden future/AI runtime claims are absent: Principal AI, FPAI, digital human, voice, model gateway, Family Total Score, ranking, and AI recommendation.
+- Browser Gate console error list is empty.
 
 ## Validation
 
 ```text
 pnpm --dir "d:\Family\50_开发_dev" --filter @family/api exec vitest run --config vitest.e2e.config.ts src/modules/family/family-wave2.e2e-spec.ts --reporter verbose
-RESULT: PASS_HARNESS_POSTGRESQL_SKIPPED
-SUMMARY: 1 passed, 5 skipped
+RESULT: FAIL_FAST_WITHOUT_TEST_DATABASE_URL
+SUMMARY: REQUIRED_REAL_POSTGRESQL: TEST_DATABASE_URL is not set
+
+pnpm --dir "d:\Family\50_开发_dev" run test:e2e
+RESULT: PASS_REAL_POSTGRESQL_HTTP_E2E
+SUMMARY: 8 files passed, 55 tests passed; family-wave2.e2e-spec.ts passed
 
 pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck
 RESULT: PASS
@@ -51,22 +60,39 @@ RESULT: PASS
 pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts intervention.service.spec.ts growth-action.service.spec.ts
 RESULT: PASS
 SUMMARY: 3 files, 15 tests
+
+pnpm --dir "d:\Family\50_开发_dev" run test:integration
+RESULT: PASS_REAL_POSTGRESQL_INTEGRATION
+SUMMARY: 6 files passed, 40 tests passed
+
+pnpm --dir "d:\Family\50_开发_dev" run test:required
+RESULT: PASS_LOCAL_REQUIRED_GATE
+SUMMARY: build, typecheck, unit, testdb reset, integration, and E2E passed
+
+Browser Gate final run
+RESULT: PASS_REAL_API_BROWSER_GATE
+API: http://localhost:3110 backed by postgres://family:family@localhost:65240/family_test
+WEB: http://localhost:5178/?wave2ApiMode=real-api&apiBaseUrl=http://localhost:3110
+SEEDED_FAMILY_ID: a7bcaa88-b42d-486d-9525-d6e803d19760
+SEEDED_CHILD_ID: 5ded2709-b35f-470f-a09c-7b1d228896a9
+SEEDED_GUARDIAN_ID: 2848f921-40e8-45d6-a3f5-8a42a3e62ac6
+ASSERTIONS: data-api-mode=real-api; F06/F07/F08/F09 visible; 7 daily actions generated; today action COMPLETED; REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME visible; forbidden runtime AI/FPAI/score/ranking claims absent; consoleErrors=[]
 ```
 
 ## E2E Scenario Status
 
 ```text
-E2E-W2-01 happy path priority -> intervention -> action completion: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-02 revoked or missing consent blocks Wave2 flow: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-03 safety escalation blocks normal continuation: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-04 forbidden fields rejected without mutation: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
-E2E-W2-05 no-priority decision and stale draft create no hidden state: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
+E2E-W2-01 happy path priority -> intervention -> action completion: PASS_REAL_POSTGRESQL_HTTP
+E2E-W2-02 revoked or missing consent blocks Wave2 flow: PASS_REAL_POSTGRESQL_HTTP
+E2E-W2-03 safety escalation blocks normal continuation: PASS_REAL_POSTGRESQL_HTTP
+E2E-W2-04 forbidden fields rejected without mutation: PASS_REAL_POSTGRESQL_HTTP
+E2E-W2-05 no-priority decision and stale draft create no hidden state: PASS_REAL_POSTGRESQL_HTTP
 ```
 
 ## Gate Statement
 
-AI-05 is blocked on real infrastructure, not on current local type or focused service tests.
+AI-05 has cleared the real PostgreSQL + HTTP E2E part of Barrier 4 in the local required harness.
 
-`BARRIER-4 REAL SYSTEM` remains `NOT_PASS` until the full migration chain and E2E-W2-01 through E2E-W2-05 run against a real PostgreSQL database with `TEST_DATABASE_URL` set.
+AI-05 has also cleared the browser real-api product evidence for F06-F09 against a live local backend and real PostgreSQL.
 
-`BARRIER-5 REAL PRODUCT` remains `NOT_PASS` until a live backend plus frontend `real-api` browser flow is captured. Pre-real fixtures and local browser prep must not be reported as real product evidence.
+`BARRIER-4 REAL SYSTEM` and `BARRIER-5 REAL PRODUCT` are `PASS` for AI-05 scope. Final M2 Wave2 PASS still requires AI-06 governance signoff and AI-00/AI-07 process authorization; Wave3 remains not started.

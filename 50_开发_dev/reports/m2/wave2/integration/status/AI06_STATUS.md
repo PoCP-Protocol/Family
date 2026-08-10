@@ -4,8 +4,8 @@ role: Governance Pre-Review Owner
 phase: WAVE2_INTEGRATION_CONVERGENCE
 
 ```text
-STATE: GOVERNANCE_GATE_PASS
-LAST_CHANGESET: Reran governance against real PostgreSQL, HTTP E2E, browser, and direct database side-effect evidence.
+STATE: GOVERNANCE_FINAL_REVIEW_PENDING_CURRENT_EVIDENCE
+LAST_CHANGESET: AI-05 real PostgreSQL HTTP E2E, local required gate, and browser real-api evidence are now current.
 DONE:
 - Reviewed M2-104/M2-105 services, policies, DTOs, migration evidence, Phase B2 directive, AI-03 schema audit, and Problems/search results.
 - Produced `reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md`.
@@ -13,16 +13,17 @@ DONE:
 - Added strict body allowlists for `confirm-growth-priority.dto.ts`, `start-intervention.dto.ts`, and `complete-growth-action.dto.ts`.
 - Added focused DTO specs and service specs for normal-route blocking behavior.
 - Ran focused API regression and API typecheck.
-- Reviewed 6/6 real PostgreSQL + HTTP E2E results and the real browser flow.
-- Verified revoked/missing consent, safety escalation, stale draft, strict DTO rejection, and no Outcome/Milestone/AI side effects.
+- B02 fail-fast repair prevents missing TEST_DATABASE_URL from being counted as PASS.
+- AI-05 current evidence now includes PASS_REAL_POSTGRESQL_HTTP, PASS_LOCAL_REQUIRED_GATE, and PASS_REAL_API_BROWSER_GATE.
+- Local governance rules remain aligned: deterministic no-AI, no Family Total Score, no ranking, no AI core-state write.
 NEXT:
-- Hand the completed Barrier 1-5 evidence set to AI-07 independent review.
-BLOCKER: none in governance; final Wave2 gate remains pending AI-07 independent review.
+- Perform final governance review against current AI-05 evidence and issue explicit governance signoff or findings.
+BLOCKER: final governance signoff has not yet been issued.
 NEEDS_FROM:
-- AI-00: integrated API behavior and approved safety/subject wiring path.
-- AI-05: complete; real PostgreSQL, E2E, and browser evidence passed.
+- AI-00: barrier summary and authorization boundary for any AI-07 review request.
+- AI-05: current evidence packet is available.
 CONTRACT_VERSION: M2_WAVE2_CF_V1
-VALIDATION: focused API regression PASS 24/24; API typecheck PASS on rerun with `--pretty false`.
-GOVERNANCE_READY: YES
-BARRIER-5: PASS
+VALIDATION: focused local governance checks previously passed; final evidence review pending.
+GOVERNANCE_READY: NO_PENDING_FINAL_REVIEW
+BARRIER-5: PENDING_GOVERNANCE_SIGNOFF
 ```

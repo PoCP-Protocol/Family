@@ -58,8 +58,10 @@ export class GrowthPriorityService {
   }
 
   async confirmGrowthPriority(request: ConfirmGrowthPriorityRequest, meta: AuditMeta): Promise<ConfirmGrowthPriorityResponse> {
-    const requestHash = hashConfirmGrowthPriorityRequest(request);
+    const requestHash = hashConfirmGrowthPriorityRequest(request, meta.actor);
     return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const idempotency = await lockIdempotencyKey<ConfirmGrowthPriorityResponse>(
         client,
         CONFIRM_GROWTH_PRIORITY_ACTION,
@@ -70,8 +72,6 @@ export class GrowthPriorityService {
         return idempotency.response;
       }
 
-      await ensureFamilyExists(client, request.family_id);
-      await assertFamilyManagePermission(client, request.family_id, meta.actor);
       await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
       await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
@@ -92,18 +92,23 @@ export class GrowthPriorityService {
         throw new ConflictException((error as Error).message);
       }
 
-      let priority: GrowthPriorityDto | null = null;
+      let candidate: GrowthPriorityCandidateDto | null = null;
       if (request.decision !== 'NO_PRIORITY_YET') {
-        const candidate = draft.candidate;
+        candidate = draft.candidate;
         if (!candidate || candidate.dimension_id !== request.decision) {
           throw new ConflictException('growth_priority_decision_not_eligible');
         }
-        const subject = await this.growthSubjectResolver.resolve(client, {
-          familyId: request.family_id,
-          onboardingId: request.onboarding_id,
-          profileId: candidate.profile_id,
-        });
-        await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
+      }
+
+      const subject = await this.growthSubjectResolver.resolve(client, {
+        familyId: request.family_id,
+        onboardingId: request.onboarding_id,
+        ...(candidate ? { profileId: candidate.profile_id } : {}),
+      });
+      await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
+
+      let priority: GrowthPriorityDto | null = null;
+      if (candidate) {
         const previousPriority = await getActivePriority(client, request.family_id, request.onboarding_id);
         await supersedeActivePriority(client, request.family_id, request.onboarding_id);
         priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority, meta);
@@ -131,13 +136,14 @@ export class GrowthPriorityService {
   }
 }
 
-function hashConfirmGrowthPriorityRequest(request: ConfirmGrowthPriorityRequest): string {
+function hashConfirmGrowthPriorityRequest(request: ConfirmGrowthPriorityRequest, actorId: string): string {
   return createHash('sha256')
     .update(JSON.stringify({
       family_id: request.family_id,
       onboarding_id: request.onboarding_id,
       draft_id: request.draft_id,
       decision: request.decision,
+      actor_id: actorId,
     }))
     .digest('hex');
 }
