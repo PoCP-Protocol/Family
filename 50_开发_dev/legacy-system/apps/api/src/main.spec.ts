@@ -10,6 +10,7 @@ import {
   getFelsHealth,
   runFelsVerticalSliceE2E,
   runLegacyAmbiguityE2E,
+  summarizeMigrationMatrixForFels1,
 } from './main';
 
 describe('FELS API executable foundation', () => {
@@ -94,24 +95,35 @@ describe('FELS-1 core education business', () => {
 
   it('preserves all M001-M055 rows with FELS-1 coverage classifications', () => {
     const rows = classifyMigrationMatrixForFels1();
+    const summary = summarizeMigrationMatrixForFels1(rows);
     expect(rows).toHaveLength(55);
     expect(rows.every((row) => row.classification)).toBe(true);
     expect(rows.find((row) => row.id === 'M001')?.classification).toBe('IMPLEMENTED_FELS1');
     expect(rows.find((row) => row.id === 'M035')?.classification).toBe('RETIRED');
+    expect(summary.IMPLEMENTED_FELS1).toBe(10);
+    expect(Object.values(summary).reduce((total, count) => total + count, 0)).toBe(55);
   });
 
-  it('passes the FELS-1 gate summary', () => {
+  it('reports FELS-1 as code-validated without overstating real system gates', () => {
     const gate = getFels1Gate();
     expect(gate.fels0).toBe('PASS');
-    expect(gate.fels1).toBe('PASS');
+    expect(gate.fels1).toBe('PASS_CODE_VALIDATED');
     expect(gate.legacyDatabase).toBe('family_legacy');
-    expect(gate.coreApi).toBe('PASS');
-    expect(gate.exportApi).toBe('PASS');
-    expect(gate.cleanSeed).toBe('PASS');
-    expect(gate.dirtySeed).toBe('PASS');
-    expect(gate.flmDiscovery).toBe('PASS');
+    expect(gate.coreDomainRuntime).toBe('PASS');
+    expect(gate.exportDomainRuntime).toBe('PASS');
+    expect(gate.coreRealHttpApi).toBe('NOT_YET_PASS');
+    expect(gate.exportRealHttpApi).toBe('NOT_YET_PASS');
+    expect(gate.freshDbMigration).toBe('PENDING_NO_LEGACY_DATABASE_URL');
+    expect(gate.cleanSeedDomainRuntime).toBe('PASS');
+    expect(gate.dirtySeedDomainRuntime).toBe('PASS');
+    expect(gate.cleanSeedDb).toBe('NOT_YET_PASS');
+    expect(gate.dirtySeedDb).toBe('NOT_YET_PASS');
+    expect(gate.flmReferenceDiscoveryStatic).toBe('PASS');
+    expect(gate.flmReferenceDiscoveryDb).toBe('NOT_YET_PASS');
     expect(gate.familyDbMutations).toBe(0);
-    expect(gate.migrationMatrixCoverage).toBe('55/55');
+    expect(gate.migrationMatrixClassified).toBe('55/55');
+    expect(gate.fels1RuntimeImplemented).toBe('10/55');
     expect(gate.blockers).toHaveLength(0);
+    expect(gate.readyForFels2).toBe('NO');
   });
 });

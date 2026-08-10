@@ -15,7 +15,14 @@ FP0-013,FP0,Create gold eval V1,DONE,evaluation
 FP0-014,FP0,Define model architecture,DONE,architecture
 FP0-015,FP0,Define training strategy with training disabled,DONE,owner
 FP0-016,FP0,Run FP0 gate,DONE,architect
-FP1-001,FP1,Build prototype retrieval,NOT_AUTHORIZED,owner
-FP1-002,FP1,Build structured generation prototype,NOT_AUTHORIZED,owner
+FP1-001,FP1,Build prototype retrieval,AUTHORIZED_TEXT_INTELLIGENCE_MVP,owner
+FP1-002,FP1,Build structured generation prototype,AUTHORIZED_TEXT_INTELLIGENCE_MVP,owner
+DH0-001,DH0,Create Digital Human IP Bible,DONE,chief_architect
+DH0-002,DH0,Create visual direction and static concept exploration,DONE,chief_architect
+DH0-003,DH0,Create non-cloned voice direction,DONE,chief_architect
+DH0-004,DH0,Create multimodal experience map,DONE,chief_architect
+DH0-005,DH0,Create prototype acceptance matrix,DONE,chief_architect
+DH0-006,DH0,Create asset rights and provenance system,DONE,chief_architect
 FP2-001,FP2,Build 21-day companion,NOT_AUTHORIZED,owner
-FP3-001,FP3,Voice avatar or digital human,NOT_AUTHORIZED,owner
+FP3-001,FP3,Voice avatar or digital human runtime,NOT_AUTHORIZED,owner
+DH1-001,DH1,Build digital human prototype runtime,NOT_AUTHORIZED,owner

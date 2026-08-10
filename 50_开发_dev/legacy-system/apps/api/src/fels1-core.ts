@@ -1,6 +1,19 @@
 import { FELS_DATABASE_CONTRACT, FELS_MIGRATION_MATRIX_COVERAGE, getFels0Gate } from '@family/fels-contracts';
 
 type Status = 'PASS' | 'FAIL';
+type MatrixClassification =
+  | 'IMPLEMENTED_FELS1'
+  | 'PLANNED_FELS2'
+  | 'PLANNED_FELS3'
+  | 'PLANNED_FELS4'
+  | 'EXTERNAL_INTEGRATION'
+  | 'RETIRED'
+  | 'FAMILY_NEW_CAPABILITY';
+
+interface MatrixClassificationRow {
+  id: string;
+  classification: MatrixClassification;
+}
 type IdPrefix = 'cus' | 'con' | 'stu' | 'gua' | 'tpl' | 'asm' | 'scr' | 'rep' | 'crs' | 'prd' | 'ord' | 'itm' | 'pay' | 'enr' | 'cns' | 'snp';
 
 export interface LegacyCustomer {
@@ -604,39 +617,49 @@ export function getFels1Gate() {
   const dirty = createDirtyCoreDataset();
   const fels0 = getFels0Gate();
   const flmDiscovery = discoverFelsReadOnly(dirty);
+  const matrixRows = classifyMigrationMatrixForFels1();
+  const matrixSummary = summarizeMigrationMatrixForFels1(matrixRows);
   const blockers: string[] = [];
   if (!fels0.readyForFels1) blockers.push('FELS0_NOT_READY');
   if (flmDiscovery.source_kind !== 'REFERENCE_IMPLEMENTATION') blockers.push('FLM_SOURCE_KIND_INVALID');
   return {
     fels0: fels0.readyForFels1 ? 'PASS' : 'FAIL',
-    fels1: blockers.length === 0 ? 'PASS' : 'FAIL',
+    fels1: blockers.length === 0 ? 'PASS_CODE_VALIDATED' : 'FAIL',
     legacyDatabase: FELS_DATABASE_CONTRACT.databaseName,
-    freshMigration: 'PASS' as Status,
-    coreApi: 'PASS' as Status,
-    exportApi: vertical.exportedCustomer.source_system === 'FELS' ? 'PASS' : 'FAIL',
-    cleanSeed: clean.records.customers.length >= 10 ? 'PASS' : 'FAIL',
-    dirtySeed: dirty.records.customers.some((customer, index, customers) => customers.findIndex((item) => item.phone === customer.phone) !== index) ? 'PASS' : 'FAIL',
-    verticalSliceE2E: vertical.status,
-    ambiguityE2E: ambiguity.requiredFlags.includes('IDENTITY_REVIEW_REQUIRED') && ambiguity.requiredFlags.includes('CONSENT_REVIEW_REQUIRED') ? 'PASS' : 'FAIL',
-    flmDiscovery: flmDiscovery.mode === 'READ_ONLY' ? 'PASS' : 'FAIL',
+    coreDomainRuntime: 'PASS' as Status,
+    exportDomainRuntime: vertical.exportedCustomer.source_system === 'FELS' ? 'PASS' : 'FAIL',
+    coreRealHttpApi: 'NOT_YET_PASS',
+    exportRealHttpApi: 'NOT_YET_PASS',
+    freshDbMigration: 'PENDING_NO_LEGACY_DATABASE_URL',
+    cleanSeedDomainRuntime: clean.records.customers.length >= 10 ? 'PASS' : 'FAIL',
+    dirtySeedDomainRuntime: dirty.records.customers.some((customer, index, customers) => customers.findIndex((item) => item.phone === customer.phone) !== index) ? 'PASS' : 'FAIL',
+    cleanSeedDb: 'NOT_YET_PASS',
+    dirtySeedDb: 'NOT_YET_PASS',
+    verticalSliceE2E: vertical.status === 'PASS' ? 'PASS_DOMAIN_RUNTIME' : 'FAIL',
+    ambiguityE2E: ambiguity.requiredFlags.includes('IDENTITY_REVIEW_REQUIRED') && ambiguity.requiredFlags.includes('CONSENT_REVIEW_REQUIRED') ? 'PASS_DOMAIN_RUNTIME' : 'FAIL',
+    flmReferenceDiscoveryStatic: flmDiscovery.mode === 'READ_ONLY' ? 'PASS' : 'FAIL',
+    flmReferenceDiscoveryDb: 'NOT_YET_PASS',
+    flmRealDbReferenceDiscovery: 'NOT_YET_PASS',
     familyDbMutations: 0,
-    migrationMatrixCoverage: `${FELS_MIGRATION_MATRIX_COVERAGE.length}/55`,
+    migrationMatrixClassified: `${FELS_MIGRATION_MATRIX_COVERAGE.length}/55`,
+    fels1RuntimeImplemented: `${matrixSummary.IMPLEMENTED_FELS1}/55`,
+    matrixSummary,
     noFakeBangyangClaim: flmDiscovery.real_bangyang_source === false ? 'PASS' : 'FAIL',
     noFamilyOntologyPollution: 'PASS' as Status,
     blockers,
-    readyForFels2: blockers.length === 0 ? 'YES' : 'NO',
+    readyForFels2: 'NO',
     startFels2: 'NO',
   } as const;
 }
 
-export function classifyMigrationMatrixForFels1() {
+export function classifyMigrationMatrixForFels1(): MatrixClassificationRow[] {
   const implemented = new Set(['M001', 'M002', 'M003', 'M004', 'M005', 'M008', 'M037', 'M038', 'M040', 'M052']);
   const retired = new Set(['M035', 'M036']);
   const external = new Set(['M020', 'M022', 'M031', 'M032', 'M039', 'M041', 'M042', 'M050']);
   const newCapability = new Set(['M054', 'M055']);
   return FELS_MIGRATION_MATRIX_COVERAGE.map((row) => ({
     id: row.id,
-    classification: implemented.has(row.id)
+    classification: (implemented.has(row.id)
       ? 'IMPLEMENTED_FELS1'
       : retired.has(row.id)
         ? 'RETIRED'
@@ -648,8 +671,22 @@ export function classifyMigrationMatrixForFels1() {
               ? 'PLANNED_FELS2'
               : row.id === 'M012' || row.id === 'M021' || row.id === 'M033' || row.id === 'M034'
                 ? 'PLANNED_FELS3'
-                : 'PLANNED_FELS4',
+                : 'PLANNED_FELS4') satisfies MatrixClassification,
   }));
+}
+
+export function summarizeMigrationMatrixForFels1(rows: MatrixClassificationRow[] = classifyMigrationMatrixForFels1()) {
+  const summary: Record<MatrixClassification, number> = {
+    IMPLEMENTED_FELS1: 0,
+    PLANNED_FELS2: 0,
+    PLANNED_FELS3: 0,
+    PLANNED_FELS4: 0,
+    EXTERNAL_INTEGRATION: 0,
+    RETIRED: 0,
+    FAMILY_NEW_CAPABILITY: 0,
+  };
+  for (const row of rows) summary[row.classification] += 1;
+  return summary;
 }
 
 function recordCounts(records: FelsRecords) {

@@ -13,10 +13,12 @@
     "lint": "echo \"(fels-api) lint ok\" && exit 0"
   },
   "dependencies": {
-    "@family/fels-contracts": "workspace:*"
+    "@family/fels-contracts": "workspace:*",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "@types/pg": "^8.11.10",
     "typescript": "^5.6.3",
     "vitest": "^2.1.5"
   }

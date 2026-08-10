@@ -17,6 +17,11 @@ describe('WAF-001A community challenge prototype', () => {
     expect(root.querySelector<HTMLAnchorElement>('a[href="./"]')?.textContent).toContain('Family');
     expect(root.querySelector('.waf-initial-entry')).not.toBeNull();
     expect(root.querySelectorAll('.waf-motion-path span')).toHaveLength(3);
+    expect(root.textContent).toContain('共同练习台');
+    expect(root.querySelector('[aria-label="今天家里的关系天气"]')).not.toBeNull();
+    expect(root.textContent).toContain('播放语音引导');
+    expect(root.textContent).toContain('不会自动播放，不使用麦克风');
+    expect(root.querySelector('.waf-listening-scene')).not.toBeNull();
     expect(root.textContent).not.toContain('关注');
     expect(root.textContent).not.toContain('私信');
     expect(root.textContent).toContain('没有家庭排名');
@@ -64,5 +69,78 @@ describe('WAF-001A community challenge prototype', () => {
     expect(state.productEvents.map((event) => event.name)).toContain('waf_story_viewed');
     expect(state.productEvents.map((event) => event.name)).toContain('waf_story_publication_opt_in_clicked');
     expect(root.textContent).toContain('发布家庭故事需要单独确认');
+  });
+
+  it('adapts the listening practice to family readiness and keeps audio opt-in', () => {
+    const root = document.createElement('main');
+    let spokenText = '';
+    let cancelled = 0;
+    const state = createWafCommunityApp(root, {
+      now: () => '2026-08-11T00:00:00.000Z',
+      speak: (text) => {
+        spokenText = text;
+        return true;
+      },
+      cancelSpeech: () => {
+        cancelled += 1;
+      },
+    });
+
+    expect(spokenText).toBe('');
+    root.querySelector<HTMLButtonElement>('button[data-waf-weather="PAUSE"]')?.click();
+
+    expect(state.familyWeather).toBe('PAUSE');
+    expect(root.textContent).toContain('尊重暂停，也保持连接');
+    expect(root.textContent).toContain('暂停不是失败');
+
+    root.querySelector<HTMLButtonElement>('button[data-waf-audio]')?.click();
+    expect(state.guidePlaying).toBe(true);
+    expect(spokenText).toContain('现在不想说，也是一个可以被尊重的答案');
+    expect(root.querySelector<HTMLButtonElement>('button[data-waf-audio]')?.getAttribute('aria-pressed')).toBe('true');
+
+    root.querySelector<HTMLButtonElement>('button[data-waf-audio]')?.click();
+    expect(state.guidePlaying).toBe(false);
+    expect(cancelled).toBe(1);
+    expect(state.productEvents.map((event) => event.name)).toEqual(expect.arrayContaining([
+      'waf_family_weather_selected',
+      'waf_guided_practice_started',
+      'waf_guided_practice_stopped',
+    ]));
+  });
+
+  it('falls back to a readable transcript when speech playback is unavailable', () => {
+    const root = document.createElement('main');
+    const state = createWafCommunityApp(root, {
+      now: () => '2026-08-11T00:00:00.000Z',
+      speak: () => false,
+    });
+
+    root.querySelector<HTMLButtonElement>('button[data-waf-audio]')?.click();
+
+    expect(state.guidePlaying).toBe(false);
+    expect(root.textContent).toContain('当前浏览器暂不支持语音播放');
+    expect(root.textContent).toContain('阅读完整引导词');
+    expect(state.productEvents.map((event) => event.name)).toContain('waf_guided_practice_unavailable');
+  });
+
+  it('returns the UI to an offline practice state when spoken guidance ends', () => {
+    const root = document.createElement('main');
+    let finishSpeech = () => {};
+    const state = createWafCommunityApp(root, {
+      now: () => '2026-08-11T00:00:00.000Z',
+      speak: (_text, onComplete) => {
+        finishSpeech = onComplete;
+        return true;
+      },
+    });
+
+    root.querySelector<HTMLButtonElement>('button[data-waf-audio]')?.click();
+    expect(state.guidePlaying).toBe(true);
+
+    finishSpeech();
+
+    expect(state.guidePlaying).toBe(false);
+    expect(root.textContent).toContain('把这一分钟留给彼此');
+    expect(state.productEvents.map((event) => event.name)).toContain('waf_guided_practice_completed');
   });
 });

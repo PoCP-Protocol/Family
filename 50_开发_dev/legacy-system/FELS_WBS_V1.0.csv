@@ -1,7 +1,7 @@
 ID,Phase,Title,Status,Authorization,Primary Deliverable,Gate Evidence
 FELS-000,FELS-0,Repository Reality Audit,DONE,AUTHORIZED,reports/REPO_AUDIT_REPORT.md,Existing repo audit and current implementation evidence
 FELS-001,FELS-0,Architecture Freeze,DONE,AUTHORIZED,legacy-system/FELS_ARCHITECTURE_V1.0.md,FELS0 architecture and executable contracts
-FELS-002,FELS-0,M001-M055 Coverage,DONE,AUTHORIZED,legacy-system/architecture/MIGRATION_MATRIX_COVERAGE.csv,55 rows / 55 unique IDs
+FELS-002,FELS-0,M001-M055 Classification,DONE,AUTHORIZED,legacy-system/architecture/MIGRATION_MATRIX_COVERAGE.csv,55 rows / 55 unique IDs classified; runtime implemented count is separate
 FELS-003,FELS-0,Legacy Entity Model,DONE,AUTHORIZED,legacy-system/contracts/src/index.ts,FELS entity/domain constants and tests
 FELS-004,FELS-0,DB Contract,DONE,AUTHORIZED,legacy-system/db/migrations/0001_fels0_schema.sql,family_legacy / LEGACY_DATABASE_URL only
 FELS-005,FELS-0,Export Contract,DONE,AUTHORIZED,legacy-system/contracts/API_CONTRACT.md,Read-only legacy export paths
@@ -15,10 +15,10 @@ FELS-106,FELS-1,Course / Product,DONE,AUTHORIZED,legacy-system/apps/api/src/fels
 FELS-107,FELS-1,Order / Payment,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
 FELS-108,FELS-1,Enrollment,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
 FELS-109,FELS-1,Legacy Consent,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Consent discovery smoke
-FELS-110,FELS-1,Source Snapshot,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Snapshot and export tests
-FELS-111,FELS-1,Export API,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,FLM reference discovery
-FELS-112,FELS-1,Core E2E,DONE,AUTHORIZED,legacy-system/apps/api/src/main.spec.ts,FELS1 gate report
-FELS-113,FELS-1,Live PostgreSQL E2E,PENDING,REQUIRES_LEGACY_DATABASE_URL,legacy-system/tools/legacy-db.mjs,Blocked until independent LEGACY_DATABASE_URL exists
+FELS-110,FELS-1,Source Snapshot,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Domain-runtime snapshot and export tests
+FELS-111,FELS-1,Domain Export Runtime,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Static FLM reference discovery; real export HTTP API not yet passed
+FELS-112,FELS-1,Core Domain E2E,DONE,AUTHORIZED,legacy-system/apps/api/src/main.spec.ts,FELS1 PASS_CODE_VALIDATED gate report
+FELS-113,FELS-1,Live PostgreSQL + Real HTTP E2E,PENDING,REQUIRES_LEGACY_DATABASE_URL,legacy-system/tools/legacy-db.mjs,Blocked until independent LEGACY_DATABASE_URL exists
 FELS-201,FELS-2,Training Program,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
 FELS-202,FELS-2,21-Day Challenge,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
 FELS-203,FELS-2,90-Day Coaching,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate

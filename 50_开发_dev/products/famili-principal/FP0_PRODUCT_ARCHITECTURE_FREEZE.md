@@ -46,13 +46,13 @@ Engineering name: Famili Principal AI
 Project code: FPAI
 ```
 
-Open naming question for FP0 review:
+Naming decision (Owner 2026-08-11):
 
 ```text
-Is 波波校长 only an external source/IP reference, or is it retired from product naming?
+波波校长 is an internal source/IP reference only, one of several. It is not used in product naming and is not disclosed in public copy.
 ```
 
-Default FP0 stance: do not use 波波校长 as product name unless explicit authorization, rights, and brand decision exist.
+FP0 stance: do not use 波波校长 as product name or public attribution. FPAI absorbs strengths from multiple education IPs and is not tied to any single real-person source.
 
 ## 4. MVP Entry Points
 
@@ -65,6 +65,8 @@ FP1 candidate entry points:
 5. Principal Micro Lesson
 
 Digital human and voice are presentation layers after text value is validated. The product destination is multimodal, but FP1 remains text intelligence only.
+
+DH0 is a horizontal Digital Human IP Foundation track that may run in parallel with FP1. DH0 defines who `法咪莉校长` is across identity, soul, face direction, voice direction, gesture, interaction ritual, and provenance. DH0 is not FP3 runtime and does not authorize voice runtime, avatar runtime, real-time avatar, lip sync, model training, or public digital-human launch.
 
 ## 5. Principal Soul Engine
 
@@ -85,6 +87,22 @@ soul/
 ```
 
 Soul must not be represented only as a giant prompt.
+
+Future modalities must share this same Principal Soul:
+
+```text
+Principal Soul
+  -> Principal Intelligence
+  -> Structured Response
+  -> Presentation Adapter
+  -> Text / Voice / Avatar
+```
+
+Forbidden:
+
+```text
+Avatar -> separate persona / prompt / safety system
+```
 
 ## 6. Runtime Boundary
 

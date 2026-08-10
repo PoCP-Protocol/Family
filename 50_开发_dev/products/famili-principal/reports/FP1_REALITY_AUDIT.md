@@ -27,7 +27,7 @@ Authoritative:
 - `products/famili-principal/scenarios/FPAI_SCENARIO_TAXONOMY_V1.yaml`
 - `products/famili-principal/evals/gold-v1/cases.jsonl`
 
-FP0 internal foundation is accepted by owner ruling. Public Bobo attribution remains deferred until external launch copy decision.
+FP0 internal foundation is accepted by owner ruling. Owner decision 2026-08-11: public Bobo attribution is NOT disclosed; Bobo is one internal method source among several and FPAI absorbs strengths from multiple education IPs.
 
 ## Current Runtime Implementation
 

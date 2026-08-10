@@ -33,6 +33,18 @@ FUTURE_FAMILY_PRODUCT = FALSE
 
 FELS rows, tags, scores, reports, and AI conclusions are legacy-source material. They are not Family canonical truth.
 
+## 2.1 Taxonomy Truth
+
+```text
+Bangyang Legacy = real historical old system = currently UNAVAILABLE
+FELS = Family Education Legacy System = runnable reference legacy implementation for FLM validation
+FES = Family Education System = future AI Native education business operations system
+FLM = Family Legacy Migration Method = old-world to Family semantic translation method
+Family = New World / Family Growth Canonical System of Record
+```
+
+FELS is not Bangyang production evidence. FES is not Legacy, not FELS, and not a Bangyang substitute. This plan may clarify the relationship, but it does not authorize expanding FES scope.
+
 ## 3. System Relationship
 
 ```text
@@ -53,6 +65,15 @@ FELS_PROGRAM = ACTIVE
 
 FELS0 = PASS
 FELS1 = PASS_CODE_VALIDATED
+FELS1_REAL_SYSTEM_CLOSURE = AUTHORIZED
+
+FELS1_DOMAIN_MODEL = PASS
+FELS1_CODE_RUNTIME = PASS_CODE_VALIDATED
+
+FELS1_REAL_POSTGRESQL = NOT_YET_PASS
+FELS1_REAL_HTTP_API = NOT_YET_PASS
+FELS1_REAL_EXPORT_API = NOT_YET_PASS
+FLM_FELS_REAL_DB_DISCOVERY = NOT_YET_PASS
 
 FELS2 = NOT_AUTHORIZED
 FELS3 = NOT_AUTHORIZED
@@ -63,6 +84,9 @@ FAMILY_M2_PRIORITY = HIGHER_THAN_FELS
 
 REAL_BANGYANG_SOURCE = NO
 FELS_REFERENCE_IMPLEMENTATION = YES
+FLM_SHADOW_IMPORT = NOT_AUTHORIZED
+FLM_CANONICAL_IMPORT = NOT_AUTHORIZED
+FAMILY_CANONICAL_WRITES = 0
 ```
 
 Authorization policy remains:
@@ -126,7 +150,7 @@ Family owns its own system of record database and canonical schemas. Legacy tabl
 ## 7. Synchronization With Family M0-M6
 
 | Family Track | FELS Track | FLM Track |
-|---|---|---|
+| --- | --- | --- |
 | M2 Wave2 | FELS-0 / FELS-1 | Control Plane / Discovery smoke |
 | M2 Wave3/4 | FELS-2 when separately authorized | FELS Discovery |
 | M3 Early | FELS-3 / FELS-4 when separately authorized | Semantic Mapping + Simulation |
@@ -143,7 +167,16 @@ FELS supports business inheritance. It must not become the main Family product l
 - FELS admin shell exists under `legacy-system/apps/web`.
 - FELS migrations exist under `legacy-system/db/migrations`.
 - FELS independent DB tool exists under `legacy-system/tools/legacy-db.mjs`.
-- 55/55 migration matrix coverage exists under `legacy-system/architecture/MIGRATION_MATRIX_COVERAGE.csv`.
+- 55/55 migration matrix classification exists under `legacy-system/architecture/MIGRATION_MATRIX_COVERAGE.csv`.
 - FELS-1 gate report exists under `reports/legacy-system/FELS1_CORE_EDUCATION_BUSINESS_GATE.md`.
 
 Live PostgreSQL migration was not executed because no independent `LEGACY_DATABASE_URL` is available. This is a truthful blocker for live DB proof only, not for FELS-1 code validation.
+
+Current metric split:
+
+```text
+MIGRATION_MATRIX_CLASSIFIED = 55/55
+FELS1_RUNTIME_IMPLEMENTED = 10/55
+```
+
+The 55/55 metric means all M001-M055 rows have been identified, classified, and assigned. It does not mean all 55 rows have FELS-1 runtime implementation.

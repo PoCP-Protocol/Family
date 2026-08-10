@@ -77,6 +77,7 @@ describe('FELS-0 executable architecture contract', () => {
       realBangyangSource: false,
       domains: 12,
       dirtyScenarios: 20,
+      migrationMatrixClassified: 55,
       migrationMatrixCoverage: 55,
       readyForFels1: true,
       startFels1: false,

@@ -1,5 +1,5 @@
 /**
- * @typedef {'waf_home_viewed' | 'waf_topic_opened' | 'waf_principal_entry_clicked' | 'waf_challenge_viewed' | 'waf_challenge_joined' | 'waf_action_prompt_viewed' | 'waf_action_accepted' | 'waf_checkin_started' | 'waf_checkin_submitted' | 'waf_story_viewed' | 'waf_story_publication_opt_in_clicked'} WafProductEventName
+ * @typedef {'waf_home_viewed' | 'waf_topic_opened' | 'waf_principal_entry_clicked' | 'waf_challenge_viewed' | 'waf_challenge_joined' | 'waf_action_prompt_viewed' | 'waf_action_accepted' | 'waf_checkin_started' | 'waf_checkin_submitted' | 'waf_story_viewed' | 'waf_story_publication_opt_in_clicked' | 'waf_family_weather_selected' | 'waf_guided_practice_started' | 'waf_guided_practice_stopped' | 'waf_guided_practice_completed' | 'waf_guided_practice_unavailable'} WafProductEventName
  */
 
 /** @typedef {{ name: WafProductEventName, at: string }} WafProductEvent */
@@ -13,6 +13,8 @@
  * @property {boolean} checkinStarted
  * @property {boolean} checkinSubmitted
  * @property {boolean} storyViewed
+ * @property {'CALM' | 'TENSE' | 'PAUSE'} familyWeather
+ * @property {boolean} guidePlaying
  * @property {string} notice
  * @property {WafProductEvent[]} productEvents
  */
@@ -20,6 +22,8 @@
 /**
  * @typedef {object} WafAppOptions
  * @property {() => string} [now]
+ * @property {(text: string, onComplete: () => void) => boolean} [speak]
+ * @property {() => void} [cancelSpeech]
  */
 
 const topics = [
@@ -34,6 +38,36 @@ const selectedStories = [
   { label: '没完成，也值得被记录', note: '匿名家庭 B · 第 3 天没有完成行动，但一家人完成了复盘。' },
 ];
 
+const familyWeatherOptions = [
+  {
+    id: 'CALM',
+    symbol: '晴',
+    label: '现在比较平静',
+    duration: '约 5 分钟',
+    title: '完成一个完整倾听回合',
+    prompt: '一人说完一件小事，另一人先复述，再一起商量下一步。',
+    script: '先把手机放到一边。请一位家人说一件今天在意的小事。另一位先不解释，也不纠正。等对方说完，用一句话回应：我听见你在意的是。最后问一句：我理解得对吗？',
+  },
+  {
+    id: 'TENSE',
+    symbol: '云',
+    label: '有一点紧绷',
+    duration: '约 2 分钟',
+    title: '只做一句复述就够了',
+    prompt: '先放慢语速，不讨论对错，只确认彼此刚才听见了什么。',
+    script: '如果现在有一点紧绷，先一起慢慢呼一口气。今天不急着解决问题。请一位家人说一句感受，另一位只复述这一句。你可以说：我听见你现在有一点。停在这里，也算完成。',
+  },
+  {
+    id: 'PAUSE',
+    symbol: '歇',
+    label: '暂时不想说',
+    duration: '约 1 分钟',
+    title: '尊重暂停，也保持连接',
+    prompt: '不用立刻表达。一起约定一个更舒服的时间，再回来聊。',
+    script: '现在不想说，也是一个可以被尊重的答案。请告诉彼此：我不是拒绝你，我只是需要一点时间。然后一起约定，什么时候再回来聊。到这里就可以结束今天的练习。',
+  },
+];
+
 /** @returns {WafCommunityState} */
 export function createWafInitialState() {
   return {
@@ -44,6 +78,8 @@ export function createWafInitialState() {
     checkinStarted: false,
     checkinSubmitted: false,
     storyViewed: false,
+    familyWeather: 'CALM',
+    guidePlaying: false,
     notice: '',
     productEvents: [],
   };
@@ -57,6 +93,22 @@ export function createWafInitialState() {
 export function createWafCommunityApp(root, options = {}) {
   const state = createWafInitialState();
   const now = options.now ?? (() => new Date().toISOString());
+  const speak = options.speak ?? ((text, onComplete) => {
+    if (typeof window === 'undefined' || typeof window.SpeechSynthesisUtterance !== 'function' || !window.speechSynthesis) {
+      return false;
+    }
+
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.88;
+    utterance.pitch = 0.96;
+    utterance.onend = onComplete;
+    utterance.onerror = onComplete;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    return true;
+  });
+  const cancelSpeech = options.cancelSpeech ?? (() => window.speechSynthesis?.cancel());
 
   /** @param {WafProductEventName} name */
   const emit = (name) => {
@@ -67,6 +119,7 @@ export function createWafCommunityApp(root, options = {}) {
     const topic = topics.find((item) => item.id === state.selectedTopic) ?? topics[0];
     const completedSteps = [state.challengeJoined, state.actionAccepted, state.checkinSubmitted].filter(Boolean).length;
     const isInitialRender = state.productEvents.length === 1 && state.productEvents[0]?.name === 'waf_home_viewed';
+    const familyWeather = familyWeatherOptions.find((item) => item.id === state.familyWeather) ?? familyWeatherOptions[0];
 
     root.innerHTML = `
       <section class="waf-shell ${isInitialRender ? 'waf-initial-entry' : ''} ${state.checkinSubmitted ? 'waf-complete' : ''}" aria-labelledby="waf-home-title">
@@ -137,6 +190,62 @@ export function createWafCommunityApp(root, options = {}) {
             </div>
           </section>
 
+          <section class="waf-panel waf-studio-panel" aria-labelledby="waf-studio-title">
+            <div class="waf-studio-heading">
+              <div>
+                <p class="eyebrow">共同练习台 · 多模态引导</p>
+                <h2 id="waf-studio-title">先感受现在，再决定怎么聊</h2>
+              </div>
+              <p>不分析谁对谁错，也不要求立刻表达。先选择此刻最接近家里的状态。</p>
+            </div>
+
+            <div class="waf-weather-group" role="radiogroup" aria-label="今天家里的关系天气">
+              ${familyWeatherOptions.map((item) => `
+                <button type="button" role="radio" aria-checked="${item.id === state.familyWeather}" class="waf-weather-button ${item.id === state.familyWeather ? 'active' : ''}" data-waf-weather="${item.id}">
+                  <span aria-hidden="true">${item.symbol}</span>
+                  <span><strong>${item.label}</strong><small>${item.duration}</small></span>
+                </button>
+              `).join('')}
+            </div>
+
+            <div class="waf-studio-grid">
+              <div class="waf-listening-scene" role="img" aria-label="家长和青少年平等坐在桌边进行双向倾听练习">
+                <div class="waf-dialogue-loop" aria-hidden="true">
+                  <span class="waf-dialogue-dot dot-one"></span>
+                  <span class="waf-dialogue-dot dot-two"></span>
+                  <span class="waf-dialogue-dot dot-three"></span>
+                  <span class="waf-dialogue-line"></span>
+                </div>
+                <div class="waf-turn-card">
+                  <small>${familyWeather.duration} · 此刻练习</small>
+                  <strong>${familyWeather.title}</strong>
+                  <p>${familyWeather.prompt}</p>
+                </div>
+              </div>
+
+              <div class="waf-guide-card ${state.guidePlaying ? 'is-playing' : ''}">
+                <div class="waf-guide-label"><span aria-hidden="true">声</span><p><small>可选语音引导</small><strong>先听 · 再复述 · 一起决定</strong></p></div>
+                <ol class="waf-listening-turns" aria-label="倾听练习三个回合">
+                  <li><span>1</span><div><strong>让对方说完</strong><small>不插话，也不急着给建议</small></div></li>
+                  <li><span>2</span><div><strong>复述你听见的</strong><small>用“我听见你在意……”开头</small></div></li>
+                  <li><span>3</span><div><strong>把选择权还回来</strong><small>问“你希望我怎么陪你？”</small></div></li>
+                </ol>
+                <div class="waf-audio-row">
+                  <div class="waf-waveform" aria-hidden="true">${Array.from({ length: 14 }, (_, index) => `<i style="--bar:${index}"></i>`).join('')}</div>
+                  <button type="button" class="waf-audio-button" data-waf-audio aria-pressed="${state.guidePlaying}">
+                    <span aria-hidden="true">${state.guidePlaying ? 'Ⅱ' : '▶'}</span>
+                    ${state.guidePlaying ? '暂停语音引导' : '播放语音引导'}
+                  </button>
+                </div>
+                <details class="waf-transcript">
+                  <summary>阅读完整引导词</summary>
+                  <p>${familyWeather.script}</p>
+                </details>
+                <p class="waf-audio-boundary">不会自动播放，不使用麦克风，也不分析任何人的声音或情绪。</p>
+              </div>
+            </div>
+          </section>
+
           <section class="waf-panel waf-topic-panel" aria-labelledby="waf-topic-title">
             <p class="eyebrow">大家正在面对</p>
             <h2 id="waf-topic-title">从你家最近的小困扰开始</h2>
@@ -199,6 +308,52 @@ export function createWafCommunityApp(root, options = {}) {
         emit('waf_topic_opened');
         render();
       });
+    });
+
+    root.querySelectorAll('button[data-waf-weather]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const value = button.getAttribute('data-waf-weather');
+        if (!familyWeatherOptions.some((item) => item.id === value)) return;
+        if (state.guidePlaying) cancelSpeech();
+        state.familyWeather = /** @type {'CALM' | 'TENSE' | 'PAUSE'} */ (value);
+        state.guidePlaying = false;
+        state.notice = value === 'PAUSE'
+          ? '已选择“暂时不想说”。暂停不是失败，约好稍后再聊就够了。'
+          : '练习方式已按此刻的关系天气调整。';
+        emit('waf_family_weather_selected');
+        render();
+      });
+    });
+
+    root.querySelector('button[data-waf-audio]')?.addEventListener('click', () => {
+      if (state.guidePlaying) {
+        cancelSpeech();
+        state.guidePlaying = false;
+        state.notice = '语音引导已暂停，你可以继续阅读引导词。';
+        emit('waf_guided_practice_stopped');
+        render();
+        return;
+      }
+
+      state.guidePlaying = true;
+      state.notice = '语音引导已开始。请把屏幕放到一边，把注意力留给彼此。';
+      emit('waf_guided_practice_started');
+      render();
+
+      const playbackStarted = speak(familyWeather.script, () => {
+        if (!state.guidePlaying) return;
+        state.guidePlaying = false;
+        state.notice = '语音引导结束了。接下来请放下屏幕，把这一分钟留给彼此。';
+        emit('waf_guided_practice_completed');
+        render();
+      });
+
+      if (!playbackStarted) {
+        state.guidePlaying = false;
+        state.notice = '当前浏览器暂不支持语音播放，你仍可以展开并阅读完整引导词。';
+        emit('waf_guided_practice_unavailable');
+        render();
+      }
     });
 
     root.querySelectorAll('button[data-waf-principal]').forEach((button) => {

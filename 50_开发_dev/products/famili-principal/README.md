@@ -6,11 +6,13 @@ FPAI is an independent product subproject for `法咪莉校长`.
 FPAI_PROGRAM = ACTIVE
 FP0 = PASS_INTERNAL
 FP1 = AUTHORIZED_TEXT_INTELLIGENCE_MVP
+DH0 = AUTHORIZED_DIGITAL_HUMAN_IP_FOUNDATION
 FAMILY_M2_DEPENDENCY = NONE
 METHOD_INHERITANCE = YES
 IDENTITY_CLONING = NO
 TRAINING_STARTED = NO
 START_FP1 = YES_TEXT_ONLY
+START_DH0 = YES_IP_FOUNDATION_ONLY
 ```
 
 ## Product Boundary
@@ -31,6 +33,8 @@ FP0 Soul & Corpus Foundation is internally passed. Public Bobo/source attributio
 
 The long-term product is multimodal, but FP1 deliberately proves the text intelligence core first. Voice, avatar, lip sync, and digital-human production remain future presentation layers and are not activated by FP1.
 
+DH0 starts the real digital-human IP track in parallel with FP1. DH0 may define the Family-owned IP Bible, visual direction, non-cloned voice direction, teaching presence, multimodal interaction storyboards, and prototype experience requirements. DH0 does not authorize voice cloning, likeness cloning, lip sync production, public digital-human launch, model training, or Family M2 runtime integration.
+
 Authorized work:
 
 - Real model calls through the shared Model Gateway boundary.
@@ -49,6 +53,24 @@ Not authorized in FP1:
 - Digital-human production.
 - 21-day companion runtime.
 - M2 runtime integration.
+
+Authorized in DH0:
+
+- Digital-human IP Bible.
+- Character and visual direction brief.
+- Non-cloned voice direction and speaking style brief.
+- Teaching presence and classroom interaction storyboard.
+- Multimodal product experience map.
+- Prototype acceptance criteria for future voice/avatar implementation.
+
+Not authorized in DH0:
+
+- Real-person likeness cloning.
+- Voice cloning.
+- Lip sync or production avatar runtime.
+- Public launch of a digital-human experience.
+- SFT, LoRA, or model training.
+- Family M2 runtime integration.
 
 ## Track Relationship
 

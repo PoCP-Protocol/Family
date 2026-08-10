@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -29,6 +30,41 @@ const p0RequiredInventoryFiles = [
   'LEGACY_CONSENT_INVENTORY.csv',
   'BUSINESS_SEMANTIC_CONFIRMATION_REGISTER.csv',
   'LEGACY_ID_RELATIONSHIPS.csv',
+];
+const fels1RuntimeTables = [
+  'legacy_customers',
+  'legacy_contacts',
+  'legacy_students',
+  'legacy_student_guardians',
+  'legacy_assessment_templates',
+  'legacy_assessment_sessions',
+  'legacy_assessment_scores',
+  'legacy_assessment_reports',
+  'legacy_courses',
+  'legacy_products',
+  'legacy_orders',
+  'legacy_order_items',
+  'legacy_payments',
+  'legacy_enrollments',
+  'legacy_consent_records',
+  'legacy_source_snapshots',
+  'legacy_audit_logs',
+];
+const retiredFelsRuntimeTables = [
+  'customer',
+  'contact',
+  'student',
+  'student_guardian',
+  'assessment_session',
+  'assessment_score',
+  'assessment_report',
+  'course',
+  'product',
+  'order',
+  'payment',
+  'enrollment',
+  'legacy_consent',
+  'source_snapshot',
 ];
 
 function rel(path) {
@@ -184,6 +220,15 @@ function printJson(value) {
   console.log(JSON.stringify(value, null, 2));
 }
 
+function legacyDatabaseUrl() {
+  const url = process.env.LEGACY_DATABASE_URL;
+  if (!url) return { status: 'PENDING_NO_LEGACY_DATABASE_URL' };
+  if (url === process.env.DATABASE_URL || url === process.env.TEST_DATABASE_URL) {
+    return { status: 'FAIL_REFERENCE_SOURCE_ISOLATION', reason: 'LEGACY_DATABASE_URL must not equal DATABASE_URL or TEST_DATABASE_URL.' };
+  }
+  return { status: 'OK', url };
+}
+
 function discover() {
   const required = [
     'FLM_METHOD.md',
@@ -218,51 +263,116 @@ function discover() {
   });
 }
 
-function discoverDb() {
+async function discoverDb() {
   assertReadOnlyInputs();
-  const felsMigration = existsSync(join(FELS_ROOT, 'db', 'migrations', '0002_fels1_core_business.sql'));
-  if (felsMigration) {
+  const urlResult = legacyDatabaseUrl();
+  const base = {
+    command: 'discover:db',
+    mode: 'FLM_REFERENCE_SOURCE_READ_ONLY',
+    source_kind: 'REFERENCE_IMPLEMENTATION',
+    source_system: 'FELS',
+    real_bangyang_source: false,
+    legacy_database: 'family_legacy',
+    required_url: 'LEGACY_DATABASE_URL',
+    allowedQueries: ['information_schema', 'pg_catalog', 'SELECT COUNT', 'COUNT DISTINCT', 'MIN/MAX', 'NULL statistics'],
+    forbiddenQueries: ['INSERT', 'UPDATE', 'DELETE', 'ALTER', 'TRUNCATE', 'DROP'],
+  };
+  if (urlResult.status !== 'OK') {
     printJson({
-      command: 'discover:db',
-      mode: 'FLM_REFERENCE_SOURCE_READ_ONLY',
-      source_kind: 'REFERENCE_IMPLEMENTATION',
-      source_system: 'FELS',
-      real_bangyang_source: false,
-      legacy_database: 'family_legacy',
-      required_url: 'LEGACY_DATABASE_URL',
-      discovered_schema: 'fels',
-      schema_inventory: [
-        'legacy_customers',
-        'legacy_contacts',
-        'legacy_students',
-        'legacy_student_guardians',
-        'legacy_assessment_sessions',
-        'legacy_assessment_scores',
-        'legacy_assessment_reports',
-        'legacy_courses',
-        'legacy_products',
-        'legacy_orders',
-        'legacy_order_items',
-        'legacy_payments',
-        'legacy_enrollments',
-        'legacy_consent_records',
-        'legacy_source_snapshots',
-      ],
-      allowedQueries: ['information_schema', 'pg_catalog', 'SELECT COUNT', 'COUNT DISTINCT', 'MIN/MAX', 'NULL statistics'],
-      forbiddenQueries: ['INSERT', 'UPDATE', 'DELETE', 'ALTER', 'TRUNCATE', 'DROP'],
-      status: 'PASS',
-      FLM_CAN_DISCOVER_FELS: 'PASS',
+      ...base,
+      status: urlResult.status,
+      reason: urlResult.reason ?? 'LEGACY_DATABASE_URL is required for live FELS PostgreSQL discovery. Static migration files are not live database evidence.',
+      FLM_STATIC_REFERENCE_DISCOVERY: existsSync(join(FELS_ROOT, 'db', 'migrations', '0002_fels1_core_business.sql')) ? 'PASS' : 'FAIL',
+      FLM_REAL_DB_REFERENCE_DISCOVERY: 'NOT_YET_PASS',
+      FLM_CAN_DISCOVER_FELS: 'NOT_YET_PASS',
     });
     return;
   }
-  printJson({
-    command: 'discover:db',
-    mode: 'LM0_READ_ONLY_DESIGN_ONLY',
-    allowedQueries: ['information_schema', 'pg_catalog', 'SELECT COUNT', 'COUNT DISTINCT', 'MIN/MAX', 'NULL statistics'],
-    forbiddenQueries: ['INSERT', 'UPDATE', 'DELETE', 'ALTER', 'TRUNCATE', 'DROP'],
-    status: 'NO_CONNECTION_ATTEMPTED',
-    reason: 'LM0 tool skeleton only; real credentials and source-system authorization are not present.',
-  });
+
+  const client = new pg.Client({ connectionString: urlResult.url });
+  try {
+    await client.connect();
+    await client.query('BEGIN READ ONLY');
+    const schema = await client.query("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'fels'");
+    if (schema.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      printJson({
+        ...base,
+        status: 'FAIL_REFERENCE_SCHEMA_MISMATCH',
+        reason: 'Schema fels was not found in LEGACY_DATABASE_URL.',
+        FLM_REAL_DB_REFERENCE_DISCOVERY: 'FAIL',
+        FLM_CAN_DISCOVER_FELS: 'FAIL',
+      });
+      return;
+    }
+
+    const inventory = await client.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'fels' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+    const tables = inventory.rows.map((row) => row.table_name);
+    const missingTables = fels1RuntimeTables.filter((table) => !tables.includes(table));
+    const retiredTablesPresent = retiredFelsRuntimeTables.filter((table) => tables.includes(table));
+    if (missingTables.length || retiredTablesPresent.length) {
+      await client.query('ROLLBACK');
+      printJson({
+        ...base,
+        discovered_schema: 'fels',
+        schema_inventory: tables,
+        expected_tables: fels1RuntimeTables,
+        missing_tables: missingTables,
+        retired_tables_present: retiredTablesPresent,
+        status: 'FAIL_REFERENCE_TABLE_INVENTORY',
+        FLM_REAL_DB_REFERENCE_DISCOVERY: 'FAIL',
+        FLM_CAN_DISCOVER_FELS: 'FAIL',
+      });
+      return;
+    }
+
+    const tableStats = [];
+    for (const table of fels1RuntimeTables) {
+      const count = await client.query(`SELECT COUNT(*)::int AS rows FROM fels.${table}`);
+      tableStats.push({ table, rows: count.rows[0].rows });
+    }
+    const migrations = await client.query(`
+      SELECT filename
+      FROM fels_schema_migrations
+      ORDER BY filename
+    `);
+    await client.query('ROLLBACK');
+    printJson({
+      ...base,
+      discovered_schema: 'fels',
+      schema_inventory: tables,
+      expected_tables: fels1RuntimeTables,
+      missing_tables: [],
+      retired_tables_present: [],
+      table_stats: tableStats,
+      migration_registry: migrations.rows.map((row) => row.filename),
+      readonly_enforcement: 'BEGIN READ ONLY',
+      status: 'PASS_REFERENCE_SOURCE_READ_ONLY',
+      FLM_STATIC_REFERENCE_DISCOVERY: 'PASS',
+      FLM_REAL_DB_REFERENCE_DISCOVERY: 'PASS',
+      FLM_CAN_DISCOVER_FELS: 'PASS',
+    });
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {}
+    printJson({
+      ...base,
+      status: 'FAIL_REFERENCE_SOURCE_CONNECTION',
+      reason: error.message,
+      FLM_REAL_DB_REFERENCE_DISCOVERY: 'FAIL',
+      FLM_CAN_DISCOVER_FELS: 'FAIL',
+    });
+  } finally {
+    try {
+      await client.end();
+    } catch {}
+  }
 }
 
 function discoverFile() {
@@ -375,7 +485,7 @@ function help() {
 
 switch (command) {
   case 'discover': discover(); break;
-  case 'discover:db': discoverDb(); break;
+  case 'discover:db': await discoverDb(); break;
   case 'discover:file': discoverFile(); break;
   case 'discover:api': discoverApi(); break;
   case 'profile': profile(); break;

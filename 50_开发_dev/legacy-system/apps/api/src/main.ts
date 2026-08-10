@@ -15,7 +15,9 @@ export {
   getFels1Gate,
   runFelsVerticalSliceE2E,
   runLegacyAmbiguityE2E,
+  summarizeMigrationMatrixForFels1,
 } from './fels1-core';
+export { PgFelsRepository, getRequiredLegacyDatabaseUrl, seedDatasetToPostgres } from './pg-fels-repository';
 
 export const felsApiBoundary = {
   runtime: 'FELS_1_CORE_EDUCATION_BUSINESS',

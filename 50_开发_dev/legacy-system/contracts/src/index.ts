@@ -231,6 +231,7 @@ export function getFels0Gate() {
     domains: FELS_DOMAINS.length,
     entityTables: FELS_ENTITY_TABLES.length,
     dirtyScenarios: FELS_DIRTY_SCENARIOS.length,
+    migrationMatrixClassified: FELS_MIGRATION_MATRIX_COVERAGE.length,
     migrationMatrixCoverage: FELS_MIGRATION_MATRIX_COVERAGE.length,
     readyForFels1: true,
     startFels1: false,

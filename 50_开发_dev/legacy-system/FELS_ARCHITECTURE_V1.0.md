@@ -13,6 +13,16 @@ REAL_BANGYANG_PRODUCTION_SYSTEM = FALSE
 
 FELS models the old-world education operation system that FLM migrates from. It intentionally preserves legacy naming, friction, and semantic ambiguity.
 
+Taxonomy boundary:
+
+```text
+Bangyang Legacy = real historical old system = unavailable
+FELS = runnable reference legacy implementation = old-world test source for FLM
+FES = future AI Native education operations system = not legacy and not Bangyang evidence
+FLM = semantic migration method
+Family = new-world canonical system of record
+```
+
 ## 2. Runtime Shape
 
 ```text
@@ -32,6 +42,7 @@ Implementation constraints:
 - API: normal legacy business API plus read-only export/snapshot API.
 - Auth: early dev role auth only.
 - Excluded: microservices, Kafka, GraphDB, Agent Runtime, World Model, real payment integration, real WeChat/live-streaming integration.
+- Current FELS-1 status: domain runtime validated; real PostgreSQL, real HTTP, and real export HTTP are not yet validated.
 
 ## 3. Database Boundary
 
@@ -52,7 +63,7 @@ Rules:
 ## 4. Twelve Domains
 
 | ID | Domain | Main Capability | Core Objects |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | D01 | Identity & Customer | 客户/联系人 | Customer, Contact |
 | D02 | CRM & Growth | 线索/商机/跟进 | Lead, Opportunity, FollowUp |
 | D03 | Student | 学员/监护关联 | Student, StudentGuardian |
@@ -67,6 +78,15 @@ Rules:
 | D12 | Governance & History | 协议/授权/报告/历史 | Consent, GrowthReport, Case |
 
 These domains must cover M001-M055 with no missing rows.
+
+Coverage metric rule:
+
+```text
+MIGRATION_MATRIX_CLASSIFIED = 55/55
+FELS1_RUNTIME_IMPLEMENTED = 10/55
+```
+
+55/55 means classification coverage, not FELS-1 implementation completeness.
 
 ## 5. Semantic Anti-Corruption Rules
 

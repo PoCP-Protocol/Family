@@ -56,49 +56,105 @@ export function App() {
   }
 
   return (
-    <div className="waf-lab-shell">
-      <aside className="waf-rail" aria-label="WF1 screens">
-        <strong>We are 伐木累</strong>
-        {[
-          ['home', 'W01 发现'],
-          ['topic', 'W02 主题'],
-          ['challenge', 'W03 挑战'],
-          ['today', 'W04 今日'],
-          ['participation', 'W05 我的参与'],
-        ].map(([id, label]) => (
-          <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id as Screen)}>
-            {label}
-          </button>
-        ))}
-        <p>Product Events: {events.length}</p>
-      </aside>
+    <main className="family-shell waf-integrated-shell">
+      <header className="app-header" aria-label="Family header">
+        <div className="brand" aria-label="Family 家庭成长陪伴">
+          <div className="brand-mark">F</div>
+          <div className="brand-name">
+            Family
+            <small>家庭成长陪伴</small>
+          </div>
+        </div>
+        <div className="header-meta">
+          <div className="privacy-chip"><span>●</span> 共享家庭账户</div>
+          <div className="avatar" aria-label="监护人账户">家</div>
+        </div>
+      </header>
 
-      <main>
+      <section className="topbar waf-topbar" aria-labelledby="home-title">
+        <div className="hero-copy">
+          <p className="eyebrow">We are 伐木累</p>
+          <h1 id="home-title">We are 伐木累</h1>
+          <p className="hero-lead">选择一个家庭议题，加入 7 天行动，晚上回来记录今天是否完成。</p>
+          <div className="hero-meta" aria-label="WAF 边界">
+            <span className="slice-badge">家庭行动</span>
+            <span className="gentle-badge">不写入成长档案</span>
+          </div>
+        </div>
+        <div className="waf-hero-card" aria-label="记录范围">
+          <strong>当前记录范围</strong>
+          <span>只记录本页操作；保存到成长档案前需要再次确认。</span>
+        </div>
+      </section>
+
+      <section className="workspace" aria-label="WAF community workspace">
+        <aside className="family-panel waf-family-panel" aria-label="家庭上下文">
+          <p className="eyebrow">WAF 社区行动</p>
+          <h2>行动社区</h2>
+          <div className="stage-card">
+            <span className="stage-icon">行</span>
+            <div>
+              <small>当前社区挑战</small>
+              <strong>7天先听后回应</strong>
+            </div>
+          </div>
+          <nav className="journey-nav" aria-label="WF1 screens">
+            <ol>
+              {[
+                ['home', 'W01 发现', '主题与故事'],
+                ['topic', 'W02 主题', '看见共同问题'],
+                ['challenge', 'W03 挑战', '加入行动挑战'],
+                ['today', 'W04 今日', '接受今晚行动'],
+                ['participation', 'W05 我的参与', '查看社区进度'],
+              ].map(([id, label, description], index) => (
+                <li key={id} className={screen === id ? 'active' : ''}>
+                  <span>{index + 1}</span>
+                  <button type="button" aria-label={label} onClick={() => setScreen(id as Screen)}>
+                    <strong>{label}</strong>
+                    <small>{description}</small>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </nav>
+          <p className="privacy-note">◇ 当前只记录本页操作：{events.length}。不会自动写入成长档案。</p>
+        </aside>
+
+        <div className="flow-panel">
         {screen === 'home' && (
-          <section aria-labelledby="home-title" className="hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow">家庭成长发现与行动社区</p>
-              <h1 id="home-title">We are 伐木累</h1>
-              <p>让一家人一起成长，从一个真实问题和今晚能做的一件小事开始。</p>
+          <section aria-labelledby="community-entry-title" className="onboarding-panel waf-community-entry">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow"><span className="step-number">01</span> WAF 社区发现</p>
+                <h2 id="community-entry-title">选择今天的议题</h2>
+                <p className="section-description">先选择议题，再决定是否加入今天的家庭行动。</p>
+              </div>
+              <span className="status-pill" data-status="started">可体验</span>
+            </div>
+            <div className="waf-topic-block">
+              <h3>今天大家都在聊</h3>
               <div className="topic-row" aria-label="今天大家都在聊">
                 {topics.map((topic) => (
                   <button key={topic.id} onClick={() => openTopic(topic.slug)}>{topic.title}</button>
                 ))}
               </div>
             </div>
-            <section className="principal-card" aria-label="Famili Principal entry">
+            <section className="summary-item principal-card" aria-label="Famili Principal entry">
               <h2>有件事不知道怎么开口？</h2>
+              <p>把问题带给法咪莉校长，只传最小上下文。</p>
               <button onClick={() => track('waf_principal_entry_clicked', 'WAF_HOME')}>问法咪莉校长</button>
               <small>只传 topic_id / challenge_id / source_surface。</small>
             </section>
+            <div className="summary-list waf-home-grid">
             <ChallengeCard joined={participation.joined} onJoin={joinChallenge} onOpen={() => { setScreen('challenge'); track('waf_challenge_viewed', 'WAF_CHALLENGE'); }} />
             <ParticipationCard participation={participation} onContinue={() => setScreen('today')} />
+            </div>
             <StoryList onView={() => track('waf_story_viewed', 'WAF_HOME')} />
           </section>
         )}
 
         {screen === 'topic' && (
-          <section aria-labelledby="topic-title" className="content-panel">
+          <section aria-labelledby="topic-title" className="onboarding-panel content-panel">
             <p className="eyebrow">很多家庭都会卡在这里</p>
             <h1 id="topic-title">{selectedTopic.title}</h1>
             <p>{selectedTopic.familyFeels}</p>
@@ -114,7 +170,7 @@ export function App() {
         )}
 
         {screen === 'challenge' && (
-          <section aria-labelledby="challenge-title" className="content-panel">
+          <section aria-labelledby="challenge-title" className="onboarding-panel content-panel">
             <p className="eyebrow">CommunityChallenge != GrowthJourney</p>
             <h1 id="challenge-title">{featuredChallenge.title}</h1>
             <p>{featuredChallenge.description}</p>
@@ -128,7 +184,7 @@ export function App() {
         )}
 
         {screen === 'today' && (
-          <section aria-labelledby="today-title" className="content-panel today-panel">
+          <section aria-labelledby="today-title" className="onboarding-panel content-panel today-panel">
             <p className="eyebrow">DAY {today.dayNumber}</p>
             <h1 id="today-title">今天的一件事</h1>
             <p>{today.action}</p>
@@ -145,7 +201,7 @@ export function App() {
         )}
 
         {screen === 'participation' && (
-          <section aria-labelledby="participation-title" className="content-panel">
+          <section aria-labelledby="participation-title" className="onboarding-panel content-panel">
             <p className="eyebrow">我的挑战</p>
             <h1 id="participation-title">{featuredChallenge.title}</h1>
             <p>Day {participation.currentDay} / 7</p>
@@ -159,8 +215,9 @@ export function App() {
             <p>暂不推荐</p>
           </section>
         )}
-      </main>
-    </div>
+        </div>
+      </section>
+    </main>
   );
 }
 

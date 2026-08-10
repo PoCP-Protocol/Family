@@ -1,6 +1,6 @@
 # FLM - Family Legacy Migration Method
 
-status: ACTIVE_METHOD_REAL_SOURCE_DEFERRED_FES_ENABLED
+status: ACTIVE_METHOD_REAL_SOURCE_DEFERRED_FELS_REFERENCE_ENABLED
 version: 1.0
 date: 2026-08-10
 
@@ -10,7 +10,17 @@ FLM is the Family legacy semantic migration method. It is the required method fo
 
 FLM is not database copy, table cloning, or post-launch cleanup. FLM is a controlled path from old business reality to the Family Growth System of Record.
 
-Current ruling: no real Bangyang Education source code, database, API, schema export, or runnable environment is available. Real Bangyang discovery is therefore suspended, not failed and not blocking FES. FES - Family Education System - is the real runnable education business operations system to be built now, and later consumed by FLM as an actual Source System for adapter and migration-readiness testing.
+Current ruling: no real Bangyang Education source code, database, API, schema export, or runnable environment is available. Real Bangyang discovery is therefore suspended, not failed. FELS - Family Education Legacy System - is the approved runnable reference legacy implementation for FLM anti-corruption and migration validation. FES - Family Education System - is the future AI Native education business operations system; it is not Legacy, not FELS, and not Bangyang substitute evidence.
+
+Taxonomy:
+
+```text
+Bangyang Legacy = real historical old system = currently UNAVAILABLE
+FELS = reference legacy implementation = REFERENCE_IMPLEMENTATION / RUNNABLE_LEGACY_SOURCE
+FES = future AI Native education operations system = not legacy evidence
+FLM = semantic translation method from old-world source to Family
+Family = New World / Canonical Growth System of Record
+```
 
 ## Method Flow
 
@@ -134,6 +144,6 @@ CANONICAL receives only gated Family, Person, Relationship, Evidence, Journey, A
 
 ## Current Authorization
 
-Current authorization is FES-M0 + FES-M1 contract freeze and source-unavailable FLM preparation: define the FES application boundary, domain contracts, AI Gateway contract, synthetic-data design, FLM compatibility fields, and read-only migration controls.
+Current authorization is source-unavailable FLM preparation plus FELS reference-source hardening. FLM may build read-only discovery controls for FELS as a reference implementation, but this does not authorize canonical import, shadow import, pilot, dual run, cutover, or real Bangyang migration.
 
 Forbidden now: fabricated Bangyang database/schema/API claims, LM1 mapping confirmation against a nonexistent real source, Shadow Import, Pilot, Dual Run, Cutover, production loader, and production Family writes.
