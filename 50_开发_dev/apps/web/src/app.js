@@ -22,6 +22,17 @@ import {
   submitConfirmGrowthPriority,
   submitStartIntervention,
 } from './wave2.js';
+import {
+  createFrozenNextStepFixture,
+  createFrozenReviewFixture,
+  createFrozenTimelineFixture,
+  createInitialWave3State,
+  fetchGrowthTimeline,
+  renderWave3Section,
+  submitCompleteGrowthReview,
+  submitRecordNextStepDecision,
+  submitRecordOutcomeObservation,
+} from './wave3.js';
 
 /**
  * @typedef {object} AppConfig
@@ -57,6 +68,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
     wave2: createInitialWave2State(config.wave2ApiMode ?? 'pre-real-api'),
+    wave3: createInitialWave3State(),
   };
 
   const render = () => {
@@ -168,6 +180,7 @@ export function createGrowthApp(root, config = defaultConfig) {
             ${state.summary ? renderPerspectiveSummary(state.summary) : ''}
             ${state.summary ? renderGrowthInsightPanel(state.insight) : ''}
             ${state.insight && state.insight.confirmed_profiles.length > 0 ? renderWave2Section(state.wave2) : ''}
+            ${state.wave2.startedIntervention ? renderWave3Section(state.wave3, state.wave2.startedIntervention.episode.episode_id) : ''}
           </main>
         </section>
       </section>
@@ -225,6 +238,26 @@ export function createGrowthApp(root, config = defaultConfig) {
       const completionStatus = /** @type {Exclude<import('@family/contracts').GrowthActionStatus, 'PENDING'>} */ (String(formData.get('completionStatus')));
       const reflection = String(formData.get('reflection') ?? '').trim();
       await completeWave2Action(completionStatus, reflection);
+    });
+
+    root.querySelector('button[data-wave3-action="record-parent-observation"]')?.addEventListener('click', async () => {
+      await recordWave3Observation('PARENT_OBSERVATION');
+    });
+
+    root.querySelector('button[data-wave3-action="record-child-observation"]')?.addEventListener('click', async () => {
+      await recordWave3Observation('CHILD_OBSERVATION');
+    });
+
+    root.querySelector('button[data-wave3-action="complete-review"]')?.addEventListener('click', async () => {
+      await completeWave3Review();
+    });
+
+    root.querySelector('button[data-wave3-action="refresh-timeline"]')?.addEventListener('click', async () => {
+      await refreshWave3Timeline();
+    });
+
+    root.querySelector('button[data-wave3-action="record-next-step"]')?.addEventListener('click', async () => {
+      await recordWave3NextStep();
     });
   };
 
@@ -317,7 +350,11 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      await submitBuildGrowthProfileDrafts(config, state.onboarding.onboarding_id);
+      await submitBuildGrowthProfileDrafts(
+        config,
+        state.onboarding.onboarding_id,
+        createPerspectiveSourceFingerprint(state.summary),
+      );
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
       if (state.insight.confirmed_profiles.length > 0) {
         await hydrateWave2();
@@ -457,6 +494,7 @@ export function createGrowthApp(root, config = defaultConfig) {
       }
       state.status = 'started';
       state.message = state.message.startsWith('7 天练习已准备') ? state.message : '7 天练习已准备。每天只有具体行动状态，不写结果。';
+      state.wave3 = createInitialWave3State();
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '开始练习失败。';
@@ -502,6 +540,108 @@ export function createGrowthApp(root, config = defaultConfig) {
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '保存行动状态失败。';
+    }
+
+    render();
+  };
+
+  const getWave3EpisodeId = () => state.wave2.startedIntervention?.episode.episode_id;
+  const getWave3ActionId = () => state.wave2.todayAction?.action_id ?? state.wave2.startedIntervention?.actions[0]?.action_id ?? '';
+
+  /** @param {'PARENT_OBSERVATION' | 'CHILD_OBSERVATION'} perspectiveType */
+  const recordWave3Observation = async (perspectiveType) => {
+    const episodeId = getWave3EpisodeId();
+    if (!episodeId) {
+      return;
+    }
+    state.status = 'submitting';
+    state.message = '正在记录 OutcomeObservation。Observation 不等于 Fact 或 CausalEffect。';
+    render();
+
+    try {
+      if (state.wave2.apiMode === 'real-api') {
+        await submitRecordOutcomeObservation(config, episodeId, perspectiveType, getWave3ActionId());
+        state.wave3.timeline = await fetchGrowthTimeline(config, episodeId);
+      } else {
+        state.wave3.timeline = createFrozenTimelineFixture(config, episodeId);
+      }
+      state.status = 'started';
+      state.message = '结果观察已记录为观察材料，不写事实结论或因果结论。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '记录结果观察失败。';
+    }
+
+    render();
+  };
+
+  const completeWave3Review = async () => {
+    const episodeId = getWave3EpisodeId();
+    if (!episodeId) {
+      return;
+    }
+    state.status = 'submitting';
+    state.message = '正在完成 GrowthReview。复盘不会自动改写画像或生成诊断。';
+    render();
+
+    try {
+      state.wave3.review = state.wave2.apiMode === 'real-api'
+        ? await submitCompleteGrowthReview(config, episodeId)
+        : createFrozenReviewFixture(config, episodeId);
+      state.wave3.timeline = state.wave2.apiMode === 'real-api'
+        ? await fetchGrowthTimeline(config, episodeId)
+        : createFrozenTimelineFixture(config, episodeId);
+      state.status = 'started';
+      state.message = '7 天复盘已完成；它是 Review，不是 Profile mutation 或 Diagnosis。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '完成成长复盘失败。';
+    }
+
+    render();
+  };
+
+  const refreshWave3Timeline = async () => {
+    const episodeId = getWave3EpisodeId();
+    if (!episodeId) {
+      return;
+    }
+    state.status = 'submitting';
+    state.message = '正在读取 FamilyTimeline。Timeline 只呈现过程来源。';
+    render();
+
+    try {
+      state.wave3.timeline = state.wave2.apiMode === 'real-api'
+        ? await fetchGrowthTimeline(config, episodeId)
+        : createFrozenTimelineFixture(config, episodeId);
+      state.status = 'started';
+      state.message = '时间线已刷新。它不是总分、排名或效果承诺。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '刷新时间线失败。';
+    }
+
+    render();
+  };
+
+  const recordWave3NextStep = async () => {
+    const review = state.wave3.review?.review;
+    if (!review) {
+      return;
+    }
+    state.status = 'submitting';
+    state.message = '正在记录 NextStepDecision。Decision 不等于 NextAction。';
+    render();
+
+    try {
+      state.wave3.nextStep = state.wave2.apiMode === 'real-api'
+        ? await submitRecordNextStepDecision(config, review.review_id, 'CONTINUE')
+        : createFrozenNextStepFixture(config, review.review_id);
+      state.status = 'started';
+      state.message = '下一步决策已记录；没有自动创建下一轮行动。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '记录下一步决策失败。';
     }
 
     render();
@@ -616,15 +756,16 @@ export async function fetchPerspectiveSummary(config, onboardingId) {
 /**
  * @param {AppConfig} config
  * @param {string} onboardingId
+ * @param {string} [sourceFingerprint]
  * @returns {Promise<BuildGrowthProfileDraftsResponse>}
  */
-export async function submitBuildGrowthProfileDrafts(config, onboardingId) {
+export async function submitBuildGrowthProfileDrafts(config, onboardingId, sourceFingerprint = 'initial') {
   const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/profile-drafts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
-      'Idempotency-Key': createIdempotencyKey('m2-103-drafts', config.familyId, onboardingId),
+      'Idempotency-Key': createIdempotencyKey('m2-103-drafts', config.familyId, `${onboardingId}-${sourceFingerprint}`),
     },
     body: JSON.stringify({}),
   });
@@ -733,6 +874,22 @@ export function createPerspectiveRequest(config, onboardingId, perspectiveKind, 
  */
 function createIdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
+}
+
+/** @param {PerspectiveSummaryResponse | undefined} summary */
+function createPerspectiveSourceFingerprint(summary) {
+  const perspectiveIds = summary?.perspectives.map((perspective) => perspective.perspective_id).sort() ?? [];
+  return perspectiveIds.length > 0 ? `p${perspectiveIds.length}-${createStableHash(perspectiveIds.join('|'))}` : 'initial';
+}
+
+/** @param {string} value */
+function createStableHash(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 /**
