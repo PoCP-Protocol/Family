@@ -46,5 +46,19 @@ DH0 may define the IP Bible, visual direction, non-cloned voice direction, exper
 - [x] VOICE_DIRECTION: non-cloned voice bible and speaking modes exist.
 - [x] EXPERIENCE_MAP: multimodal relationship scenes exist.
 - [x] PROTOTYPE_ACCEPTANCE: future prototype evaluation matrix exists.
-- [x] ASSET_PROVENANCE: asset rights and provenance registry schema exists.
+- [x] ASSET_PROVENANCE: asset rights and provenance registry landed as a formal CSV SSOT.
 - [x] RUNTIME_NOT_STARTED: voice/avatar/lip-sync/digital-human production runtime remains disabled.
+
+## DH0 Closure (Owner decision 2026-08-11)
+
+```text
+DH0 = PASS_CLOSED
+DH0_BLOCKERS = 0
+OWNER_DECISIONS = 3/3
+VISUAL_DIRECTION_C = OWNER_SELECTED
+PUBLIC_BOBO_DISCLOSURE = NOT_PART_OF_FAMILI_PUBLIC_IDENTITY
+PROVENANCE_REGISTRY = FORMAL_CSV_SSOT
+STATIC_CONCEPT_DIRECTION = OWNER_SELECTED_C
+```
+
+DH0 is no longer waiting on the owner. Static concept validation continues under DH0.5 (review-only).

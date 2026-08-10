@@ -12,7 +12,7 @@ FELS1_DB_SCHEMA_CODE = PASS
 EXPORT_DOMAIN_RUNTIME = PASS
 CORE_REAL_HTTP_API = NOT_YET_PASS
 EXPORT_REAL_HTTP_API = NOT_YET_PASS
-FRESH_DB_MIGRATION = PENDING_NO_LEGACY_DATABASE_URL
+FRESH_DB_MIGRATION = PASS_REAL_POSTGRESQL
 CUSTOMER = PASS_DOMAIN_RUNTIME
 CONTACT = PASS_DOMAIN_RUNTIME
 STUDENT = PASS_DOMAIN_RUNTIME
@@ -27,20 +27,20 @@ SOURCE_SNAPSHOT = PASS_DOMAIN_RUNTIME
 LEGACY_EXPORT_API = PASS_DOMAIN_RUNTIME_ONLY
 CLEAN_SYNTHETIC_SEED = PASS_IN_MEMORY_ONLY
 DIRTY_CORE_SEED = PASS_IN_MEMORY_ONLY
-CLEAN_SEED_DB = NOT_YET_PASS
-DIRTY_SEED_DB = NOT_YET_PASS
-FELS1_REAL_DB_SEED = NOT_YET_PASS
+CLEAN_SEED_DB = PASS_DB_SEED
+DIRTY_SEED_DB = PASS_DB_SEED
+FELS1_REAL_DB_SEED = PASS_DB_SEED
 FELS_VERTICAL_SLICE_E2E = PASS_DOMAIN_RUNTIME
 AMBIGUITY_E2E = PASS_DOMAIN_RUNTIME
 FLM_REFERENCE_DISCOVERY_STATIC = PASS
-FLM_REFERENCE_DISCOVERY_DB = NOT_YET_PASS
+FLM_REFERENCE_DISCOVERY_DB = PASS_REAL_DB_READ
 FLM_STATIC_REFERENCE_DISCOVERY = PASS
-FLM_REAL_DB_REFERENCE_DISCOVERY = NOT_YET_PASS
+FLM_REAL_DB_REFERENCE_DISCOVERY = PASS_REFERENCE_SOURCE_READ_ONLY
 FAMILY_DB_WRITE_COUNT = 0
 MIGRATION_MATRIX_CLASSIFIED = 55/55
 FELS1_RUNTIME_IMPLEMENTED = 10/55
 NO_FAMILY_ONTOLOGY_POLLUTION = PASS
-BLOCKERS = REAL_POSTGRESQL_HTTP_AND_FLM_DB_DISCOVERY_NOT_YET_VALIDATED
+BLOCKERS = REAL_HTTP_AND_EXPORT_API_NOT_YET_VALIDATED
 
 ## Boundary
 
@@ -60,8 +60,24 @@ They do not yet prove the real system path:
 HTTP -> FELS API -> family_legacy PostgreSQL -> Export API -> FLM read-only discovery
 ```
 
-Therefore FELS-1 must remain `PASS_CODE_VALIDATED` until Gate B through Gate E pass with independent `LEGACY_DATABASE_URL` evidence.
+Therefore FELS-1 must remain `PASS_CODE_VALIDATED` until the remaining real HTTP and export API gates pass with independent `LEGACY_DATABASE_URL` evidence.
 
 ## Schema Truth
 
-Schema convergence is tracked by `legacy-system/architecture/FELS_SCHEMA_CONVERGENCE_DECISION.md`. FELS-1 runtime uses the `fels.legacy_*` physical model. FELS-0 12-domain coverage is logical coverage and `0001_fels0_schema.sql` no longer creates a second active runtime source model. Fresh PostgreSQL migration remains `NOT_YET_PASS` until independent `LEGACY_DATABASE_URL` validation exists.
+Schema convergence is tracked by `legacy-system/architecture/FELS_SCHEMA_CONVERGENCE_DECISION.md`. FELS-1 runtime uses the `fels.legacy_*` physical model. FELS-0 12-domain coverage is logical coverage and `0001_fels0_schema.sql` no longer creates a second active runtime source model. Fresh PostgreSQL migration now has local independent `LEGACY_DATABASE_URL` evidence against `family_legacy`.
+
+## Real System Closure Evidence
+
+Machine-readable H002/H003 evidence is recorded in `reports/legacy-system/FELS1_REAL_SYSTEM_CLOSURE_EVIDENCE.json`.
+
+Validated local gates:
+
+```text
+FRESH_DB_MIGRATION = PASS_REAL_POSTGRESQL
+FLM_REAL_DB_REFERENCE_DISCOVERY = PASS_REFERENCE_SOURCE_READ_ONLY
+CLEAN_SEED_DB = PASS_DB_SEED
+DIRTY_SEED_DB = PASS_DB_SEED
+FAMILY_DB_WRITE_COUNT = 0
+```
+
+FELS-1 is not yet `PASS_REAL_SYSTEM_VALIDATED` because the real HTTP and export HTTP gates remain `NOT_YET_PASS`.

@@ -8,6 +8,9 @@ describe('WAF-001A community challenge prototype', () => {
     createWafCommunityApp(root, { now: () => '2026-08-10T00:00:00.000Z' });
 
     expect(root.textContent).toContain('We are 伐木累');
+    expect(root.textContent).toContain('两个人都想靠近');
+    expect(root.textContent).toContain('却不知道怎么开口');
+    expect(root.textContent).toContain('愿意再听一次，就已经在靠近');
     expect(root.textContent).toContain('大家正在面对');
     expect(root.textContent).toContain('问法咪莉校长');
     expect(root.textContent).toContain('7 天先听后回应');
@@ -16,7 +19,9 @@ describe('WAF-001A community challenge prototype', () => {
     expect(root.textContent).toContain('故事发布需单独同意');
     expect(root.querySelector<HTMLAnchorElement>('a[href="./"]')?.textContent).toContain('Family');
     expect(root.querySelector('.waf-initial-entry')).not.toBeNull();
-    expect(root.querySelectorAll('.waf-motion-path span')).toHaveLength(3);
+    expect(root.querySelectorAll('.waf-perspective-caption')).toHaveLength(2);
+    expect(root.querySelectorAll('.waf-heartline span')).toHaveLength(1);
+    expect(root.querySelector<HTMLAnchorElement>('a[href="#waf-studio"]')?.textContent).toContain('从先听完一句开始');
     expect(root.textContent).toContain('共同练习台');
     expect(root.querySelector('[aria-label="今天家里的关系天气"]')).not.toBeNull();
     expect(root.textContent).toContain('播放语音引导');

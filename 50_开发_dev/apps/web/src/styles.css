@@ -2124,6 +2124,7 @@ h3 {
 
 .waf-footer ul {
   display: flex;
+  flex-wrap: wrap;
   gap: 18px;
   margin: 0;
   padding: 0;
@@ -2232,6 +2233,259 @@ h3 {
   .waf-footer ul {
     display: grid;
     gap: 4px;
+  }
+}
+
+/* Emotional hero v3: one human moment before product explanation. */
+.waf-emotional-hero {
+  position: relative;
+  display: block;
+  min-height: 620px;
+  isolation: isolate;
+  background: #d7bd91;
+}
+
+.waf-emotional-hero .waf-hero-copy {
+  position: relative;
+  z-index: 4;
+  width: 54%;
+  min-height: 620px;
+  padding: 68px 24px 58px 54px;
+  background: linear-gradient(90deg, rgba(255, 248, 235, 0.99) 0%, rgba(255, 248, 235, 0.97) 64%, rgba(255, 248, 235, 0.76) 83%, transparent 100%);
+}
+
+.waf-emotional-hero h1 {
+  max-width: 540px;
+  margin-top: 10px;
+  font-size: clamp(3rem, 4.3vw, 3.7rem);
+  line-height: 1.13;
+}
+
+.waf-emotional-hero .waf-lead {
+  max-width: 430px;
+  margin-top: 24px;
+  font-size: 1.04rem;
+}
+
+.waf-guide-link {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--forest-dark);
+  text-decoration: none;
+}
+
+.waf-guide-link:hover,
+.waf-guide-link:visited {
+  color: var(--forest-dark);
+}
+
+.waf-emotional-hero .waf-hero-art {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  min-height: 100%;
+  background-image: url('./assets/waf-hero-emotional-v3.png');
+  background-position: center;
+  background-size: cover;
+  animation: waf-emotional-scene 18s ease-in-out infinite alternate;
+}
+
+.waf-emotional-hero .waf-hero-art::after {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(255, 248, 235, 0.08) 40%, transparent 64%),
+    linear-gradient(0deg, rgba(27, 32, 31, 0.34), transparent 48%);
+}
+
+.waf-heartline {
+  position: absolute;
+  z-index: 3;
+  top: 54%;
+  left: 65%;
+  width: 17%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(250, 232, 215, 0.12), rgba(250, 232, 215, 0.9), rgba(250, 232, 215, 0.12));
+  box-shadow: 0 0 14px rgba(250, 232, 215, 0.5);
+  opacity: 0.82;
+}
+
+.waf-heartline span {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border: 2px solid rgba(255, 253, 248, 0.86);
+  border-radius: 50%;
+  background: var(--apricot);
+  box-shadow: 0 0 18px rgba(233, 170, 112, 0.9);
+  transform: translate(-50%, -50%);
+  animation: waf-heart-travel 5.8s ease-in-out infinite alternate;
+}
+
+.waf-perspective-caption {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  gap: 5px;
+  min-width: 190px;
+  padding: 13px 15px;
+  border: 1px solid rgba(255, 253, 248, 0.38);
+  border-radius: 17px;
+  background: rgba(27, 42, 38, 0.68);
+  color: #fffdf8;
+  box-shadow: 0 12px 34px rgba(20, 27, 25, 0.18);
+  opacity: 0;
+  backdrop-filter: blur(10px);
+  animation: waf-caption-reveal 9.6s ease-in-out infinite;
+}
+
+.waf-perspective-caption small {
+  color: rgba(255, 253, 248, 0.62);
+  font-size: 0.6rem;
+  letter-spacing: 0.03em;
+}
+
+.waf-perspective-caption strong {
+  font-family: var(--font-display);
+  font-size: 1.03rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.waf-perspective-parent {
+  top: 11%;
+  left: 62%;
+}
+
+.waf-perspective-child {
+  top: 58%;
+  right: 3%;
+  animation-delay: 4.8s;
+}
+
+.waf-emotional-hero .waf-hero-moment {
+  position: absolute;
+  z-index: 4;
+  right: 28px;
+  bottom: 24px;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: #fffdf8;
+  text-align: right;
+  text-shadow: 0 2px 16px rgba(18, 25, 23, 0.48);
+}
+
+.waf-hero-moment span {
+  color: rgba(255, 253, 248, 0.64);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+.waf-hero-moment strong {
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+
+@keyframes waf-emotional-scene {
+  from { background-position: 50% center; }
+  to { background-position: 52% center; }
+}
+
+@keyframes waf-emotional-scene-mobile {
+  from { background-position: 68% center; }
+  to { background-position: 72% center; }
+}
+
+@keyframes waf-heart-travel {
+  0% { left: 0; opacity: 0.38; transform: translate(-50%, -50%) scale(0.78); }
+  45% { opacity: 1; }
+  100% { left: 100%; opacity: 0.5; transform: translate(-50%, -50%) scale(1.06); }
+}
+
+@keyframes waf-caption-reveal {
+  0%, 9% { opacity: 0; transform: translateY(10px); }
+  18%, 44% { opacity: 1; transform: translateY(0); }
+  54%, 100% { opacity: 0; transform: translateY(-5px); }
+}
+
+@media (max-width: 900px) {
+  .waf-emotional-hero .waf-hero-copy {
+    width: 62%;
+  }
+
+  .waf-perspective-parent {
+    left: 62%;
+  }
+}
+
+@media (max-width: 680px) {
+  .waf-emotional-hero {
+    min-height: 0;
+  }
+
+  .waf-emotional-hero .waf-hero-copy {
+    width: 100%;
+    min-height: 0;
+    padding: 34px 22px 24px;
+    background: #fff8eb;
+  }
+
+  .waf-emotional-hero h1 {
+    font-size: clamp(1.9rem, 8vw, 2.15rem);
+    line-height: 1.12;
+  }
+
+  .waf-emotional-hero .waf-hero-art {
+    position: relative;
+    min-height: 410px;
+    background-position: 70% center;
+    background-size: auto 100%;
+    animation-name: waf-emotional-scene-mobile;
+  }
+
+  .waf-emotional-hero .waf-hero-art::after {
+    background: linear-gradient(0deg, rgba(23, 30, 28, 0.44), transparent 62%);
+  }
+
+  .waf-perspective-caption {
+    min-width: 0;
+    max-width: 180px;
+    padding: 10px 12px;
+  }
+
+  .waf-perspective-caption small {
+    display: none;
+  }
+
+  .waf-perspective-caption strong {
+    font-size: 0.9rem;
+  }
+
+  .waf-perspective-parent {
+    top: 8%;
+    left: 8%;
+  }
+
+  .waf-perspective-child {
+    top: 53%;
+    right: 5%;
+  }
+
+  .waf-heartline {
+    top: 48%;
+    left: 45%;
+    width: 34%;
+  }
+
+  .waf-emotional-hero .waf-hero-moment {
+    right: 15px;
+    bottom: 14px;
   }
 }
 

@@ -135,23 +135,32 @@ export function createWafCommunityApp(root, options = {}) {
           <span class="waf-private-chip"><span aria-hidden="true">●</span> 家庭隐私受保护</span>
         </nav>
 
-        <header class="waf-hero">
+        <header class="waf-hero waf-emotional-hero">
           <div class="waf-hero-copy">
-            <p class="eyebrow">家庭共同成长社区</p>
-            <h1 id="waf-home-title">不只是住在一起，<br><span>而是一起成长。</span></h1>
-            <p class="waf-lead">从一个真实的小困扰出发，和家人完成一件今天就能做到的小事。</p>
+            <p class="eyebrow">有些话，不是不想说</p>
+            <h1 id="waf-home-title">两个人都想靠近，<br><span>却不知道怎么开口。</span></h1>
+            <p class="waf-lead">今晚，不急着讲道理。先把彼此的一句话，完整地听完。</p>
             <div class="waf-hero-actions">
-              <a class="primary-action waf-primary-link" href="#waf-today">看看今天的挑战</a>
-              <button type="button" class="waf-text-action" data-waf-principal>问法咪莉校长 <span aria-hidden="true">→</span></button>
+              <a class="primary-action waf-primary-link" href="#waf-studio">从先听完一句开始</a>
+              <a class="waf-text-action waf-guide-link" href="#waf-studio">听 60 秒引导 <span aria-hidden="true">→</span></a>
             </div>
             <ul class="waf-trust-list" aria-label="隐私承诺">
-              <li>社区参与单独授权</li>
-              <li>孩子成长画像不公开</li>
+              <li>不录音</li>
+              <li>不分析对话</li>
+              <li>随时可以暂停</li>
             </ul>
           </div>
-          <div class="waf-hero-art" role="img" aria-label="一家人围坐倾听、共同成长的温暖场景">
-            <div class="waf-motion-path" aria-hidden="true"><span></span><span></span><span></span></div>
-            <p>“先听见彼此，<br>再一起向前。”</p>
+          <div class="waf-hero-art" role="img" aria-label="争执后的家庭夜晚，家长和青少年都想靠近却还不知道怎样开口">
+            <div class="waf-heartline" aria-hidden="true"><span></span></div>
+            <div class="waf-perspective-caption waf-perspective-parent">
+              <small>一种可能的感受 · 家长</small>
+              <strong>“我只是怕，<br>离你越来越远。”</strong>
+            </div>
+            <div class="waf-perspective-caption waf-perspective-child">
+              <small>一种可能的感受 · 孩子</small>
+              <strong>“我只是想，<br>先把这句话说完。”</strong>
+            </div>
+            <p class="waf-hero-moment"><span>同一个晚上</span><strong>愿意再听一次，就已经在靠近。</strong></p>
           </div>
         </header>
 
@@ -190,7 +199,7 @@ export function createWafCommunityApp(root, options = {}) {
             </div>
           </section>
 
-          <section class="waf-panel waf-studio-panel" aria-labelledby="waf-studio-title">
+          <section class="waf-panel waf-studio-panel" id="waf-studio" aria-labelledby="waf-studio-title">
             <div class="waf-studio-heading">
               <div>
                 <p class="eyebrow">共同练习台 · 多模态引导</p>
@@ -260,7 +269,7 @@ export function createWafCommunityApp(root, options = {}) {
               <small>法咪莉校长的一个提醒</small>
               <h3>${topic.title}</h3>
               <p>${topic.note}</p>
-              <button type="button" class="waf-text-action" data-waf-principal>继续问问法咪莉 <span aria-hidden="true">→</span></button>
+              <button type="button" class="waf-text-action" data-waf-principal>问法咪莉校长 <span aria-hidden="true">→</span></button>
             </article>
           </section>
 
@@ -296,7 +305,7 @@ export function createWafCommunityApp(root, options = {}) {
         <footer class="waf-footer">
           <strong>We are 伐木累</strong>
           <span>让每个家庭，在自己的节奏里一起成长。</span>
-          <ul><li>没有家庭排名</li><li>故事发布需单独同意</li><li>成长记录由你确认</li></ul>
+          <ul><li>社区参与单独授权</li><li>孩子成长画像不公开</li><li>没有家庭排名</li><li>故事发布需单独同意</li><li>成长记录由你确认</li></ul>
         </footer>
       </section>
     `;
