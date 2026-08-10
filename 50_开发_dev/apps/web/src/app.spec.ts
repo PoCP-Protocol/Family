@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
+import { submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
 
 import type { AppConfig } from './app.js';
 
@@ -20,7 +21,7 @@ describe('M2-102 Family web perspective capture', () => {
     expect(root.textContent).toContain('F01 家庭上下文');
     expect(root.textContent).toContain('F02 成长入口');
     expect(root.textContent).toContain('启动亲子沟通成长旅程');
-    expect(root.textContent).toContain('AI 非必需');
+    expect(root.textContent).toContain('确定性流程');
   });
 
   it('submits StartGrowthOnboarding with named-action headers and no AI personalization payload', async () => {
@@ -193,7 +194,7 @@ describe('M2-102 Family web perspective capture', () => {
     await flushPromises();
 
     expect(root.textContent).toContain('我们目前看到的沟通状态');
-    expect(root.textContent).toContain('这不是评分，也不是事实判定，而是基于目前信息形成的工作画像。');
+    expect(root.textContent).toContain('这是基于目前信息形成的解释性工作画像，不是事实判定。');
     expect(root.textContent).toContain('Evidence 本身不是 Profile');
     expect(root.textContent).not.toContain('总分');
     expect(root.textContent).not.toContain('排名');
@@ -211,6 +212,105 @@ describe('M2-102 Family web perspective capture', () => {
 
     expect(root.textContent).toContain('已确认 1 个工作画像');
     expect(root.textContent).toContain('不会自动生成行动');
+  });
+
+  it('renders Wave2 F06-F09 workspace after confirmed profile using pre-real-api fixtures', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspective: perspectiveFixture('PARENT_PERSPECTIVE'), evidence: evidenceFixture('PARENT') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ perspectives: [perspectiveFixture('PARENT_PERSPECTIVE'), perspectiveFixture('CHILD_PERSPECTIVE')], evidence: [evidenceFixture('PARENT'), evidenceFixture('CHILD')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('P03', 'DRAFT'), growthDraftFixture('R03', 'DRAFT'), growthDraftFixture('R05', 'REVIEW_REQUIRED')] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => growthInsightFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ draft: growthDraftFixture('R03', 'CONFIRMED'), profile: growthProfileFixture('R03') }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('main');
+
+    createGrowthApp(root, config);
+    root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('#build-profile-drafts')?.click();
+    await flushPromises();
+    root.querySelector<HTMLButtonElement>('button[data-confirm-draft-id="draft-R03"]')?.click();
+    await flushPromises();
+
+    expect(root.textContent).toContain('7 天沟通练习工作台');
+    expect(root.textContent).toContain('pre-real-api');
+    expect(root.textContent).toContain('本周练习重点');
+    expect(root.textContent).toContain('NO_PRIORITY_YET');
+    expect(root.textContent).toContain('先听后回应');
+    expect(root.textContent).toContain('今天的具体练习');
+    expect(root.textContent).toContain('行动后的记录');
+    expect(root.textContent).toContain('这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。');
+    expect(root.textContent).not.toContain('总分');
+    expect(root.textContent).not.toContain('排名');
+    expect(root.textContent).not.toContain('诊断');
+    expect(root.textContent).not.toContain('AI 推荐');
+
+    root.querySelector<HTMLButtonElement>('button[data-wave2-action="start-intervention"]')?.click();
+    await flushPromises();
+    expect(root.textContent).toContain('已生成 7 个每日练习');
+
+    root.querySelector<HTMLFormElement>('#wave2-reflection-form')?.requestSubmit();
+    await flushPromises();
+    expect(root.textContent).toContain('只记录行动完成情况，不声明结果已经发生。');
+  });
+
+  it('keeps Wave2 future real API adapters on named-action payload boundaries', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
+      .mockResolvedValueOnce({ ok: true, json: async () => completeActionFixture() });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await submitConfirmGrowthPriority(config, 'onboarding-1', 'priority-draft-R03', 'R03');
+    await submitStartIntervention(config, 'onboarding-1', 'priority-R03');
+    await submitCompleteGrowthAction(config, 'action-day-1', 'PARTIAL', '今天先听后回应了一次。');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1,
+      `http://api.test/families/${config.familyId}/growth/priorities/confirm`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2,
+      `http://api.test/families/${config.familyId}/growth/interventions/start`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(3,
+      `http://api.test/families/${config.familyId}/growth/actions/action-day-1/complete`,
+      expect.objectContaining({ method: 'POST' }),
+    );
+
+    const priorityBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const interventionBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    const actionBody = JSON.parse(fetchMock.mock.calls[2][1].body);
+    expect(priorityBody).toEqual({
+      family_id: config.familyId,
+      onboarding_id: 'onboarding-1',
+      draft_id: 'priority-draft-R03',
+      decision: 'R03',
+    });
+    expect(interventionBody).toEqual({
+      family_id: config.familyId,
+      onboarding_id: 'onboarding-1',
+      priority_id: 'priority-R03',
+      intervention_code: 'LISTEN_BEFORE_RESPOND',
+    });
+    expect(actionBody).toMatchObject({
+      family_id: config.familyId,
+      action_id: 'action-day-1',
+      completion_status: 'PARTIAL',
+      reflection: '今天先听后回应了一次。',
+    });
+    expect(priorityBody).not.toHaveProperty('score');
+    expect(priorityBody).not.toHaveProperty('ranking');
+    expect(interventionBody).not.toHaveProperty('outcome');
+    expect(interventionBody).not.toHaveProperty('milestone');
+    expect(actionBody).not.toHaveProperty('outcome');
+    expect(actionBody).not.toHaveProperty('safetySeverity');
   });
 });
 
@@ -350,6 +450,87 @@ function growthProfileFixture(dimensionId: 'R03') {
     effective_to: null,
     previous_profile_id: null,
     created_at: '2026-08-09T00:00:00.000Z',
+  };
+}
+
+function priorityConfirmFixture() {
+  return {
+    draft: {
+      draft_id: 'priority-draft-R03',
+      family_id: config.familyId,
+      onboarding_id: 'onboarding-1',
+      decision: 'R03',
+      candidate: null,
+      profile_refs: [{ profile_id: 'profile-R03', version: 1, dimension_id: 'R03' }],
+      evidence_refs: ['evidence-PARENT', 'evidence-CHILD'],
+      confidence: 'MEDIUM',
+      policy_version: 'M2_104_DETERMINISTIC_V1',
+      profile_snapshot: {},
+      created_at: '2026-08-10T00:00:00.000Z',
+    },
+    decision: 'R03',
+    priority: {
+      priority_id: 'priority-R03',
+      family_id: config.familyId,
+      onboarding_id: 'onboarding-1',
+      dimension_id: 'R03',
+      profile_id: 'profile-R03',
+      status: 'ACTIVE',
+      boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
+      confirmed_by_actor_id: config.actorPersonId,
+      confirmed_at: '2026-08-10T00:00:00.000Z',
+      created_at: '2026-08-10T00:00:00.000Z',
+    },
+  };
+}
+
+function startInterventionFixture() {
+  return {
+    intervention: {
+      intervention_id: 'INTERVENTION-001',
+      intervention_code: 'LISTEN_BEFORE_RESPOND',
+      name_zh: '先听后回应',
+      duration_days: 7,
+      why: '把回应放在倾听之后。',
+      target: '父母回应方式',
+      behavior: '先听完，再回应。',
+      applicability: ['R03'],
+      contraindications: [],
+      safety_notes: [],
+      expected_mediator: '父母倾听行为',
+      expected_outcome: '不作为结果承诺展示',
+      action_template: '先听完，再回应。',
+      policy_version: 'M2_105_DETERMINISTIC_V1',
+    },
+    episode_id: 'episode-1',
+    actions: [growthActionFixture('PENDING')],
+  };
+}
+
+function completeActionFixture() {
+  return {
+    action: growthActionFixture('PARTIAL'),
+    reflection_boundary: '只记录行动完成情况，不声明结果已经发生。',
+  };
+}
+
+function growthActionFixture(status: 'PENDING' | 'COMPLETED' | 'PARTIAL' | 'NOT_COMPLETED') {
+  return {
+    action_id: 'action-day-1',
+    family_id: config.familyId,
+    onboarding_id: 'onboarding-1',
+    priority_id: 'priority-R03',
+    intervention_episode_id: 'episode-1',
+    day_index: 1,
+    status,
+    assignment_text: '今天在一次沟通中，先停顿 3 秒，邀请孩子把话说完，再回应。',
+    due_date: '2026-08-10',
+    completed_at: status === 'PENDING' ? null : '2026-08-10T00:00:00.000Z',
+    completion_status: status === 'PENDING' ? null : status,
+    reflection: status === 'PENDING' ? null : '今天先听后回应了一次。',
+    reflection_boundary: status === 'PENDING' ? null : '只记录行动完成情况，不声明结果已经发生。',
+    boundary: 'ACTION_IS_NOT_OUTCOME',
+    created_at: '2026-08-10T00:00:00.000Z',
   };
 }
 

@@ -9,6 +9,16 @@
 /** @typedef {import('@family/contracts').ConfirmGrowthProfileResponse} ConfirmGrowthProfileResponse */
 /** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
 /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
+import {
+  createFrozenActionFixture,
+  createFrozenInterventionFixture,
+  createFrozenPriorityFixture,
+  createInitialWave2State,
+  renderWave2Section,
+  submitCompleteGrowthAction,
+  submitConfirmGrowthPriority,
+  submitStartIntervention,
+} from './wave2.js';
 
 /**
  * @typedef {object} AppConfig
@@ -42,6 +52,7 @@ export function createGrowthApp(root, config = defaultConfig) {
     summary: undefined,
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
+    wave2: createInitialWave2State(),
   };
 
   const render = () => {
@@ -91,7 +102,7 @@ export function createGrowthApp(root, config = defaultConfig) {
                   <span>SERVICE</span>
                   <span>ASSESSMENT</span>
                   <span>GROWTH_TRACKING</span>
-                  <span class="optional">AI 非必需</span>
+                  <span class="optional">确定性流程</span>
                 </div>
 
                 <button type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
@@ -106,6 +117,7 @@ export function createGrowthApp(root, config = defaultConfig) {
             ${state.onboarding ? renderPerspectiveForms() : ''}
             ${state.summary ? renderPerspectiveSummary(state.summary) : ''}
             ${state.summary ? renderGrowthInsightPanel(state.insight) : ''}
+            ${state.insight && state.insight.confirmed_profiles.length > 0 ? renderWave2Section(state.wave2) : ''}
           </main>
         </section>
       </section>
@@ -138,6 +150,31 @@ export function createGrowthApp(root, config = defaultConfig) {
           await confirmProfileDraft(draftId);
         }
       });
+    });
+
+    root.querySelector('button[data-wave2-action="confirm-priority"]')?.addEventListener('click', async (event) => {
+      const button = /** @type {HTMLButtonElement} */ (event.currentTarget);
+      await confirmWave2Priority(button.dataset.draftId ?? 'priority-draft-R03', button.dataset.decision ?? 'R03');
+    });
+
+    root.querySelector('button[data-wave2-action="start-intervention"]')?.addEventListener('click', async () => {
+      await startWave2Intervention();
+    });
+
+    root.querySelectorAll('button[data-wave2-complete]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const completionStatus = /** @type {Exclude<import('@family/contracts').GrowthActionStatus, 'PENDING'>} */ (button.getAttribute('data-wave2-complete'));
+        await completeWave2Action(completionStatus, '按钮记录：今天已更新练习状态。');
+      });
+    });
+
+    root.querySelector('#wave2-reflection-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = /** @type {HTMLFormElement} */ (event.currentTarget);
+      const formData = new FormData(form);
+      const completionStatus = /** @type {Exclude<import('@family/contracts').GrowthActionStatus, 'PENDING'>} */ (String(formData.get('completionStatus')));
+      const reflection = String(formData.get('reflection') ?? '').trim();
+      await completeWave2Action(completionStatus, reflection);
     });
   };
 
@@ -208,7 +245,7 @@ export function createGrowthApp(root, config = defaultConfig) {
       await submitBuildGrowthProfileDrafts(config, state.onboarding.onboarding_id);
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
       state.status = 'started';
-      state.message = '已生成工作画像草稿。它不是评分，也不是事实判定。';
+      state.message = '已生成工作画像草稿。它是解释性工作材料，不是事实判定。';
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '生成成长画像草稿失败。';
@@ -230,11 +267,126 @@ export function createGrowthApp(root, config = defaultConfig) {
     try {
       await submitConfirmGrowthProfile(config, draftId);
       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      state.wave2.priorityInsight = createFrozenPriorityFixture();
+      state.wave2.intervention = createFrozenInterventionFixture();
+      state.wave2.todayAction = createFrozenActionFixture();
       state.status = 'started';
-      state.message = '画像已确认。当前仍没有写入 Growth Priority、行动或 AI 侧效果。';
+      state.message = '画像已确认。当前仍没有写入 Growth Priority 或行动。';
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '确认成长画像失败。';
+    }
+
+    render();
+  };
+
+  /**
+   * @param {string} draftId
+   * @param {string} decision
+   */
+  const confirmWave2Priority = async (draftId, decision) => {
+    if (!state.onboarding) {
+      return;
+    }
+
+    state.status = 'submitting';
+    state.message = '正在提交 ConfirmGrowthPriority；当前前端仍标记为 pre-real-api。';
+    render();
+
+    try {
+      if (state.wave2.apiMode === 'real-api') {
+        const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
+        state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
+      } else {
+        state.wave2.priorityInsight = createFrozenPriorityFixture();
+      }
+      state.status = 'started';
+      state.message = '已确认本周练习重点。不会自动开始练习计划。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '确认练习重点失败。';
+    }
+
+    render();
+  };
+
+  const startWave2Intervention = async () => {
+    if (!state.onboarding) {
+      return;
+    }
+
+    state.status = 'submitting';
+    state.message = '正在提交 StartIntervention。';
+    render();
+
+    try {
+      if (state.wave2.apiMode === 'real-api') {
+        const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id ?? 'priority-R03';
+        state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
+      } else {
+        const firstAction = createFrozenActionFixture();
+        state.wave2.startedIntervention = {
+          intervention: createFrozenInterventionFixture(),
+          episode: {
+            episode_id: 'episode-1',
+            family_id: config.familyId,
+            onboarding_id: state.onboarding.onboarding_id,
+            priority_id: firstAction.priority_id,
+            intervention_id: 'INTERVENTION-001',
+            intervention_code: 'LISTEN_BEFORE_RESPOND',
+            status: 'ACTIVE',
+            started_by_actor_id: config.actorPersonId,
+            started_at: '2026-08-10T00:00:00.000Z',
+            planned_days: 7,
+            policy_version: 'M2_105_DETERMINISTIC_V1',
+            created_at: '2026-08-10T00:00:00.000Z',
+          },
+          actions: createFrozenActionPlan(firstAction),
+        };
+      }
+      state.wave2.intervention = state.wave2.startedIntervention.intervention;
+      state.wave2.todayAction = state.wave2.startedIntervention.actions[0];
+      state.status = 'started';
+      state.message = '7 天练习已准备。每天只有具体行动状态，不写结果。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '开始练习失败。';
+    }
+
+    render();
+  };
+
+  /**
+   * @param {Exclude<import('@family/contracts').GrowthActionStatus, 'PENDING'>} completionStatus
+   * @param {string} reflection
+   */
+  const completeWave2Action = async (completionStatus, reflection) => {
+    const action = state.wave2.todayAction ?? createFrozenActionFixture();
+    state.status = 'submitting';
+    state.message = '正在提交 CompleteGrowthAction。';
+    render();
+
+    try {
+      if (state.wave2.apiMode === 'real-api') {
+        const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
+        state.wave2.todayAction = response.action;
+        state.wave2.reflectionBoundary = response.reflection_boundary;
+      } else {
+        state.wave2.todayAction = {
+          ...action,
+          status: completionStatus,
+          completion_status: completionStatus,
+          completed_at: '2026-08-10T00:00:00.000Z',
+          reflection,
+          reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
+        };
+        state.wave2.reflectionBoundary = '只记录行动完成情况，不声明结果已经发生。';
+      }
+      state.status = 'started';
+      state.message = '行动状态已记录；反思只作为原始记录保留。';
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '保存行动状态失败。';
     }
 
     render();
@@ -468,6 +620,30 @@ function createIdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
 }
 
+/** @param {import('@family/contracts').GrowthActionDto} firstAction */
+function createFrozenActionPlan(firstAction) {
+  return /** @type {import('@family/contracts').GrowthActionDto[]} */ ([1, 2, 3, 4, 5, 6, 7].map((dayIndex) => ({
+    ...firstAction,
+    action_id: `action-day-${dayIndex}`,
+    day_index: /** @type {1 | 2 | 3 | 4 | 5 | 6 | 7} */ (dayIndex),
+    assignment_text: frozenAssignmentText(dayIndex),
+  })));
+}
+
+/** @param {number} dayIndex */
+function frozenAssignmentText(dayIndex) {
+  const assignments = [
+    '今天在一次沟通中，先停顿 3 秒，邀请孩子把话说完，再回应。',
+    '回应前，先复述一句你听到的内容。',
+    '提出解决办法前，先问一个澄清问题。',
+    '先说出你听到的感受，再说自己的看法。',
+    '把倾听和纠正分开，不在同一句话里完成。',
+    '如果中途打断了，补一句“我刚才急了，你继续说”。',
+    '回看这 7 天的练习体验，只记录过程。',
+  ];
+  return assignments[dayIndex - 1] ?? assignments[0];
+}
+
 /**
  * @param {SafetyScreeningResult} value
  * @param {string} label
@@ -576,12 +752,12 @@ function renderGrowthInsightPanel(insight) {
         </div>
         <button id="build-profile-drafts" type="button">生成成长画像草稿</button>
       </div>
-      <p class="boundary-note">这不是评分，也不是事实判定，而是基于目前信息形成的工作画像。</p>
+      <p class="boundary-note">这是基于目前信息形成的解释性工作画像，不是事实判定。</p>
       <div class="contract-strip" aria-label="画像边界">
         <span>Evidence 支持 Profile</span>
         <span>Evidence 本身不是 Profile</span>
         <span>不生成优先级</span>
-        <span>不触发 AI</span>
+        <span>不触发自动行动</span>
       </div>
       ${drafts.length > 0 ? `
         <div class="insight-grid">

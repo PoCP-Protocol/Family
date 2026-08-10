@@ -49,11 +49,13 @@ textarea {
 .panel-heading,
 .consent-strip,
 .contract-strip,
+.action-row,
 .perspective-grid,
 .result-panel div,
 .family-panel dl div,
 .summary-item dl div,
-.insight-card dl div {
+.insight-card dl div,
+.wave2-card dl div {
   display: flex;
 }
 
@@ -131,7 +133,8 @@ h2 {
 .onboarding-panel,
 .perspective-card,
 .summary-panel,
-.insight-panel {
+.insight-panel,
+.wave2-panel {
   flex: 1;
   padding: 24px;
 }
@@ -144,7 +147,8 @@ h2 {
 .family-panel dl div,
 .result-panel div,
 .summary-item dl div,
-.insight-card dl div {
+.insight-card dl div,
+.wave2-card dl div {
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
@@ -265,7 +269,8 @@ button:disabled {
 
 .perspective-card,
 .summary-panel,
-.insight-panel {
+.insight-panel,
+.wave2-panel {
   border: 1px solid rgba(71, 115, 90, 0.24);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
@@ -306,6 +311,13 @@ button:disabled {
   margin-top: 20px;
 }
 
+.wave2-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
 .summary-item {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -321,6 +333,16 @@ button:disabled {
   border-radius: 8px;
   padding: 18px;
   background: var(--panel);
+}
+
+.wave2-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  border: 1px solid rgba(23, 107, 115, 0.24);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .summary-item h3,
@@ -341,6 +363,28 @@ button:disabled {
 .insight-card p {
   color: var(--ink);
   line-height: 1.6;
+}
+
+.wave2-card p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.wave2-card h3,
+.wave2-card dl {
+  margin: 0;
+}
+
+.action-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-row button {
+  flex: 1 1 120px;
+  min-height: 44px;
+  padding: 0 10px;
 }
 
 .summary-item dl {
@@ -383,7 +427,8 @@ button:disabled {
   .topbar,
   .workspace,
   .panel-heading,
-  .perspective-grid {
+  .perspective-grid,
+  .wave2-grid {
     display: grid;
   }
 

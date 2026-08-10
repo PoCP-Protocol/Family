@@ -1,8 +1,8 @@
 # Family Project Status
 
-status_version: 2
-phase: ENGINEERING_KICKOFF
-milestone: M2_WAVE_1_START_GROWTH_ONBOARDING
+status_version: 3
+phase: M2_WAVE_2_DECIDE_AND_ACT
+milestone: PHASE_B2_INTEGRATION_CONVERGENCE
 as_of: 2026-08-10
 
 ## Completed Design Baseline
@@ -27,11 +27,14 @@ as_of: 2026-08-10
 
 ## Current Milestone
 
-M2 — First Growth Slice Wave 1 / M2-101 Start Growth Onboarding
+M2 Wave 2 — DECIDE & ACT / Phase B2 Integration Convergence
 
 ## In Progress
 
-- Waiting for explicit next-task approval after M2-101 completion
+- active_task: M2-WAVE2-INTEGRATION
+- current_wave: M2_WAVE_2_DECIDE_AND_ACT
+- current_phase: WAVE2_INTEGRATION_CONVERGENCE
+- AI-00 integration lead coordinating Schema/Contract, API, Frontend, Real PostgreSQL, E2E, Governance, and Independent Review
 
 ## Completed
 
@@ -42,21 +45,49 @@ M2 — First Growth Slice Wave 1 / M2-101 Start Growth Onboarding
 - Previous M2-000 planning artifacts created, but gate was NOT PASS because Frontend / UI / UX was insufficient
 - M2-000 V3.0 First Growth Slice Contract Gate → PASS; BLOCKERS=0; READY_FOR_M2_WAVE1=YES
 - M2-101 StartGrowthOnboarding + F01/F02 → COMPLETED with backend API, Family Web path, HTTP E2E, web tests, and browser demo check
+- M2-102 RecordPerspective + EvidenceRecord + server-side safety derivation → PASS
+- M2-103 Evidence Synthesis + Limited Growth Profile + ConfirmGrowthProfile + F05 → PASS
+- M2 Wave 1 — UNDERSTAND → PASS / CLOSED
+- M2 Wave 2 Phase A — Contract Freeze → PASS / CLOSED
+- Contract Freeze and Shared File Conflict Matrix → APPROVED
+- M2-104 GrowthPriority → LOCAL_GATE_PASS
+- M2-105 Intervention-001 + GrowthAction → LOCAL_GATE_PASS
+
+## Current Ruling
+
+```text
+M2_WAVE_1 = CLOSED
+M2-103 = PASS
+M2_WAVE_2 = IN_PROGRESS
+M2-104 = LOCAL_GATE_PASS
+M2-105 = LOCAL_GATE_PASS
+M2_WAVE_2 = NOT YET PASS
+READY_FOR_WAVE2_INTEGRATION = YES
+current_phase = WAVE2_INTEGRATION_CONVERGENCE
+active_task = M2-WAVE2-INTEGRATION
+STATE_ALIGNMENT = PASS
+```
 
 ## Known Issues
 
-- active_task: none; awaiting explicit approval for M2-102 or another next task
-- last_completed_task: M2-101_START_GROWTH_ONBOARDING
-- current_gate_blocker: none for M2-101; M2-102+ not started
+- last_completed_task: M2-105_INTERVENTION_001_AND_GROWTH_ACTION
+- current_gate_blocker: none for Phase B2 startup
+- Contract Freeze is now immutable baseline `M2_WAVE2_CF_V1`; changes require `CONTRACT_CHANGE_REQUEST` and AI-00 approval before any V2.
+- Existing unrelated/unintegrated worktree files must not be reverted during Wave 2 integration.
+- `growth_journeys.subject_person_id` must not be added for convenience; subject/consent resolution must converge through canonical relations or a minimal `GrowthSubjectResolver`.
+- `growth_actions` legacy dual-write is temporary schema compatibility only and requires audit before Real PostgreSQL final gate.
 
 ## Not Started
 
-- GrowthProfile implementation
-- GrowthPriority implementation
-- GrowthAction implementation
+- F06/F07/F08/F09 Wave 2 frontend implementation
+- Wave2 HTTP Controller/Module integration
+- GrowthAction Schema Compatibility Audit
+- GrowthSubjectResolver integration boundary
+- Real PostgreSQL migration chain validation
+- HTTP E2E and Browser Demo
+- Governance Review and Independent Review
 - GrowthReview implementation
 - 90-Day Journey implementation
-- Intervention engine
 - AI Model Gateway
 - Agent Runtime
 - Knowledge Foundry

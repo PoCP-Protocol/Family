@@ -1,9 +1,9 @@
 # Current Sprint
 
-sprint_id: S00-S01
-sprint_name: Engineering Bootstrap + Family Core
-sprint_goal: M1 Family Core Running
-status: CLOSED
+sprint_id: M2-WAVE2
+sprint_name: M2 Wave 2 — Decide & Act
+sprint_goal: Help a family act through confirmed priority, Intervention-001, and daily growth action
+status: PHASE_B2_INTEGRATION_CONVERGENCE
 
 ---
 
@@ -85,7 +85,7 @@ Create Family
 - Schema invalid正确返回
 - Unit / Integration tests通过
 
-Sprint DoD status: PASS. M2 implementation is now authorized only for the active M2-101 task.
+Sprint DoD status: PASS. M1 is closed.
 
 ---
 
@@ -132,16 +132,81 @@ M2 gate blocker: NONE for M2-000.
 
 User approval recorded: automatic review completed and automatic continuation approved on 2026-08-10.
 
-Current Approved Task:
+M2 Wave 1 status: PASS / CLOSED on 2026-08-10.
+
+Completed Wave 1 tasks:
 
 1. `M2-101_START_GROWTH_ONBOARDING`
+2. `M2-102_RECORD_PERSPECTIVE_AND_EVIDENCE`
+3. `M2-103_EVIDENCE_SYNTHESIS_AND_LIMITED_GROWTH_PROFILE`
 
-Task status: COMPLETED on 2026-08-10.
+Last completed task:
 
-Completion evidence:
+```text
+M2-103_EVIDENCE_SYNTHESIS_AND_LIMITED_GROWTH_PROFILE
+```
 
-- Backend `StartGrowthOnboarding` API path, contract, validation, service, audit/outbox/idempotency, and growth event write path implemented.
-- Family Web F01/F02 implemented under `apps/web`.
-- API typecheck, DTO tests, service integration tests, HTTP E2E, web typecheck, web unit tests, and browser demo check passed.
+M2 Wave 2 Phase A status: PASS / CLOSED.
 
-Next boundary: do not start M2-102 or later tasks without explicit next-task approval.
+Approved Phase B task:
+
+```text
+M2-WAVE2-PHASE-B
+```
+
+Current wave:
+
+```text
+M2_WAVE_2_DECIDE_AND_ACT
+```
+
+Current phase:
+
+```text
+WAVE2_INTEGRATION_CONVERGENCE
+```
+
+Active task:
+
+```text
+M2-WAVE2-INTEGRATION
+```
+
+Stage ruling:
+
+```text
+M2_WAVE_1 = CLOSED
+M2-103 = PASS
+M2_WAVE_2 = IN_PROGRESS
+M2-104 = LOCAL_GATE_PASS
+M2-105 = LOCAL_GATE_PASS
+M2_WAVE_2 = NOT YET PASS
+READY_FOR_WAVE2_INTEGRATION = YES
+STATE_ALIGNMENT = PASS
+```
+
+Active integration streams:
+
+1. STREAM-A Schema / Contract Compatibility — AI-03
+2. STREAM-B API / Module / Orchestration Integration — AI-00
+3. STREAM-C Frontend F01/F06/F07/F08/F09 Real Integration — AI-04
+4. STREAM-D Real PostgreSQL + HTTP E2E + Browser QA — AI-05
+5. STREAM-E Governance Pre-Review — AI-06
+6. Domain Fix Owner: GrowthPriority — AI-01
+7. Domain Fix Owner: Intervention / GrowthAction — AI-02
+8. Independent Review after Barriers 1-5 — AI-07
+
+Phase B boundary:
+
+- `reports/m2/wave2/M2_WAVE2_CONTRACT_FREEZE.md` is immutable baseline `M2_WAVE2_CF_V1`.
+- `reports/m2/wave2/SHARED_FILE_CONFLICT_MATRIX.md` is approved and binding.
+- Any contract change requires `CONTRACT_CHANGE_REQUEST`; no role may freely edit the freeze baseline.
+- Wave 3 planning may be prepared only after Wave 2 PASS; Wave 3 code remains forbidden without explicit authorization.
+- `growth_journeys.subject_person_id` is not approved; subject resolution must use canonical Family/Growth/Onboarding/Profile relations or a minimal resolver boundary.
+- `growth_actions` legacy dual-write is allowed only as `TEMPORARY_SCHEMA_COMPATIBILITY` after semantic audit.
+
+Phase B2 status artifacts:
+
+- `reports/m2/wave2/integration/PHASE_B2_INTEGRATION_CONVERGENCE_DIRECTIVE.md`
+- `reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md`
+- `reports/m2/wave2/integration/status/AI00_STATUS.md` through `AI06_STATUS.md`
