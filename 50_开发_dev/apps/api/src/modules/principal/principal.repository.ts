@@ -142,7 +142,61 @@ export class PrincipalRepository {
     return (r.rowCount ?? 0) > 0;
   }
 
-  /** M3-104 配额:今日该 family 真实外部模型调用计数(任何真实厂商;排除 fake/确定性回退,它们无外呼成本)。 */
+  // ---------- B1 Attempt 账本(实现 AttemptSink) ----------
+  async begin(ctx: { provider: string; requestId?: string; sessionId?: string; failoverSequence: number }): Promise<string | undefined> {
+    const r = await this.pool.query<{ attempt_id: string }>(
+      `insert into principal_model_attempts(request_id, session_id, provider, failover_sequence, status)
+         values ($1,$2,$3,$4,'STARTED') returning attempt_id`,
+      [ctx.requestId ?? 'unknown', ctx.sessionId ?? null, ctx.provider, ctx.failoverSequence],
+    );
+    return r.rows[0]?.attempt_id;
+  }
+
+  async finish(attemptId: string | undefined, res: { status: string; latencyMs: number; failureKind?: string; modelName?: string }): Promise<void> {
+    if (!attemptId) return;
+    await this.pool.query(
+      `update principal_model_attempts
+          set status=$2, latency_ms=$3, failure_kind=$4, model_name=$5, finished_at=now()
+        where attempt_id=$1`,
+      [attemptId, res.status, res.latencyMs, res.failureKind ?? null, res.modelName ?? null],
+    );
+  }
+
+  /** B2 配额:今日该 family 的真实 provider ATTEMPT 数(含失败/failover;经 session 关联 family)。 */
+  async countRealAttemptsToday(familyId: string): Promise<number> {
+    const r = await this.pool.query<{ n: string }>(
+      `select count(*)::int as n
+         from principal_model_attempts a
+         join principal_sessions s on s.session_id = a.session_id
+        where s.family_id=$1 and a.created_at >= date_trunc('day', now())`,
+      [familyId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  }
+
+  /** B2 usage 明细(今日,按 family)。 */
+  async attemptUsageToday(familyId: string): Promise<{ attempts: number; successes: number; failures: number; failovers: number; logical_runs: number }> {
+    const r = await this.pool.query<{ attempts: string; successes: string; failures: string; failovers: string; runs: string }>(
+      `select
+         count(*)::int as attempts,
+         count(*) filter (where a.status='SUCCESS')::int as successes,
+         count(*) filter (where a.status='FAILURE')::int as failures,
+         count(*) filter (where a.failover_sequence > 0)::int as failovers,
+         count(distinct a.request_id)::int as runs
+       from principal_model_attempts a
+       join principal_sessions s on s.session_id = a.session_id
+      where s.family_id=$1 and a.created_at >= date_trunc('day', now())`,
+      [familyId],
+    );
+    const row = r.rows[0];
+    return {
+      attempts: Number(row?.attempts ?? 0), successes: Number(row?.successes ?? 0),
+      failures: Number(row?.failures ?? 0), failovers: Number(row?.failovers ?? 0),
+      logical_runs: Number(row?.runs ?? 0),
+    };
+  }
+
+  /** (保留)基于成功 Run 的旧口径,供对照/回归。 */
   async countRealModelRunsToday(familyId: string): Promise<number> {
     const r = await this.pool.query<{ n: string }>(
       `select count(*)::int as n from principal_model_runs

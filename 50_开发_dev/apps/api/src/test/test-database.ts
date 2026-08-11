@@ -58,8 +58,8 @@ export async function seedAiConsentSubject(
   const c = await pool.query(`insert into persons(family_id, person_type, display_name, birth_date) values ($1,'CHILD','孩子','2013-05-01') returning person_id`, [familyId]);
   const status = opts.status ?? 'GRANTED';
   await pool.query(
-    `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version${status === 'WITHDRAWN' ? ', withdrawn_at' : ''})
-       values ($1,$2,$3,'AI_PERSONALIZATION',$4,'policy-ai-v1'${status === 'WITHDRAWN' ? ', now()' : ''})`,
+    `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at${status === 'WITHDRAWN' ? ', withdrawn_at' : ''})
+       values ($1,$2,$3,'AI_PERSONALIZATION',$4,'policy-ai-v1', now()${status === 'WITHDRAWN' ? ', now()' : ''})`,
     [familyId, c.rows[0].person_id, g.rows[0].person_id, status],
   );
   return { familyId, subjectRef: c.rows[0].person_id, guardianRef: g.rows[0].person_id };
@@ -68,7 +68,7 @@ export async function seedAiConsentSubject(
 /** 清 Principal 域表(FK 安全序);若库未迁移 0011 则逐表跳过,便于 Family-core-only 测试库复用。 */
 export async function cleanPrincipalTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [
-    'principal_action_proposals', 'principal_feedback', 'principal_model_runs',
+    'principal_action_proposals', 'principal_feedback', 'principal_model_attempts', 'principal_model_runs',
     'principal_human_handoffs', 'principal_messages', 'principal_responses',
     'principal_sessions', 'product_events',
   ];

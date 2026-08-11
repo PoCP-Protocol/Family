@@ -93,7 +93,7 @@ capabilities:
 
   - capability_id: M3_104_QUOTA
     stage: M3-104
-    status: PARTIAL_PASS_REMEDIATION_REQUIRED
+    status: PASS_ACCOUNTING_ATTEMPT_BASED   # B1/B2 整改完成:计量基于 principal_model_attempts
     architecture_authorized: true
     code_authorized: true
     runtime_authorized: true
@@ -155,7 +155,7 @@ capabilities:
 
   - capability_id: M3_108_USAGE
     stage: M3-108
-    status: PARTIAL_PASS_REMEDIATION_REQUIRED
+    status: PASS_ACCOUNTING_ATTEMPT_BASED   # B1/B2 整改完成:计量基于 principal_model_attempts
     architecture_authorized: true
     code_authorized: true
     runtime_authorized: true

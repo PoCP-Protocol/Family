@@ -113,7 +113,7 @@ export class PrincipalService {
     // M3-104 每日配额:仅约束真实外部模型成本。危机(precheck=HIGH_RISK)不受配额影响;不外呼不计。
     const cap = Number(process.env.FPAI_PRINCIPAL_DAILY_CAP ?? 0);
     if (willCallExternal && cap > 0 && safetyPrecheck({ user_message: userMessage }) !== 'HIGH_RISK') {
-      const used = await this.repo.countRealModelRunsToday(familyId);
+      const used = await this.repo.countRealAttemptsToday(familyId); // B2:按真实 provider attempt 计量
       if (used >= cap) {
         await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'quota', 'REVIEWER');
         await this.repo.recordProductEvent('principal_quota_exceeded', familyId, sessionId, correlationId, { used, cap });
@@ -155,10 +155,10 @@ export class PrincipalService {
       risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
     });
 
-    // M3-108 阈值告警:真实外呼达到 warn 阈值(默认 80%)时发一次 principal_quota_warning(exceeded 由前置守卫另发)。
+    // M3-108 阈值告警:真实外呼(attempt)达到 warn 阈值(默认 80%)发一次 principal_quota_warning(exceeded 由前置守卫另发)。
     const provider = run.model_run.model_provider;
     if (cap > 0 && provider !== 'fake' && provider !== 'deterministic-fallback') {
-      const usedAfter = await this.repo.countRealModelRunsToday(familyId);
+      const usedAfter = await this.repo.countRealAttemptsToday(familyId); // B2:按 attempt 计量
       const warnPct = Number(process.env.FPAI_PRINCIPAL_DAILY_WARN_PCT ?? 80);
       const warnAt = Math.max(1, Math.ceil((cap * warnPct) / 100));
       if (usedAfter === warnAt && usedAfter < cap) {
@@ -205,16 +205,27 @@ export class PrincipalService {
     return this.repo.sessionBelongsToFamily(sessionId, familyId);
   }
 
-  // M3-108 配额用量(持久来源=principal_model_runs;跨重启有效)
-  async getUsage(familyId: string): Promise<{ date: string; used: number; cap: number; remaining: number | null; state: string }> {
+  // M3-108/B2 配额用量:持久来源=principal_model_attempts(真实 provider attempt,含 failover/失败;跨重启有效)。
+  async getUsage(familyId: string): Promise<Record<string, unknown>> {
     const cap = Number(process.env.FPAI_PRINCIPAL_DAILY_CAP ?? 0);
     const warnPct = Number(process.env.FPAI_PRINCIPAL_DAILY_WARN_PCT ?? 80);
-    const used = await this.repo.countRealModelRunsToday(familyId);
+    const u = await this.repo.attemptUsageToday(familyId);
+    const used = u.attempts; // 计量口径 = provider attempts(§27)
     let state = 'OK';
     if (cap <= 0) state = 'UNLIMITED';
     else if (used >= cap) state = 'EXCEEDED';
     else if (used >= Math.max(1, Math.ceil((cap * warnPct) / 100))) state = 'WARN';
-    return { date: new Date().toISOString().slice(0, 10), used, cap, remaining: cap > 0 ? Math.max(0, cap - used) : null, state };
+    return {
+      date: new Date().toISOString().slice(0, 10),
+      logical_runs: u.logical_runs,
+      provider_attempts: u.attempts,
+      successful_attempts: u.successes,
+      failed_attempts: u.failures,
+      failovers: u.failovers,
+      token_usage: null,          // §28:暂无法精确 → null,不伪造
+      estimated_cost: null,
+      used, cap, remaining: cap > 0 ? Math.max(0, cap - used) : null, state,
+    };
   }
 
   // M3-103 人工复核队列

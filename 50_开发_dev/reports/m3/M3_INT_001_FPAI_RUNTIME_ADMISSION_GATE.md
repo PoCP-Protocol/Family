@@ -3,7 +3,7 @@
 date: 2026-08-11
 branch: `m3/fpai-runtime-admission-fix`(off frozen evidence `99d4797`)
 evidence_baseline (frozen): `m3/fpai-runtime-readiness @ 99d479755510cd85f55a19fbc7127a6fee16c3d0`
-status: **TRANCHE_1_DONE — 安全/治理阻断项已闭合;账本/配额口径/policy-aware failover/MOS 程序分支 为 TRANCHE_2。**
+status: **TRANCHE_1+2_DONE — 安全/治理阻断项 + Attempt 账本/配额口径/policy-aware provider 已闭合;仅剩 B4(RB-002/MOS 程序分支)。**
 mission: 不加功能,把高质量隔离研发线变成可合法并入 Family 1.0 MOS 的 Runtime Candidate。
 
 ## 判定矩阵(§45)
@@ -18,9 +18,9 @@ AUTHORIZATION_REGISTRY        = PASS          # governance/AUTHORIZATION_REGISTR
 PROVIDER_REGISTRY             = PASS          # governance/FPAI_PROVIDER_REGISTRY.yaml(anthropic/zhipu = TECHNICALLY_VALIDATED,非 production)
 DANGEROUS_AUTH_SCAN           = PASS          # runtime 代码存在但 registry 未授权 → FAIL;当前 registry 已授权 101A runtime → PASS(0 hits)
 MODEL_RUN_LEDGER              = PASS          # principal_model_runs 存在
-MODEL_ATTEMPT_LEDGER          = DEFERRED_T2   # principal_model_attempts 未建(§22-26)→ TRANCHE_2
-QUOTA_ACCOUNTING              = PARTIAL       # 前置拦截成立;used 仍基于成功 run,须改 provider attempt/billable(§27-28)→ TRANCHE_2
-FAILOVER_POLICY_AWARE         = PARTIAL       # RoutingAiGateway 仅 infra-only + 默认关闭;按数据类别/consent 的 provider 准入路由 → TRANCHE_2
+MODEL_ATTEMPT_LEDGER          = PASS (B1)     # principal_model_attempts;AttemptRecordingGateway 外呼前 persist STARTED,failover/timeout 全留痕(live:2 attempts)
+QUOTA_ACCOUNTING              = PASS (B2)     # used=真实 provider attempts(join sessions→family);usage 返回 runs/attempts/success/fail/failovers/token(null)/cost(null)/cap/remaining/state(live 验证)
+FAILOVER_POLICY_AWARE         = PASS (B3)     # provider 集受环境准入(internal_livecheck=请求即批;pilot/prod 须 FPAI_APPROVED_PROVIDERS);RoutingAiGateway 仅 infra 瞬时错误切换;per-request 数据类别由 evaluateProcessing 上游把关
 REVIEW_WORKFLOW               = PASS_INTERNAL
 REVIEW_CONSOLE                = INTERNAL_ONLY # 默认关闭,FPAI_INTERNAL_OPS=true 才开;e2e 证明默认 404
 USAGE_ENDPOINT                = INTERNAL_ONLY # 同上,默认 404
@@ -32,11 +32,11 @@ DISTILLATION                  = NOT_AUTHORIZED
 DH1 / VOICE / AVATAR          = NOT_AUTHORIZED
 WAF_WF1_C                     = NOT_AUTHORIZED
 
-BLOCKERS (to final PR)        = 4
-  B1 MODEL_ATTEMPT_LEDGER (Run/Attempt 拆分 + 外呼前 persist + failover/timeout 计入)
-  B2 QUOTA_ATTEMPT_ACCOUNTING (used=provider attempts;usage 返回 attempts/failovers/cost)
-  B3 FAILOVER_POLICY_AWARE (Router 只在同一 processing 授权的 approved provider 间切换)
-  B4 M3-RB-002 / m3/family-1-0-mos (V3.3 SSOT rebaseline;Runtime PR 的并入基)
+BLOCKERS (to final PR)        = 1
+  B1 MODEL_ATTEMPT_LEDGER          = DONE
+  B2 QUOTA_ATTEMPT_ACCOUNTING      = DONE
+  B3 FAILOVER_POLICY_AWARE         = DONE
+  B4 M3-RB-002 / m3/family-1-0-mos = PENDING (V3.3 SSOT rebaseline;Runtime PR 的并入基;程序级,须架构师授权 + 独立分支,§42)
 ```
 
 ## 本 tranche 交付(TRANCHE_1)
@@ -51,14 +51,15 @@ P0 强制             evaluateProcessing 重写(ALLOW/DENY/REVIEW + FAIL_CLOSED 
 历史 Gate 裁决       M3_RUNTIME_ARCHITECT_ADJUDICATION.md(101A 接受;101B–108 证据保留、授权表述被取代)
 ```
 
-## 证据(offline,fresh PG 0001–0013)
+## 证据(offline,fresh PG 0001–0014)
 ```
-package units   principal-runtime 21 · ai-gateway 28 · principal-ai 15
+package units   principal-runtime 21 · ai-gateway 31(+3 AttemptRecordingGateway:success/timeout留痕/failover双attempt)· principal-ai 15
 api unit        85(含 principal.service.spec 6 项 enforcement:granted+livecheck→外呼;默认/无consent/撤回/HIGH_RISK→不外呼;图片→quarantine)
 api integration 40
-api e2e         80(含 internal-ops 默认 404;usage UNLIMITED;console HTML)
+api e2e         80(含 internal-ops 默认 404;usage;console HTML)
 scan            M3 STATIC + GOVERNANCE SCAN PASS (0 hits)
 builds+typecheck  clean
+LIVE B1/B3(真实 cc switch+智谱,.livecheck)  failover 记 2 attempts(anthropic FAILURE seq0→zhipu SUCCESS seq1);usage failovers=1;attempt 配额 cap=2 拦第2次
 ```
 
 ## 安全不变量(保持)

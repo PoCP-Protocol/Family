@@ -300,6 +300,52 @@ export const AI_GATEWAY_POLICY = {
 /** 仅对基础设施瞬时错误做跨厂商 failover 的错误分类。 */
 const INFRA_FAILOVER_KINDS: ReadonlySet<AiGatewayErrorKind> = new Set(['TIMEOUT', 'NETWORK_ERROR', 'PROVIDER_5XX']);
 
+// ---------- M3-INT-001 B1:Provider Attempt 账本 ----------
+/** 每次对某具体 provider 的实际尝试。业务层注入实现(写 principal_model_attempts)。 */
+export interface AttemptSink {
+  /** 外呼前登记(STARTED),返回 attempt 句柄;失败/超时也不会丢。 */
+  begin(ctx: { provider: string; requestId?: string; sessionId?: string; failoverSequence: number }): Promise<string | undefined>;
+  finish(attemptId: string | undefined, res: { status: string; latencyMs: number; failureKind?: string; modelName?: string }): Promise<void>;
+}
+
+/**
+ * 装饰器网关:包裹单个 provider,对每次 generateStructured 先 persist STARTED 再调用,
+ * 成功/失败(含 timeout)回写。requestId/sessionId 从 request.input 取(PrincipalAiInput 携带)。
+ * §25:persist BEFORE external attempt → timeout 不会消失;§26:failover 每次 attempt 都留痕。
+ */
+export class AttemptRecordingGateway implements AiGateway {
+  constructor(
+    private readonly inner: AiGateway,
+    private readonly providerId: string,
+    private readonly sink: AttemptSink,
+    private readonly failoverSequence: number,
+  ) {}
+
+  async generateStructured<TInput extends object, TOutput extends object>(
+    request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    const ctx = (request.input ?? {}) as { request_id?: string; session_id?: string };
+    let attemptId: string | undefined;
+    try { attemptId = await this.sink.begin({ provider: this.providerId, requestId: ctx.request_id, sessionId: ctx.session_id, failoverSequence: this.failoverSequence }); } catch { /* 记录失败不阻断调用 */ }
+    const started = Date.now();
+    try {
+      const r = await this.inner.generateStructured(request);
+      await safeFinish(this.sink, attemptId, { status: 'SUCCESS', latencyMs: Date.now() - started, modelName: r.model });
+      return r;
+    } catch (e) {
+      const failureKind = e instanceof AiGatewayError ? e.kind : 'ERROR';
+      await safeFinish(this.sink, attemptId, { status: 'FAILURE', latencyMs: Date.now() - started, failureKind });
+      throw e;
+    }
+  }
+
+  async embed(request: EmbeddingRequest): Promise<EmbeddingResult> { return this.inner.embed(request); }
+}
+
+async function safeFinish(sink: AttemptSink, id: string | undefined, res: { status: string; latencyMs: number; failureKind?: string; modelName?: string }): Promise<void> {
+  try { await sink.finish(id, res); } catch { /* best-effort */ }
+}
+
 /**
  * M3-106 受控路由:按顺序尝试多个网关。仅当上一个抛出【基础设施瞬时错误】时才尝试下一个;
  * 4xx / 非法JSON / schema / policy 失败 → 立即上抛(FAIL CLOSED,绝不静默兜底)。默认不启用(单厂商时不用)。
