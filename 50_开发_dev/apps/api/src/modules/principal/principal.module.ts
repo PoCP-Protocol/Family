@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FamilyModule } from '../family/family.module';
 import { PrincipalController } from './principal.controller';
 import { PrincipalService } from './principal.service';
 import { PrincipalRepository } from './principal.repository';
@@ -9,6 +10,7 @@ import { PrincipalRepository } from './principal.repository';
  * 只写 principal_* / product_events;不写 Growth canonical(那属 101A-C Action Bridge → 既有 Named Action)。
  */
 @Module({
+  imports: [FamilyModule], // 复用 InterventionService(既有 StartIntervention Named Action)
   controllers: [PrincipalController],
   providers: [PrincipalService, PrincipalRepository],
 })

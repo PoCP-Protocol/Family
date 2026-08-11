@@ -5,6 +5,18 @@ import type { CanonicalConsentRow } from '@family/principal-runtime';
 const { Pool } = pg;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export interface PrincipalProposalRow {
+  proposal_id: string;
+  family_id: string;
+  session_id: string;
+  subject_ref: string;
+  recommended_intervention_id: string;
+  risk_route: string;
+  status: string;
+  canonical: boolean;
+  accepted_episode_id: string | null;
+}
+
 /** Principal 域持久化(L3;principal_* + product_events,隔离于 Family/Growth canonical)。 */
 @Injectable()
 export class PrincipalRepository {
@@ -82,6 +94,25 @@ export class PrincipalRepository {
         p.display_title, p.display_instruction, p.rationale, p.risk_route],
     );
     return r.rows[0];
+  }
+
+  async loadProposal(proposalId: string): Promise<PrincipalProposalRow | null> {
+    const r = await this.pool.query<PrincipalProposalRow>(
+      `select proposal_id, family_id, session_id, subject_ref, recommended_intervention_id,
+              risk_route, status, canonical, accepted_episode_id
+         from principal_action_proposals where proposal_id=$1`,
+      [proposalId],
+    );
+    return r.rows[0] ?? null;
+  }
+
+  async markProposalAccepted(proposalId: string, episodeId: string, actorId: string): Promise<void> {
+    await this.pool.query(
+      `update principal_action_proposals
+          set status='ACCEPTED', accepted_episode_id=$2, accepted_by_actor_id=$3, accepted_at=now()
+        where proposal_id=$1`,
+      [proposalId, episodeId, actorId],
+    );
   }
 
   async saveHandoff(sessionId: string, familyId: string, subjectRef: string, riskRoute: string, trigger: string): Promise<void> {

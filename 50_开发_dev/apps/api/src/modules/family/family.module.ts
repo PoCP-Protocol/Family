@@ -29,5 +29,7 @@ import { InterventionService } from './intervention.service';
 		GrowthActionService,
 		GrowthReviewService,
 	],
+	// M3-101A-C:导出 InterventionService,供 Principal Action Bridge 调用既有 StartIntervention Named Action(不复制其 canonical 门)。
+	exports: [InterventionService],
 })
 export class FamilyModule {}

@@ -55,6 +55,25 @@ export class PrincipalController {
     return agg;
   }
 
+  @Post('proposals/:proposalId/accept')
+  async acceptProposal(
+    @Param('familyId') familyId: string,
+    @Param('proposalId') proposalId: string,
+    @Body() body: { onboarding_id?: string; priority_id?: string; idempotency_key?: string },
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const actor = requireActor(actorId);
+    if (!body?.onboarding_id) throw new BadRequestException('onboarding_id is required');
+    if (!body?.priority_id) throw new BadRequestException('priority_id is required');
+    if (!body?.idempotency_key) throw new BadRequestException('idempotency_key is required');
+    const result = await this.service.acceptProposal(familyId, proposalId, actor, corr(correlationId), {
+      onboarding_id: body.onboarding_id, priority_id: body.priority_id, idempotency_key: body.idempotency_key,
+    });
+    if (!result) throw new NotFoundException('proposal not found for family');
+    return result;
+  }
+
   @Post('responses/:responseId/feedback')
   async feedback(
     @Param('familyId') familyId: string,
