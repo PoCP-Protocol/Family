@@ -32,11 +32,14 @@ DISTILLATION                  = NOT_AUTHORIZED
 DH1 / VOICE / AVATAR          = NOT_AUTHORIZED
 WAF_WF1_C                     = NOT_AUTHORIZED
 
-BLOCKERS (to final PR)        = 1
+BLOCKERS (to final PR)        = 0
   B1 MODEL_ATTEMPT_LEDGER          = DONE
   B2 QUOTA_ATTEMPT_ACCOUNTING      = DONE
   B3 FAILOVER_POLICY_AWARE         = DONE
-  B4 M3-RB-002 / m3/family-1-0-mos = PENDING (V3.3 SSOT rebaseline;Runtime PR 的并入基;程序级,须架构师授权 + 独立分支,§42)
+  B4 M3-RB-002 / m3/family-1-0-mos = DONE (V3.3 SSOT 收敛收口 @ family-1-0-mos commit 6708829)
+
+ADMISSION_PR = https://github.com/PoCP-Protocol/Family/pull/1  (DRAFT, base=m3/family-1-0-mos, head=m3/fpai-runtime-admission-fix, AUTO_MERGE=NO)
+NEXT = M3-W1_RUNTIME_INTEGRATION_FINAL_REVIEW (架构师);建议合并前 GitHub 实跑 Family Required + M3 Foundation gates
 ```
 
 ## 本 tranche 交付(TRANCHE_1)
