@@ -181,6 +181,21 @@ capabilities:
     supersedes: []
     notes: used 须基于 provider attempt;内部 Ops only。
 
+  - capability_id: WAF_WF1_C
+    stage: M3-W2
+    status: INTERNAL_ALLOWED   # 消费端「法咪莉校长咨询」;架构师 M3-W2 批准内部级
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # 仅内部/自测(dogfood),x-actor-id
+    live_external_call_authorized: false   # 校长走确定性 soul,零外呼
+    pilot_authorized: false           # IAM 缺口:无真实用户身份不得对真实家庭开
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2_000_CONSUMER_PRODUCT_INTEGRATION_KICKOFF.md
+    authorized_at: "2026-08-12"
+    supersedes: []
+    notes: W2-101 消费端校长章节;内部端到端可建可验,试点须先过 IAM gate。
+
   # 明确未授权(危险能力)
   - capability_id: SFT
     stage: FUTURE
