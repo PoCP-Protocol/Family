@@ -1,0 +1,7 @@
+gestures:
+  small_open_hand:
+    name: "SMALL_OPEN_HAND"
+  slight_nod:
+    name: "SLIGHT_NOD"
+  steady_gaze:
+    name: "STEADY_GAZE"

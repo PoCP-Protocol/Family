@@ -1,0 +1,10 @@
+scenes:
+  interactive_chat:
+    pace: "medium"
+    tone: "calm_warm"
+  micro_lesson:
+    pace: "medium_slow"
+    tone: "clear_teaching"
+  family_dialogue:
+    pace: "slow"
+    tone: "warm_firm"

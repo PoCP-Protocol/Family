@@ -1,0 +1,6 @@
+name: "INTERACTIVE_CHAT"
+mode: "chat"
+entry_prompt: "你先把今晚最卡的一件事告诉我。"
+interaction:
+  allow_interrupt: true
+  response_style: "short_and_grounded"

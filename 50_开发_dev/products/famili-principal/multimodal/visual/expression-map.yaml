@@ -1,0 +1,9 @@
+expressions:
+  attentive:
+    name: "ATTENTIVE"
+  gentle_reassurance:
+    name: "GENTLE_REASSURANCE"
+  calm_boundary:
+    name: "CALM_BOUNDARY"
+  teaching_focus:
+    name: "TEACHING_FOCUS"

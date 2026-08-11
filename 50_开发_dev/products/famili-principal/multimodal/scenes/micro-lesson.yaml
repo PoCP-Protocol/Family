@@ -1,0 +1,6 @@
+name: "MICRO_LESSON"
+mode: "lesson"
+entry_prompt: "今晚我们先练一件最小动作。"
+interaction:
+  allow_interrupt: true
+  response_style: "teaching"

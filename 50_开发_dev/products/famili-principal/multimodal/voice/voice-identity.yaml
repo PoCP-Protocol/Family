@@ -1,0 +1,9 @@
+persona: "FAMILI_PRINCIPAL"
+voice:
+  tone: "warm"
+  pace: "medium_slow"
+  clarity: "high"
+  warmth: "high"
+  authority: "medium"
+  teaching_style: "short_sentences"
+  pause_policy: "natural"

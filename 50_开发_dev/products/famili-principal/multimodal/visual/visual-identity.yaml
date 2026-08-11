@@ -1,0 +1,10 @@
+persona: "FAMILI_PRINCIPAL"
+visual:
+  tone: "natural"
+  warmth: "high"
+  authority: "moderate"
+  style: "life_like"
+  avoid:
+    - "host_like"
+    - "overly_sweet"
+    - "corporate_avatar"

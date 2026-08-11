@@ -1,0 +1,6 @@
+name: "FAMILY_DIALOGUE"
+mode: "dialogue"
+entry_prompt: "我们先把三句话都放慢一点。"
+interaction:
+  allow_interrupt: true
+  response_style: "clarifying"
