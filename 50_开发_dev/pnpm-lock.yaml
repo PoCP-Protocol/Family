@@ -29,9 +29,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@family/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@family/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@family/principal-ai':
+        specifier: workspace:*
+        version: link:../../packages/principal-ai
+      '@family/principal-runtime':
+        specifier: workspace:*
+        version: link:../../packages/principal-runtime
       '@family/waf-contracts':
         specifier: workspace:*
         version: link:../../packages/waf-contracts
