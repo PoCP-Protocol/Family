@@ -42,6 +42,12 @@ describe('AnthropicAiGateway (cc switch multimodal)', () => {
     expect(blocks.some((b: any) => b.type === 'text')).toBe(true);
   });
 
+  it('strips ```json markdown fences before parsing (real models sometimes fence despite instructions)', async () => {
+    const gw = new AnthropicAiGateway(cfg(), async () => okResp('```json\n{"say":"fenced"}\n```'));
+    const r = await gw.generateStructured(req());
+    expect(r.output).toEqual({ say: 'fenced' });
+  });
+
   it('TIMEOUT on hung fetch', async () => {
     const gw = new AnthropicAiGateway(cfg(20), () => new Promise(() => {}) as never);
     await expect(gw.generateStructured(req())).rejects.toMatchObject({ kind: 'TIMEOUT' });

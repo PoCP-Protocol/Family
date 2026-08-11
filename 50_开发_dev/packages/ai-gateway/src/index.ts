@@ -266,6 +266,13 @@ export function createOpenAICompatibleAiGatewayFromEnv(env: Record<string, strin
   return new OpenAICompatibleAiGateway({ baseUrl, apiKey, model, timeoutMs });
 }
 
+/** 剥离模型输出外层的 ```json ... ``` / ``` ... ``` markdown 围栏(仅去外层,内容不改)。 */
+export function stripCodeFence(text: string): string {
+  const t = text.trim();
+  const m = t.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i);
+  return m ? m[1].trim() : t;
+}
+
 function getGlobalFetch(): JsonFetch {
   const candidate = (globalThis as unknown as { fetch?: JsonFetch }).fetch;
   if (!candidate) throw new Error('Global fetch is unavailable; Node 20+ or an injected fetch implementation is required');
@@ -365,7 +372,8 @@ export class AnthropicAiGateway implements AiGateway {
 
     let parsed: TOutput;
     try {
-      parsed = JSON.parse(text) as TOutput;
+      // 部分模型即便被要求"无 markdown"仍会用 ```json ``` 包裹 → 先剥离围栏再解析(仍 FAIL CLOSED)。
+      parsed = JSON.parse(stripCodeFence(text)) as TOutput;
     } catch {
       throw new AiGatewayError('INVALID_JSON', 'model content is not valid JSON'); // FAIL CLOSED:不返原始文本
     }

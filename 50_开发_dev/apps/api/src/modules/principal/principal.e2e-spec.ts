@@ -93,6 +93,47 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     expect(pr.rows[0].n).toBe(0);
   });
 
+  it('M3-103 REVIEW: message routes to human-review queue (no proposal); list + resolve', async () => {
+    const sid = await newSession();
+    const res = await post(`/families/${familyId}/principal/sessions/${sid}/messages`, {
+      subject_ref: 'child-1', message: '孩子最近厌学，我快崩溃了',
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.risk_route).toBe('REVIEW');
+    expect(body.response_id).toBeTruthy();
+    expect(body.action_proposal_id).toBeNull();
+
+    const list = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: Array<Record<string, unknown>> };
+    expect(list.handoffs.length).toBe(1);
+    expect(list.handoffs[0].risk_route).toBe('REVIEW');
+    expect(list.handoffs[0].trigger_reason).toBe('review');
+    const handoffId = list.handoffs[0].handoff_id as string;
+
+    const resolve = await post(`/families/${familyId}/principal/handoffs/${handoffId}/resolve`, { resolution: 'APPROVED', note: '已复核' });
+    expect(resolve.status).toBe(201);
+    const after = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: unknown[] };
+    expect(after.handoffs.length).toBe(0);
+    // resolving an unknown/closed handoff -> 404
+    const again = await post(`/families/${familyId}/principal/handoffs/${handoffId}/resolve`, { resolution: 'APPROVED' });
+    expect(again.status).toBe(404);
+  });
+
+  it('M3-102 multimodal: message accepts images[]; image_count recorded; deterministic path stays NORMAL', async () => {
+    const sid = await newSession();
+    const res = await post(`/families/${familyId}/principal/sessions/${sid}/messages`, {
+      subject_ref: 'child-1', message: '这是孩子今天的作业，拖到很晚', images: [{ media_type: 'image/png', data: 'iVBORw0KGgo=' }],
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.risk_route).toBe('NORMAL');
+    const ev = (await pool.query(`select payload from product_events where session_id=$1 and event_name='principal_question_submitted'`, [sid])).rows[0];
+    expect(ev.payload.image_count).toBe(1);
+    // bad image shape -> 400
+    const bad = await post(`/families/${familyId}/principal/sessions/${sid}/messages`, { subject_ref: 'child-1', message: 'x', images: [{ media_type: 'image/png' }] });
+    expect(bad.status).toBe(400);
+  });
+
   it('GET session returns aggregate; unknown family -> 404', async () => {
     const sid = await newSession();
     await post(`/families/${familyId}/principal/sessions/${sid}/messages`, { subject_ref: 'child-1', message: '手机玩太久了' });

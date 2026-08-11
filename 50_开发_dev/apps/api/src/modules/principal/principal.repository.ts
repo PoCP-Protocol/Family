@@ -115,12 +115,41 @@ export class PrincipalRepository {
     );
   }
 
-  async saveHandoff(sessionId: string, familyId: string, subjectRef: string, riskRoute: string, trigger: string): Promise<void> {
+  async saveHandoff(sessionId: string, familyId: string, subjectRef: string, riskRoute: string, trigger: string, assignedRole: string | null = null): Promise<void> {
     await this.pool.query(
-      `insert into principal_human_handoffs(session_id, family_id, subject_ref, risk_route, trigger_reason)
-         values ($1,$2,$3,$4,$5)`,
-      [sessionId, familyId, subjectRef, riskRoute, trigger],
+      `insert into principal_human_handoffs(session_id, family_id, subject_ref, risk_route, trigger_reason, assigned_role)
+         values ($1,$2,$3,$4,$5,$6)`,
+      [sessionId, familyId, subjectRef, riskRoute, trigger, assignedRole],
     );
+  }
+
+  async listOpenHandoffs(familyId: string): Promise<Array<Record<string, unknown>>> {
+    const r = await this.pool.query(
+      `select handoff_id, session_id, subject_ref, risk_route, trigger_reason, assigned_role, status, created_at
+         from principal_human_handoffs where family_id=$1 and status='OPEN' order by created_at desc`,
+      [familyId],
+    );
+    return r.rows;
+  }
+
+  async resolveHandoff(handoffId: string, familyId: string, actorId: string, resolution: string, note: string | null): Promise<boolean> {
+    const r = await this.pool.query(
+      `update principal_human_handoffs
+          set status='RESOLVED', resolution=$3, resolution_note=$4, resolved_by_actor_id=$5, resolved_at=now()
+        where handoff_id=$1 and family_id=$2 and status='OPEN'`,
+      [handoffId, familyId, resolution, note, actorId],
+    );
+    return (r.rowCount ?? 0) > 0;
+  }
+
+  /** M3-104 配额:今日该 family 真实外部模型(anthropic-compatible)调用计数。 */
+  async countRealModelRunsToday(familyId: string): Promise<number> {
+    const r = await this.pool.query<{ n: string }>(
+      `select count(*)::int as n from principal_model_runs
+        where family_id_ref=$1 and model_provider='anthropic-compatible' and created_at >= date_trunc('day', now())`,
+      [familyId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
   }
 
   async recordProductEvent(eventName: string, familyId: string | null, sessionId: string | null, correlationId: string, payload: unknown = {}): Promise<void> {

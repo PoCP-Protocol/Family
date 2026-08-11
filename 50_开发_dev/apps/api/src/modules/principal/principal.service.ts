@@ -55,25 +55,48 @@ export class PrincipalService {
   async handleMessage(
     familyId: string, sessionId: string, subjectRef: string, actorId: string,
     userMessage: string, correlationId: string,
+    images?: Array<{ media_type: string; data: string }>,
   ): Promise<HandleMessageResult> {
     await this.repo.addMessage(sessionId, familyId, 'USER', userMessage, correlationId);
-    await this.repo.recordProductEvent('principal_question_submitted', familyId, sessionId, correlationId, {});
+    await this.repo.recordProductEvent('principal_question_submitted', familyId, sessionId, correlationId,
+      images?.length ? { image_count: images.length } : {}); // 只记数量,不落原始字节(隐私)
 
     // Consent (canonical) — 授权才允许注入个性化 Family context;此处最小化不读 growth。
     const consents = await this.repo.loadConsents(familyId, subjectRef);
     const consent = resolvePrincipalConsent(consents, subjectRef);
+
+    // M3-104 每日配额:仅约束真实外部模型成本。危机(precheck=HIGH_RISK)不受配额影响;确定性回退无外呼不计。
+    const cap = Number(process.env.FPAI_PRINCIPAL_DAILY_CAP ?? 0);
+    if (this.gateway && cap > 0 && safetyPrecheck({ user_message: userMessage }) !== 'HIGH_RISK') {
+      const used = await this.repo.countRealModelRunsToday(familyId);
+      if (used >= cap) {
+        await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'quota', 'REVIEWER');
+        await this.repo.recordProductEvent('principal_quota_exceeded', familyId, sessionId, correlationId, { used, cap });
+        return { session_id: sessionId, response_id: null, risk_route: 'REVIEW', consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
+      }
+    }
 
     const requestId = randomUUID();
     const input: PrincipalAiInput = {
       request_id: requestId, session_id: sessionId, entry_point: 'ASK_FAMILI_PRINCIPAL',
       user_message: userMessage,
       consent_context: { fpai_lab_consent: consent.allowed, family_context_read_allowed: consent.allowed },
+      ...(images?.length ? { images } : {}), // 多模态:runPrincipalTextMvp 仅在 precheck!=HIGH_RISK 时转发给网关
     };
 
     // 安全编排全部在 runPrincipalTextMvp 内(已单测,101B 唯一接入点):
     //  precheck=HIGH_RISK → 根本不调用模型;调用后 postcheck;schema 不过 → FAIL_CLOSED(REVIEW,绝不返自由文本)。
     //  gateway=null(默认/CI/测试)→ 确定性回退,零外部调用;gateway=真实(FPAI_PRINCIPAL_PROVIDER=real)→ cc switch(anthropic-compatible)。
-    const run = await runPrincipalTextMvp(input, this.gateway ?? undefined);
+    // FAIL CLOSED:真实网关任何失败(超时/网络/4xx/5xx/非法JSON/schema)绝不 500、绝不返原始文本 —— 安全降级到人工复核。
+    let run: Awaited<ReturnType<typeof runPrincipalTextMvp>>;
+    try {
+      run = await runPrincipalTextMvp(input, this.gateway ?? undefined);
+    } catch (e) {
+      const kind = (e as { kind?: string })?.kind ?? 'MODEL_ERROR';
+      await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'model_error', 'REVIEWER');
+      await this.repo.recordProductEvent('principal_model_error', familyId, sessionId, correlationId, { kind });
+      return { session_id: sessionId, response_id: null, risk_route: 'REVIEW', consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
+    }
     const output = run.output;
     const route = output.risk_route;
     const schemaPass = run.model_run.schema_validation === 'PASS';
@@ -99,6 +122,12 @@ export class PrincipalService {
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
     await this.repo.recordProductEvent('principal_response_received', familyId, sessionId, correlationId, { response_id: resp.response_id, risk_route: route });
 
+    // REVIEW(含 FAIL_CLOSED 降级)→ 进人工复核队列(REVIEWER),响应已存供复核;不建 proposal。
+    if (route === 'REVIEW') {
+      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, 'review', 'REVIEWER');
+      await this.repo.recordProductEvent('principal_review_queued', familyId, sessionId, correlationId, { response_id: resp.response_id });
+    }
+
     // NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
     // 真正应用到 Growth 是 101A-C accept(→ 既有 Named Action)。
     let proposalId: string | null = null;
@@ -118,6 +147,17 @@ export class PrincipalService {
 
   async sessionBelongsToFamily(sessionId: string, familyId: string): Promise<boolean> {
     return this.repo.sessionBelongsToFamily(sessionId, familyId);
+  }
+
+  // M3-103 人工复核队列
+  async listHandoffs(familyId: string): Promise<Array<Record<string, unknown>>> {
+    return this.repo.listOpenHandoffs(familyId);
+  }
+
+  async resolveHandoff(familyId: string, handoffId: string, actorId: string, resolution: string, note: string | null, correlationId: string): Promise<boolean> {
+    const ok = await this.repo.resolveHandoff(handoffId, familyId, actorId, resolution, note);
+    if (ok) await this.repo.recordProductEvent('principal_handoff_resolved', familyId, null, correlationId, { handoff_id: handoffId, resolution });
+    return ok;
   }
 
   /**

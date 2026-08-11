@@ -30,17 +30,25 @@ export class PrincipalController {
   async postMessage(
     @Param('familyId') familyId: string,
     @Param('sessionId') sessionId: string,
-    @Body() body: { message?: string; subject_ref?: string },
+    @Body() body: { message?: string; subject_ref?: string; images?: Array<{ media_type?: string; data?: string }> },
     @Headers('x-actor-id') actorId?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
     const actor = requireActor(actorId);
     if (!body?.message) throw new BadRequestException('message is required');
     if (!body?.subject_ref) throw new BadRequestException('subject_ref is required');
+    let images: Array<{ media_type: string; data: string }> | undefined;
+    if (body.images !== undefined) {
+      if (!Array.isArray(body.images)) throw new BadRequestException('images must be an array');
+      images = body.images.map((img, i) => {
+        if (!img?.media_type || !img?.data) throw new BadRequestException(`images[${i}] requires media_type and data`);
+        return { media_type: img.media_type, data: img.data };
+      });
+    }
     if (!(await this.service.sessionBelongsToFamily(sessionId, familyId))) {
       throw new NotFoundException('session not found for family');
     }
-    return this.service.handleMessage(familyId, sessionId, body.subject_ref, actor, body.message, corr(correlationId));
+    return this.service.handleMessage(familyId, sessionId, body.subject_ref, actor, body.message, corr(correlationId), images);
   }
 
   @Get('sessions/:sessionId')
@@ -53,6 +61,33 @@ export class PrincipalController {
     const agg = await this.service.getSession(familyId, sessionId);
     if (!agg) throw new NotFoundException('session not found');
     return agg;
+  }
+
+  @Get('handoffs')
+  async listHandoffs(
+    @Param('familyId') familyId: string,
+    @Headers('x-actor-id') actorId?: string,
+  ) {
+    requireActor(actorId);
+    return { handoffs: await this.service.listHandoffs(familyId) };
+  }
+
+  @Post('handoffs/:handoffId/resolve')
+  async resolveHandoff(
+    @Param('familyId') familyId: string,
+    @Param('handoffId') handoffId: string,
+    @Body() body: { resolution?: string; note?: string },
+    @Headers('x-actor-id') actorId?: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    const actor = requireActor(actorId);
+    const resolution = body?.resolution ?? 'INFO_ONLY';
+    if (!['APPROVED', 'REJECTED', 'ESCALATED', 'INFO_ONLY'].includes(resolution)) {
+      throw new BadRequestException('resolution must be APPROVED|REJECTED|ESCALATED|INFO_ONLY');
+    }
+    const ok = await this.service.resolveHandoff(familyId, handoffId, actor, resolution, body?.note ?? null, corr(correlationId));
+    if (!ok) throw new NotFoundException('open handoff not found for family');
+    return { ok: true, resolution };
   }
 
   @Post('proposals/:proposalId/accept')

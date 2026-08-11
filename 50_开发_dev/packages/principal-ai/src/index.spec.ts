@@ -188,6 +188,19 @@ describe('@family/principal-ai FP1 text intelligence MVP', () => {
     expect(soul.training_tags).toContain('sisterly_mentor');
   });
 
+  it('M3-102: forwards images on the top-level images channel, not inside the text input', () => {
+    const req = buildPrincipalAiGatewayRequest({
+      request_id: 'r1', session_id: 's1', entry_point: 'ASK_FAMILI_PRINCIPAL',
+      user_message: '孩子作业拖拉，附了一张作业照片',
+      consent_context: { fpai_lab_consent: false, family_context_read_allowed: false },
+      images: [{ media_type: 'image/png', data: 'AAAABBBB' }],
+    });
+    expect(req.images).toEqual([{ media_type: 'image/png', data: 'AAAABBBB' }]);
+    // base64 不得混进文本 input(避免污染 prompt)
+    expect(JSON.stringify(req.input)).not.toContain('AAAABBBB');
+    expect((req.input as { images?: unknown }).images).toBeUndefined();
+  });
+
   it('marks voice, avatar, digital human, and FP2 as future-only', () => {
     expect(FUTURE_ONLY_CAPABILITIES).toMatchObject({
       VOICE_RUNTIME: 'NO',
