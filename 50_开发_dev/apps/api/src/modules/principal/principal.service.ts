@@ -110,6 +110,17 @@ export class PrincipalService {
       risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
     });
 
+    // M3-108 阈值告警:真实外呼达到 warn 阈值(默认 80%)时发一次 principal_quota_warning(exceeded 由前置守卫另发)。
+    const provider = run.model_run.model_provider;
+    if (cap > 0 && provider !== 'fake' && provider !== 'deterministic-fallback') {
+      const usedAfter = await this.repo.countRealModelRunsToday(familyId);
+      const warnPct = Number(process.env.FPAI_PRINCIPAL_DAILY_WARN_PCT ?? 80);
+      const warnAt = Math.max(1, Math.ceil((cap * warnPct) / 100));
+      if (usedAfter === warnAt && usedAfter < cap) {
+        await this.repo.recordProductEvent('principal_quota_warning', familyId, sessionId, correlationId, { used: usedAfter, cap, warn_at: warnAt });
+      }
+    }
+
     // HIGH_RISK: 不展示陪练输出、不建 proposal、转人工。
     if (route === 'HIGH_RISK') {
       const trigger = safetyPrecheck({ user_message: userMessage }) === 'HIGH_RISK' ? 'precheck' : 'postcheck';
@@ -147,6 +158,18 @@ export class PrincipalService {
 
   async sessionBelongsToFamily(sessionId: string, familyId: string): Promise<boolean> {
     return this.repo.sessionBelongsToFamily(sessionId, familyId);
+  }
+
+  // M3-108 配额用量(持久来源=principal_model_runs;跨重启有效)
+  async getUsage(familyId: string): Promise<{ date: string; used: number; cap: number; remaining: number | null; state: string }> {
+    const cap = Number(process.env.FPAI_PRINCIPAL_DAILY_CAP ?? 0);
+    const warnPct = Number(process.env.FPAI_PRINCIPAL_DAILY_WARN_PCT ?? 80);
+    const used = await this.repo.countRealModelRunsToday(familyId);
+    let state = 'OK';
+    if (cap <= 0) state = 'UNLIMITED';
+    else if (used >= cap) state = 'EXCEEDED';
+    else if (used >= Math.max(1, Math.ceil((cap * warnPct) / 100))) state = 'WARN';
+    return { date: new Date().toISOString().slice(0, 10), used, cap, remaining: cap > 0 ? Math.max(0, cap - used) : null, state };
   }
 
   // M3-103 人工复核队列

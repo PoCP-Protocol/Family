@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, NotFoundException, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Header, Headers, Inject, NotFoundException, Param, Post } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrincipalService } from './principal.service';
 
@@ -8,6 +8,49 @@ function requireActor(actorId?: string): string {
 }
 function corr(id?: string): string {
   return id && id.trim() ? id.trim() : randomUUID();
+}
+
+/**
+ * M3-107 REVIEW 队列操作台(自包含静态页,无构建链;调用同域 handoffs / resolve 端点)。
+ * familyId 从后端注入;actor 由页面输入(→ x-actor-id)。仅列 OPEN、可解决,不触碰 canonical。
+ */
+function renderReviewConsole(familyId: string): string {
+  const fid = String(familyId).replace(/[<>"'&]/g, '');
+  return `<!doctype html><html lang="zh"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>FPAI 复核队列 · ${fid}</title>
+<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:24px;color:#1a1a1a}
+h1{font-size:18px}.row{border:1px solid #e2e2e2;border-radius:10px;padding:12px 14px;margin:8px 0}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#f0f0f4;margin-right:6px}
+.HIGH_RISK{background:#fde8e8;color:#b42318}.REVIEW{background:#fff4e5;color:#b25e09}
+button{border:0;border-radius:8px;padding:6px 12px;margin-right:6px;cursor:pointer;background:#eef;color:#334}
+button.p{background:#2f6feb;color:#fff}input,select{padding:6px;border:1px solid #ccc;border-radius:8px}
+.muted{color:#888;font-size:12px}</style></head>
+<body>
+<h1>Famili Principal · 人工复核队列</h1>
+<p class="muted">family=${fid} · 仅 OPEN 项;解决即出队。这是运营台,不写 Growth 核心态。</p>
+<p>复核人 <input id="actor" value="reviewer-1"/> <button class="p" onclick="load()">刷新</button></p>
+<div id="list"></div>
+<script>
+const FID=${JSON.stringify(fid)};
+function actor(){return document.getElementById('actor').value||'reviewer-1';}
+async function load(){
+  const r=await fetch('handoffs',{headers:{'x-actor-id':actor()}});
+  const d=await r.json();const el=document.getElementById('list');
+  if(!d.handoffs||!d.handoffs.length){el.innerHTML='<p class=muted>队列为空。</p>';return;}
+  el.innerHTML=d.handoffs.map(h=>'<div class=row><span class="tag '+h.risk_route+'">'+h.risk_route+'</span>'
+    +'<span class=tag>'+(h.trigger_reason||'')+'</span><span class=muted>'+(h.subject_ref||'')+' · '+(h.created_at||'')+'</span><br/>'
+    +'<div style="margin-top:8px">'
+    +btn(h.handoff_id,'APPROVED','通过')+btn(h.handoff_id,'ESCALATED','升级')+btn(h.handoff_id,'REJECTED','驳回')+btn(h.handoff_id,'INFO_ONLY','仅记录')
+    +'</div></div>').join('');
+}
+function btn(id,res,label){return '<button onclick="resolve(\\''+id+'\\',\\''+res+'\\')">'+label+'</button>';}
+async function resolve(id,resolution){
+  const r=await fetch('handoffs/'+id+'/resolve',{method:'POST',headers:{'content-type':'application/json','x-actor-id':actor()},body:JSON.stringify({resolution})});
+  if(r.ok)load();else alert('解决失败: '+r.status);
+}
+load();
+</script></body></html>`;
 }
 
 @Controller('families/:familyId/principal')
@@ -61,6 +104,21 @@ export class PrincipalController {
     const agg = await this.service.getSession(familyId, sessionId);
     if (!agg) throw new NotFoundException('session not found');
     return agg;
+  }
+
+  @Get('usage')
+  async usage(
+    @Param('familyId') familyId: string,
+    @Headers('x-actor-id') actorId?: string,
+  ) {
+    requireActor(actorId);
+    return this.service.getUsage(familyId);
+  }
+
+  @Get('review-console')
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  reviewConsole(@Param('familyId') familyId: string): string {
+    return renderReviewConsole(familyId);
   }
 
   @Get('handoffs')

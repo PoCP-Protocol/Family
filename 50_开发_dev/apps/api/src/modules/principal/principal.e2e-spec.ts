@@ -134,6 +134,26 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     expect(bad.status).toBe(400);
   });
 
+  it('M3-108 usage: GET usage reports UNLIMITED when no cap configured', async () => {
+    const res = await fetch(`${baseUrl}/families/${familyId}/principal/usage`, { headers: { 'x-actor-id': 'advisor-1' } });
+    expect(res.status).toBe(200);
+    const u = await res.json() as { used: number; cap: number; state: string; remaining: number | null };
+    expect(u.used).toBe(0);
+    expect(u.cap).toBe(0);
+    expect(u.state).toBe('UNLIMITED');
+    expect(u.remaining).toBeNull();
+  });
+
+  it('M3-107 review console: GET returns self-contained HTML operator page', async () => {
+    const res = await fetch(`${baseUrl}/families/${familyId}/principal/review-console`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    expect(html).toContain('人工复核队列');
+    expect(html).toContain(familyId);
+    expect(html).toContain("fetch('handoffs'");
+  });
+
   it('GET session returns aggregate; unknown family -> 404', async () => {
     const sid = await newSession();
     await post(`/families/${familyId}/principal/sessions/${sid}/messages`, { subject_ref: 'child-1', message: '手机玩太久了' });

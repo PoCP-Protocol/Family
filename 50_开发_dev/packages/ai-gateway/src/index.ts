@@ -290,9 +290,47 @@ export const AI_GATEWAY_POLICY = {
   on_failure: 'fail_closed',
   automatic_retry: 0,
   cross_provider_fallback: 'forbidden',
+  // M3-106:显式 opt-in 的受控路由(FPAI_MODEL_VENDOR=逗号列表)才启用跨厂商 failover,且仅限基础设施瞬时错误
+  //  (TIMEOUT / NETWORK_ERROR / PROVIDER_5XX);对 4xx / INVALID_JSON / SCHEMA_INVALID / POLICY_REJECTED 立即 FAIL CLOSED,绝不兜底。
+  cross_provider_fallback_when_routing: 'controlled_infra_only_TIMEOUT_NETWORK_5XX',
   schema_failure_returns_raw_text: false,
   timeout_enforced: true,
 } as const;
+
+/** 仅对基础设施瞬时错误做跨厂商 failover 的错误分类。 */
+const INFRA_FAILOVER_KINDS: ReadonlySet<AiGatewayErrorKind> = new Set(['TIMEOUT', 'NETWORK_ERROR', 'PROVIDER_5XX']);
+
+/**
+ * M3-106 受控路由:按顺序尝试多个网关。仅当上一个抛出【基础设施瞬时错误】时才尝试下一个;
+ * 4xx / 非法JSON / schema / policy 失败 → 立即上抛(FAIL CLOSED,绝不静默兜底)。默认不启用(单厂商时不用)。
+ */
+export class RoutingAiGateway implements AiGateway {
+  constructor(private readonly gateways: AiGateway[]) {
+    if (!gateways.length) throw new Error('RoutingAiGateway requires at least one gateway');
+  }
+
+  async generateStructured<TInput extends object, TOutput extends object>(
+    request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    let lastErr: unknown;
+    for (let i = 0; i < this.gateways.length; i += 1) {
+      try {
+        return await this.gateways[i].generateStructured(request);
+      } catch (e) {
+        lastErr = e;
+        const kind = e instanceof AiGatewayError ? e.kind : undefined;
+        const isLast = i === this.gateways.length - 1;
+        if (!kind || !INFRA_FAILOVER_KINDS.has(kind) || isLast) throw e; // 非瞬时错误或已到最后一个 → FAIL CLOSED
+        // 否则:基础设施瞬时错误且还有下一个 → 尝试下一个厂商
+      }
+    }
+    throw lastErr;
+  }
+
+  async embed(request: EmbeddingRequest): Promise<EmbeddingResult> {
+    return this.gateways[0].embed(request);
+  }
+}
 
 /**
  * Anthropic Messages API 适配器(支持多模态图片)。
@@ -512,12 +550,27 @@ export function createAnthropicAiGatewayFromEnv(env: Record<string, string | und
  * 统一工厂:Anthropic(cc switch,多模态)优先 → OpenAI 兼容 → Fake。
  * 未配置真实 provider 时回退 FakeAiGateway,确保测试/CI 确定性、无真实调用。
  */
+/** 按厂商名构造单个真实网关(供路由/选择复用)。 */
+export function buildVendorGateway(vendor: string, env: Record<string, string | undefined>): AiGateway {
+  switch (vendor.trim()) {
+    case 'zhipu': return createZhipuAiGatewayFromEnv(env);
+    case 'anthropic': return createAnthropicAiGatewayFromEnv(env);
+    default: throw new Error(`Unknown FPAI_MODEL_VENDOR: ${vendor}`);
+  }
+}
+
 export function createAiGatewayFromEnv(env: Record<string, string | undefined>): AiGateway {
-  // 显式厂商选择:FPAI_MODEL_VENDOR=zhipu → 智谱 GLM-4V(视觉);默认走 Anthropic(cc switch)优先链。
-  if (env.FPAI_MODEL_VENDOR === 'zhipu') {
+  const vendorSpec = env.FPAI_MODEL_VENDOR;
+  // M3-106:逗号列表 → 受控 failover 路由(如 "anthropic,zhipu")。
+  if (vendorSpec && vendorSpec.includes(',')) {
+    const gateways = vendorSpec.split(',').map((v) => v.trim()).filter(Boolean).map((v) => buildVendorGateway(v, env));
+    return new RoutingAiGateway(gateways);
+  }
+  // 显式单厂商选择:zhipu → 智谱 GLM-4V(视觉);anthropic 或 ANTHROPIC_* → cc switch。
+  if (vendorSpec === 'zhipu') {
     return createZhipuAiGatewayFromEnv(env);
   }
-  if (env.FPAI_MODEL_VENDOR === 'anthropic' || ((env.ANTHROPIC_BASE_URL) && (env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY))) {
+  if (vendorSpec === 'anthropic' || ((env.ANTHROPIC_BASE_URL) && (env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY))) {
     return createAnthropicAiGatewayFromEnv(env);
   }
   if (env.FPAI_MODEL_BASE_URL && env.FPAI_MODEL_API_KEY && env.FPAI_MODEL_NAME) {
