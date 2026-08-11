@@ -63,9 +63,9 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     const p = await pool.query(`select recommended_intervention_id, canonical from principal_action_proposals where proposal_id=$1`, [body.action_proposal_id]);
     expect(p.rows[0].recommended_intervention_id).toBe('LISTEN_BEFORE_RESPOND');
     expect(p.rows[0].canonical).toBe(false);
-    // model run recorded, provider fake (no real external call)
+    // model run recorded, no real external call (deterministic fallback when FPAI_PRINCIPAL_PROVIDER!=real)
     const mr = await pool.query(`select model_provider from principal_model_runs where session_id=$1`, [sid]);
-    expect(mr.rows[0].model_provider).toBe('fake');
+    expect(mr.rows[0].model_provider).toBe('deterministic-fallback');
     // Growth OS canonical untouched in B: Principal writes nothing to growth_actions
     const growthAfter = (await pool.query(`select count(*)::int n from growth_actions`)).rows[0].n;
     expect(growthAfter).toBe(growthBefore);

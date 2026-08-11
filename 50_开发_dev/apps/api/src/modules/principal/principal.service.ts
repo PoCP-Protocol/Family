@@ -1,14 +1,17 @@
-import { ConflictException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { InterventionCode, StartInterventionResponse } from '@family/contracts';
+import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
-  askPrincipal, safetyPrecheck, safetyPostcheck, validatePrincipalOutput, detectScenario,
-  PRINCIPAL_AI_PROMPT_VERSION, PRINCIPAL_SOUL_VERSION,
+  runPrincipalTextMvp, safetyPrecheck,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
 import { resolvePrincipalConsent } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
+
+/** DI token:Principal 真实模型网关(env-gated)。未配置真实 provider 时为 null → 确定性回退(不发外部调用)。 */
+export const PRINCIPAL_AI_GATEWAY = 'PRINCIPAL_AI_GATEWAY';
 
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
 
@@ -39,6 +42,8 @@ export class PrincipalService {
   constructor(
     @Inject(PrincipalRepository) private readonly repo: PrincipalRepository,
     @Inject(InterventionService) private readonly intervention: InterventionService,
+    // env-gated 真实模型网关(cc switch / AnthropicAiGateway)。null → runPrincipalTextMvp 走确定性回退,不发外部调用。
+    @Optional() @Inject(PRINCIPAL_AI_GATEWAY) private readonly gateway: AiGateway | null = null,
   ) {}
 
   async createSession(familyId: string, subjectRef: string, actorId: string, correlationId: string): Promise<{ session_id: string }> {
@@ -51,66 +56,64 @@ export class PrincipalService {
     familyId: string, sessionId: string, subjectRef: string, actorId: string,
     userMessage: string, correlationId: string,
   ): Promise<HandleMessageResult> {
-    const startedAt = Date.now();
     await this.repo.addMessage(sessionId, familyId, 'USER', userMessage, correlationId);
     await this.repo.recordProductEvent('principal_question_submitted', familyId, sessionId, correlationId, {});
 
-    // Consent (canonical) — AI_PERSONALIZATION+GRANTED gates personalized Family context
+    // Consent (canonical) — 授权才允许注入个性化 Family context;此处最小化不读 growth。
     const consents = await this.repo.loadConsents(familyId, subjectRef);
     const consent = resolvePrincipalConsent(consents, subjectRef);
 
-    // Safety precheck BEFORE generation
-    const precheck = safetyPrecheck({ user_message: userMessage });
-    const scenario = detectScenario({ user_message: userMessage });
     const requestId = randomUUID();
-
-    // Provider = deterministic soul (FakeAiGateway equivalent). REAL model via cc switch is M3-101B (env-gated), not here.
     const input: PrincipalAiInput = {
       request_id: requestId, session_id: sessionId, entry_point: 'ASK_FAMILI_PRINCIPAL',
       user_message: userMessage,
-      // 最小化:未授权时不注入 Family context(输出=0);此处 B 阶段不读 growth 读模型
       consent_context: { fpai_lab_consent: consent.allowed, family_context_read_allowed: consent.allowed },
     };
-    const output = askPrincipal(input);
-    const evalResult = validatePrincipalOutput(output);
-    const postRoute = safetyPostcheck(output, precheck);
 
-    const latency = Date.now() - startedAt;
+    // 安全编排全部在 runPrincipalTextMvp 内(已单测,101B 唯一接入点):
+    //  precheck=HIGH_RISK → 根本不调用模型;调用后 postcheck;schema 不过 → FAIL_CLOSED(REVIEW,绝不返自由文本)。
+    //  gateway=null(默认/CI/测试)→ 确定性回退,零外部调用;gateway=真实(FPAI_PRINCIPAL_PROVIDER=real)→ cc switch(anthropic-compatible)。
+    const run = await runPrincipalTextMvp(input, this.gateway ?? undefined);
+    const output = run.output;
+    const route = output.risk_route;
+    const schemaPass = run.model_run.schema_validation === 'PASS';
+
     await this.repo.saveModelRun({
       request_id: requestId, session_id: sessionId, family_id_ref: familyId,
-      model_provider: 'fake', model_name: 'principal-soul-deterministic',
-      prompt_version: PRINCIPAL_AI_PROMPT_VERSION, soul_version: PRINCIPAL_SOUL_VERSION, soul_hash: sha256(PRINCIPAL_SOUL_VERSION),
-      scenario_id: scenario, method_refs: output.method_refs ?? [], source_refs: output.source_refs ?? [],
-      input_hash: sha256(userMessage), output_hash: sha256(JSON.stringify(output)),
-      risk_route: postRoute, schema_validation: evalResult.pass ? 'valid' : 'invalid', latency_ms: latency,
+      model_provider: run.model_run.model_provider, model_name: run.model_run.model_name,
+      prompt_version: run.model_run.prompt_version, soul_version: run.model_run.soul_version, soul_hash: run.model_run.soul_hash,
+      scenario_id: run.model_run.scenario_id, method_refs: run.model_run.method_refs, source_refs: run.model_run.source_refs,
+      input_hash: sha256(userMessage), output_hash: run.model_run.output_hash,
+      risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
     });
 
-    // HIGH_RISK: no coaching output, no proposal, human handoff
-    if (postRoute === 'HIGH_RISK') {
-      await this.repo.saveHandoff(sessionId, familyId, subjectRef, postRoute, precheck === 'HIGH_RISK' ? 'precheck' : 'postcheck');
-      await this.repo.recordProductEvent('principal_safety_routed', familyId, sessionId, correlationId, { risk_route: postRoute });
+    // HIGH_RISK: 不展示陪练输出、不建 proposal、转人工。
+    if (route === 'HIGH_RISK') {
+      const trigger = safetyPrecheck({ user_message: userMessage }) === 'HIGH_RISK' ? 'precheck' : 'postcheck';
+      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, trigger);
+      await this.repo.recordProductEvent('principal_safety_routed', familyId, sessionId, correlationId, { risk_route: route });
       await this.repo.recordProductEvent('principal_human_handoff_created', familyId, sessionId, correlationId, {});
-      return { session_id: sessionId, response_id: null, risk_route: postRoute, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
+      return { session_id: sessionId, response_id: null, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
 
-    const resp = await this.repo.saveResponse(sessionId, familyId, postRoute, evalResult.pass, output);
-    await this.repo.recordProductEvent('principal_response_received', familyId, sessionId, correlationId, { response_id: resp.response_id, risk_route: postRoute });
+    const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
+    await this.repo.recordProductEvent('principal_response_received', familyId, sessionId, correlationId, { response_id: resp.response_id, risk_route: route });
 
-    // NORMAL + valid: create an Action Proposal bound to the existing deterministic intervention (canonical=false).
-    // Actual application into Growth OS is M3-101A-C (accept endpoint → existing Named Action).
+    // NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
+    // 真正应用到 Growth 是 101A-C accept(→ 既有 Named Action)。
     let proposalId: string | null = null;
-    if (postRoute === 'NORMAL' && evalResult.pass && output.one_small_action) {
+    if (route === 'NORMAL' && output.one_small_action) {
       const p = await this.repo.saveProposal({
         response_id: resp.response_id, session_id: sessionId, family_id: familyId, subject_ref: subjectRef,
         proposal_type: 'RECOMMEND_INTERVENTION', recommended_intervention_id: 'LISTEN_BEFORE_RESPOND',
         display_title: 'Tonight', display_instruction: output.one_small_action,
-        rationale: output.possible_pattern ?? null, risk_route: postRoute,
+        rationale: output.possible_pattern ?? null, risk_route: route,
       });
       proposalId = p.proposal_id;
       await this.repo.recordProductEvent('principal_action_proposal_viewed', familyId, sessionId, correlationId, { proposal_id: proposalId });
     }
 
-    return { session_id: sessionId, response_id: resp.response_id, risk_route: postRoute, consent_allowed: consent.allowed, response: output, action_proposal_id: proposalId, human_handoff: false };
+    return { session_id: sessionId, response_id: resp.response_id, risk_route: route, consent_allowed: consent.allowed, response: output, action_proposal_id: proposalId, human_handoff: false };
   }
 
   async sessionBelongsToFamily(sessionId: string, familyId: string): Promise<boolean> {
