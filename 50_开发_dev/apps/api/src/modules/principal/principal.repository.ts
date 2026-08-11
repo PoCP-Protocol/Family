@@ -142,11 +142,12 @@ export class PrincipalRepository {
     return (r.rowCount ?? 0) > 0;
   }
 
-  /** M3-104 配额:今日该 family 真实外部模型(anthropic-compatible)调用计数。 */
+  /** M3-104 配额:今日该 family 真实外部模型调用计数(任何真实厂商;排除 fake/确定性回退,它们无外呼成本)。 */
   async countRealModelRunsToday(familyId: string): Promise<number> {
     const r = await this.pool.query<{ n: string }>(
       `select count(*)::int as n from principal_model_runs
-        where family_id_ref=$1 and model_provider='anthropic-compatible' and created_at >= date_trunc('day', now())`,
+        where family_id_ref=$1 and model_provider not in ('fake','deterministic-fallback')
+          and created_at >= date_trunc('day', now())`,
       [familyId],
     );
     return Number(r.rows[0]?.n ?? 0);

@@ -115,7 +115,7 @@ export interface PrincipalTokenUsage {
 export interface PrincipalModelRun {
   model_run_id: string;
   request_id: string;
-  model_provider: 'fake' | 'openai-compatible' | 'deterministic-fallback' | 'anthropic-compatible';
+  model_provider: 'fake' | 'openai-compatible' | 'deterministic-fallback' | 'anthropic-compatible' | 'zhipu-compatible';
   model_name: string;
   model_version?: string;
   prompt_version: string;

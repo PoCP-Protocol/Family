@@ -21,7 +21,7 @@ export interface AiGatewayModelConfig {
 }
 
 export interface StructuredGenerationMetadata {
-  model_provider: 'fake' | 'openai-compatible' | 'anthropic-compatible';
+  model_provider: 'fake' | 'openai-compatible' | 'anthropic-compatible' | 'zhipu-compatible';
   model_version?: string;
   latency_ms: number;
   token_usage?: {
@@ -396,6 +396,109 @@ export class AnthropicAiGateway implements AiGateway {
   }
 }
 
+/**
+ * 智谱 GLM-4V 视觉适配器(OpenAI 兼容 /chat/completions,支持 image_url 多模态)。
+ * 复用 A5 硬化 + stripCodeFence(GLM 会用 ```json 包裹)。原始 API key 直接作 Bearer(v4 端点无需 JWT)。
+ */
+export class ZhipuAiGateway implements AiGateway {
+  constructor(private readonly config: AiGatewayModelConfig, private readonly httpFetch: JsonFetch = getGlobalFetch()) {}
+
+  async generateStructured<TInput extends object, TOutput extends object>(
+    request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    const startedAt = Date.now();
+    const timeoutMs = this.config.timeoutMs > 0 ? this.config.timeoutMs : 40000;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new AiGatewayError('TIMEOUT', `provider timeout after ${timeoutMs}ms`)); }, timeoutMs);
+    });
+
+    const userContent: Array<Record<string, unknown>> = [{ type: 'text', text: JSON.stringify(request.input) }];
+    for (const img of request.images ?? []) {
+      userContent.push({ type: 'image_url', image_url: { url: `data:${img.media_type};base64,${img.data}` } });
+    }
+
+    let response: JsonHttpResponse;
+    try {
+      response = await Promise.race([
+        this.httpFetch(`${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${this.config.apiKey}`, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: this.config.model,
+            messages: [
+              {
+                role: 'system',
+                content: [
+                  `use_case=${request.use_case}`, `prompt_version=${request.prompt_version}`, `schema_version=${request.schema_version}`,
+                  'Return only one JSON object matching this schema. No markdown, no prose.',
+                  `output_schema=${JSON.stringify(request.output_schema)}`,
+                ].join('\n'),
+              },
+              { role: 'user', content: userContent },
+            ],
+          }),
+          signal: controller.signal,
+        }),
+        timeout,
+      ]);
+    } catch (err) {
+      if (err instanceof AiGatewayError) throw err;
+      if (controller.signal.aborted) throw new AiGatewayError('TIMEOUT', 'request aborted');
+      throw new AiGatewayError('NETWORK_ERROR', (err as Error)?.message ?? 'network error');
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+      const kind: AiGatewayErrorKind = response.status >= 500 ? 'PROVIDER_5XX' : 'PROVIDER_4XX';
+      throw new AiGatewayError(kind, `provider ${response.status} ${response.statusText}`, response.status);
+    }
+
+    let payload: { model?: string; choices?: Array<{ message?: { content?: string } }>; usage?: StructuredGenerationMetadata['token_usage'] };
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      throw new AiGatewayError('INVALID_JSON', 'provider response body is not JSON');
+    }
+    const content = payload.choices?.[0]?.message?.content;
+    if (!content) throw new AiGatewayError('INVALID_JSON', 'provider returned no message content');
+
+    let parsed: TOutput;
+    try {
+      parsed = JSON.parse(stripCodeFence(content)) as TOutput; // FAIL CLOSED:剥离围栏后仍非法则不返原始文本
+    } catch {
+      throw new AiGatewayError('INVALID_JSON', 'model content is not valid JSON');
+    }
+
+    return {
+      model: payload.model ?? this.config.model,
+      prompt_version: request.prompt_version,
+      schema_version: request.schema_version,
+      input_refs: request.input_refs,
+      generated_at: new Date().toISOString(),
+      validation_status: 'valid',
+      human_status: 'draft',
+      output: parsed,
+      metadata: { model_provider: 'zhipu-compatible', latency_ms: Date.now() - startedAt, token_usage: payload.usage },
+    };
+  }
+
+  async embed(): Promise<EmbeddingResult> {
+    throw new Error('Embedding not supported by ZhipuAiGateway');
+  }
+}
+
+export function createZhipuAiGatewayFromEnv(env: Record<string, string | undefined>): ZhipuAiGateway {
+  const baseUrl = env.ZHIPUAI_BASE_URL;
+  const apiKey = env.ZHIPUAI_API_KEY;
+  const model = env.ZHIPUAI_VISION_MODEL ?? env.GLM_MODEL ?? 'glm-4v-plus';
+  const timeoutMs = Number(env.FPAI_MODEL_TIMEOUT_MS ?? 40000);
+  if (!baseUrl || !apiKey) throw new Error('Missing ZHIPUAI_BASE_URL or ZHIPUAI_API_KEY');
+  return new ZhipuAiGateway({ baseUrl, apiKey, model, timeoutMs });
+}
+
 export function createAnthropicAiGatewayFromEnv(env: Record<string, string | undefined>): AnthropicAiGateway {
   const baseUrl = env.ANTHROPIC_BASE_URL;
   const apiKey = env.ANTHROPIC_AUTH_TOKEN ?? env.ANTHROPIC_API_KEY;
@@ -410,7 +513,11 @@ export function createAnthropicAiGatewayFromEnv(env: Record<string, string | und
  * 未配置真实 provider 时回退 FakeAiGateway,确保测试/CI 确定性、无真实调用。
  */
 export function createAiGatewayFromEnv(env: Record<string, string | undefined>): AiGateway {
-  if ((env.ANTHROPIC_BASE_URL) && (env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY)) {
+  // 显式厂商选择:FPAI_MODEL_VENDOR=zhipu → 智谱 GLM-4V(视觉);默认走 Anthropic(cc switch)优先链。
+  if (env.FPAI_MODEL_VENDOR === 'zhipu') {
+    return createZhipuAiGatewayFromEnv(env);
+  }
+  if (env.FPAI_MODEL_VENDOR === 'anthropic' || ((env.ANTHROPIC_BASE_URL) && (env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY))) {
     return createAnthropicAiGatewayFromEnv(env);
   }
   if (env.FPAI_MODEL_BASE_URL && env.FPAI_MODEL_API_KEY && env.FPAI_MODEL_NAME) {
