@@ -1,0 +1,4502 @@
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/complete-growth-action.dto.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/complete-growth-action.dto.ts"
+index 75826b1..24772f5 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/complete-growth-action.dto.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/complete-growth-action.dto.ts"
+@@ -3,6 +3,7 @@ import type { CompleteGrowthActionRequest } from '@family/contracts';
+ 
+ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+ const COMPLETION_STATUSES = new Set(['COMPLETED', 'PARTIAL', 'NOT_COMPLETED']);
++const ALLOWED_FIELDS = new Set(['completion_status', 'reflection', 'occurred_at']);
+ 
+ type JsonObject = Record<string, unknown>;
+ 
+@@ -25,6 +26,12 @@ export function validateCompleteGrowthActionRequest(
+   }
+ 
+   const input = body as JsonObject;
++  for (const field of Object.keys(input)) {
++    if (!ALLOWED_FIELDS.has(field)) {
++      throw new BadRequestException('Invalid schema');
++    }
++  }
++
+   if (typeof input.completion_status !== 'string' || !COMPLETION_STATUSES.has(input.completion_status)) {
+     throw new BadRequestException('Invalid schema');
+   }
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/confirm-growth-priority.dto.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/confirm-growth-priority.dto.ts"
+index 25060fb..6c9d4b9 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/confirm-growth-priority.dto.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/confirm-growth-priority.dto.ts"
+@@ -3,17 +3,17 @@ import type { ConfirmGrowthPriorityRequest, GrowthPriorityDecision } from '@fami
+ 
+ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+ const ALLOWED_DECISIONS = new Set<GrowthPriorityDecision>(['P03', 'R03', 'R04', 'R05', 'NO_PRIORITY_YET']);
++const ALLOWED_FIELDS = new Set(['draft_id', 'decision']);
+ 
+ type JsonObject = Record<string, unknown>;
+ 
+ export function validateConfirmGrowthPriorityRequest(
+   familyId: string,
+   onboardingId: string,
+-  draftId: string,
+   idempotencyKey: string | undefined,
+   body: unknown,
+ ): ConfirmGrowthPriorityRequest {
+-  if (!UUID_PATTERN.test(familyId) || !UUID_PATTERN.test(onboardingId) || !UUID_PATTERN.test(draftId)) {
++  if (!UUID_PATTERN.test(familyId) || !UUID_PATTERN.test(onboardingId)) {
+     throw new BadRequestException('Invalid schema');
+   }
+ 
+@@ -26,9 +26,17 @@ export function validateConfirmGrowthPriorityRequest(
+   }
+ 
+   const input = body as JsonObject;
++  for (const field of Object.keys(input)) {
++    if (!ALLOWED_FIELDS.has(field)) {
++      throw new BadRequestException('Invalid schema');
++    }
++  }
++
+   const decision = input.decision;
++  const draftId = input.draft_id;
+ 
+-  if (typeof decision !== 'string' || !ALLOWED_DECISIONS.has(decision as GrowthPriorityDecision)) {
++  if (typeof draftId !== 'string' || !UUID_PATTERN.test(draftId)
++    || typeof decision !== 'string' || !ALLOWED_DECISIONS.has(decision as GrowthPriorityDecision)) {
+     throw new BadRequestException('Invalid schema');
+   }
+ 
+@@ -39,4 +47,4 @@ export function validateConfirmGrowthPriorityRequest(
+     decision: decision as GrowthPriorityDecision,
+     idempotency_key: idempotencyKey,
+   };
+-}
+\ No newline at end of file
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family-wave2.e2e-spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family-wave2.e2e-spec.ts"
+index 46057eb..34132e2 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family-wave2.e2e-spec.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family-wave2.e2e-spec.ts"
+@@ -1,43 +1,578 @@
+-import { readFileSync } from 'node:fs';
+-import { join } from 'node:path';
+-import { describe, expect, it } from 'vitest';
+-
+-const controllerSource = readFileSync(join(__dirname, 'family.controller.ts'), 'utf8');
+-
+-const requiredWave2HttpRoutes = [
+-  ':familyId/growth/onboardings/:onboardingId/priority',
+-  ':familyId/growth/onboardings/:onboardingId/priority/confirm',
+-  ':familyId/growth/interventions/LISTEN_BEFORE_RESPOND',
+-  ':familyId/growth/onboardings/:onboardingId/interventions/start',
+-  ':familyId/growth/onboardings/:onboardingId/interventions/active',
+-  ':familyId/growth/actions/today',
+-  ':familyId/growth/actions/:actionId/complete',
+-] as const;
+-
+-const missingWave2HttpRoutes = requiredWave2HttpRoutes.filter((route) => !controllerSource.includes(route));
+-
+-describe('M2 Wave2 HTTP E2E readiness', () => {
+-  it('PENDING_API_INTEGRATION: Wave2 HTTP routes are not fully integrated yet', () => {
+-    expect(missingWave2HttpRoutes, [
+-      'PENDING_API_INTEGRATION',
+-      'AI-05 cannot execute final Wave2 HTTP E2E until AI-00 wires controller routes to Named Actions.',
+-      `missing_routes=${missingWave2HttpRoutes.join(',')}`,
+-    ].join('\n')).not.toHaveLength(0);
+-  });
+-
+-  it.todo('E2E-W2-01 profile -> priority draft through real HTTP and PostgreSQL');
+-  it.todo('E2E-W2-02 ConfirmGrowthPriority creates active priority only through Named Action');
+-  it.todo('E2E-W2-03 NO_PRIORITY_YET path does not create hidden priority state');
+-  it.todo('E2E-W2-04 stale priority confirmation is rejected');
+-  it.todo('E2E-W2-05 StartIntervention starts LISTEN_BEFORE_RESPOND only through Named Action');
+-  it.todo('E2E-W2-06 StartIntervention creates exactly seven GrowthAction assignments');
+-  it.todo('E2E-W2-07 get today action returns one pending daily assignment');
+-  it.todo('E2E-W2-08 CompleteGrowthAction updates status without outcome or milestone');
+-  it.todo('E2E-W2-09 reflection is persisted as raw material with boundary language');
+-  it.todo('E2E-W2-10 idempotency replay returns the original Named Action response');
+-  it.todo('E2E-W2-11 idempotency conflict rejects changed payload');
+-  it.todo('E2E-W2-12 revoked or missing consent blocks priority/intervention/action flow');
+-  it.todo('E2E-W2-13 safety escalation blocks normal Wave2 continuation');
+-  it.todo('E2E-W2-14 Wave2 flow creates no Outcome side effect');
+-  it.todo('E2E-W2-15 Wave2 flow creates no AI, LLM, Model Gateway, Agent, Causal, or World Model side effect');
+-});
+\ No newline at end of file
++import type { INestApplication } from '@nestjs/common';
++import { NestFactory } from '@nestjs/core';
++import pg from 'pg';
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
++import { AppModule } from '../../app.module';
++import { cleanFamilyCoreTables, createTestPool } from '../../test/test-database';
++
++interface PgAvailability {
++  ready: boolean;
++  reason: string;
++}
++
++const pgAvailability: PgAvailability = { ready: false, reason: 'TEST_DATABASE_URL_NOT_CHECKED' };
++
++let app: INestApplication | undefined;
++let baseUrl = '';
++let pool: pg.Pool | undefined;
++
++beforeAll(async () => {
++  const testDatabaseUrl = process.env.TEST_DATABASE_URL;
++  if (!testDatabaseUrl) {
++    pgAvailability.reason = 'PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set';
++    return;
++  }
++
++  try {
++    process.env.DATABASE_URL = testDatabaseUrl;
++    pool = createTestPool();
++    await pool.query('select 1');
++    app = await NestFactory.create(AppModule, { logger: ['error'] });
++    await app.listen(0);
++    baseUrl = await app.getUrl();
++    pgAvailability.ready = true;
++    pgAvailability.reason = 'REAL_POSTGRESQL_READY';
++  } catch (error) {
++    pgAvailability.ready = false;
++    pgAvailability.reason = `PENDING_REAL_POSTGRESQL: ${(error as Error).message}`;
++    await app?.close();
++    await pool?.end();
++    app = undefined;
++    pool = undefined;
++  }
++});
++
++beforeEach(async () => {
++  if (!pgAvailability.ready || !pool) {
++    return;
++  }
++  await cleanFamilyCoreTables(pool);
++});
++
++afterAll(async () => {
++  await app?.close();
++  await pool?.end();
++});
++
++describe('M2 Wave2 PostgreSQL + HTTP E2E readiness', () => {
++  it('reports real PostgreSQL availability without faking PASS', () => {
++    expect(pgAvailability.reason).toMatch(/REAL_POSTGRESQL_READY|PENDING_REAL_POSTGRESQL/);
++  });
++});
++
++describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
++  it('E2E-W2-01 happy path confirms priority, starts intervention, completes action, and creates no outcome-like or AI side effects', async (context) => {
++    skipIfPostgresUnavailable(context);
++    const setup = await seedConfirmedProfile('corr-w2-happy');
++
++    const insightResponse = await getPriorityInsight(setup.familyId, setup.onboardingId);
++    const insight = await insightResponse.json() as GrowthPriorityInsightHttpResponse;
++
++    expect(insightResponse.status).toBe(200);
++    expect(insight.draft.candidate?.dimension_id).toBe('R03');
++    expect(insight.active_priority).toBeNull();
++
++    const confirmResponse = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-w2-happy', 'idem-w2-confirm-r03');
++    const confirm = await confirmResponse.json() as ConfirmGrowthPriorityHttpResponse;
++
++    expect(confirmResponse.status).toBe(201);
++    expect(confirm.priority).toMatchObject({
++      family_id: setup.familyId,
++      onboarding_id: setup.onboardingId,
++      profile_id: setup.profileId,
++      dimension_id: 'R03',
++      status: 'ACTIVE',
++      boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS',
++    });
++
++    const cardResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/interventions/LISTEN_BEFORE_RESPOND`, {
++      headers: baseHeaders('corr-w2-card'),
++    });
++    expect(cardResponse.status).toBe(200);
++    expect((await cardResponse.json() as { intervention_code: string }).intervention_code).toBe('LISTEN_BEFORE_RESPOND');
++
++    const startResponse = await startIntervention(setup.familyId, setup.onboardingId, confirm.priority!.priority_id, 'corr-w2-happy', 'idem-w2-start-intervention');
++    const start = await startResponse.json() as StartInterventionHttpResponse;
++
++    expect(startResponse.status).toBe(201);
++    expect(start.intervention.intervention_code).toBe('LISTEN_BEFORE_RESPOND');
++    expect(start.episode).toMatchObject({
++      family_id: setup.familyId,
++      onboarding_id: setup.onboardingId,
++      priority_id: confirm.priority!.priority_id,
++      status: 'ACTIVE',
++      planned_days: 7,
++    });
++    expect(start.actions).toHaveLength(7);
++    expect(start.actions.map((action) => action.day_index)).toEqual([1, 2, 3, 4, 5, 6, 7]);
++    expect(start.actions.every((action) => action.boundary === 'ACTION_IS_NOT_OUTCOME')).toBe(true);
++
++    const activeResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/interventions/active`, {
++      headers: baseHeaders('corr-w2-active'),
++    });
++    const active = await activeResponse.json() as StartInterventionHttpResponse;
++    expect(activeResponse.status).toBe(200);
++    expect(active.episode.episode_id).toBe(start.episode.episode_id);
++    expect(active.actions).toHaveLength(7);
++
++    const todayResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/actions/today`, {
++      headers: baseHeaders('corr-w2-today'),
++    });
++    const today = await todayResponse.json() as GrowthActionHttpDto;
++    expect(todayResponse.status).toBe(200);
++    expect(today.action_id).toBe(start.actions[0].action_id);
++    expect(today.status).toBe('PENDING');
++
++    const completeResponse = await completeAction(setup.familyId, start.actions[0].action_id, 'corr-w2-happy', 'idem-w2-complete-action', {
++      completion_status: 'COMPLETED',
++      reflection: '今天我先停下来听孩子讲完,没有马上给建议。',
++      occurred_at: '2026-08-10T12:00:00.000Z',
++    });
++    const complete = await completeResponse.json() as CompleteGrowthActionHttpResponse;
++
++    expect(completeResponse.status).toBe(201);
++    expect(complete.action).toMatchObject({
++      action_id: start.actions[0].action_id,
++      status: 'COMPLETED',
++      completion_status: 'COMPLETED',
++      reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
++      boundary: 'ACTION_IS_NOT_OUTCOME',
++    });
++    expect(complete.reflection_boundary).toBe('REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME');
++
++    await expectCount('growth_priorities', 1);
++    await expectCount('intervention_episodes', 1);
++    await expectCount('growth_actions', 7);
++    await expectOutcomeLikeTablesEmpty();
++    await expectNoAiLikeSideEffects();
++    await expectAuditActions(['ConfirmGrowthPriority', 'StartIntervention', 'CompleteGrowthAction']);
++    await expectOutboxEvents(['GrowthPriorityConfirmed', 'InterventionStarted', 'GrowthActionCompleted']);
++  });
++
++  it('E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects', async (context) => {
++    skipIfPostgresUnavailable(context);
++    const missingConsentSetup = await seedConfirmedProfile('corr-w2-missing-consent');
++    await pool!.query(
++      `delete from consents where family_id = $1 and subject_person_id = $2 and purpose = 'GROWTH_TRACKING'`,
++      [missingConsentSetup.familyId, missingConsentSetup.childId],
++    );
++    const missingInsight = await (await getPriorityInsight(missingConsentSetup.familyId, missingConsentSetup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
++    const missingConfirm = await confirmPriority(missingConsentSetup.familyId, missingConsentSetup.onboardingId, missingInsight.draft.draft_id, 'R03', 'corr-w2-missing-consent', 'idem-w2-missing-consent-confirm');
++
++    expect(missingConfirm.status).toBe(403);
++    await expectCount('growth_priorities', 0);
++    await expectCount('intervention_episodes', 0);
++    await expectCount('growth_actions', 0);
++
++    await cleanFamilyCoreTables(pool!);
++    const revokedSetup = await seedConfirmedProfile('corr-w2-revoked-consent');
++    const revokedInsight = await (await getPriorityInsight(revokedSetup.familyId, revokedSetup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
++    const confirmed = await (await confirmPriority(revokedSetup.familyId, revokedSetup.onboardingId, revokedInsight.draft.draft_id, 'R03', 'corr-w2-revoked-consent', 'idem-w2-revoked-confirm')).json() as ConfirmGrowthPriorityHttpResponse;
++    const started = await (await startIntervention(revokedSetup.familyId, revokedSetup.onboardingId, confirmed.priority!.priority_id, 'corr-w2-revoked-consent', 'idem-w2-revoked-start')).json() as StartInterventionHttpResponse;
++
++    await revokeConsent(revokedSetup.familyId, revokedSetup.childId, 'GROWTH_TRACKING');
++
++    const blockedIntervention = await startIntervention(revokedSetup.familyId, revokedSetup.onboardingId, confirmed.priority!.priority_id, 'corr-w2-revoked-consent', 'idem-w2-revoked-start-2');
++    const blockedAction = await completeAction(revokedSetup.familyId, started.actions[0].action_id, 'corr-w2-revoked-consent', 'idem-w2-revoked-complete', {
++      completion_status: 'COMPLETED',
++      reflection: '应被撤回 consent 阻止。',
++      occurred_at: '2026-08-10T12:00:00.000Z',
++    });
++
++    expect(blockedIntervention.status).toBe(403);
++    expect(blockedAction.status).toBe(403);
++    await expectCount('growth_priorities', 1);
++    await expectCount('intervention_episodes', 1);
++    await expectCount('growth_actions', 7);
++    await expectCompletedActionCount(0);
++    await expectOutcomeLikeTablesEmpty();
++  });
++
++  it('E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects', async (context) => {
++    skipIfPostgresUnavailable(context);
++    const setup = await seedConfirmedProfile('corr-w2-safety');
++    await pool!.query(
++      `update perspectives
++       set safety_disposition = '{"severity":"MEDIUM","disposition":"HUMAN_REVIEW","policy_version":"M2_102_DETERMINISTIC_V1","signals":["HUMAN_REVIEW_REQUIRED"]}'::jsonb
++       where family_id = $1 and onboarding_id = $2`,
++      [setup.familyId, setup.onboardingId],
++    );
++    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
++    const confirm = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-w2-safety', 'idem-w2-safety-confirm');
++
++    expect(confirm.status).toBe(403);
++    await expectCount('growth_priorities', 0);
++    await expectCount('intervention_episodes', 0);
++    await expectCount('growth_actions', 0);
++    await expectOutcomeLikeTablesEmpty();
++  });
++
++  it('E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state', async (context) => {
++    skipIfPostgresUnavailable(context);
++    const setup = await seedConfirmedProfile('corr-w2-forbidden');
++    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
++
++    const forbiddenPriority = await postJson(`/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/priority/confirm`, {
++      draft_id: insight.draft.draft_id,
++      decision: 'R03',
++      priority_id: '11111111-1111-4111-8111-111111111111',
++    }, 'corr-w2-forbidden', 'idem-w2-forbidden-priority');
++    expect(forbiddenPriority.status).toBe(400);
++    await expectCount('growth_priorities', 0);
++
++    const confirmed = await (await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-w2-forbidden', 'idem-w2-forbidden-confirm-valid')).json() as ConfirmGrowthPriorityHttpResponse;
++    const forbiddenIntervention = await postJson(`/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/interventions/start`, {
++      priority_id: confirmed.priority!.priority_id,
++      intervention_code: 'LISTEN_BEFORE_RESPOND',
++      episode_id: '11111111-1111-4111-8111-111111111111',
++    }, 'corr-w2-forbidden', 'idem-w2-forbidden-intervention');
++    expect(forbiddenIntervention.status).toBe(400);
++    await expectCount('intervention_episodes', 0);
++    await expectCount('growth_actions', 0);
++
++    const started = await (await startIntervention(setup.familyId, setup.onboardingId, confirmed.priority!.priority_id, 'corr-w2-forbidden', 'idem-w2-forbidden-start-valid')).json() as StartInterventionHttpResponse;
++    const forbiddenAction = await completeAction(setup.familyId, started.actions[0].action_id, 'corr-w2-forbidden', 'idem-w2-forbidden-action', {
++      completion_status: 'COMPLETED',
++      reflection: '字段白名单测试。',
++      occurred_at: '2026-08-10T12:00:00.000Z',
++      outcome_id: '11111111-1111-4111-8111-111111111111',
++    });
++
++    expect(forbiddenAction.status).toBe(400);
++    await expectCompletedActionCount(0);
++    await expectOutcomeLikeTablesEmpty();
++  });
++
++  it('E2E-W2-05 no-priority decision and stale draft do not create hidden state', async (context) => {
++    skipIfPostgresUnavailable(context);
++    const setup = await seedConfirmedProfile('corr-w2-no-priority');
++    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
++
++    const noPriority = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'NO_PRIORITY_YET', 'corr-w2-no-priority', 'idem-w2-no-priority');
++    const noPriorityBody = await noPriority.json() as ConfirmGrowthPriorityHttpResponse;
++    expect(noPriority.status).toBe(201);
++    expect(noPriorityBody.priority).toBeNull();
++    await expectCount('growth_priorities', 0);
++    await expectCount('intervention_episodes', 0);
++    await expectCount('growth_actions', 0);
++
++    const stale = await confirmPriority(setup.familyId, setup.onboardingId, '11111111-1111-4111-8111-111111111111', 'R03', 'corr-w2-no-priority', 'idem-w2-stale-priority');
++    expect(stale.status).toBe(409);
++    await expectCount('growth_priorities', 0);
++  });
++});
++
++function skipIfPostgresUnavailable(context: { skip: (note?: string) => void }): void {
++  if (!pgAvailability.ready) {
++    context.skip(pgAvailability.reason);
++  }
++}
++
++async function seedConfirmedProfile(correlationId: string, options: { grantGrowthTrackingConsent?: boolean; safetyScreeningResult?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' } = {}): Promise<SeededWave2State> {
++  const grantGrowthTrackingConsent = options.grantGrowthTrackingConsent ?? true;
++  const family = await postFamily({ display_name: 'Wave2 E2E 家庭', idempotency_key: `idem-${correlationId}-family` }, correlationId);
++  const familyBody = await family.json() as CreateFamilyHttpResponse;
++  expect(family.status).toBe(201);
++
++  const parent = await postJsonExpect<{ parent: { person_id: string } }>(`/families/${familyBody.family.family_id}/parents`, {
++    role: 'GUARDIAN',
++    display_name: '监护人',
++    account_id: 'architect-1',
++    idempotency_key: `idem-${correlationId}-parent`,
++  }, correlationId);
++  const child = await postJsonExpect<{ child: { person_id: string } }>(`/families/${familyBody.family.family_id}/children`, {
++    display_name: '孩子',
++    birth_date: '2012-06-01',
++    idempotency_key: `idem-${correlationId}-child`,
++  }, correlationId);
++  const relationship = await postJsonExpect<{ relationship: { relationship_id: string } }>(`/families/${familyBody.family.family_id}/relationships`, {
++    person_a_id: parent.parent.person_id,
++    person_b_id: child.child.person_id,
++    relationship_type: 'GUARDIAN_CHILD',
++    idempotency_key: `idem-${correlationId}-relationship`,
++  }, correlationId);
++
++  await postJsonExpect(`/families/${familyBody.family.family_id}/life-stages`, {
++    child_id: child.child.person_id,
++    life_stage_code: 'EARLY_ADOLESCENCE_12_15',
++    effective_from: '2026-08-10T00:00:00.000Z',
++    idempotency_key: `idem-${correlationId}-life-stage`,
++  }, correlationId);
++
++  const purposes: Array<'SERVICE' | 'ASSESSMENT' | 'GROWTH_TRACKING'> = ['SERVICE', 'ASSESSMENT'];
++  if (grantGrowthTrackingConsent) {
++    purposes.push('GROWTH_TRACKING');
++  }
++  for (const purpose of purposes) {
++    await postJsonExpect(`/families/${familyBody.family.family_id}/consents`, {
++      subjectPersonId: child.child.person_id,
++      guardianPersonId: parent.parent.person_id,
++      purpose,
++      policyVersion: `policy-${correlationId}`,
++    }, correlationId, `idem-${correlationId}-consent-${purpose}`);
++  }
++
++  const onboarding = await postJsonExpect<StartGrowthOnboardingHttpResponse>(`/families/${familyBody.family.family_id}/growth/onboarding`, {
++    childId: child.child.person_id,
++    guardianPersonId: parent.parent.person_id,
++    safetyScreeningResult: options.safetyScreeningResult ?? 'LOW',
++  }, correlationId, `idem-${correlationId}-onboarding`);
++
++  await seedPerspectivePair(familyBody.family.family_id, onboarding.onboarding.onboarding_id, parent.parent.person_id, child.child.person_id, correlationId);
++  const drafts = await postJsonExpect<GrowthProfileDraftsHttpResponse>(`/families/${familyBody.family.family_id}/growth/onboardings/${onboarding.onboarding.onboarding_id}/profile-drafts`, {}, correlationId, `idem-${correlationId}-profile-drafts`);
++  const relationshipDraft = drafts.drafts.find((draft) => draft.dimension_id === 'R03');
++  expect(relationshipDraft).toBeDefined();
++  const profile = await postJsonExpect<ConfirmGrowthProfileHttpResponse>(`/families/${familyBody.family.family_id}/growth/profile-drafts/${relationshipDraft!.draft_id}/confirm`, {}, correlationId, `idem-${correlationId}-confirm-profile`);
++
++  return {
++    familyId: familyBody.family.family_id,
++    parentId: parent.parent.person_id,
++    childId: child.child.person_id,
++    relationshipId: relationship.relationship.relationship_id,
++    onboardingId: onboarding.onboarding.onboarding_id,
++    profileId: profile.profile.profile_id,
++  };
++}
++
++async function seedPerspectivePair(familyId: string, onboardingId: string, parentId: string, childId: string, correlationId: string): Promise<void> {
++  const parentResponse = await postJson(`/families/${familyId}/growth/onboardings/${onboardingId}/perspectives`, {
++    subjectPersonId: childId,
++    authorPersonId: parentId,
++    perspectiveType: 'PARENT_PERSPECTIVE',
++    captureMode: 'DIRECT_SELF_REPORT',
++    relatedDimensionIds: ['P03', 'R03'],
++    content: {
++      promptId: 'wave2-parent-v1',
++      responseText: '我经常还没听完就开始讲道理。',
++      selectedSignals: ['interrupts', 'evaluates-too-fast'],
++    },
++    structuredSafetySignals: ['NONE'],
++  }, correlationId, `idem-${correlationId}-parent-perspective`);
++  const childResponse = await postJson(`/families/${familyId}/growth/onboardings/${onboardingId}/perspectives`, {
++    subjectPersonId: childId,
++    authorPersonId: childId,
++    perspectiveType: 'CHILD_PERSPECTIVE',
++    captureMode: 'FACILITATED_ENTRY',
++    relatedDimensionIds: ['R03', 'R04'],
++    content: {
++      promptId: 'wave2-child-v1',
++      responseText: '我希望大人先听我说完再回应。',
++      selectedSignals: ['wants-to-be-heard'],
++    },
++    structuredSafetySignals: ['NONE'],
++  }, correlationId, `idem-${correlationId}-child-perspective`);
++
++  expect(parentResponse.status).toBe(201);
++  expect(childResponse.status).toBe(201);
++}
++
++async function postFamily(body: Record<string, unknown>, correlationId: string): Promise<Response> {
++  return postJson('/families', body, correlationId, String(body.idempotency_key ?? 'missing'));
++}
++
++async function getPriorityInsight(familyId: string, onboardingId: string): Promise<Response> {
++  return fetch(`${baseUrl}/families/${familyId}/growth/onboardings/${onboardingId}/priority`, {
++    method: 'GET',
++    headers: baseHeaders('corr-w2-get-priority-insight'),
++  });
++}
++
++async function confirmPriority(familyId: string, onboardingId: string, draftId: string, decision: GrowthPriorityDecision, correlationId: string, idempotencyKey: string): Promise<Response> {
++  return postJson(`/families/${familyId}/growth/onboardings/${onboardingId}/priority/confirm`, { draft_id: draftId, decision }, correlationId, idempotencyKey);
++}
++
++async function startIntervention(familyId: string, onboardingId: string, priorityId: string, correlationId: string, idempotencyKey: string): Promise<Response> {
++  return postJson(`/families/${familyId}/growth/onboardings/${onboardingId}/interventions/start`, { priority_id: priorityId, intervention_code: 'LISTEN_BEFORE_RESPOND' }, correlationId, idempotencyKey);
++}
++
++async function completeAction(familyId: string, actionId: string, correlationId: string, idempotencyKey: string, body: Record<string, unknown>): Promise<Response> {
++  return postJson(`/families/${familyId}/growth/actions/${actionId}/complete`, body, correlationId, idempotencyKey);
++}
++
++async function postJson(path: string, body: Record<string, unknown>, correlationId: string, idempotencyKey?: string): Promise<Response> {
++  return fetch(`${baseUrl}${path}`, {
++    method: 'POST',
++    headers: baseHeaders(correlationId, idempotencyKey),
++    body: JSON.stringify(body),
++  });
++}
++
++async function postJsonExpect<TBody>(path: string, body: Record<string, unknown>, correlationId: string, idempotencyKey?: string): Promise<TBody> {
++  const response = await postJson(path, body, correlationId, idempotencyKey);
++  expect(response.status).toBe(201);
++  return await response.json() as TBody;
++}
++
++function baseHeaders(correlationId: string, idempotencyKey?: string): Record<string, string> {
++  return {
++    authorization: 'Bearer test-token',
++    'content-type': 'application/json',
++    'x-actor-id': 'architect-1',
++    'x-correlation-id': correlationId,
++    'x-source': 'vitest-e2e',
++    ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
++  };
++}
++
++async function revokeConsent(familyId: string, subjectPersonId: string, purpose: 'SERVICE' | 'ASSESSMENT' | 'GROWTH_TRACKING'): Promise<void> {
++  await pool!.query(
++    `update consents
++     set status = 'WITHDRAWN', withdrawn_at = now()
++     where family_id = $1 and subject_person_id = $2 and purpose = $3`,
++    [familyId, subjectPersonId, purpose],
++  );
++}
++
++async function expectCount(tableName: string, expected: number): Promise<void> {
++  const result = await pool!.query(`select count(*)::int as count from ${tableName}`);
++  expect(result.rows[0].count).toBe(expected);
++}
++
++async function expectOptionalTableCount(tableName: string, expected: number): Promise<void> {
++  const exists = await pool!.query('select to_regclass($1) as table_name', [tableName]);
++  if (!exists.rows[0].table_name) {
++    return;
++  }
++  await expectCount(tableName, expected);
++}
++
++async function expectCompletedActionCount(expected: number): Promise<void> {
++  const result = await pool!.query("select count(*)::int as count from growth_actions where completion_status is not null");
++  expect(result.rows[0].count).toBe(expected);
++}
++
++async function expectOutcomeLikeTablesEmpty(): Promise<void> {
++  await expectCount('outcomes', 0);
++  await expectCount('milestones', 0);
++  await expectOptionalTableCount('growth_reviews', 0);
++}
++
++async function expectNoAiLikeSideEffects(): Promise<void> {
++  const events = await pool!.query(
++    `select event_name from outbox_events
++     where lower(event_name) like any($1::text[])
++     order by event_name`,
++    [['%ai%', '%llm%', '%model%', '%agent%', '%causal%', '%world%']],
++  );
++  expect(events.rows).toEqual([]);
++
++  const tables = await pool!.query<{ table_name: string }>(
++    `select table_name
++     from information_schema.tables
++     where table_schema = 'public'
++       and (table_name like 'ai_%'
++         or table_name like 'llm_%'
++         or table_name like 'model_%'
++         or table_name like 'agent_%'
++         or table_name like 'causal_%'
++         or table_name like 'world_%')
++     order by table_name`,
++  );
++  for (const row of tables.rows) {
++    await expectCount(row.table_name, 0);
++  }
++}
++
++async function expectAuditActions(actionNames: string[]): Promise<void> {
++  const result = await pool!.query<{ action_name: string }>(
++    `select action_name
++     from audit_logs
++     where action_name = any($1::varchar[])
++     order by created_at`,
++    [actionNames],
++  );
++  expect(result.rows.map((row) => row.action_name)).toEqual(actionNames);
++}
++
++async function expectOutboxEvents(eventNames: string[]): Promise<void> {
++  const result = await pool!.query<{ event_name: string }>(
++    `select event_name
++     from outbox_events
++     where event_name = any($1::varchar[])
++     order by occurred_at`,
++    [eventNames],
++  );
++  expect(result.rows.map((row) => row.event_name)).toEqual(eventNames);
++}
++
++interface SeededWave2State {
++  familyId: string;
++  parentId: string;
++  childId: string;
++  relationshipId: string;
++  onboardingId: string;
++  profileId: string;
++}
++
++interface CreateFamilyHttpResponse {
++  family: { family_id: string };
++}
++
++interface StartGrowthOnboardingHttpResponse {
++  onboarding: { onboarding_id: string };
++}
++
++interface GrowthProfileDraftHttpDto {
++  draft_id: string;
++  dimension_id: 'P03' | 'R03' | 'R04' | 'R05';
++}
++
++interface GrowthProfileDraftsHttpResponse {
++  drafts: GrowthProfileDraftHttpDto[];
++}
++
++interface ConfirmGrowthProfileHttpResponse {
++  profile: { profile_id: string };
++}
++
++type GrowthPriorityDecision = 'P03' | 'R03' | 'R04' | 'R05' | 'NO_PRIORITY_YET';
++
++interface GrowthPriorityInsightHttpResponse {
++  draft: {
++    draft_id: string;
++    candidate: null | { dimension_id: 'P03' | 'R03' | 'R04' | 'R05' };
++  };
++  active_priority: null | GrowthPriorityHttpDto;
++}
++
++interface ConfirmGrowthPriorityHttpResponse {
++  priority: null | GrowthPriorityHttpDto;
++  decision: GrowthPriorityDecision;
++}
++
++interface GrowthPriorityHttpDto {
++  priority_id: string;
++  family_id: string;
++  onboarding_id: string;
++  profile_id: string;
++  dimension_id: 'P03' | 'R03' | 'R04' | 'R05';
++  status: 'ACTIVE' | 'SUPERSEDED';
++  boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS';
++}
++
++interface StartInterventionHttpResponse {
++  intervention: { intervention_code: 'LISTEN_BEFORE_RESPOND' };
++  episode: {
++    episode_id: string;
++    family_id: string;
++    onboarding_id: string;
++    priority_id: string;
++    status: 'ACTIVE';
++    planned_days: 7;
++  };
++  actions: GrowthActionHttpDto[];
++}
++
++interface CompleteGrowthActionHttpResponse {
++  action: GrowthActionHttpDto;
++  reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME';
++}
++
++interface GrowthActionHttpDto {
++  action_id: string;
++  day_index: 1 | 2 | 3 | 4 | 5 | 6 | 7;
++  status: 'PENDING' | 'COMPLETED' | 'PARTIAL' | 'NOT_COMPLETED';
++  completion_status: null | 'COMPLETED' | 'PARTIAL' | 'NOT_COMPLETED';
++  reflection_boundary: null | 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME';
++  boundary: 'ACTION_IS_NOT_OUTCOME';
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.controller.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.controller.ts"
+index cdfdad6..a8046dc 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.controller.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.controller.ts"
+@@ -1,20 +1,31 @@
+ import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
+-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, GrantConsentResponse, GrowthInsightResponse, PerspectiveSummaryResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse } from '@family/contracts';
++import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+ import { validateAddChildRequest } from './add-child.dto';
+ import { validateAddParentRequest } from './add-parent.dto';
+ import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
+ import { validateBuildGrowthProfileDraftsRequest } from './build-growth-profile-drafts.dto';
++import { validateCompleteGrowthActionRequest } from './complete-growth-action.dto';
++import { validateConfirmGrowthPriorityRequest } from './confirm-growth-priority.dto';
+ import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dto';
+ import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
+ import { validateCreateFamilyRequest } from './create-family.dto';
+ import { validateGrantConsentRequest } from './grant-consent.dto';
+ import { validateRecordPerspectiveRequest } from './record-perspective.dto';
+ import { validateStartGrowthOnboardingRequest } from './start-growth-onboarding.dto';
++import { validateStartInterventionRequest } from './start-intervention.dto';
+ import { FamilyService } from './family.service';
++import { GrowthActionService } from './growth-action.service';
++import { GrowthPriorityService } from './growth-priority.service';
++import { InterventionService } from './intervention.service';
+ 
+ @Controller('families')
+ export class FamilyController {
+-  constructor(@Inject(FamilyService) private readonly familyService: FamilyService) {}
++  constructor(
++    @Inject(FamilyService) private readonly familyService: FamilyService,
++    @Inject(GrowthPriorityService) private readonly growthPriorityService: GrowthPriorityService,
++    @Inject(InterventionService) private readonly interventionService: InterventionService,
++    @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
++  ) {}
+ 
+   @Get(':familyId')
+   async getFamilyAggregate(
+@@ -278,6 +289,108 @@ export class FamilyController {
+     return this.familyService.getGrowthInsight(familyId, onboardingId, actorId);
+   }
+ 
++  @Get(':familyId/growth/onboardings/:onboardingId/priority')
++  async getGrowthPriorityInsight(
++    @Param('familyId') familyId: string,
++    @Param('onboardingId') onboardingId: string,
++    @Headers('x-actor-id') actorId?: string,
++  ): Promise<GrowthPriorityInsightResponse> {
++    if (!actorId || actorId.trim().length === 0) {
++      throw new UnauthorizedException('actor_is_authenticated');
++    }
++
++    if (!isUuid(familyId) || !isUuid(onboardingId)) {
++      throw new BadRequestException('Invalid schema');
++    }
++
++    return this.growthPriorityService.getGrowthPriorityInsight(familyId, onboardingId, actorId);
++  }
++
++  @Post(':familyId/growth/onboardings/:onboardingId/priority/confirm')
++  async confirmGrowthPriority(
++    @Param('familyId') familyId: string,
++    @Param('onboardingId') onboardingId: string,
++    @Body() body: unknown,
++    @Headers('x-actor-id') actorId?: string,
++    @Headers('x-correlation-id') correlationId?: string,
++    @Headers('x-source') source?: string,
++    @Headers('idempotency-key') idempotencyKey?: string,
++  ): Promise<ConfirmGrowthPriorityResponse> {
++    if (!actorId || actorId.trim().length === 0) {
++      throw new UnauthorizedException('actor_is_authenticated');
++    }
++
++    const request = validateConfirmGrowthPriorityRequest(familyId, onboardingId, idempotencyKey, body);
++    const meta = buildAuditMeta(actorId, correlationId, source);
++    return this.growthPriorityService.confirmGrowthPriority(request, meta);
++  }
++
++  @Get(':familyId/growth/interventions/LISTEN_BEFORE_RESPOND')
++  async getInterventionCard(
++    @Param('familyId') familyId: string,
++    @Headers('x-actor-id') actorId?: string,
++  ): Promise<InterventionCardDto> {
++    assertReadContext(familyId, actorId);
++    return this.interventionService.getInterventionCard(familyId, actorId!);
++  }
++
++  @Post(':familyId/growth/onboardings/:onboardingId/interventions/start')
++  async startIntervention(
++    @Param('familyId') familyId: string,
++    @Param('onboardingId') onboardingId: string,
++    @Body() body: unknown,
++    @Headers('x-actor-id') actorId?: string,
++    @Headers('x-correlation-id') correlationId?: string,
++    @Headers('x-source') source?: string,
++    @Headers('idempotency-key') idempotencyKey?: string,
++  ): Promise<StartInterventionResponse> {
++    if (!actorId || actorId.trim().length === 0) {
++      throw new UnauthorizedException('actor_is_authenticated');
++    }
++
++    const request = validateStartInterventionRequest(familyId, onboardingId, idempotencyKey, body);
++    const meta = buildAuditMeta(actorId, correlationId, source);
++    return this.interventionService.startIntervention(request, meta);
++  }
++
++  @Get(':familyId/growth/onboardings/:onboardingId/interventions/active')
++  async getActiveIntervention(
++    @Param('familyId') familyId: string,
++    @Param('onboardingId') onboardingId: string,
++    @Headers('x-actor-id') actorId?: string,
++  ): Promise<StartInterventionResponse | null> {
++    assertReadContext(familyId, actorId, onboardingId);
++    return this.interventionService.getActiveIntervention(familyId, onboardingId, actorId!);
++  }
++
++  @Get(':familyId/growth/actions/today')
++  async getTodayGrowthAction(
++    @Param('familyId') familyId: string,
++    @Headers('x-actor-id') actorId?: string,
++  ): Promise<GrowthActionDto | null> {
++    assertReadContext(familyId, actorId);
++    return this.growthActionService.getTodayAction(familyId, actorId!);
++  }
++
++  @Post(':familyId/growth/actions/:actionId/complete')
++  async completeGrowthAction(
++    @Param('familyId') familyId: string,
++    @Param('actionId') actionId: string,
++    @Body() body: unknown,
++    @Headers('x-actor-id') actorId?: string,
++    @Headers('x-correlation-id') correlationId?: string,
++    @Headers('x-source') source?: string,
++    @Headers('idempotency-key') idempotencyKey?: string,
++  ): Promise<CompleteGrowthActionResponse> {
++    if (!actorId || actorId.trim().length === 0) {
++      throw new UnauthorizedException('actor_is_authenticated');
++    }
++
++    const request = validateCompleteGrowthActionRequest(familyId, actionId, idempotencyKey, body);
++    const meta = buildAuditMeta(actorId, correlationId, source);
++    return this.growthActionService.completeGrowthAction(request, meta);
++  }
++
+   @Post(':familyId/growth/profile-drafts/:draftId/confirm')
+   async confirmGrowthProfile(
+     @Param('familyId') familyId: string,
+@@ -306,4 +419,22 @@ export class FamilyController {
+ 
+ function isUuid(value: string): boolean {
+   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+-}
+\ No newline at end of file
++}
++
++function buildAuditMeta(actorId: string, correlationId?: string, source?: string): AuditMeta {
++  return {
++    actor: actorId,
++    correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
++    source: source && source.trim().length > 0 ? source : 'api',
++    occurredAt: new Date().toISOString(),
++  };
++}
++
++function assertReadContext(familyId: string, actorId?: string, onboardingId?: string): void {
++  if (!actorId || actorId.trim().length === 0) {
++    throw new UnauthorizedException('actor_is_authenticated');
++  }
++  if (!isUuid(familyId) || (onboardingId !== undefined && !isUuid(onboardingId))) {
++    throw new BadRequestException('Invalid schema');
++  }
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.module.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.module.ts"
+index 6d6a02d..086b96f 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.module.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/family.module.ts"
+@@ -4,6 +4,10 @@ import { EvidenceSynthesisService } from './evidence-synthesis.service';
+ import { FamilyController } from './family.controller';
+ import { FamilyRepository } from './family.repository';
+ import { FamilyService } from './family.service';
++import { GrowthActionService } from './growth-action.service';
++import { GrowthPriorityService } from './growth-priority.service';
++import { InterventionService } from './intervention.service';
++import { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ /**
+  * Family 模块占位(TASK-001)。
+@@ -13,6 +17,6 @@ import { FamilyService } from './family.service';
+  */
+ @Module({
+ 	controllers: [FamilyController],
+-	providers: [FamilyRepository, FamilyAggregateRepository, EvidenceSynthesisService, FamilyService],
++	providers: [FamilyRepository, FamilyAggregateRepository, EvidenceSynthesisService, FamilyService, GrowthSubjectResolver, GrowthPriorityService, InterventionService, GrowthActionService],
+ })
+ export class FamilyModule {}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.spec.ts"
+index 69b298d..3ece286 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.spec.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.spec.ts"
+@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
+ import type { FamilyRepository } from './family.repository';
+ import { REFLECTION_BOUNDARY } from './growth-action.policy';
+ import { GrowthActionService } from './growth-action.service';
++import type { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ const familyId = '11111111-1111-4111-8111-111111111111';
+ const onboardingId = '22222222-2222-4222-8222-222222222222';
+@@ -22,7 +23,7 @@ const meta: AuditMeta = {
+ describe('GrowthActionService', () => {
+   it('stores completion and reflection as raw material without profile or outcome writes', async () => {
+     const client = new FakeGrowthActionClient();
+-    const service = new GrowthActionService(createRepository(client));
++    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+ 
+     const response = await service.completeGrowthAction({
+       family_id: familyId,
+@@ -47,10 +48,28 @@ describe('GrowthActionService', () => {
+     expect(client.profileOrOutcomeWrites).toEqual([]);
+   });
+ 
++  it('blocks completion when normal safety route cannot be verified', async () => {
++    const client = new FakeGrowthActionClient(null, false);
++    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
++
++    await expect(service.completeGrowthAction({
++      family_id: familyId,
++      action_id: actionId,
++      completion_status: 'COMPLETED',
++      reflection: '已完成。',
++      occurred_at: meta.occurredAt,
++      idempotency_key: 'idem-complete-normal-route-blocked',
++    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
++
++    expect(client.updatedActionCount).toBe(0);
++    expect(client.auditActions).toEqual([]);
++    expect(client.outboxEvents).toEqual([]);
++  });
++
+   it('replays an idempotent completion without rewriting the action', async () => {
+     const replayResponse = createReplayResponse();
+     const client = new FakeGrowthActionClient(replayResponse);
+-    const service = new GrowthActionService(createRepository(client));
++    const service = new GrowthActionService(createRepository(client), createSubjectResolver());
+ 
+     const response = await service.completeGrowthAction({
+       family_id: familyId,
+@@ -104,7 +123,7 @@ class FakeGrowthActionClient {
+   private actionName = '';
+   private requestHash = '';
+ 
+-  constructor(private readonly replayResponse: CompleteGrowthActionResponse | null = null) {}
++  constructor(private readonly replayResponse: CompleteGrowthActionResponse | null = null, private readonly normalRouteVerified = true) {}
+ 
+   async query(sql: string, params: unknown[] = []): Promise<{ rowCount: number; rows: unknown[] }> {
+     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+@@ -126,8 +145,8 @@ class FakeGrowthActionClient {
+     if (normalized.startsWith('select audit_id from audit_logs')) {
+       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
+     }
+-    if (normalized.startsWith('select ga.action_id, ga.priority_id')) {
+-      return { rowCount: 1, rows: [{ action_id: actionId, priority_id: priorityId }] };
++    if (normalized.startsWith('select ga.action_id, ga.onboarding_id, ga.priority_id')) {
++      return { rowCount: 1, rows: [{ action_id: actionId, onboarding_id: onboardingId, priority_id: priorityId }] };
+     }
+     if (normalized.startsWith('select profile.subject_person_id')) {
+       return { rowCount: 1, rows: [{ subject_person_id: childId, subject_relationship_id: null }] };
+@@ -135,6 +154,15 @@ class FakeGrowthActionClient {
+     if (normalized.startsWith('select purpose from consents')) {
+       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+     }
++    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
++      if (!this.normalRouteVerified) {
++        return { rowCount: 0, rows: [] };
++      }
++      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
++    }
++    if (normalized.startsWith('select perspective_id from perspectives')) {
++      return { rowCount: 0, rows: [] };
++    }
+     if (normalized.startsWith('update growth_actions')) {
+       this.updatedActionCount += 1;
+       return {
+@@ -174,4 +202,15 @@ class FakeGrowthActionClient {
+     }
+     throw new Error(`unexpected query: ${normalized}`);
+   }
+-}
+\ No newline at end of file
++}
++
++function createSubjectResolver(): GrowthSubjectResolver {
++  return {
++    resolve: async () => ({
++      childPersonId: childId,
++      guardianPersonIds: [actorId],
++      subjectRelationshipId: null,
++      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
++    }),
++  } as GrowthSubjectResolver;
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.ts"
+index 7e6d3f3..48b55f5 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-action.service.ts"
+@@ -1,9 +1,11 @@
+-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
++import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+ import { createHash, randomUUID } from 'node:crypto';
+ import type pg from 'pg';
+ import type { AuditMeta, CompleteGrowthActionRequest, CompleteGrowthActionResponse, GrowthActionDto } from '@family/contracts';
+ import { FamilyRepository } from './family.repository';
+ import { REFLECTION_BOUNDARY, assertCompletableGrowthActionStatus } from './growth-action.policy';
++import { assertNormalSafetyRoute } from './normal-safety-route.policy';
++import { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ const CREATE_FAMILY_ACTION = 'CreateFamily';
+ const COMPLETE_GROWTH_ACTION_ACTION = 'CompleteGrowthAction';
+@@ -13,7 +15,29 @@ type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response
+ 
+ @Injectable()
+ export class GrowthActionService {
+-  constructor(private readonly repository: FamilyRepository) {}
++  constructor(
++    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
++    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
++  ) {}
++
++  async getTodayAction(familyId: string, actorId: string): Promise<GrowthActionDto | null> {
++    return this.repository.withTransaction(async (client) => {
++      await ensureFamilyExists(client, familyId);
++      await assertFamilyManagePermission(client, familyId, actorId);
++      const result = await client.query<GrowthActionRow>(
++        `select ga.action_id, ga.family_id, ga.onboarding_id, ga.priority_id, ga.intervention_episode_id,
++                ga.day_index, ga.status, ga.assignment_text, ga.due_date, ga.completed_at,
++                ga.completion_status, ga.reflection, ga.reflection_boundary, ga.boundary, ga.created_at
++         from growth_actions ga
++         join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
++         where ga.family_id = $1 and ie.status = 'ACTIVE' and ga.status = 'PENDING'
++         order by ga.due_date, ga.day_index
++         limit 1`,
++        [familyId],
++      );
++      return result.rows[0] ? mapGrowthAction(result.rows[0]) : null;
++    });
++  }
+ 
+   async completeGrowthAction(request: CompleteGrowthActionRequest, meta: AuditMeta): Promise<CompleteGrowthActionResponse> {
+     assertCompletableGrowthActionStatus(request.completion_status);
+@@ -27,8 +51,13 @@ export class GrowthActionService {
+       await ensureFamilyExists(client, request.family_id);
+       await assertFamilyManagePermission(client, request.family_id, meta.actor);
+       const existing = await getCompletableGrowthAction(client, request.family_id, request.action_id);
+-      const consentSubjectId = await getConsentSubjectForPriority(client, existing.priority_id);
+-      await assertRequiredGrowthConsents(client, request.family_id, consentSubjectId);
++      const subject = await this.growthSubjectResolver.resolve(client, {
++        familyId: request.family_id,
++        onboardingId: existing.onboarding_id,
++        priorityId: existing.priority_id,
++      });
++      await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
++      await assertNormalSafetyRoute(client, request.family_id, existing.onboarding_id);
+       const action = await updateGrowthActionCompletion(client, request);
+       const response: CompleteGrowthActionResponse = {
+         action,
+@@ -130,9 +159,9 @@ async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: str
+   }
+ }
+ 
+-async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; priority_id: string }> {
+-  const result = await client.query<{ action_id: string; priority_id: string }>(
+-    `select ga.action_id, ga.priority_id
++async function getCompletableGrowthAction(client: pg.PoolClient, familyId: string, actionId: string): Promise<{ action_id: string; onboarding_id: string; priority_id: string }> {
++  const result = await client.query<{ action_id: string; onboarding_id: string; priority_id: string }>(
++    `select ga.action_id, ga.onboarding_id, ga.priority_id
+      from growth_actions ga
+      join intervention_episodes ie on ie.episode_id = ga.intervention_episode_id
+      where ga.family_id = $1
+@@ -149,38 +178,6 @@ async function getCompletableGrowthAction(client: pg.PoolClient, familyId: strin
+   return row;
+ }
+ 
+-async function getConsentSubjectForPriority(client: pg.PoolClient, priorityId: string): Promise<string> {
+-  const result = await client.query<{ subject_person_id: string | null; subject_relationship_id: string | null }>(
+-    `select profile.subject_person_id, profile.subject_relationship_id
+-     from growth_priorities priority
+-     join growth_profiles profile on profile.profile_id = priority.profile_id
+-     where priority.priority_id = $1
+-     for share`,
+-    [priorityId],
+-  );
+-  const profile = result.rows[0];
+-  if (!profile) {
+-    throw new NotFoundException('growth_priority_not_found');
+-  }
+-  if (profile.subject_person_id) {
+-    return profile.subject_person_id;
+-  }
+-  if (profile.subject_relationship_id) {
+-    const relationship = await client.query<{ person_b_id: string }>(
+-      `select person_b_id
+-       from family_relationships
+-       where relationship_id = $1
+-       for share`,
+-      [profile.subject_relationship_id],
+-    );
+-    const row = relationship.rows[0];
+-    if (row) {
+-      return row.person_b_id;
+-    }
+-  }
+-  throw new ConflictException('growth_action_consent_subject_unresolved');
+-}
+-
+ async function updateGrowthActionCompletion(client: pg.PoolClient, request: CompleteGrowthActionRequest): Promise<GrowthActionDto> {
+   const result = await client.query<GrowthActionRow>(
+     `update growth_actions
+@@ -288,4 +285,4 @@ function toDateOnly(value: Date | string): string {
+     return value.includes('T') ? value.slice(0, 10) : value;
+   }
+   return value.toISOString().slice(0, 10);
+-}
+\ No newline at end of file
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.policy.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.policy.ts"
+index 52cd8a6..feb82ec 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.policy.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.policy.ts"
+@@ -90,9 +90,8 @@ export function buildGrowthPriorityDraft(input: BuildGrowthPriorityDraftInput):
+ 
+ export function assertDecisionMatchesDraft(draft: GrowthPriorityDraftDto, decision: GrowthPriorityDecision): void {
+   if (decision === 'NO_PRIORITY_YET') {
+-    if (draft.decision !== 'NO_PRIORITY_YET') {
+-      throw new Error('growth_priority_decision_not_eligible');
+-    }
++    // A guardian may explicitly defer even when a deterministic candidate exists.
++    // This writes no hidden priority state and keeps human confirmation authoritative.
+     return;
+   }
+ 
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.spec.ts"
+index fd633fc..7769ad8 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.spec.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.spec.ts"
+@@ -4,10 +4,13 @@ import { describe, expect, it } from 'vitest';
+ import type { FamilyRepository } from './family.repository';
+ import { buildGrowthPriorityDraft, type ConfirmedProfileForPriority } from './growth-priority.policy';
+ import { GrowthPriorityService } from './growth-priority.service';
++import type { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ const familyId = '11111111-1111-4111-8111-111111111111';
+ const onboardingId = '22222222-2222-4222-8222-222222222222';
+ const childId = '33333333-3333-4333-8333-333333333333';
++const relationshipId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
++const relationshipChildId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const actorId = 'actor-parent-1';
+ const meta: AuditMeta = {
+   actor: actorId,
+@@ -63,7 +66,7 @@ describe('GrowthPriority policy', () => {
+ describe('GrowthPriorityService', () => {
+   it('confirms NO_PRIORITY_YET without inserting an active priority', async () => {
+     const client = new FakePriorityClient({ profiles: [] });
+-    const service = new GrowthPriorityService(createRepository(client));
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
+     const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
+ 
+     const response = await service.confirmGrowthPriority({
+@@ -84,7 +87,7 @@ describe('GrowthPriorityService', () => {
+   it('creates one active priority and supersedes the previous active priority', async () => {
+     const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
+     const client = new FakePriorityClient({ profiles: [profile], activePriorityId: '88888888-8888-4888-8888-888888888888' });
+-    const service = new GrowthPriorityService(createRepository(client));
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
+     const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
+ 
+     const response = await service.confirmGrowthPriority({
+@@ -108,12 +111,78 @@ describe('GrowthPriorityService', () => {
+     expect(client.supersededActivePriority).toBe(true);
+     expect(response.priority?.reason_codes).toContain('PRACTICE_READY');
+     expect(response.priority?.evidence_refs).toEqual(['ev-R03']);
++    expect(client.consentSubjectIds).toEqual([childId]);
++    expect(client.relationshipLookupCount).toBe(0);
++  });
++
++  it('blocks confirmation when normal safety route cannot be verified', async () => {
++    const client = new FakePriorityClient({ profiles: [], normalRouteVerified: false });
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
++    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt });
++
++    await expect(service.confirmGrowthPriority({
++      family_id: familyId,
++      onboarding_id: onboardingId,
++      draft_id: draft.draft_id,
++      decision: 'NO_PRIORITY_YET',
++      idempotency_key: 'idem-normal-route-blocked',
++    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
++
++    expect(client.insertedPriority).toBe(false);
++    expect(client.auditActions).toEqual([]);
++    expect(client.outboxEvents).toEqual([]);
++  });
++
++  it('uses the unified onboarding subject resolution for a relationship profile', async () => {
++    const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
++    const client = new FakePriorityClient({
++      profiles: [profile],
++      profileSubjectPersonId: null,
++      profileSubjectRelationshipId: relationshipId,
++      relationshipSubjectPersonId: relationshipChildId,
++    });
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver(relationshipChildId));
++    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
++
++    await service.confirmGrowthPriority({
++      family_id: familyId,
++      onboarding_id: onboardingId,
++      draft_id: draft.draft_id,
++      decision: 'R03',
++      idempotency_key: 'idem-confirm-r03',
++    }, meta);
++
++    expect(client.consentSubjectIds).toEqual([relationshipChildId]);
++    expect(client.relationshipLookupCount).toBe(0);
++  });
++
++  it('uses the same resolved onboarding child even when profile provenance has two subject fields', async () => {
++    const profile = createProfile({ profileId: '77777777-7777-4777-8777-777777777777', dimensionId: 'R03', state: 'DEVELOPING' });
++    const client = new FakePriorityClient({
++      profiles: [profile],
++      profileSubjectPersonId: childId,
++      profileSubjectRelationshipId: relationshipId,
++      relationshipSubjectPersonId: relationshipChildId,
++    });
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
++    const draft = buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [profile], createdAt: meta.occurredAt });
++
++    await service.confirmGrowthPriority({
++      family_id: familyId,
++      onboarding_id: onboardingId,
++      draft_id: draft.draft_id,
++      decision: 'R03',
++      idempotency_key: 'idem-confirm-r03',
++    }, meta);
++
++    expect(client.consentSubjectIds).toEqual([childId]);
++    expect(client.relationshipLookupCount).toBe(0);
+   });
+ 
+   it('replays an idempotent response without rewriting priority state', async () => {
+     const replayResponse = { priority: null, decision: 'NO_PRIORITY_YET' as GrowthPriorityDecision, draft: buildGrowthPriorityDraft({ familyId, onboardingId, profiles: [], createdAt: meta.occurredAt }) };
+     const client = new FakePriorityClient({ profiles: [], replayResponse });
+-    const service = new GrowthPriorityService(createRepository(client));
++    const service = new GrowthPriorityService(createRepository(client), createSubjectResolver());
+ 
+     const response = await service.confirmGrowthPriority({
+       family_id: familyId,
+@@ -135,6 +204,17 @@ function createRepository(client: FakePriorityClient): FamilyRepository {
+   } as unknown as FamilyRepository;
+ }
+ 
++function createSubjectResolver(resolvedChildId = childId): GrowthSubjectResolver {
++  return {
++    resolve: async () => ({
++      childPersonId: resolvedChildId,
++      guardianPersonIds: [actorId],
++      subjectRelationshipId: relationshipId,
++      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
++    }),
++  } as GrowthSubjectResolver;
++}
++
+ function createProfile(input: {
+   profileId: string;
+   dimensionId: ConfirmedProfileForPriority['dimension_id'];
+@@ -167,12 +247,20 @@ class FakePriorityClient {
+   supersededActivePriority = false;
+   auditActions: string[] = [];
+   outboxEvents: string[] = [];
++  consentSubjectIds: string[] = [];
++  relationshipLookupCount = 0;
++  private actionName = '';
++  private requestHash = '';
+   private storedResponse: unknown | null;
+ 
+   constructor(private readonly state: {
+     profiles: ConfirmedProfileForPriority[];
+     activePriorityId?: string;
+     replayResponse?: unknown;
++    profileSubjectPersonId?: string | null;
++    profileSubjectRelationshipId?: string | null;
++    relationshipSubjectPersonId?: string;
++    normalRouteVerified?: boolean;
+   }) {
+     this.storedResponse = state.replayResponse ?? null;
+   }
+@@ -181,12 +269,14 @@ class FakePriorityClient {
+     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+ 
+     if (normalized.startsWith('insert into idempotency_keys')) {
++      this.actionName = params[1] as string;
++      this.requestHash = params[2] as string;
+       return { rowCount: 1, rows: [] };
+     }
+     if (normalized.startsWith('select action_name, request_hash, response_body')) {
+       return {
+         rowCount: 1,
+-        rows: [{ action_name: 'ConfirmGrowthPriority', request_hash: hashRequest(params[0] as string), response_body: this.storedResponse }],
++        rows: [{ action_name: this.actionName, request_hash: this.requestHash, response_body: this.storedResponse }],
+       };
+     }
+     if (normalized.startsWith('select family_id from families')) {
+@@ -195,12 +285,39 @@ class FakePriorityClient {
+     if (normalized.startsWith('select audit_id from audit_logs')) {
+       return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
+     }
+-    if (normalized.startsWith('select subject_person_id from growth_journeys')) {
+-      return { rowCount: 1, rows: [{ subject_person_id: childId }] };
++    if (normalized.includes('growth_journeys') && normalized.includes('subject_person_id')) {
++      throw new Error('growth_journeys.subject_person_id must not be queried');
++    }
++    if (normalized.startsWith('select journey_id from growth_journeys')) {
++      return { rowCount: 1, rows: [{ journey_id: onboardingId }] };
++    }
++    if (normalized.startsWith('select family_id, subject_person_id, subject_relationship_id from growth_profiles')) {
++      return {
++        rowCount: 1,
++        rows: [{
++          family_id: familyId,
++          subject_person_id: this.state.profileSubjectPersonId === undefined ? childId : this.state.profileSubjectPersonId,
++          subject_relationship_id: this.state.profileSubjectRelationshipId ?? null,
++        }],
++      };
++    }
++    if (normalized.startsWith('select person_b_id from family_relationships')) {
++      this.relationshipLookupCount += 1;
++      return { rowCount: 1, rows: [{ person_b_id: this.state.relationshipSubjectPersonId ?? childId }] };
+     }
+     if (normalized.startsWith('select purpose from consents')) {
++      this.consentSubjectIds.push(params[1] as string);
+       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+     }
++    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
++      if (this.state.normalRouteVerified === false) {
++        return { rowCount: 0, rows: [] };
++      }
++      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
++    }
++    if (normalized.startsWith('select perspective_id from perspectives')) {
++      return { rowCount: 0, rows: [] };
++    }
+     if (normalized.startsWith('select episode_id from intervention_episodes')) {
+       return { rowCount: 0, rows: [] };
+     }
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.ts"
+index 32dc000..fdb2407 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/growth-priority.service.ts"
+@@ -1,4 +1,4 @@
+-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
++import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+ import { createHash, randomUUID } from 'node:crypto';
+ import type pg from 'pg';
+ import type {
+@@ -18,24 +18,29 @@ import {
+   GROWTH_PRIORITY_BOUNDARY,
+   GROWTH_PRIORITY_POLICY_VERSION,
+ } from './growth-priority.policy';
++import { GrowthSubjectResolver } from './growth-subject.resolver';
++import { assertNormalSafetyRoute } from './normal-safety-route.policy';
+ 
+ const CREATE_FAMILY_ACTION = 'CreateFamily';
+ const CONFIRM_GROWTH_PRIORITY_ACTION = 'ConfirmGrowthPriority';
+ const GROWTH_PRIORITY_CONFIRMED_EVENT = 'GrowthPriorityConfirmed';
+-const M2_ONBOARDING_JOURNEY_TYPE = 'M2_FIRST_GROWTH_ONBOARDING';
++const M2_ONBOARDING_JOURNEY_TYPE = 'PARENT_CHILD_COMMUNICATION_CONFLICT';
+ 
+ type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response: TResponse };
+ 
+ @Injectable()
+ export class GrowthPriorityService {
+-  constructor(private readonly repository: FamilyRepository) {}
++  constructor(
++    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
++    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
++  ) {}
+ 
+   async getGrowthPriorityInsight(familyId: string, onboardingId: string, actorId: string): Promise<GrowthPriorityInsightResponse> {
+     return this.repository.withTransaction(async (client) => {
+       await ensureFamilyExists(client, familyId);
+       await assertFamilyManagePermission(client, familyId, actorId);
+       await assertActiveOnboarding(client, familyId, onboardingId);
+-      const profiles = await listConfirmedProfiles(client, familyId);
++      const profiles = await listConfirmedProfiles(client, familyId, onboardingId);
+       const draft = buildGrowthPriorityDraft({
+         familyId,
+         onboardingId,
+@@ -67,11 +72,11 @@ export class GrowthPriorityService {
+ 
+       await ensureFamilyExists(client, request.family_id);
+       await assertFamilyManagePermission(client, request.family_id, meta.actor);
+-      const childId = await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
+-      await assertRequiredGrowthConsents(client, request.family_id, childId);
++      await assertActiveOnboarding(client, request.family_id, request.onboarding_id);
++      await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
+       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
+ 
+-      const profiles = await listConfirmedProfiles(client, request.family_id);
++      const profiles = await listConfirmedProfiles(client, request.family_id, request.onboarding_id);
+       const draft = buildGrowthPriorityDraft({
+         familyId: request.family_id,
+         onboardingId: request.onboarding_id,
+@@ -93,6 +98,12 @@ export class GrowthPriorityService {
+         if (!candidate || candidate.dimension_id !== request.decision) {
+           throw new ConflictException('growth_priority_decision_not_eligible');
+         }
++        const subject = await this.growthSubjectResolver.resolve(client, {
++          familyId: request.family_id,
++          onboardingId: request.onboarding_id,
++          profileId: candidate.profile_id,
++        });
++        await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
+         const previousPriority = await getActivePriority(client, request.family_id, request.onboarding_id);
+         await supersedeActivePriority(client, request.family_id, request.onboarding_id);
+         priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority?.priority_id ?? null, meta);
+@@ -195,22 +206,21 @@ async function assertFamilyManagePermission(client: pg.PoolClient, familyId: str
+   }
+ }
+ 
+-async function assertActiveOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<string> {
+-  const result = await client.query<{ subject_person_id: string | null }>(
+-    `select subject_person_id
++async function assertActiveOnboarding(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
++  const result = await client.query(
++    `select journey_id
+      from growth_journeys
+      where family_id = $1
+        and journey_id = $2
+        and journey_type = $3
++       and phase = 'ONBOARDING'
+        and status = 'ACTIVE'
+      for share`,
+     [familyId, onboardingId, M2_ONBOARDING_JOURNEY_TYPE],
+   );
+-  const row = result.rows[0];
+-  if (!row || !row.subject_person_id) {
++  if (result.rowCount !== 1) {
+     throw new NotFoundException('active_growth_onboarding_not_found');
+   }
+-  return row.subject_person_id;
+ }
+ 
+ async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: string, childId: string): Promise<void> {
+@@ -247,7 +257,7 @@ async function assertNoActiveInterventionEpisode(client: pg.PoolClient, familyId
+   }
+ }
+ 
+-async function listConfirmedProfiles(client: pg.PoolClient, familyId: string): Promise<ConfirmedProfileForPriority[]> {
++async function listConfirmedProfiles(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<ConfirmedProfileForPriority[]> {
+   const result = await client.query<{
+     profile_id: string;
+     family_id: string;
+@@ -267,8 +277,15 @@ async function listConfirmedProfiles(client: pg.PoolClient, familyId: string): P
+        and gp.status = 'WORKING'
+        and gp.confirmed_at is not null
+        and gpd.dimension_id = any($2::varchar[])
++       and exists (
++         select 1
++         from jsonb_array_elements_text(coalesce(gp.evidence_snapshot->'evidence_ids', '[]'::jsonb)) as evidence_ref(value)
++         join evidence_records er on er.evidence_id::text = evidence_ref.value
++         join perspectives p on p.perspective_id = er.perspective_id
++         where p.onboarding_id = $3
++       )
+      order by gp.confirmed_at desc`,
+-    [familyId, ['P03', 'R03', 'R04', 'R05']],
++    [familyId, ['P03', 'R03', 'R04', 'R05'], onboardingId],
+   );
+ 
+   return result.rows.map((row) => ({
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.spec.ts"
+index 864eee5..34061cd 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.spec.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.spec.ts"
+@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
+ import type { FamilyRepository } from './family.repository';
+ import { buildGrowthActionAssignments, getListenBeforeRespondCard } from './intervention.policy';
+ import { InterventionService } from './intervention.service';
++import type { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ const familyId = '11111111-1111-4111-8111-111111111111';
+ const onboardingId = '22222222-2222-4222-8222-222222222222';
+@@ -42,7 +43,7 @@ describe('Intervention policy', () => {
+ describe('InterventionService', () => {
+   it('starts one active episode and exactly seven pending growth actions', async () => {
+     const client = new FakeInterventionClient();
+-    const service = new InterventionService(createRepository(client));
++    const service = new InterventionService(createRepository(client), createSubjectResolver());
+ 
+     const response = await service.startIntervention({
+       family_id: familyId,
+@@ -72,10 +73,27 @@ describe('InterventionService', () => {
+     expect(client.profileOrOutcomeWrites).toEqual([]);
+   });
+ 
++  it('blocks start when normal safety route cannot be verified', async () => {
++    const client = new FakeInterventionClient(null, false);
++    const service = new InterventionService(createRepository(client), createSubjectResolver());
++
++    await expect(service.startIntervention({
++      family_id: familyId,
++      onboarding_id: onboardingId,
++      priority_id: priorityId,
++      intervention_code: 'LISTEN_BEFORE_RESPOND',
++      idempotency_key: 'idem-start-normal-route-blocked',
++    }, meta)).rejects.toThrow('normal_safety_route_not_verified');
++
++    expect(client.insertedEpisodeCount).toBe(0);
++    expect(client.insertedActions).toEqual([]);
++    expect(client.auditActions).toEqual([]);
++  });
++
+   it('replays an idempotent response without creating another episode or actions', async () => {
+     const replayResponse = createReplayResponse();
+     const client = new FakeInterventionClient(replayResponse);
+-    const service = new InterventionService(createRepository(client));
++    const service = new InterventionService(createRepository(client), createSubjectResolver());
+ 
+     const response = await service.startIntervention({
+       family_id: familyId,
+@@ -128,7 +146,7 @@ class FakeInterventionClient {
+   private actionName = '';
+   private requestHash = '';
+ 
+-  constructor(private readonly replayResponse: StartInterventionResponse | null = null) {}
++  constructor(private readonly replayResponse: StartInterventionResponse | null = null, private readonly normalRouteVerified = true) {}
+ 
+   async query(sql: string, params: unknown[] = []): Promise<{ rowCount: number; rows: unknown[] }> {
+     const normalized = sql.replace(/\s+/g, ' ').trim().toLowerCase();
+@@ -162,6 +180,15 @@ class FakeInterventionClient {
+     if (normalized.startsWith('select purpose from consents')) {
+       return { rowCount: 3, rows: [{ purpose: 'SERVICE' }, { purpose: 'ASSESSMENT' }, { purpose: 'GROWTH_TRACKING' }] };
+     }
++    if (normalized.startsWith("select payload->>'safety_screening_result'")) {
++      if (!this.normalRouteVerified) {
++        return { rowCount: 0, rows: [] };
++      }
++      return { rowCount: 1, rows: [{ safety_screening_result: 'LOW' }] };
++    }
++    if (normalized.startsWith('select perspective_id from perspectives')) {
++      return { rowCount: 0, rows: [] };
++    }
+     if (normalized.startsWith('select episode_id from intervention_episodes')) {
+       return { rowCount: 0, rows: [] };
+     }
+@@ -225,4 +252,15 @@ class FakeInterventionClient {
+     }
+     throw new Error(`unexpected query: ${normalized}`);
+   }
+-}
+\ No newline at end of file
++}
++
++function createSubjectResolver(): GrowthSubjectResolver {
++  return {
++    resolve: async () => ({
++      childPersonId: childId,
++      guardianPersonIds: [actorId],
++      subjectRelationshipId: null,
++      resolvedVia: 'ONBOARDING_AND_PROFILE_PROVENANCE',
++    }),
++  } as GrowthSubjectResolver;
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.ts"
+index e800a7f..927cbc9 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/intervention.service.ts"
+@@ -1,4 +1,4 @@
+-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
++import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+ import { createHash, randomUUID } from 'node:crypto';
+ import type pg from 'pg';
+ import type {
+@@ -19,6 +19,8 @@ import {
+   buildGrowthActionAssignments,
+   getListenBeforeRespondCard,
+ } from './intervention.policy';
++import { assertNormalSafetyRoute } from './normal-safety-route.policy';
++import { GrowthSubjectResolver } from './growth-subject.resolver';
+ 
+ const CREATE_FAMILY_ACTION = 'CreateFamily';
+ const START_INTERVENTION_ACTION = 'StartIntervention';
+@@ -28,7 +30,37 @@ type IdempotencyResult<TResponse> = { replay: false } | { replay: true; response
+ 
+ @Injectable()
+ export class InterventionService {
+-  constructor(private readonly repository: FamilyRepository) {}
++  constructor(
++    @Inject(FamilyRepository) private readonly repository: FamilyRepository,
++    @Inject(GrowthSubjectResolver) private readonly growthSubjectResolver: GrowthSubjectResolver = new GrowthSubjectResolver(),
++  ) {}
++
++  async getInterventionCard(familyId: string, actorId: string) {
++    return this.repository.withTransaction(async (client) => {
++      await ensureFamilyExists(client, familyId);
++      await assertFamilyManagePermission(client, familyId, actorId);
++      return getListenBeforeRespondCard();
++    });
++  }
++
++  async getActiveIntervention(familyId: string, onboardingId: string, actorId: string): Promise<StartInterventionResponse | null> {
++    return this.repository.withTransaction(async (client) => {
++      await ensureFamilyExists(client, familyId);
++      await assertFamilyManagePermission(client, familyId, actorId);
++      const episodeResult = await client.query<InterventionEpisodeRow>(
++        `select episode_id, family_id, onboarding_id, priority_id, intervention_id, intervention_code,
++                status, started_by_actor_id, started_at, planned_days, policy_version, created_at
++         from intervention_episodes
++         where family_id = $1 and onboarding_id = $2 and status = 'ACTIVE'
++         limit 1`,
++        [familyId, onboardingId],
++      );
++      const episode = episodeResult.rows[0];
++      if (!episode) return null;
++      const actions = await listEpisodeActions(client, episode.episode_id);
++      return { intervention: getListenBeforeRespondCard(), episode: mapInterventionEpisode(episode), actions };
++    });
++  }
+ 
+   async startIntervention(request: StartInterventionRequest, meta: AuditMeta): Promise<StartInterventionResponse> {
+     const requestHash = hashStartInterventionRequest(request);
+@@ -41,8 +73,13 @@ export class InterventionService {
+       await ensureFamilyExists(client, request.family_id);
+       await assertFamilyManagePermission(client, request.family_id, meta.actor);
+       const activePriority = await getActivePriorityForStart(client, request);
+-      const consentSubjectId = await getConsentSubjectForPriority(client, activePriority.profile_id);
+-      await assertRequiredGrowthConsents(client, request.family_id, consentSubjectId);
++      const subject = await this.growthSubjectResolver.resolve(client, {
++        familyId: request.family_id,
++        onboardingId: request.onboarding_id,
++        priorityId: request.priority_id,
++      });
++      await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
++      await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
+       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
+ 
+       const episode = await insertInterventionEpisode(client, request, meta);
+@@ -175,37 +212,6 @@ async function getActivePriorityForStart(client: pg.PoolClient, request: StartIn
+   return row;
+ }
+ 
+-async function getConsentSubjectForPriority(client: pg.PoolClient, profileId: string): Promise<string> {
+-  const result = await client.query<{ subject_person_id: string | null; subject_relationship_id: string | null }>(
+-    `select subject_person_id, subject_relationship_id
+-     from growth_profiles
+-     where profile_id = $1
+-     for share`,
+-    [profileId],
+-  );
+-  const profile = result.rows[0];
+-  if (!profile) {
+-    throw new NotFoundException('growth_profile_not_found');
+-  }
+-  if (profile.subject_person_id) {
+-    return profile.subject_person_id;
+-  }
+-  if (profile.subject_relationship_id) {
+-    const relationship = await client.query<{ person_b_id: string }>(
+-      `select person_b_id
+-       from family_relationships
+-       where relationship_id = $1
+-       for share`,
+-      [profile.subject_relationship_id],
+-    );
+-    const row = relationship.rows[0];
+-    if (row) {
+-      return row.person_b_id;
+-    }
+-  }
+-  throw new ConflictException('growth_priority_consent_subject_unresolved');
+-}
+-
+ async function assertNoActiveInterventionEpisode(client: pg.PoolClient, familyId: string, onboardingId: string): Promise<void> {
+   const result = await client.query(
+     `select episode_id
+@@ -272,6 +278,19 @@ async function insertGrowthActions(
+   return actions;
+ }
+ 
++async function listEpisodeActions(client: pg.PoolClient, episodeId: string): Promise<GrowthActionDto[]> {
++  const result = await client.query<GrowthActionRow>(
++    `select action_id, family_id, onboarding_id, priority_id, intervention_episode_id,
++            day_index, status, assignment_text, due_date, completed_at,
++            completion_status, reflection, reflection_boundary, boundary, created_at
++     from growth_actions
++     where intervention_episode_id = $1
++     order by day_index`,
++    [episodeId],
++  );
++  return result.rows.map(mapGrowthAction);
++}
++
+ async function insertAudit(
+   client: pg.PoolClient,
+   actionName: string,
+@@ -398,4 +417,4 @@ function toDateOnly(value: Date | string): string {
+     return value.includes('T') ? value.slice(0, 10) : value;
+   }
+   return value.toISOString().slice(0, 10);
+-}
+\ No newline at end of file
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/start-intervention.dto.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/start-intervention.dto.ts"
+index 7ee205d..493abd6 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/start-intervention.dto.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/family/start-intervention.dto.ts"
+@@ -2,17 +2,17 @@ import { BadRequestException } from '@nestjs/common';
+ import type { StartInterventionRequest } from '@family/contracts';
+ 
+ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
++const ALLOWED_FIELDS = new Set(['priority_id', 'intervention_code']);
+ 
+ type JsonObject = Record<string, unknown>;
+ 
+ export function validateStartInterventionRequest(
+   familyId: string,
+   onboardingId: string,
+-  priorityId: string,
+   idempotencyKey: string | undefined,
+   body: unknown,
+ ): StartInterventionRequest {
+-  if (!UUID_PATTERN.test(familyId) || !UUID_PATTERN.test(onboardingId) || !UUID_PATTERN.test(priorityId)) {
++  if (!UUID_PATTERN.test(familyId) || !UUID_PATTERN.test(onboardingId)) {
+     throw new BadRequestException('Invalid schema');
+   }
+ 
+@@ -25,15 +25,22 @@ export function validateStartInterventionRequest(
+   }
+ 
+   const input = body as JsonObject;
+-  if (input.intervention_code !== 'LISTEN_BEFORE_RESPOND') {
++  for (const field of Object.keys(input)) {
++    if (!ALLOWED_FIELDS.has(field)) {
++      throw new BadRequestException('Invalid schema');
++    }
++  }
++
++  if (typeof input.priority_id !== 'string' || !UUID_PATTERN.test(input.priority_id)
++    || input.intervention_code !== 'LISTEN_BEFORE_RESPOND') {
+     throw new BadRequestException('Invalid schema');
+   }
+ 
+   return {
+     family_id: familyId,
+     onboarding_id: onboardingId,
+-    priority_id: priorityId,
++    priority_id: input.priority_id,
+     intervention_code: 'LISTEN_BEFORE_RESPOND',
+     idempotency_key: idempotencyKey,
+   };
+-}
+\ No newline at end of file
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"
+index e09606b..9f366d5 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"
+@@ -20,11 +20,11 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
+   await pool.query('delete from perspectives');
+   await pool.query('delete from milestones');
+   await pool.query('delete from outcomes');
+-  await pool.query('delete from growth_events');
+   await pool.query('delete from growth_actions');
+-  await pool.query('delete from growth_journeys');
+-  await pool.query('delete from interventions');
++  await pool.query('delete from intervention_episodes');
+   await pool.query('delete from growth_priorities');
++  await pool.query('delete from growth_events');
++  await pool.query('delete from growth_journeys');
+   await pool.query('delete from growth_profile_dimensions');
+   await pool.query('delete from growth_profiles');
+   await pool.query('delete from outbox_events');
+@@ -35,4 +35,4 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
+   await pool.query('delete from family_relationships');
+   await pool.query('delete from persons');
+   await pool.query('delete from families');
+-}
+\ No newline at end of file
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/api/vitest.config.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/vitest.config.ts"
+index 3566066..f3ddcff 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/api/vitest.config.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/api/vitest.config.ts"
+@@ -5,5 +5,6 @@ export default defineConfig({
+     globals: true,
+     environment: 'node',
+     include: ['src/**/*.spec.ts'],
++    fileParallelism: false,
+   },
+ });
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/index.html" "b/50_\345\274\200\345\217\221_dev/apps/web/index.html"
+index 2e550ed..1f8e250 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/index.html"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/index.html"
+@@ -3,7 +3,9 @@
+   <head>
+     <meta charset="UTF-8" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>Family Growth</title>
++    <meta name="theme-color" content="#f5f1e8" />
++    <meta name="description" content="Family 家庭成长陪伴——从听见彼此开始，一次练习一件小事。" />
++    <title>Family · 家庭成长陪伴</title>
+     <link rel="stylesheet" href="./src/styles.css" />
+   </head>
+   <body>
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/app.js" "b/50_\345\274\200\345\217\221_dev/apps/web/src/app.js"
+index 9623cee..3039ced 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/app.js"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/app.js"
+@@ -10,10 +10,11 @@
+ /** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
+ /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
+ import {
+-  createFrozenActionFixture,
+-  createFrozenInterventionFixture,
+-  createFrozenPriorityFixture,
+   createInitialWave2State,
++  fetchActiveIntervention,
++  fetchGrowthPriorityInsight,
++  fetchListenBeforeRespondCard,
++  fetchTodayGrowthAction,
+   renderWave2Section,
+   submitCompleteGrowthAction,
+   submitConfirmGrowthPriority,
+@@ -52,65 +53,108 @@ export function createGrowthApp(root, config = defaultConfig) {
+     summary: undefined,
+     /** @type {GrowthInsightResponse | undefined} */
+     insight: undefined,
+-    wave2: createInitialWave2State(),
++    wave2: createInitialWave2State('real-api'),
+   };
+ 
+   const render = () => {
++    const journeyStage = state.insight?.confirmed_profiles.length
++      ? 4
++      : state.insight
++        ? 3
++        : state.summary
++          ? 2
++          : state.onboarding
++            ? 1
++            : 0;
+     root.innerHTML = `
+       <section class="shell" aria-labelledby="family-home-title">
+-        <header class="topbar">
+-          <div>
+-            <p class="eyebrow">Family Core · M2-102</p>
+-            <h1 id="family-home-title">成长视角记录台</h1>
++        <header class="app-header">
++          <div class="brand" aria-label="Family 家庭成长陪伴">
++            <span class="brand-mark" aria-hidden="true">F</span>
++            <span class="brand-name">Family <small>家庭成长陪伴</small></span>
++          </div>
++          <div class="header-meta">
++            <span class="privacy-chip"><span aria-hidden="true">●</span> 仅家庭可见</span>
++            <span class="avatar" aria-label="监护人账户">家</span>
+           </div>
+-          <span class="slice-badge">青春期亲子沟通</span>
+         </header>
+ 
++        <section class="topbar" aria-label="成长旅程介绍">
++          <div class="hero-copy">
++            <p class="eyebrow">Family Core · M2-102</p>
++            <h1 id="family-home-title">让沟通，从被听见开始</h1>
++            <p class="hero-lead">不急着下结论。先记录彼此的视角，再找到这一周最值得练习的一件小事。</p>
++            <div class="hero-meta" aria-label="当前主题">
++              <span class="slice-badge">青春期亲子沟通</span>
++              <span class="gentle-badge">约 2 分钟开始</span>
++            </div>
++          </div>
++          <div class="hero-art" role="img" aria-label="家庭沿着成长路径同行的抽象插画"></div>
++        </section>
++
+         <section class="workspace" aria-label="成长工作台">
+           <aside class="family-panel" aria-label="家庭上下文">
+-            <h2>F01 家庭上下文</h2>
+-            <dl>
+-              <div><dt>家庭</dt><dd>${config.familyId}</dd></div>
+-              <div><dt>监护人</dt><dd>${config.guardianPersonId}</dd></div>
+-              <div><dt>孩子</dt><dd>${config.childId}</dd></div>
+-              <div><dt>阶段</dt><dd>12-15 岁早期青春期</dd></div>
+-            </dl>
++            <p class="eyebrow">F01 家庭上下文</p>
++            <h2>我们的成长旅程</h2>
++            <div class="stage-card">
++              <span class="stage-icon" aria-hidden="true">芽</span>
++              <div><small>当前成长阶段</small><strong>12–15 岁 · 早期青春期</strong></div>
++            </div>
++            <nav class="journey-nav" aria-label="成长旅程进度">
++              <ol>
++                <li class="${journeyStage === 0 ? 'active' : journeyStage > 0 ? 'done' : ''}"><span>1</span><div><strong>建立起点</strong><small>确认安全与使用范围</small></div></li>
++                <li class="${journeyStage === 1 ? 'active' : journeyStage > 1 ? 'done' : ''}"><span>2</span><div><strong>听见彼此</strong><small>记录父母与孩子视角</small></div></li>
++                <li class="${journeyStage === 2 || journeyStage === 3 ? 'active' : journeyStage > 3 ? 'done' : ''}"><span>3</span><div><strong>形成理解</strong><small>查看有限的工作画像</small></div></li>
++                <li class="${journeyStage === 4 ? 'active' : ''}"><span>4</span><div><strong>开始练习</strong><small>一次只改变一件小事</small></div></li>
++              </ol>
++            </nav>
++            <p class="privacy-note"><span aria-hidden="true">◇</span> 记录只用于本次家庭成长旅程，并遵循同意范围。</p>
++            <details class="technical-details">
++              <summary>查看数据标识</summary>
++              <dl>
++                <div><dt>家庭</dt><dd>${config.familyId}</dd></div>
++                <div><dt>监护人</dt><dd>${config.guardianPersonId}</dd></div>
++                <div><dt>孩子</dt><dd>${config.childId}</dd></div>
++              </dl>
++            </details>
+           </aside>
+ 
+           <main class="flow-panel">
+             <section class="onboarding-panel" aria-labelledby="onboarding-title">
+               <div class="panel-heading">
+                 <div>
+-                  <p class="eyebrow">F02 成长入口</p>
++                  <p class="eyebrow"><span class="step-number">01</span> F02 成长入口</p>
+                   <h2 id="onboarding-title">启动亲子沟通成长旅程</h2>
++                  <p class="section-description">先完成一个简短确认，系统会根据安全规则决定接下来的记录方式。</p>
+                 </div>
+                 <output class="status-pill" data-status="${state.status}">${statusLabel(state.status)}</output>
+               </div>
+ 
+               <form id="growth-onboarding-form">
+                 <label>
+-                  安全初筛
++                  <span>当前是否存在需要优先处理的安全情况？ <small>必选</small></span>
+                   <select name="safetyScreeningResult" aria-label="安全初筛">
+-                    ${safetyOption('LOW', 'LOW · 可以进入普通记录')}
+-                    ${safetyOption('MEDIUM', 'MEDIUM · 需要人工门')}
+-                    ${safetyOption('HIGH', 'HIGH · 需要人工门')}
+-                    ${safetyOption('CRITICAL', 'CRITICAL · 需要人工门')}
++                    ${safetyOption('LOW', '没有，可以进入普通记录（LOW）')}
++                    ${safetyOption('MEDIUM', '可能存在，希望获得人工协助（MEDIUM）')}
++                    ${safetyOption('HIGH', '存在明显风险，需要人工协助（HIGH）')}
++                    ${safetyOption('CRITICAL', '情况紧急，需要立即转人工（CRITICAL）')}
+                   </select>
+                 </label>
+ 
+                 <div class="consent-strip" aria-label="同意范围">
+-                  <span>SERVICE</span>
+-                  <span>ASSESSMENT</span>
+-                  <span>GROWTH_TRACKING</span>
+-                  <span class="optional">确定性流程</span>
++                  <span><strong>基础服务</strong><small>SERVICE</small></span>
++                  <span><strong>视角整理</strong><small>ASSESSMENT</small></span>
++                  <span><strong>成长记录</strong><small>GROWTH_TRACKING</small></span>
++                  <span class="optional"><strong>规则保障</strong><small>确定性流程</small></span>
+                 </div>
+ 
+-                <button type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
+-                  ${state.status === 'submitting' ? '启动中...' : '启动成长入口'}
++                <button class="primary-action" type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
++                  ${state.status === 'submitting' ? '正在准备旅程…' : '开始 2 分钟记录'}
++                  <span aria-hidden="true">→</span>
+                 </button>
+               </form>
+ 
+-              <p class="message" role="status">${state.message}</p>
++              <p class="message status-message" role="status"><span aria-hidden="true">i</span>${state.message}</p>
+               ${state.onboarding ? renderOnboarding(state.onboarding) : ''}
+             </section>
+ 
+@@ -267,9 +311,16 @@ export function createGrowthApp(root, config = defaultConfig) {
+     try {
+       await submitConfirmGrowthProfile(config, draftId);
+       state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+-      state.wave2.priorityInsight = createFrozenPriorityFixture();
+-      state.wave2.intervention = createFrozenInterventionFixture();
+-      state.wave2.todayAction = createFrozenActionFixture();
++      const [priorityInsight, intervention, activeIntervention, todayAction] = await Promise.all([
++        fetchGrowthPriorityInsight(config, state.onboarding.onboarding_id),
++        fetchListenBeforeRespondCard(config),
++        fetchActiveIntervention(config, state.onboarding.onboarding_id),
++        fetchTodayGrowthAction(config),
++      ]);
++      state.wave2.priorityInsight = priorityInsight;
++      state.wave2.intervention = intervention;
++      state.wave2.startedIntervention = activeIntervention ?? undefined;
++      state.wave2.todayAction = todayAction ?? undefined;
+       state.status = 'started';
+       state.message = '画像已确认。当前仍没有写入 Growth Priority 或行动。';
+     } catch (error) {
+@@ -290,16 +341,12 @@ export function createGrowthApp(root, config = defaultConfig) {
+     }
+ 
+     state.status = 'submitting';
+-    state.message = '正在提交 ConfirmGrowthPriority；当前前端仍标记为 pre-real-api。';
++    state.message = '正在提交 ConfirmGrowthPriority Named Action。';
+     render();
+ 
+     try {
+-      if (state.wave2.apiMode === 'real-api') {
+-        const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
+-        state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
+-      } else {
+-        state.wave2.priorityInsight = createFrozenPriorityFixture();
+-      }
++      const response = await submitConfirmGrowthPriority(config, state.onboarding.onboarding_id, draftId, decision);
++      state.wave2.priorityInsight = { onboarding_id: state.onboarding.onboarding_id, family_id: config.familyId, draft: response.draft, active_priority: response.priority };
+       state.status = 'started';
+       state.message = '已确认本周练习重点。不会自动开始练习计划。';
+     } catch (error) {
+@@ -320,32 +367,11 @@ export function createGrowthApp(root, config = defaultConfig) {
+     render();
+ 
+     try {
+-      if (state.wave2.apiMode === 'real-api') {
+-        const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id ?? 'priority-R03';
+-        state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
+-      } else {
+-        const firstAction = createFrozenActionFixture();
+-        state.wave2.startedIntervention = {
+-          intervention: createFrozenInterventionFixture(),
+-          episode: {
+-            episode_id: 'episode-1',
+-            family_id: config.familyId,
+-            onboarding_id: state.onboarding.onboarding_id,
+-            priority_id: firstAction.priority_id,
+-            intervention_id: 'INTERVENTION-001',
+-            intervention_code: 'LISTEN_BEFORE_RESPOND',
+-            status: 'ACTIVE',
+-            started_by_actor_id: config.actorPersonId,
+-            started_at: '2026-08-10T00:00:00.000Z',
+-            planned_days: 7,
+-            policy_version: 'M2_105_DETERMINISTIC_V1',
+-            created_at: '2026-08-10T00:00:00.000Z',
+-          },
+-          actions: createFrozenActionPlan(firstAction),
+-        };
+-      }
++      const priorityId = state.wave2.priorityInsight?.active_priority?.priority_id;
++      if (!priorityId) throw new Error('请先确认一个练习重点。');
++      state.wave2.startedIntervention = await submitStartIntervention(config, state.onboarding.onboarding_id, priorityId);
+       state.wave2.intervention = state.wave2.startedIntervention.intervention;
+-      state.wave2.todayAction = state.wave2.startedIntervention.actions[0];
++      state.wave2.todayAction = await fetchTodayGrowthAction(config) ?? state.wave2.startedIntervention.actions[0];
+       state.status = 'started';
+       state.message = '7 天练习已准备。每天只有具体行动状态，不写结果。';
+     } catch (error) {
+@@ -361,27 +387,21 @@ export function createGrowthApp(root, config = defaultConfig) {
+    * @param {string} reflection
+    */
+   const completeWave2Action = async (completionStatus, reflection) => {
+-    const action = state.wave2.todayAction ?? createFrozenActionFixture();
++    const action = state.wave2.todayAction;
++    if (!action) {
++      state.status = 'error';
++      state.message = '当前没有可记录的今日行动。';
++      render();
++      return;
++    }
+     state.status = 'submitting';
+     state.message = '正在提交 CompleteGrowthAction。';
+     render();
+ 
+     try {
+-      if (state.wave2.apiMode === 'real-api') {
+-        const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
+-        state.wave2.todayAction = response.action;
+-        state.wave2.reflectionBoundary = response.reflection_boundary;
+-      } else {
+-        state.wave2.todayAction = {
+-          ...action,
+-          status: completionStatus,
+-          completion_status: completionStatus,
+-          completed_at: '2026-08-10T00:00:00.000Z',
+-          reflection,
+-          reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
+-        };
+-        state.wave2.reflectionBoundary = '只记录行动完成情况，不声明结果已经发生。';
+-      }
++      const response = await submitCompleteGrowthAction(config, action.action_id, completionStatus, reflection);
++      state.wave2.todayAction = response.action;
++      state.wave2.reflectionBoundary = response.reflection_boundary;
+       state.status = 'started';
+       state.message = '行动状态已记录；反思只作为原始记录保留。';
+     } catch (error) {
+@@ -620,30 +640,6 @@ function createIdempotencyKey(prefix, familyId, resourceId) {
+   return `${prefix}-${familyId}-${resourceId}`;
+ }
+ 
+-/** @param {import('@family/contracts').GrowthActionDto} firstAction */
+-function createFrozenActionPlan(firstAction) {
+-  return /** @type {import('@family/contracts').GrowthActionDto[]} */ ([1, 2, 3, 4, 5, 6, 7].map((dayIndex) => ({
+-    ...firstAction,
+-    action_id: `action-day-${dayIndex}`,
+-    day_index: /** @type {1 | 2 | 3 | 4 | 5 | 6 | 7} */ (dayIndex),
+-    assignment_text: frozenAssignmentText(dayIndex),
+-  })));
+-}
+-
+-/** @param {number} dayIndex */
+-function frozenAssignmentText(dayIndex) {
+-  const assignments = [
+-    '今天在一次沟通中，先停顿 3 秒，邀请孩子把话说完，再回应。',
+-    '回应前，先复述一句你听到的内容。',
+-    '提出解决办法前，先问一个澄清问题。',
+-    '先说出你听到的感受，再说自己的看法。',
+-    '把倾听和纠正分开，不在同一句话里完成。',
+-    '如果中途打断了，补一句“我刚才急了，你继续说”。',
+-    '回看这 7 天的练习体验，只记录过程。',
+-  ];
+-  return assignments[dayIndex - 1] ?? assignments[0];
+-}
+-
+ /**
+  * @param {SafetyScreeningResult} value
+  * @param {string} label
+@@ -698,18 +694,20 @@ function renderPerspectiveForms() {
+  */
+ function renderPerspectiveForm(kind, title, label, value, signalValue) {
+   return `
+-    <form class="perspective-card" data-perspective-form="${kind}">
++    <form class="perspective-card perspective-card--${kind}" data-perspective-form="${kind}">
+       <input type="hidden" name="perspectiveKind" value="${kind}">
+-      <div>
+-        <p class="eyebrow">${title}</p>
++      <div class="perspective-heading">
++        <span class="perspective-icon" aria-hidden="true">${kind === 'child' ? '孩' : '亲'}</span>
++        <div><p class="eyebrow">${title}</p>
+         <h2>${label}</h2>
++        </div>
+       </div>
+       <label>
+-        视角文本
++        <span>用自己的话描述 <small>这是一段视角记录，不是事实判定</small></span>
+         <textarea name="responseText" rows="5" required>${value}</textarea>
+       </label>
+       <label>
+-        结构化观察标签
++        <span>观察关键词 <small>可选，用逗号分隔</small></span>
+         <input name="selectedSignals" value="${signalValue}" aria-label="结构化观察标签">
+       </label>
+       <div class="contract-strip" aria-label="记录边界">
+@@ -717,7 +715,7 @@ function renderPerspectiveForm(kind, title, label, value, signalValue) {
+         <span>E1 Self Report</span>
+         <span>服务端安全策略</span>
+       </div>
+-      <button type="submit">记录${kind === 'child' ? '孩子' : '父母'}视角</button>
++      <button class="secondary-action" type="submit">保存${kind === 'child' ? '孩子' : '父母'}视角 <span aria-hidden="true">→</span></button>
+     </form>
+   `;
+ }
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/app.spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/web/src/app.spec.ts"
+index bb8488f..df09413 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/app.spec.ts"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/app.spec.ts"
+@@ -1,6 +1,6 @@
+ import { describe, expect, it, vi } from 'vitest';
+ import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
+-import { submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
++import { fetchGrowthPriorityInsight, submitCompleteGrowthAction, submitConfirmGrowthPriority, submitStartIntervention } from './wave2.js';
+ 
+ import type { AppConfig } from './app.js';
+ 
+@@ -214,7 +214,7 @@ describe('M2-102 Family web perspective capture', () => {
+     expect(root.textContent).toContain('不会自动生成行动');
+   });
+ 
+-  it('renders Wave2 F06-F09 workspace after confirmed profile using pre-real-api fixtures', async () => {
++  it('renders Wave2 F06-F09 workspace after confirmed profile using real API responses', async () => {
+     const fetchMock = vi
+       .fn()
+       .mockResolvedValueOnce({ ok: true, json: async () => ({ onboarding: onboardingFixture() }) })
+@@ -223,7 +223,15 @@ describe('M2-102 Family web perspective capture', () => {
+       .mockResolvedValueOnce({ ok: true, json: async () => ({ drafts: [growthDraftFixture('P03', 'DRAFT'), growthDraftFixture('R03', 'DRAFT'), growthDraftFixture('R05', 'REVIEW_REQUIRED')] }) })
+       .mockResolvedValueOnce({ ok: true, json: async () => growthInsightFixture() })
+       .mockResolvedValueOnce({ ok: true, json: async () => ({ draft: growthDraftFixture('R03', 'CONFIRMED'), profile: growthProfileFixture('R03') }) })
+-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) });
++      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...growthInsightFixture(), confirmed_profiles: [growthProfileFixture('R03')] }) })
++      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
++      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture().intervention })
++      .mockResolvedValueOnce({ ok: true, json: async () => null })
++      .mockResolvedValueOnce({ ok: true, json: async () => null })
++      .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
++      .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
++      .mockResolvedValueOnce({ ok: true, json: async () => growthActionFixture('PENDING') })
++      .mockResolvedValueOnce({ ok: true, json: async () => completeActionFixture() });
+     vi.stubGlobal('fetch', fetchMock);
+     const root = document.createElement('main');
+ 
+@@ -238,70 +246,74 @@ describe('M2-102 Family web perspective capture', () => {
+     await flushPromises();
+ 
+     expect(root.textContent).toContain('7 天沟通练习工作台');
+-    expect(root.textContent).toContain('pre-real-api');
++    expect(root.textContent).toContain('real-api');
+     expect(root.textContent).toContain('本周练习重点');
+     expect(root.textContent).toContain('NO_PRIORITY_YET');
+     expect(root.textContent).toContain('先听后回应');
+-    expect(root.textContent).toContain('今天的具体练习');
+-    expect(root.textContent).toContain('行动后的记录');
+-    expect(root.textContent).toContain('这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。');
++    expect(root.textContent).toContain('当前没有待完成的今日行动');
++    expect(root.textContent).toContain('开始练习后可记录行动反思');
+     expect(root.textContent).not.toContain('总分');
+     expect(root.textContent).not.toContain('排名');
+     expect(root.textContent).not.toContain('诊断');
+     expect(root.textContent).not.toContain('AI 推荐');
+ 
++    root.querySelector<HTMLButtonElement>('button[data-wave2-action="confirm-priority"]')?.click();
++    await flushPromises();
+     root.querySelector<HTMLButtonElement>('button[data-wave2-action="start-intervention"]')?.click();
+     await flushPromises();
+     expect(root.textContent).toContain('已生成 7 个每日练习');
++    expect(root.textContent).toContain('今天的具体练习');
++    expect(root.textContent).toContain('行动后的记录');
++    expect(root.textContent).toContain('这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。');
+ 
+     root.querySelector<HTMLFormElement>('#wave2-reflection-form')?.requestSubmit();
+     await flushPromises();
+-    expect(root.textContent).toContain('只记录行动完成情况，不声明结果已经发生。');
++    expect(root.textContent).toContain('REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME');
+   });
+ 
+   it('keeps Wave2 future real API adapters on named-action payload boundaries', async () => {
+     const fetchMock = vi
+       .fn()
++      .mockResolvedValueOnce({ ok: true, json: async () => priorityInsightFixture() })
+       .mockResolvedValueOnce({ ok: true, json: async () => priorityConfirmFixture() })
+       .mockResolvedValueOnce({ ok: true, json: async () => startInterventionFixture() })
+       .mockResolvedValueOnce({ ok: true, json: async () => completeActionFixture() });
+     vi.stubGlobal('fetch', fetchMock);
+ 
++    await fetchGrowthPriorityInsight(config, 'onboarding-1');
+     await submitConfirmGrowthPriority(config, 'onboarding-1', 'priority-draft-R03', 'R03');
+     await submitStartIntervention(config, 'onboarding-1', 'priority-R03');
+     await submitCompleteGrowthAction(config, 'action-day-1', 'PARTIAL', '今天先听后回应了一次。');
+ 
+     expect(fetchMock).toHaveBeenNthCalledWith(1,
+-      `http://api.test/families/${config.familyId}/growth/priorities/confirm`,
+-      expect.objectContaining({ method: 'POST' }),
++      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/priority`,
++      expect.objectContaining({ method: 'GET' }),
+     );
+     expect(fetchMock).toHaveBeenNthCalledWith(2,
+-      `http://api.test/families/${config.familyId}/growth/interventions/start`,
++      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/priority/confirm`,
+       expect.objectContaining({ method: 'POST' }),
+     );
+     expect(fetchMock).toHaveBeenNthCalledWith(3,
++      `http://api.test/families/${config.familyId}/growth/onboardings/onboarding-1/interventions/start`,
++      expect.objectContaining({ method: 'POST' }),
++    );
++    expect(fetchMock).toHaveBeenNthCalledWith(4,
+       `http://api.test/families/${config.familyId}/growth/actions/action-day-1/complete`,
+       expect.objectContaining({ method: 'POST' }),
+     );
+ 
+-    const priorityBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+-    const interventionBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+-    const actionBody = JSON.parse(fetchMock.mock.calls[2][1].body);
++    const priorityBody = JSON.parse(fetchMock.mock.calls[1][1].body);
++    const interventionBody = JSON.parse(fetchMock.mock.calls[2][1].body);
++    const actionBody = JSON.parse(fetchMock.mock.calls[3][1].body);
+     expect(priorityBody).toEqual({
+-      family_id: config.familyId,
+-      onboarding_id: 'onboarding-1',
+       draft_id: 'priority-draft-R03',
+       decision: 'R03',
+     });
+     expect(interventionBody).toEqual({
+-      family_id: config.familyId,
+-      onboarding_id: 'onboarding-1',
+       priority_id: 'priority-R03',
+       intervention_code: 'LISTEN_BEFORE_RESPOND',
+     });
+     expect(actionBody).toMatchObject({
+-      family_id: config.familyId,
+-      action_id: 'action-day-1',
+       completion_status: 'PARTIAL',
+       reflection: '今天先听后回应了一次。',
+     });
+@@ -503,14 +515,27 @@ function startInterventionFixture() {
+       policy_version: 'M2_105_DETERMINISTIC_V1',
+     },
+     episode_id: 'episode-1',
+-    actions: [growthActionFixture('PENDING')],
++    actions: Array.from({ length: 7 }, (_, index) => ({
++      ...growthActionFixture('PENDING'),
++      action_id: `action-day-${index + 1}`,
++      day_index: index + 1,
++    })),
+   };
+ }
+ 
+ function completeActionFixture() {
+   return {
+     action: growthActionFixture('PARTIAL'),
+-    reflection_boundary: '只记录行动完成情况，不声明结果已经发生。',
++    reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
++  };
++}
++
++function priorityInsightFixture() {
++  return {
++    onboarding_id: 'onboarding-1',
++    family_id: config.familyId,
++    draft: priorityConfirmFixture().draft,
++    active_priority: null,
+   };
+ }
+ 
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css" "b/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"
+index 0560c87..879f77a 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"
+@@ -1,34 +1,55 @@
+ @font-face {
+   font-family: 'FamilySignal';
+-  src: local('Segoe UI Variable Text'), local('Segoe UI');
++  src: local('Microsoft YaHei UI'), local('Segoe UI Variable Text'), local('Segoe UI');
+ }
+ 
+ :root {
+-  --ink: #19211d;
+-  --muted: #667067;
+-  --paper: #fbfaf4;
+-  --panel: #ffffff;
+-  --line: #d9dfd5;
+-  --moss: #47735a;
+-  --teal: #176b73;
+-  --amber: #c7792d;
+-  --rose: #a8504f;
+-  --shadow: 0 18px 42px rgba(41, 54, 46, 0.14);
++  color-scheme: light;
++  --ink: #18352d;
++  --ink-soft: #355048;
++  --muted: #6f7d77;
++  --paper: #f6f2e9;
++  --paper-deep: #eee9dd;
++  --panel: #fffdf8;
++  --panel-soft: #f9f6ef;
++  --line: #dfe3da;
++  --line-strong: #cad3c8;
++  --forest: #1f5a45;
++  --forest-dark: #174636;
++  --sage: #7f9c7f;
++  --sage-soft: #e4ede3;
++  --teal: #317577;
++  --apricot: #e9aa70;
++  --apricot-soft: #fae8d7;
++  --rose: #a84f4d;
++  --rose-soft: #f7e4e1;
++  --amber: #9f652d;
++  --shadow-soft: 0 12px 36px rgba(35, 55, 45, 0.08);
++  --shadow-card: 0 20px 60px rgba(35, 55, 45, 0.11);
++  --radius-xl: 30px;
++  --radius-lg: 22px;
++  --radius-md: 15px;
+ }
+ 
+ * {
+   box-sizing: border-box;
+ }
+ 
++html {
++  scroll-behavior: smooth;
++}
++
+ body {
+   margin: 0;
+   min-width: 320px;
+   min-height: 100vh;
+   color: var(--ink);
+-  font-family: FamilySignal, 'Segoe UI', sans-serif;
++  font-family: FamilySignal, 'Microsoft YaHei UI', 'PingFang SC', sans-serif;
+   background:
+-    radial-gradient(circle at 15% 0%, rgba(23, 107, 115, 0.16), transparent 34rem),
+-    linear-gradient(135deg, #fbfaf4 0%, #edf4ef 52%, #f7efe8 100%);
++    radial-gradient(circle at 8% 14%, rgba(233, 170, 112, 0.13), transparent 28rem),
++    radial-gradient(circle at 92% 24%, rgba(127, 156, 127, 0.16), transparent 30rem),
++    var(--paper);
++  -webkit-font-smoothing: antialiased;
+ }
+ 
+ button,
+@@ -38,19 +59,38 @@ textarea {
+   font: inherit;
+ }
+ 
++button,
++select,
++summary {
++  -webkit-tap-highlight-color: transparent;
++}
++
++button:focus-visible,
++input:focus-visible,
++select:focus-visible,
++textarea:focus-visible,
++summary:focus-visible {
++  outline: 3px solid rgba(49, 117, 119, 0.28);
++  outline-offset: 3px;
++}
++
+ .shell {
+-  width: min(1120px, calc(100vw - 32px));
++  width: min(1240px, calc(100vw - 48px));
+   margin: 0 auto;
+-  padding: 32px 0;
++  padding: 22px 0 64px;
+ }
+ 
++.app-header,
++.header-meta,
++.brand,
+ .topbar,
+ .workspace,
+ .panel-heading,
+-.consent-strip,
+-.contract-strip,
+-.action-row,
+ .perspective-grid,
++.perspective-heading,
++.stage-card,
++.journey-nav li,
++.status-message,
+ .result-panel div,
+ .family-panel dl div,
+ .summary-item dl div,
+@@ -59,75 +99,397 @@ textarea {
+   display: flex;
+ }
+ 
+-.topbar {
+-  align-items: end;
++.app-header {
++  min-height: 56px;
++  align-items: center;
+   justify-content: space-between;
+-  gap: 16px;
+-  margin-bottom: 24px;
++  gap: 20px;
++  margin-bottom: 18px;
++}
++
++.brand,
++.header-meta {
++  align-items: center;
++}
++
++.brand {
++  gap: 11px;
++}
++
++.brand-mark {
++  display: grid;
++  width: 38px;
++  height: 38px;
++  place-items: center;
++  border-radius: 13px 13px 13px 5px;
++  color: #fffdf8;
++  background: var(--forest);
++  font-family: Georgia, serif;
++  font-size: 1.3rem;
++  font-weight: 700;
++  box-shadow: 0 8px 20px rgba(31, 90, 69, 0.2);
++}
++
++.brand-name {
++  color: var(--forest-dark);
++  font-family: Georgia, 'Times New Roman', serif;
++  font-size: 1.3rem;
++  font-weight: 700;
++  letter-spacing: 0.01em;
++}
++
++.brand-name small {
++  display: block;
++  margin-top: 1px;
++  color: var(--muted);
++  font-family: FamilySignal, sans-serif;
++  font-size: 0.68rem;
++  font-weight: 700;
++  letter-spacing: 0.12em;
++}
++
++.header-meta {
++  gap: 11px;
++}
++
++.privacy-chip,
++.avatar {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  border: 1px solid rgba(31, 90, 69, 0.13);
++  background: rgba(255, 253, 248, 0.72);
++}
++
++.privacy-chip {
++  gap: 7px;
++  min-height: 36px;
++  padding: 0 12px;
++  border-radius: 999px;
++  color: var(--ink-soft);
++  font-size: 0.78rem;
++  font-weight: 700;
++}
++
++.privacy-chip span {
++  color: var(--sage);
++  font-size: 0.6rem;
++}
++
++.avatar {
++  width: 38px;
++  height: 38px;
++  border-radius: 50%;
++  color: var(--forest);
++  font-size: 0.82rem;
++  font-weight: 900;
++}
++
++.topbar {
++  position: relative;
++  min-height: 344px;
++  align-items: stretch;
++  overflow: hidden;
++  border: 1px solid rgba(31, 90, 69, 0.09);
++  border-radius: var(--radius-xl);
++  background: #fffaf0;
++  box-shadow: var(--shadow-card);
++}
++
++.hero-copy {
++  position: relative;
++  z-index: 2;
++  flex: 0 0 55%;
++  align-self: center;
++  padding: 50px 24px 48px 52px;
++}
++
++.hero-copy::after {
++  position: absolute;
++  z-index: -1;
++  inset: -80px -130px -80px -40px;
++  background: linear-gradient(90deg, #fffaf0 62%, rgba(255, 250, 240, 0));
++  content: '';
++}
++
++.hero-art {
++  position: absolute;
++  inset: 0 0 0 39%;
++  background: url('./assets/family-growth-journey.webp') center right / cover no-repeat;
+ }
+ 
+ .eyebrow {
+-  margin: 0 0 6px;
++  margin: 0 0 8px;
+   color: var(--teal);
+-  font-size: 0.78rem;
+-  font-weight: 800;
+-  letter-spacing: 0;
++  font-size: 0.72rem;
++  font-weight: 900;
++  letter-spacing: 0.11em;
+   text-transform: uppercase;
+ }
+ 
+ h1,
+-h2 {
++h2,
++h3,
++p {
++  overflow-wrap: anywhere;
++}
++
++h1,
++h2,
++h3 {
+   margin: 0;
+-  letter-spacing: 0;
++  letter-spacing: -0.025em;
+ }
+ 
+ h1 {
+-  font-size: clamp(2rem, 6vw, 4.5rem);
+-  line-height: 0.94;
++  max-width: 600px;
++  font-size: clamp(2.45rem, 5vw, 4.7rem);
++  font-weight: 850;
++  line-height: 1.03;
+ }
+ 
+ h2 {
+-  font-size: 1.35rem;
++  font-size: clamp(1.3rem, 2vw, 1.72rem);
++  line-height: 1.28;
++}
++
++h3 {
++  font-size: 1.12rem;
++  line-height: 1.35;
++}
++
++.hero-lead {
++  max-width: 540px;
++  margin: 20px 0 0;
++  color: var(--ink-soft);
++  font-size: clamp(1rem, 1.5vw, 1.12rem);
++  line-height: 1.8;
++}
++
++.hero-meta,
++.consent-strip,
++.contract-strip,
++.action-row {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 9px;
++}
++
++.hero-meta {
++  margin-top: 25px;
+ }
+ 
+ .slice-badge,
+-.status-pill,
+-.consent-strip span {
+-  border: 1px solid var(--line);
++.gentle-badge,
++.status-pill {
++  display: inline-flex;
++  align-items: center;
++  width: fit-content;
++  min-height: 34px;
+   border-radius: 999px;
+-  background: rgba(255, 255, 255, 0.78);
+-  color: var(--moss);
+-  font-weight: 800;
++  padding: 0 12px;
+   white-space: nowrap;
++  font-size: 0.78rem;
++  font-weight: 850;
+ }
+ 
+-.slice-badge,
+-.status-pill {
+-  padding: 9px 13px;
++.slice-badge {
++  color: #fff;
++  background: var(--forest);
++}
++
++.gentle-badge {
++  border: 1px solid rgba(159, 101, 45, 0.18);
++  color: var(--amber);
++  background: rgba(250, 232, 215, 0.76);
+ }
+ 
+ .workspace {
+-  align-items: stretch;
+-  gap: 18px;
++  align-items: flex-start;
++  gap: 22px;
++  margin-top: 22px;
+ }
+ 
+ .family-panel,
+-.onboarding-panel {
+-  border: 1px solid rgba(71, 115, 90, 0.24);
+-  border-radius: 8px;
+-  background: rgba(255, 255, 255, 0.82);
+-  box-shadow: var(--shadow);
++.onboarding-panel,
++.perspective-card,
++.summary-panel,
++.insight-panel,
++.wave2-panel {
++  border: 1px solid rgba(31, 90, 69, 0.12);
++  background: rgba(255, 253, 248, 0.93);
++  box-shadow: var(--shadow-soft);
+ }
+ 
+ .family-panel {
+-  flex: 0 0 330px;
+-  padding: 22px;
++  position: sticky;
++  top: 20px;
++  flex: 0 0 292px;
++  padding: 25px;
++  border-radius: var(--radius-lg);
++}
++
++.stage-card {
++  align-items: center;
++  gap: 12px;
++  margin-top: 20px;
++  border-radius: var(--radius-md);
++  padding: 13px;
++  background: var(--sage-soft);
++}
++
++.stage-card .stage-icon {
++  display: grid;
++  flex: 0 0 40px;
++  width: 40px;
++  height: 40px;
++  place-items: center;
++  border-radius: 13px;
++  color: #fff;
++  background: var(--sage);
++  font-size: 0.78rem;
++  font-weight: 900;
++}
++
++.stage-card small,
++.stage-card strong {
++  display: block;
++}
++
++.stage-card small {
++  margin-bottom: 3px;
++  color: var(--muted);
++  font-size: 0.7rem;
++}
++
++.stage-card strong {
++  font-size: 0.88rem;
++}
++
++.journey-nav {
++  margin-top: 25px;
++}
++
++.journey-nav ol {
++  display: grid;
++  gap: 2px;
++  margin: 0;
++  padding: 0;
++  list-style: none;
++}
++
++.journey-nav li {
++  position: relative;
++  align-items: center;
++  gap: 12px;
++  min-height: 62px;
++  border-radius: 13px;
++  padding: 9px 10px;
++  color: var(--muted);
++}
++
++.journey-nav li::before {
++  position: absolute;
++  top: 48px;
++  bottom: -16px;
++  left: 24px;
++  width: 1px;
++  background: var(--line);
++  content: '';
++}
++
++.journey-nav li:last-child::before {
++  display: none;
++}
++
++.journey-nav li > span {
++  z-index: 1;
++  display: grid;
++  flex: 0 0 31px;
++  width: 31px;
++  height: 31px;
++  place-items: center;
++  border: 1px solid var(--line-strong);
++  border-radius: 50%;
++  background: var(--panel);
++  font-size: 0.72rem;
++  font-weight: 900;
++}
++
++.journey-nav li strong,
++.journey-nav li small {
++  display: block;
++}
++
++.journey-nav li strong {
++  margin-bottom: 3px;
++  color: var(--ink-soft);
++  font-size: 0.84rem;
++}
++
++.journey-nav li small {
++  font-size: 0.7rem;
++  line-height: 1.4;
++}
++
++.journey-nav li.active {
++  color: var(--forest);
++  background: var(--sage-soft);
++}
++
++.journey-nav li.active > span,
++.journey-nav li.done > span {
++  border-color: var(--forest);
++  color: #fff;
++  background: var(--forest);
++}
++
++.journey-nav li.done > span::after {
++  content: '✓';
++}
++
++.journey-nav li.done > span {
++  font-size: 0;
++}
++
++.journey-nav li.done > span::after {
++  font-size: 0.72rem;
++}
++
++.privacy-note {
++  margin: 22px 0 0;
++  border-top: 1px solid var(--line);
++  padding-top: 18px;
++  color: var(--muted);
++  font-size: 0.72rem;
++  line-height: 1.65;
++}
++
++.technical-details {
++  margin-top: 14px;
++  font-size: 0.73rem;
++}
++
++.technical-details summary {
++  width: fit-content;
++  color: var(--teal);
++  cursor: pointer;
++  font-weight: 800;
++}
++
++.technical-details dl {
++  margin: 12px 0 0;
++}
++
++.technical-details dl div {
++  padding: 8px 0;
+ }
+ 
+ .flow-panel {
+-  flex: 1;
+   display: grid;
+-  gap: 18px;
++  min-width: 0;
++  flex: 1;
++  gap: 20px;
+ }
+ 
+ .onboarding-panel,
+@@ -135,214 +497,399 @@ h2 {
+ .summary-panel,
+ .insight-panel,
+ .wave2-panel {
+-  flex: 1;
+-  padding: 24px;
++  min-width: 0;
++  border-radius: var(--radius-lg);
++  padding: clamp(22px, 3.5vw, 34px);
+ }
+ 
+-.family-panel dl,
+-.result-panel {
+-  margin: 20px 0 0;
++.onboarding-panel {
++  border-top: 4px solid var(--forest);
+ }
+ 
+-.family-panel dl div,
+-.result-panel div,
+-.summary-item dl div,
+-.insight-card dl div,
+-.wave2-card dl div {
++.panel-heading {
++  align-items: flex-start;
+   justify-content: space-between;
+-  gap: 16px;
+-  padding: 14px 0;
+-  border-bottom: 1px solid var(--line);
++  gap: 22px;
+ }
+ 
+-dt {
++.section-description {
++  max-width: 650px;
++  margin: 8px 0 0;
+   color: var(--muted);
+-  font-weight: 700;
++  font-size: 0.88rem;
++  line-height: 1.7;
+ }
+ 
+-dd {
+-  margin: 0;
+-  max-width: 60%;
+-  overflow-wrap: anywhere;
+-  text-align: right;
+-  font-weight: 800;
++.step-number {
++  display: inline-grid;
++  width: 28px;
++  height: 28px;
++  margin-right: 6px;
++  place-items: center;
++  border-radius: 9px;
++  color: #fff;
++  background: var(--teal);
++  letter-spacing: 0;
+ }
+ 
+-.panel-heading {
+-  align-items: start;
+-  justify-content: space-between;
+-  gap: 16px;
++.status-pill {
++  border: 1px solid var(--line);
++  color: var(--muted);
++  background: var(--panel-soft);
+ }
+ 
+ .status-pill[data-status='started'] {
+-  color: var(--teal);
++  border-color: rgba(31, 90, 69, 0.16);
++  color: var(--forest);
++  background: var(--sage-soft);
+ }
+ 
+ .status-pill[data-status='blocked'],
+ .status-pill[data-status='error'] {
++  border-color: rgba(168, 79, 77, 0.14);
+   color: var(--rose);
++  background: var(--rose-soft);
+ }
+ 
+ form {
+   display: grid;
+   gap: 18px;
+-  margin-top: 28px;
++  margin-top: 26px;
+ }
+ 
+ label {
+   display: grid;
+   gap: 9px;
++  color: var(--ink-soft);
++  font-size: 0.86rem;
++  font-weight: 850;
++}
++
++label > span {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 5px 14px;
++}
++
++label small {
+   color: var(--muted);
+-  font-weight: 800;
++  font-size: 0.7rem;
++  font-weight: 650;
+ }
+ 
+-select {
++select,
++input,
++textarea {
+   width: 100%;
+-  min-height: 48px;
+-  border: 1px solid var(--line);
+-  border-radius: 8px;
+-  padding: 0 14px;
++  border: 1px solid var(--line-strong);
++  border-radius: 13px;
+   color: var(--ink);
+-  background: var(--paper);
++  background: #fff;
++  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
++}
++
++select:hover,
++input:hover,
++textarea:hover {
++  border-color: var(--sage);
++}
++
++select:focus,
++input:focus,
++textarea:focus {
++  border-color: var(--teal);
++  box-shadow: 0 0 0 4px rgba(49, 117, 119, 0.1);
++}
++
++select {
++  min-height: 52px;
++  padding: 0 44px 0 15px;
+ }
+ 
+ input,
+ textarea {
+-  width: 100%;
+-  border: 1px solid var(--line);
+-  border-radius: 8px;
+-  padding: 12px 14px;
+-  color: var(--ink);
+-  background: var(--paper);
++  padding: 13px 15px;
+ }
+ 
+ textarea {
+-  min-height: 128px;
++  min-height: 132px;
+   resize: vertical;
++  line-height: 1.65;
+ }
+ 
+ .consent-strip {
+-  flex-wrap: wrap;
+-  gap: 8px;
++  padding: 14px;
++  border-radius: 15px;
++  background: var(--panel-soft);
+ }
+ 
+-.consent-strip span,
+-.contract-strip span {
+-  padding: 8px 10px;
+-  font-size: 0.78rem;
++.consent-strip > span {
++  display: grid;
++  min-width: 116px;
++  flex: 1 1 116px;
++  gap: 2px;
++  border-left: 2px solid var(--sage);
++  padding: 3px 9px;
++}
++
++.consent-strip strong {
++  color: var(--ink-soft);
++  font-size: 0.76rem;
++}
++
++.consent-strip small {
++  color: var(--muted);
++  font-size: 0.6rem;
++  font-weight: 800;
++  letter-spacing: 0.04em;
+ }
+ 
+ .consent-strip .optional {
+-  color: var(--amber);
++  border-left-color: var(--apricot);
+ }
+ 
+ button {
+-  min-height: 50px;
+-  border: 0;
+-  border-radius: 8px;
+-  color: white;
+-  background: linear-gradient(135deg, var(--teal), var(--moss));
++  display: inline-flex;
++  min-height: 48px;
++  align-items: center;
++  justify-content: center;
++  gap: 10px;
++  border: 1px solid transparent;
++  border-radius: 13px;
++  padding: 0 18px;
++  color: #fff;
++  background: var(--forest);
++  box-shadow: 0 7px 16px rgba(31, 90, 69, 0.14);
++  font-size: 0.88rem;
+   font-weight: 900;
+   cursor: pointer;
++  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
++}
++
++button:hover:not(:disabled) {
++  transform: translateY(-1px);
++  background: var(--forest-dark);
++  box-shadow: 0 10px 22px rgba(31, 90, 69, 0.2);
++}
++
++button:active:not(:disabled) {
++  transform: translateY(0);
+ }
+ 
+ button:disabled {
+   cursor: progress;
+-  opacity: 0.68;
++  opacity: 0.58;
+ }
+ 
+-.message {
+-  min-height: 24px;
+-  margin: 18px 0 0;
++.primary-action {
++  background: var(--forest);
++}
++
++.secondary-action {
++  border-color: rgba(31, 90, 69, 0.22);
++  color: var(--forest);
++  background: var(--sage-soft);
++  box-shadow: none;
++}
++
++.secondary-action:hover:not(:disabled) {
++  color: #fff;
++  background: var(--forest);
++}
++
++.ghost-action {
++  border-color: var(--line-strong);
++  color: var(--muted);
++  background: transparent;
++  box-shadow: none;
++}
++
++.ghost-action:hover:not(:disabled) {
++  color: var(--ink);
++  background: var(--panel-soft);
++}
++
++.status-message {
++  align-items: flex-start;
++  gap: 10px;
++  min-height: 48px;
++  margin: 20px 0 0;
++  border-radius: 13px;
++  padding: 12px 14px;
+   color: var(--muted);
++  background: rgba(49, 117, 119, 0.07);
++  font-size: 0.78rem;
+   font-weight: 700;
++  line-height: 1.55;
++}
++
++.status-message > span {
++  display: grid;
++  flex: 0 0 20px;
++  width: 20px;
++  height: 20px;
++  place-items: center;
++  border-radius: 50%;
++  color: #fff;
++  background: var(--teal);
++  font-family: Georgia, serif;
++  font-size: 0.74rem;
++}
++
++.message {
++  color: var(--muted);
++  line-height: 1.6;
+ }
+ 
+ .result-panel {
++  display: grid;
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++  gap: 0 22px;
++  margin: 20px 0 0;
+   border-top: 1px solid var(--line);
+ }
+ 
+-.perspective-grid {
+-  align-items: stretch;
+-  gap: 18px;
++.result-panel div,
++.family-panel dl div,
++.summary-item dl div,
++.insight-card dl div,
++.wave2-card dl div {
++  justify-content: space-between;
++  gap: 16px;
++  padding: 12px 0;
++  border-bottom: 1px solid var(--line);
+ }
+ 
+-.perspective-card,
+-.summary-panel,
+-.insight-panel,
+-.wave2-panel {
+-  border: 1px solid rgba(71, 115, 90, 0.24);
+-  border-radius: 8px;
+-  background: rgba(255, 255, 255, 0.82);
+-  box-shadow: var(--shadow);
++dt {
++  color: var(--muted);
++  font-size: 0.75rem;
++  font-weight: 700;
+ }
+ 
+-.insight-panel {
+-  background: rgba(255, 253, 247, 0.9);
++dd {
++  margin: 0;
++  max-width: 65%;
++  overflow-wrap: anywhere;
++  text-align: right;
++  color: var(--ink-soft);
++  font-size: 0.77rem;
++  font-weight: 850;
++}
++
++.perspective-grid {
++  align-items: stretch;
++  gap: 20px;
+ }
+ 
+ .perspective-card {
++  position: relative;
+   flex: 1;
++  overflow: hidden;
++}
++
++.perspective-card::before {
++  position: absolute;
++  inset: 0 0 auto;
++  height: 4px;
++  background: var(--teal);
++  content: '';
++}
++
++.perspective-card--child::before {
++  background: var(--apricot);
++}
++
++.perspective-heading {
++  align-items: center;
++  gap: 13px;
++}
++
++.perspective-icon {
++  display: grid;
++  flex: 0 0 44px;
++  width: 44px;
++  height: 44px;
++  place-items: center;
++  border-radius: 15px;
++  color: #fff;
++  background: var(--teal);
++  font-size: 0.75rem;
++  font-weight: 900;
++}
++
++.perspective-card--child .perspective-icon {
++  color: #713d1e;
++  background: var(--apricot-soft);
++}
++
++.perspective-heading .eyebrow {
++  margin-bottom: 4px;
+ }
+ 
+ .contract-strip {
+-  flex-wrap: wrap;
+-  gap: 8px;
++  align-items: center;
+ }
+ 
+ .contract-strip span {
+-  border: 1px solid rgba(23, 107, 115, 0.24);
++  display: inline-flex;
++  min-height: 30px;
++  align-items: center;
++  border: 1px solid rgba(49, 117, 119, 0.14);
+   border-radius: 999px;
+-  background: rgba(237, 244, 239, 0.86);
++  padding: 0 10px;
+   color: var(--teal);
++  background: rgba(228, 237, 227, 0.64);
++  font-size: 0.67rem;
+   font-weight: 800;
+ }
+ 
+-.summary-list {
++.summary-panel,
++.insight-panel,
++.wave2-panel {
++  scroll-margin-top: 20px;
++}
++
++.summary-list,
++.insight-grid,
++.wave2-grid {
+   display: grid;
+   gap: 14px;
+   margin-top: 20px;
+ }
+ 
++.summary-list {
++  grid-template-columns: repeat(2, minmax(0, 1fr));
++}
++
+ .insight-grid {
+-  display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+-  gap: 14px;
+-  margin-top: 20px;
+ }
+ 
+ .wave2-grid {
+-  display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+-  gap: 14px;
+-  margin-top: 20px;
+ }
+ 
+-.summary-item {
++.summary-item,
++.insight-card,
++.wave2-card {
++  display: grid;
++  min-width: 0;
++  align-content: start;
++  gap: 14px;
+   border: 1px solid var(--line);
+-  border-radius: 8px;
+-  padding: 18px;
+-  background: var(--paper);
++  border-radius: var(--radius-md);
++  padding: 20px;
++  background: #fff;
+ }
+ 
+-.insight-card {
+-  display: grid;
+-  gap: 14px;
+-  align-content: start;
+-  border: 1px solid rgba(199, 121, 45, 0.28);
+-  border-radius: 8px;
+-  padding: 18px;
+-  background: var(--panel);
++.summary-item {
++  border-top: 3px solid var(--teal);
+ }
+ 
+-.wave2-card {
+-  display: grid;
+-  gap: 14px;
+-  align-content: start;
+-  border: 1px solid rgba(23, 107, 115, 0.24);
+-  border-radius: 8px;
+-  padding: 18px;
+-  background: rgba(255, 255, 255, 0.9);
++.summary-item:nth-child(2) {
++  border-top-color: var(--apricot);
+ }
+ 
+ .summary-item h3,
+@@ -350,98 +897,274 @@ button:disabled {
+ .summary-item dl,
+ .insight-card h3,
+ .insight-card p,
+-.insight-card dl {
++.insight-card dl,
++.wave2-card h3,
++.wave2-card p,
++.wave2-card dl {
+   margin: 0;
+ }
+ 
+-.summary-item p {
+-  margin-top: 10px;
+-  color: var(--ink);
+-  line-height: 1.65;
++.summary-item p,
++.insight-card p,
++.wave2-card p {
++  color: var(--ink-soft);
++  font-size: 0.85rem;
++  line-height: 1.72;
+ }
+ 
+-.insight-card p {
+-  color: var(--ink);
+-  line-height: 1.6;
++.insight-panel {
++  background: rgba(255, 250, 240, 0.95);
+ }
+ 
+-.wave2-card p {
+-  margin: 0;
+-  color: var(--ink);
+-  line-height: 1.6;
++.insight-card {
++  border-color: rgba(159, 101, 45, 0.2);
++  box-shadow: 0 8px 24px rgba(159, 101, 45, 0.06);
+ }
+ 
+-.wave2-card h3,
+-.wave2-card dl {
+-  margin: 0;
++.wave2-panel {
++  border-color: rgba(49, 117, 119, 0.2);
+ }
+ 
+-.action-row {
+-  flex-wrap: wrap;
+-  gap: 8px;
++.wave2-card {
++  position: relative;
+ }
+ 
+-.action-row button {
+-  flex: 1 1 120px;
+-  min-height: 44px;
+-  padding: 0 10px;
++.today-card {
++  border-color: rgba(31, 90, 69, 0.28);
++  background: linear-gradient(145deg, #fff 58%, rgba(228, 237, 227, 0.82));
++  box-shadow: 0 12px 34px rgba(31, 90, 69, 0.1);
+ }
+ 
+-.summary-item dl {
+-  margin-top: 12px;
++.today-card::after {
++  position: absolute;
++  top: 16px;
++  right: 16px;
++  border-radius: 999px;
++  padding: 5px 8px;
++  color: var(--forest);
++  background: var(--sage-soft);
++  content: 'TODAY';
++  font-size: 0.58rem;
++  font-weight: 900;
++  letter-spacing: 0.1em;
++}
++
++.action-row button {
++  flex: 1 1 105px;
++  min-height: 42px;
++  padding: 0 10px;
++  font-size: 0.77rem;
+ }
+ 
+ .boundary-note {
+-  margin: 14px 0;
+-  color: var(--ink);
+-  font-weight: 900;
++  margin: 17px 0;
++  border-left: 3px solid var(--apricot);
++  border-radius: 0 10px 10px 0;
++  padding: 10px 12px;
++  color: var(--ink-soft);
++  background: rgba(250, 232, 215, 0.54);
++  font-size: 0.78rem;
++  font-weight: 800;
++  line-height: 1.6;
+ }
+ 
+ .limitation {
+-  color: var(--amber);
++  border-radius: 10px;
++  padding: 10px 12px;
++  color: var(--amber) !important;
++  background: var(--apricot-soft);
+   font-weight: 800;
+ }
+ 
+ .review-needed,
+ .confirmed-strip {
+   display: inline-flex;
+-  align-items: center;
+   min-height: 42px;
+-  border-radius: 8px;
+-  background: rgba(199, 121, 45, 0.12);
+-  color: #76501f;
+-  padding: 0 14px;
++  align-items: center;
++  width: fit-content;
++  border-radius: 12px;
++  padding: 0 13px;
++  color: var(--amber);
++  background: var(--apricot-soft);
++  font-size: 0.76rem;
+   font-weight: 900;
++  line-height: 1.45;
+ }
+ 
+ .confirmed-strip {
+-  margin-top: 16px;
++  margin-top: 14px;
++  color: var(--forest);
++  background: var(--sage-soft);
+ }
+ 
+-@media (max-width: 760px) {
++@media (max-width: 960px) {
+   .shell {
+-    width: min(100vw - 20px, 560px);
+-    padding: 18px 0;
++    width: min(100vw - 30px, 760px);
+   }
+ 
+-  .topbar,
+-  .workspace,
+-  .panel-heading,
+-  .perspective-grid,
+-  .wave2-grid {
++  .topbar {
++    min-height: 390px;
++  }
++
++  .hero-copy {
++    flex-basis: 64%;
++    padding-left: 34px;
++  }
++
++  .hero-art {
++    inset-left: 34%;
++  }
++
++  .workspace {
+     display: grid;
+   }
+ 
+   .family-panel {
+-    flex-basis: auto;
++    position: static;
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++    gap: 0 20px;
++  }
++
++  .family-panel > .eyebrow,
++  .family-panel > h2,
++  .privacy-note,
++  .technical-details {
++    grid-column: 1 / -1;
++  }
++
++  .journey-nav {
++    margin-top: 18px;
++  }
++}
++
++@media (max-width: 700px) {
++  .shell {
++    width: min(100vw - 20px, 560px);
++    padding-top: 12px;
++  }
++
++  .app-header {
++    min-height: 48px;
++    margin-bottom: 12px;
++  }
++
++  .privacy-chip {
++    display: none;
++  }
++
++  .topbar {
++    min-height: 520px;
++    border-radius: 24px;
++  }
++
++  .hero-copy {
++    align-self: flex-start;
++    flex-basis: 100%;
++    padding: 32px 24px;
++  }
++
++  .hero-copy::after {
++    inset: -40px -20px -150px;
++    background: linear-gradient(180deg, #fffaf0 72%, rgba(255, 250, 240, 0));
++  }
++
++  .hero-art {
++    inset: 45% 0 0;
++    background-position: 70% center;
++  }
++
++  h1 {
++    font-size: clamp(2.3rem, 12vw, 3.4rem);
++  }
++
++  .hero-lead {
++    margin-top: 14px;
++    font-size: 0.94rem;
++    line-height: 1.7;
++  }
++
++  .workspace {
++    margin-top: 14px;
++  }
++
++  .family-panel,
++  .onboarding-panel,
++  .perspective-card,
++  .summary-panel,
++  .insight-panel,
++  .wave2-panel {
++    border-radius: 19px;
++    padding: 21px;
++  }
++
++  .family-panel {
++    display: block;
++  }
++
++  .panel-heading,
++  .perspective-grid {
++    display: grid;
+   }
+ 
+-  .slice-badge,
+   .status-pill {
+-    width: fit-content;
++    margin-top: 2px;
++  }
++
++  .result-panel,
++  .summary-list,
++  .wave2-grid {
++    grid-template-columns: 1fr;
++  }
++
++  .panel-heading > button {
++    width: 100%;
+   }
+ 
+   dd {
+     max-width: 58%;
+   }
+ }
++
++@media (max-width: 420px) {
++  .brand-name small {
++    display: none;
++  }
++
++  .topbar {
++    min-height: 540px;
++  }
++
++  .hero-copy {
++    padding: 28px 20px;
++  }
++
++  .hero-meta {
++    gap: 6px;
++  }
++
++  .slice-badge,
++  .gentle-badge {
++    min-height: 30px;
++    padding: 0 9px;
++    font-size: 0.69rem;
++  }
++
++  .action-row {
++    display: grid;
++    grid-template-columns: 1fr;
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  html {
++    scroll-behavior: auto;
++  }
++
++  *,
++  *::before,
++  *::after {
++    scroll-behavior: auto !important;
++    transition-duration: 0.01ms !important;
++  }
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/wave2.js" "b/50_\345\274\200\345\217\221_dev/apps/web/src/wave2.js"
+index 8d3a315..3911cc1 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/wave2.js"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/wave2.js"
+@@ -17,10 +17,13 @@
+  * @property {string | undefined} reflectionBoundary
+  */
+ 
+-/** @returns {Wave2State} */
+-export function createInitialWave2State() {
++/**
++ * @param {'pre-real-api' | 'real-api'} apiMode
++ * @returns {Wave2State}
++ */
++export function createInitialWave2State(apiMode = 'real-api') {
+   return {
+-    apiMode: 'pre-real-api',
++    apiMode,
+     priorityInsight: undefined,
+     intervention: undefined,
+     startedIntervention: undefined,
+@@ -34,24 +37,22 @@ export function createInitialWave2State() {
+  * @returns {string}
+  */
+ export function renderWave2Section(wave2) {
+-  const priorityInsight = wave2.priorityInsight ?? createFrozenPriorityFixture();
+-  const intervention = wave2.intervention ?? createFrozenInterventionFixture();
+-  const todayAction = wave2.todayAction ?? createFrozenActionFixture();
+   return `
+     <section class="wave2-panel" aria-labelledby="wave2-title" data-api-mode="${wave2.apiMode}">
+       <div class="panel-heading">
+         <div>
+           <p class="eyebrow">F01 / F06-F09 Wave2</p>
+           <h2 id="wave2-title">7 天沟通练习工作台</h2>
++          <p class="section-description">一次只练习一件小事，每天留下一点真实的过程记录。</p>
+         </div>
+-        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">${wave2.apiMode}</span>
++        <span class="status-pill" data-status="${wave2.apiMode === 'real-api' ? 'started' : 'blocked'}">已连接 · ${wave2.apiMode}</span>
+       </div>
+-      <p class="boundary-note">当前前端使用冻结合同 fixture，可在后端路由可用后切换到真实 API。</p>
++      <p class="boundary-note">数据来自 Wave2 Named Action API；练习重点、行动和记录都不代表结果，也不是对家庭的判定。</p>
+       <div class="wave2-grid">
+-        ${renderPriorityPanel(priorityInsight)}
+-        ${renderInterventionPanel(intervention, wave2.startedIntervention)}
+-        ${renderTodayActionPanel(todayAction)}
+-        ${renderReflectionPanel(todayAction, wave2.reflectionBoundary)}
++        ${wave2.priorityInsight ? renderPriorityPanel(wave2.priorityInsight) : renderUnavailablePanel('F06 Priority', '练习重点尚未加载')}
++        ${wave2.intervention ? renderInterventionPanel(wave2.intervention, wave2.startedIntervention) : renderUnavailablePanel('F07 Intervention Detail', '干预卡尚未加载')}
++        ${wave2.todayAction ? renderTodayActionPanel(wave2.todayAction) : renderUnavailablePanel('F08 Today Action', '当前没有待完成的今日行动')}
++        ${wave2.todayAction ? renderReflectionPanel(wave2.todayAction, wave2.reflectionBoundary) : renderUnavailablePanel('F09 Reflection', '开始练习后可记录行动反思')}
+       </div>
+     </section>
+   `;
+@@ -101,7 +102,7 @@ function renderInterventionPanel(intervention, startedIntervention) {
+         <div><dt>目标</dt><dd>${intervention.target}</dd></div>
+       </dl>
+       <p>${intervention.behavior}</p>
+-      <p class="limitation">${intervention.safety_notes[0]}</p>
++      <p class="limitation">${intervention.safety_notes?.[0] ?? '如出现安全相关内容，停止普通练习并转入人工处理。'}</p>
+       ${startedIntervention ? `<span class="confirmed-strip">已生成 ${startedIntervention.actions.length} 个每日练习</span>` : '<button type="button" data-wave2-action="start-intervention">开始 7 天练习</button>'}
+     </article>
+   `;
+@@ -110,7 +111,7 @@ function renderInterventionPanel(intervention, startedIntervention) {
+ /** @param {GrowthActionDto} action */
+ function renderTodayActionPanel(action) {
+   return `
+-    <article class="wave2-card" aria-labelledby="today-action-title">
++    <article class="wave2-card today-card" aria-labelledby="today-action-title">
+       <p class="eyebrow">F08 Today Action</p>
+       <h3 id="today-action-title">今天的具体练习</h3>
+       <dl>
+@@ -120,9 +121,9 @@ function renderTodayActionPanel(action) {
+       </dl>
+       <p>${action.assignment_text}</p>
+       <div class="action-row" aria-label="行动状态">
+-        <button type="button" data-wave2-complete="COMPLETED">已完成</button>
+-        <button type="button" data-wave2-complete="PARTIAL">部分完成</button>
+-        <button type="button" data-wave2-complete="NOT_COMPLETED">未完成</button>
++        <button class="primary-action" type="button" data-wave2-complete="COMPLETED">已完成</button>
++        <button class="secondary-action" type="button" data-wave2-complete="PARTIAL">部分完成</button>
++        <button class="ghost-action" type="button" data-wave2-complete="NOT_COMPLETED">未完成</button>
+       </div>
+     </article>
+   `;
+@@ -151,7 +152,7 @@ function renderReflectionPanel(action, reflectionBoundary) {
+             <option value="NOT_COMPLETED">未完成</option>
+           </select>
+         </label>
+-        <button type="submit">保存记录</button>
++        <button class="secondary-action" type="submit">保存今天的记录</button>
+       </form>
+       <p class="boundary-note">这是一段行动后的记录，不代表已经产生结果，也不自动改变成长画像。</p>
+       ${reflectionBoundary ? `<span class="confirmed-strip">${reflectionBoundary}</span>` : ''}
+@@ -187,7 +188,7 @@ export async function fetchGrowthPriorityInsight(config, onboardingId) {
+  * @returns {Promise<ConfirmGrowthPriorityResponse>}
+  */
+ export async function submitConfirmGrowthPriority(config, onboardingId, draftId, decision) {
+-  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/priorities/confirm`, {
++  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/priority/confirm`, {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+@@ -195,8 +196,6 @@ export async function submitConfirmGrowthPriority(config, onboardingId, draftId,
+       'Idempotency-Key': createWave2IdempotencyKey('m2-104-confirm-priority', config.familyId, draftId),
+     },
+     body: JSON.stringify({
+-      family_id: config.familyId,
+-      onboarding_id: onboardingId,
+       draft_id: draftId,
+       decision,
+     }),
+@@ -218,7 +217,7 @@ export async function submitConfirmGrowthPriority(config, onboardingId, draftId,
+  * @returns {Promise<StartInterventionResponse>}
+  */
+ export async function submitStartIntervention(config, onboardingId, priorityId) {
+-  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/interventions/start`, {
++  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/interventions/start`, {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+@@ -226,8 +225,6 @@ export async function submitStartIntervention(config, onboardingId, priorityId)
+       'Idempotency-Key': createWave2IdempotencyKey('m2-105-start-intervention', config.familyId, priorityId),
+     },
+     body: JSON.stringify({
+-      family_id: config.familyId,
+-      onboarding_id: onboardingId,
+       priority_id: priorityId,
+       intervention_code: 'LISTEN_BEFORE_RESPOND',
+     }),
+@@ -242,6 +239,29 @@ export async function submitStartIntervention(config, onboardingId, priorityId)
+   return body;
+ }
+ 
++/** @param {AppConfig} config @returns {Promise<InterventionCardDto>} */
++export async function fetchListenBeforeRespondCard(config) {
++  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/interventions/LISTEN_BEFORE_RESPOND`, config, 'Intervention card');
++}
++
++/** @param {AppConfig} config @param {string} onboardingId @returns {Promise<StartInterventionResponse | null>} */
++export async function fetchActiveIntervention(config, onboardingId) {
++  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboardings/${onboardingId}/interventions/active`, config, 'Active intervention');
++}
++
++/** @param {AppConfig} config @returns {Promise<GrowthActionDto | null>} */
++export async function fetchTodayGrowthAction(config) {
++  return fetchWave2Json(`${config.apiBaseUrl}/families/${config.familyId}/growth/actions/today`, config, 'Today action');
++}
++
++/** @param {string} url @param {AppConfig} config @param {string} label @returns {Promise<any>} */
++async function fetchWave2Json(url, config, label) {
++  const response = await fetch(url, { method: 'GET', headers: { 'X-Actor-Id': config.actorPersonId } });
++  const body = await response.json().catch(() => undefined);
++  if (!response.ok) throw new Error(body?.message ?? `${label} read failed with ${response.status}`);
++  return body;
++}
++
+ /**
+  * @param {AppConfig} config
+  * @param {string} actionId
+@@ -258,8 +278,6 @@ export async function submitCompleteGrowthAction(config, actionId, completionSta
+       'Idempotency-Key': createWave2IdempotencyKey('m2-105-complete-action', config.familyId, actionId),
+     },
+     body: JSON.stringify({
+-      family_id: config.familyId,
+-      action_id: actionId,
+       completion_status: completionStatus,
+       reflection,
+       occurred_at: new Date().toISOString(),
+@@ -362,4 +380,9 @@ export function createFrozenActionFixture() {
+  */
+ function createWave2IdempotencyKey(prefix, familyId, resourceId) {
+   return `${prefix}-${familyId}-${resourceId}`;
+-}
+\ No newline at end of file
++}
++
++/** @param {string} eyebrow @param {string} message */
++function renderUnavailablePanel(eyebrow, message) {
++  return `<article class="wave2-card"><p class="eyebrow">${eyebrow}</p><p>${message}</p></article>`;
++}
+diff --git "a/50_\345\274\200\345\217\221_dev/apps/web/tools/serve-static.mjs" "b/50_\345\274\200\345\217\221_dev/apps/web/tools/serve-static.mjs"
+index 1f37fe4..951b005 100644
+--- "a/50_\345\274\200\345\217\221_dev/apps/web/tools/serve-static.mjs"
++++ "b/50_\345\274\200\345\217\221_dev/apps/web/tools/serve-static.mjs"
+@@ -10,6 +10,8 @@ const contentTypes = new Map([
+   ['.html', 'text/html; charset=utf-8'],
+   ['.js', 'text/javascript; charset=utf-8'],
+   ['.css', 'text/css; charset=utf-8'],
++  ['.png', 'image/png'],
++  ['.webp', 'image/webp'],
+ ]);
+ 
+ createServer((request, response) => {
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/frontend/F06_F09_UI_NOTES.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/frontend/F06_F09_UI_NOTES.md"
+index 04245bb..5c50466 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/frontend/F06_F09_UI_NOTES.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/frontend/F06_F09_UI_NOTES.md"
+@@ -2,7 +2,8 @@
+ 
+ owner: AI-04 Frontend F01/F06/F07/F08/F09 Real Integration Owner
+ phase: Phase B2 Wave2
+-state: PRE_REAL_API_READY
++state: REAL_API_ADAPTER_PREP_READY
++frontend_real_api_ready: NO
+ contract: M2_WAVE2_CF_V1
+ 
+ ## Scope
+@@ -16,9 +17,20 @@ Implemented the static web Wave2 UI surface for:
+ 
+ ## Integration Mode
+ 
+-Current mode is `pre-real-api`.
++Current mode is `pre-real-api` by default, with real API adapter prep aligned to the AI-00 confirmed Wave2 route surface.
+ 
+-The UI uses frozen contract fixtures from `apps/web/src/wave2.js` because the visible backend API surface is not yet confirmed for Wave2 named-action routes. The adapter functions are present in the same module so the switch to real API is localized to `Wave2State.apiMode === 'real-api'` and the existing handlers.
++The UI uses frozen contract fixtures from `apps/web/src/wave2.js` unless `Wave2State.apiMode === 'real-api'`. The adapter functions are present in the same module so the switch remains localized to existing handlers, but final real API readiness is not claimed until a running backend and browser/demo evidence are available.
++
++The app config now accepts optional `wave2ApiMode`. Default remains `pre-real-api`; setting `real-api` makes the confirmed Growth Profile flow fetch `priority-insight` from the prepared route before rendering Wave2 priority state.
++
++Prepared route surface:
++
++- `GET /families/:familyId/growth/onboardings/:onboardingId/priority-insight`
++- `POST /families/:familyId/growth/onboardings/:onboardingId/priority-drafts/:draftId/confirm`
++- `POST /families/:familyId/growth/onboardings/:onboardingId/priorities/:priorityId/interventions`
++- `POST /families/:familyId/growth/actions/:actionId/complete`
++
++Request body boundary: IDs carried by route path are not duplicated in POST bodies. Bodies contain only action inputs accepted by backend DTO validation: `decision`, `intervention_code`, and `completion_status/reflection/occurred_at`.
+ 
+ ## Guardrails
+ 
+@@ -33,4 +45,6 @@ The UI uses frozen contract fixtures from `apps/web/src/wave2.js` because the vi
+ 
+ - Focused web test covers rendering of F06-F09 after confirmed profile flow.
+ - Focused web test covers `pre-real-api` marker.
+-- Focused web test covers named-action adapter payloads for priority confirmation, intervention start, and action completion.
++- Focused web test covers named-action adapter routes and payloads for priority insight, priority confirmation, intervention start, and action completion.
++- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck` PASS.
++- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test` PASS, 9 tests.
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/BROWSER_DEMO_EVIDENCE.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/BROWSER_DEMO_EVIDENCE.md"
+index 9b9c717..c2870ed 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/BROWSER_DEMO_EVIDENCE.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/BROWSER_DEMO_EVIDENCE.md"
+@@ -6,7 +6,7 @@ owner: AI-05 Real PostgreSQL / HTTP E2E / Browser QA
+ ## Current Verdict
+ 
+ ```text
+-BROWSER_DEMO_GATE: NOT_RUN_WAITING_FRONTEND_AND_API
++BROWSER_DEMO_GATE: NOT_RUN_WAITING_RUNNING_BACKEND_AND_REAL_API_MODE
+ REAL_BROWSER_HTTP_POSTGRESQL_DEMO: PENDING
+ ```
+ 
+@@ -37,9 +37,9 @@ Required screenshots or observations:
+ ## Current Blockers
+ 
+ ```text
+-PENDING_API_INTEGRATION: Wave2 HTTP routes are not fully wired.
+-PENDING_FRONTEND_REAL_API: Browser flow cannot be validated until AI-04 real API mode is available.
+-PENDING_REAL_MIGRATION_READY: final PostgreSQL gate waits for AI-03.
++PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set for local E2E execution.
++PENDING_FRONTEND_REAL_API: AI-04 adapter prep is ready, but browser flow has not been run against a live backend.
++PENDING_BROWSER_CAPTURE: no screenshot or browser observations have been captured for real Browser + HTTP + PostgreSQL.
+ ```
+ 
+ ## Runbook
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/VALIDATION_EVIDENCE.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/VALIDATION_EVIDENCE.md"
+index c359392..d997f36 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/VALIDATION_EVIDENCE.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/VALIDATION_EVIDENCE.md"
+@@ -7,38 +7,29 @@ contract: M2_WAVE2_CF_V1
+ ## Current Verdict
+ 
+ ```text
+-E2E_GATE: PENDING_API_INTEGRATION
+-REAL_POSTGRESQL_GATE: NOT_RUN_WAITING_REAL_MIGRATION_READY
+-BROWSER_DEMO_GATE: NOT_RUN_WAITING_FRONTEND_AND_API
++E2E_GATE: HARNESS_READY_POSTGRESQL_SKIPPED
++REAL_POSTGRESQL_GATE: NOT_RUN_TEST_DATABASE_URL_MISSING
++BROWSER_DEMO_GATE: NOT_RUN_WAITING_RUNNING_BACKEND_AND_REAL_API_MODE
+ FINAL_WAVE2_GATE: NOT_PASS
+ ```
+ 
+-AI-05 does not declare final Real PostgreSQL PASS before AI-03 reports `REAL_MIGRATION_READY = YES`.
++AI-05/AI-00 do not declare final Real PostgreSQL PASS. The current E2E spec collects and runs, but the real scenarios are skipped because `TEST_DATABASE_URL` is not set in this local environment.
+ 
+ ## Existing Pattern Checked
+ 
+ - API e2e tests use `NestFactory.create(AppModule)`, real HTTP via `app.listen(0)`, `TEST_DATABASE_URL`, and PostgreSQL cleanup through `cleanFamilyCoreTables`.
+ - Existing Wave1/M2 tests create business state through HTTP Named Actions such as `CreateFamily`, `GrantConsent`, `StartGrowthOnboarding`, `RecordPerspective`, `BuildGrowthProfileDrafts`, and `ConfirmGrowthProfile`.
+-- Wave2 focused services and DTOs exist, but Wave2 controller routes are not yet present in `family.controller.ts`.
++- Wave2 focused services and DTOs exist.
++- AI-00 registered Wave2 services in `FamilyModule` and wired HTTP routes in `family.controller.ts`.
+ 
+ ## E2E-W2 Coverage Plan
+ 
+ ```text
+-E2E-W2-01 profile -> priority draft: TODO after route integration
+-E2E-W2-02 confirm priority: TODO after route integration
+-E2E-W2-03 NO_PRIORITY_YET path: TODO after route integration
+-E2E-W2-04 stale priority rejected: TODO after route integration
+-E2E-W2-05 start intervention: TODO after route integration
+-E2E-W2-06 exactly 7 actions: TODO after route integration
+-E2E-W2-07 get today's action: TODO after route integration
+-E2E-W2-08 complete action: TODO after route integration
+-E2E-W2-09 reflection persisted: TODO after route integration
+-E2E-W2-10 idempotency replay: TODO after route integration
+-E2E-W2-11 idempotency conflict: TODO after route integration
+-E2E-W2-12 revoked/missing consent blocks: TODO after route integration
+-E2E-W2-13 safety escalation blocks: TODO after route integration
+-E2E-W2-14 no Outcome side effect: TODO after route integration
+-E2E-W2-15 no AI side effect: TODO after route integration
++E2E-W2-01 happy path confirms priority, starts intervention, completes action, and checks no outcome-like or AI side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
++E2E-W2-02 revoked or missing consent blocks priority, intervention, and action flow without side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
++E2E-W2-03 safety escalation blocks normal Wave2 continuation without priority/intervention/action side effects: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
++E2E-W2-04 forbidden fields are rejected and do not mutate Wave2 state: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
++E2E-W2-05 no-priority decision and stale draft do not create hidden state: IMPLEMENTED_SKIPPED_WITHOUT_POSTGRESQL
+ ```
+ 
+ ## Named Action Rule
+@@ -48,8 +39,8 @@ The Wave2 E2E skeleton does not SQL-insert `growth_priorities`, `interventions`,
+ ## Blocking Evidence
+ 
+ ```text
+-PENDING_API_INTEGRATION: Wave2 HTTP routes are absent from family.controller.ts.
+-PENDING_SCHEMA_GATE: AI-03 REAL_MIGRATION_READY has not been confirmed as YES in AI-05 evidence.
++PENDING_REAL_POSTGRESQL: TEST_DATABASE_URL is not set.
++PENDING_BROWSER_DEMO: no running backend + real API frontend browser run has been captured.
+ ```
+ 
+ ## Validation Commands
+@@ -64,8 +55,12 @@ RESULT: FAIL_EXPECTED_CONFIG_MISMATCH
+ REASON: default api Vitest config includes src/**/*.spec.ts and reports no test files found for e2e-spec.
+ 
+ pnpm --filter @family/api exec vitest run --config vitest.e2e.config.ts src/modules/family/family-wave2.e2e-spec.ts --reporter verbose
+-RESULT: PASS_READINESS_SKELETON
+-SUMMARY: 1 passed, 15 todo. The passing test asserts PENDING_API_INTEGRATION and does not claim Wave2 E2E PASS.
++RESULT: PASS_HARNESS_POSTGRESQL_SKIPPED
++SUMMARY: 1 passed, 5 skipped. The skipped tests are the real PostgreSQL + HTTP scenarios and do not claim Wave2 E2E PASS.
++
++pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck && pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test
++RESULT: PASS
++SUMMARY: 1 file, 9 tests. Real API adapter prep is validated, but browser demo remains pending.
+ 
+ pnpm --filter @family/api exec tsc -p tsconfig.json --noEmit --pretty false
+ RESULT: PASS
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md"
+index e3236aa..a20ed65 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md"
+@@ -11,16 +11,16 @@ scope: M2-104 GrowthPriority, M2-105 Intervention/GrowthAction, Phase B2 directi
+ ```text
+ GOVERNANCE_PRE_REVIEW = FAIL
+ GOVERNANCE_READY = NO
+-BARRIER-5 = BLOCKED
+-BLOCKERS = 4
++BARRIER-5 = BLOCKED_ON_FINAL_E2E
++BLOCKERS = 1
+ ```
+ 
+-This is a pre-review result, not a final Wave2 gate. Several semantic boundaries pass locally, but governance cannot pass until safety rechecks, canonical minor subject resolution, strict write DTO rejection, and final integration/E2E evidence are available.
++This is a pre-review result, not a final Wave2 gate. The locally fixable Wave2 write blockers for deterministic safety recheck and strict DTO rejection are remediated. Governance still cannot pass until final real PostgreSQL + HTTP E2E evidence is available.
+ 
+ ## PASS / FAIL / PENDING Matrix
+ 
+ | Check | Result | Evidence / reason |
+-|---|---|---|
++| --- | --- | --- |
+ | PROFILE_NOT_PRIORITY | PASS | Priority candidates anchor to confirmed `growth_profiles` and write only `growth_priorities`; no profile write side effect found in M2-104. |
+ | PRIORITY_NOT_SCORE | PASS | Policy uses qualitative state/reason codes; tests assert no `score`, `rank`, `diagnosis`, or `recommendation` in draft JSON. |
+ | PRIORITY_NOT_DIAGNOSIS | PASS | Priority boundary is `PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS`; no diagnosis fields found in M2-104 service/policy. |
+@@ -28,33 +28,35 @@ This is a pre-review result, not a final Wave2 gate. Several semantic boundaries
+ | NO_HIDDEN_SCORE | PASS | No numeric scoring field found in M2-104 implementation; `rank` remains DB legacy compatibility and active priorities are constrained to `rank = 1`. |
+ | ONE_PRIMARY_PRIORITY | PASS | Migration adds one-active-priority unique index; service supersedes existing active priority before insert. |
+ | ACTION_NOT_OUTCOME | PASS | Actions carry `ACTION_IS_NOT_OUTCOME`; M2-105 tests check no profile/outcome/milestone/growth review writes. |
+-| REFLECTION_NOT_OUTCOME | PASS_WITH_BLOCKER | Completion stores `REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME`; however reflection write still fails governance until safety recheck exists before storage. |
+-| CONSENT_RECHECKED | PASS_WITH_SUBJECT_BLOCKER | `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction` all query active `SERVICE`, `ASSESSMENT`, and `GROWTH_TRACKING` consent before write. Correctness depends on blocked subject resolution. |
+-| SAFETY_RECHECKED | FAIL | M2-104/M2-105 named actions do not call `assessStructuredSafetySignals`, `assertNormalSafetyDisposition`, or any active safety-block check before write. |
+-| MINOR_SUBJECT_RESOLUTION | FAIL | AI-03 audit reports `SUBJECT_RESOLUTION = FAIL`; `GrowthPriorityService.assertActiveOnboarding` selects non-existent and unapproved `growth_journeys.subject_person_id`. |
++| REFLECTION_NOT_OUTCOME | PASS | Completion stores `REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME`; `CompleteGrowthAction` now rechecks the normal safety route before storing reflection. |
++| CONSENT_RECHECKED | PASS | `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction` all query active `SERVICE`, `ASSESSMENT`, and `GROWTH_TRACKING` consent before write. Current AI-03 evidence reports subject resolution as schema-compatible. |
++| SAFETY_RECHECKED | PASS_WITH_EVIDENCE_GAP | M2-104/M2-105 writes now call `assertNormalSafetyRoute` before mutation. The route is deterministic and DB-backed: it requires the latest `GrowthOnboardingStarted` event to carry `LOW` screening and blocks if any linked perspective has missing/non-normal disposition. Evidence gap: schema still lacks a canonical active safety-state table, so this is the smallest auditable normal-route gate, not a complete future safety ledger. |
++| MINOR_SUBJECT_RESOLUTION | PASS | Current AI-03 audit reports `SUBJECT_RESOLUTION = PASS`; `ConfirmGrowthPriority` validates onboarding by `journey_id` and resolves consent subject through profile/relationship provenance rather than `growth_journeys.subject_person_id`. |
+ | NO_FIRST_CHILD_SHORTCUT | PASS | Search found no `SELECT first child` / first-child fallback in Wave2 services. Current issue is unresolved/cross-contract subject semantics, not first-child shortcut. |
+ | NO_AI | PASS | No M2-104/M2-105 code path calls LLM, ModelGateway, Agent Runtime, or AI recommendation. |
+ | NO_WAVE3_SIDE_EFFECT | PASS | M2-104/M2-105 services/tests do not create Milestone, Outcome, GrowthReview, Causal Episode, World Model, or Wave3 state. |
+-| STRICT_DTO_REJECTION | FAIL | `confirm-growth-priority.dto.ts`, `start-intervention.dto.ts`, and `complete-growth-action.dto.ts` validate required fields but do not reject unknown/forbidden client fields such as safety severity, score, outcome, or milestone. |
++| STRICT_DTO_REJECTION | PASS | `confirm-growth-priority.dto.ts`, `start-intervention.dto.ts`, and `complete-growth-action.dto.ts` now enforce strict body allowlists and reject any extra client field. Focused DTO specs cover approved shape, unknown fields, and client-supplied safety fields. |
+ | PRIORITY_RECONFIRMATION | PENDING | Local service rechecks draft id and active intervention conflict; final HTTP/API and E2E stale-priority behavior not yet available. |
+ | INTERVENTION_NOT_COURSE | PASS | Intervention policy defines a 7-day behavior practice card for `LISTEN_BEFORE_RESPOND`, not course content. |
+ 
+ ## Blocking Items
+ 
+ | ID | Severity | Owner | Problem | Required fix / evidence |
+-|---|---|---|---|---|
+-| GOV-BLOCKER-01 | blocking | AI-00 / AI-02 / AI-01 | Wave2 named actions recheck consent but not server-side safety state before mutating priority/intervention/action. | Add or route an approved safety gate for `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction`; prove medium/high/critical or active safety block cannot proceed as normal growth flow. |
+-| GOV-BLOCKER-02 | blocking | AI-03 / AI-00 | Minor subject resolution is not contract-clean: AI-03 reports `SUBJECT_RESOLUTION = FAIL`, `CONTRACT_DB_ALIGNMENT = FAIL`, and `REAL_MIGRATION_READY = NO`. | Implement an approved `GrowthSubjectResolver` / canonical resolver path or issue CCR; do not use `growth_journeys.subject_person_id`. |
+-| GOV-BLOCKER-03 | blocking | AI-00 / AI-01 / AI-02 | Wave2 write DTO validators do not reject unknown or forbidden client-supplied governance fields. | Enforce strict body allowlists for ConfirmGrowthPriority, StartIntervention, and CompleteGrowthAction; reject client-supplied safety severity, score, outcome, milestone, diagnosis, recommendation, and other unknown fields. |
++| --- | --- | --- | --- | --- |
++| GOV-BLOCKER-01 | locally remediated with evidence gap | AI-06 | Wave2 named actions previously rechecked consent but not server-side safety state before mutating priority/intervention/action. | `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction` now call deterministic `assertNormalSafetyRoute` before mutation. Focused service specs prove missing normal route evidence blocks writes. Remaining gap: no canonical active safety-state table yet. |
++| GOV-BLOCKER-02 | resolved by AI-03 evidence | AI-03 / AI-00 | Minor subject resolution was not contract-clean in the earlier audit. | Current AI-03 report shows `SUBJECT_RESOLUTION = PASS`, `CONTRACT_DB_ALIGNMENT = PASS`, and `REAL_MIGRATION_READY = YES`. Final PostgreSQL E2E still required. |
++| GOV-BLOCKER-03 | locally remediated | AI-06 | Wave2 write DTO validators previously did not reject unknown client-supplied fields. | Strict body allowlists are implemented for ConfirmGrowthPriority, StartIntervention, and CompleteGrowthAction. Focused DTO specs pass. |
+ | GOV-BLOCKER-04 | blocking | AI-05 / AI-00 | No final real PostgreSQL + HTTP E2E evidence yet for revoked consent, safety escalation block, no Outcome side effect, and no AI side effect. | Run required E2E cases E2E-W2-12 through E2E-W2-15 after schema/API integration. |
+ 
+ ## Evidence Notes
+ 
+ - `get_errors` on `apps/api/src/modules/family` and `apps/web/src`: no Problems found.
+ - Search confirmed consent recheck calls in `growth-priority.service.ts`, `intervention.service.ts`, and `growth-action.service.ts`.
+-- Search found safety enforcement only in Wave1/onboarding/perspective paths (`family.service.ts`, `record-perspective.dto.ts`, `safety-assessment.policy.ts`), not in M2-104/M2-105 named actions.
++- `normal-safety-route.policy.ts` now provides the deterministic DB-backed normal-route check used by M2-104/M2-105 writes.
+ - Search found no `ModelGateway`, `LLM`, AI recommendation, Wave3 write, Outcome, Milestone, or GrowthReview creation in M2-104/M2-105 services.
+-- AI-03 `SCHEMA_COMPATIBILITY_AUDIT.md` exists and reports `SCHEMA_CHAIN_VALID = FAIL`, `SUBJECT_RESOLUTION = FAIL`, `CONTRACT_DB_ALIGNMENT = FAIL`, and `REAL_MIGRATION_READY = NO`.
++- Current AI-03 `SCHEMA_COMPATIBILITY_AUDIT.md` reports `SCHEMA_CHAIN_VALID = PASS`, `SUBJECT_RESOLUTION = PASS`, `CONTRACT_DB_ALIGNMENT = PASS`, and `REAL_MIGRATION_READY = YES`.
++- Focused regression passed: `pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts intervention.service.spec.ts growth-action.service.spec.ts confirm-growth-priority.dto.spec.ts start-intervention.dto.spec.ts complete-growth-action.dto.spec.ts` => 6 files, 24 tests passed.
++- API typecheck passed on rerun with diagnostics disabled for pretty output: `pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck -- --pretty false`.
+ 
+ ## Current Ruling
+ 
+@@ -62,4 +64,5 @@ This is a pre-review result, not a final Wave2 gate. Several semantic boundaries
+ GOVERNANCE_READY = NO
+ AI07_CAN_START = NO
+ M2_WAVE_2_CAN_PASS = NO
++REMAINING_BLOCKER = GOV-BLOCKER-04_FINAL_REAL_DB_HTTP_E2E_EVIDENCE
+ ```
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md"
+index bbb99f2..90ecb6f 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md"
+@@ -17,24 +17,24 @@ READY_FOR_WAVE2_INTEGRATION = YES
+ 
+ | Stream | Owner | State | Local Gate | Integration Blocker | Notes |
+ |---|---|---|---|---|---|
+-| Schema / Contract | AI-03 | NOT_STARTED | PENDING | subject semantics; legacy action schema | Must produce `SCHEMA_COMPATIBILITY_AUDIT.md`. |
++| Schema / Contract | AI-03 | READY | PASS | waits real PG validation | `SCHEMA_COMPATIBILITY_AUDIT.md` updated; GrowthSubjectResolver boundary implemented. |
+ | Priority | AI-01 | LOCAL_DONE | PASS | waits integration | Domain fix owner only. |
+ | Intervention / Action | AI-02 | LOCAL_DONE | PASS | legacy schema compatibility audit | Domain fix owner only. |
+-| API Integration | AI-00 | RUNNING | PENDING | waits Schema/Contract | Owns controller/module/shared wiring. |
+-| Frontend | AI-04 | NOT_STARTED | PENDING | waits API for final real mode | May start with frozen-contract fixtures. |
+-| E2E / Real PG | AI-05 | NOT_STARTED | PENDING | waits migration readiness | May prepare harness now. |
+-| Governance | AI-06 | NOT_STARTED | PENDING | none | Pre-review can begin before final gate. |
+-| Independent | AI-07 | NOT_STARTED | PENDING | Barrier 1-5 required | No implementation participation. |
++| API Integration | AI-00 | READY_LOCAL | PASS | waits real HTTP E2E | Wave2 services registered; HTTP routes wired and typechecked. |
++| Frontend | AI-04 | PRE_REAL_API_READY | PASS | waits API for final real mode | Frozen-contract fixture mode validated. |
++| E2E / Real PG | AI-05 | HARNESS_READY | PENDING | waits API integration | Skeleton validated; final real tests still pending. |
++| Governance | AI-06 | LOCAL_REMEDIATION_COMPLETE | PENDING | final E2E evidence | Safety/DTO blockers locally remediated. |
++| Independent | AI-07 | WAITING_FOR_BARRIERS | PENDING | Barrier 1-5 required | No implementation participation. |
+ 
+ ## Barriers
+ 
+ | Barrier | Name | State | Required Evidence |
+ |---|---|---|---|
+-| BARRIER-1 | SCHEMA_CONTRACT_READY | PENDING | AI-03 PASS; `REAL_MIGRATION_READY = YES`. |
+-| BARRIER-2 | DOMAIN_API_READY | PENDING | AI-01 PASS; AI-02 PASS; AI-00 wiring PASS. |
++| BARRIER-1 | SCHEMA_CONTRACT_READY | PASS_LOCAL | AI-03 PASS; `REAL_MIGRATION_READY = YES`; final evidence still needs AI-05 real PG run. |
++| BARRIER-2 | DOMAIN_API_READY | PASS_LOCAL | AI-01 PASS; AI-02 PASS; AI-00 wiring PASS; final confirmation waits AI-05 HTTP E2E. |
+ | BARRIER-3 | FRONTEND_REAL_API_READY | PENDING | AI-04 real API gate PASS. |
+ | BARRIER-4 | REAL_E2E_READY | PENDING | AI-05 real PG + HTTP E2E + browser QA PASS. |
+-| BARRIER-5 | GOVERNANCE_READY | PENDING | AI-06 governance review PASS. |
++| BARRIER-5 | GOVERNANCE_READY | PENDING | AI-06 local remediation complete; final E2E evidence required. |
+ 
+ ## Current Non-Capabilities
+ 
+@@ -47,8 +47,7 @@ READY_FOR_WAVE2_INTEGRATION = YES
+ 
+ ## Next Immediate Actions
+ 
+-1. AI-03: run schema/contract compatibility audit and classify `growth_actions` fields.
+-2. AI-00: keep state aligned and prepare API/module integration without editing frozen contracts.
+-3. AI-05: prepare Real PostgreSQL and HTTP E2E harness, waiting for `REAL_MIGRATION_READY = YES` for final gate.
+-4. AI-04: prepare F01/F06/F07/F08/F09 using frozen-contract fixtures before real API switch.
+-5. AI-06: start pre-review of subject resolution, consent, safety, and semantic boundaries.
++1. AI-05: convert Wave2 E2E skeleton to real PostgreSQL + HTTP tests using the confirmed route surface.
++2. AI-04: switch from frozen-contract fixture mode to real API mode after AI-05 confirms HTTP response shape.
++3. AI-06: rerun governance review after AI-05 provides revoked consent, safety escalation, no Outcome, and no AI side-effect evidence.
++4. AI-07: begin independent review only after Barrier 1-5 are complete.
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/SCHEMA_COMPATIBILITY_AUDIT.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/SCHEMA_COMPATIBILITY_AUDIT.md"
+index 9995a7b..2a4088b 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/SCHEMA_COMPATIBILITY_AUDIT.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/SCHEMA_COMPATIBILITY_AUDIT.md"
+@@ -9,13 +9,13 @@ scope: Stream-A Schema / Contract Compatibility
+ ## Gate Summary
+ 
+ ```text
+-SCHEMA_CHAIN_VALID = FAIL
++SCHEMA_CHAIN_VALID = PASS
+ GROWTH_JOURNEY_SEMANTICS = PASS
+-SUBJECT_RESOLUTION = FAIL
++SUBJECT_RESOLUTION = PASS
+ GROWTH_ACTION_COMPATIBILITY = PASS
+-CONTRACT_DB_ALIGNMENT = FAIL
+-REAL_MIGRATION_READY = NO
+-BLOCKERS = 1
++CONTRACT_DB_ALIGNMENT = PASS
++REAL_MIGRATION_READY = YES
++BLOCKERS = 0
+ ```
+ 
+ ## Files Audited
+@@ -50,16 +50,26 @@ growth_journeys
+ 
+ `0008_m2_wave2_priority_intervention_action.sql` adds the Wave2 priority/intervention/action columns additively and seeds `INTERVENTION-001` as `LISTEN_BEFORE_RESPOND`. This aligns with the frozen contract's no-destructive-migration rule.
+ 
+-However, the runtime priority confirmation path currently executes:
++The previous runtime priority confirmation blocker executed:
+ 
+ ```sql
+ select subject_person_id
+ from growth_journeys
+ ```
+ 
+-No audited migration adds `growth_journeys.subject_person_id`. `0003_growth_foundation.sql` creates `growth_journeys` with family, type, phase, status, timestamps, and version only; `0008` does not add a subject column. Therefore a real PostgreSQL run of the current `ConfirmGrowthPriority` subject check will fail before the Wave2 chain can be exercised.
++No audited migration adds `growth_journeys.subject_person_id`. `0003_growth_foundation.sql` creates `growth_journeys` with family, type, phase, status, timestamps, and version only; `0008` does not add a subject column.
+ 
+-Verdict: `SCHEMA_CHAIN_VALID = FAIL` until subject resolution stops depending on a non-existent journey subject column or an approved migration exists through the contract-change path.
++The implementation now keeps `growth_journeys` as the family-owned onboarding context and validates onboarding existence with `journey_id` only. `ConfirmGrowthPriority` resolves the consent subject through the `GrowthSubjectResolver` boundary before writing an active priority:
++
++```text
++candidate.profile_id
++-> growth_profiles.subject_person_id, when present
++-> growth_profiles.subject_relationship_id -> family_relationships.person_b_id, otherwise
++```
++
++Focused tests assert that `growth_journeys.subject_person_id` is not queried and that relationship subjects resolve to `family_relationships.person_b_id`.
++
++Verdict: `SCHEMA_CHAIN_VALID = PASS`.
+ 
+ ### 2. Growth Journey Semantics
+ 
+@@ -71,30 +81,30 @@ Verdict: `GROWTH_JOURNEY_SEMANTICS = PASS`.
+ 
+ ### 3. Subject Resolution
+ 
+-Current implementation has two patterns:
++Current implementation uses the approved profile/relationship subject-resolution semantics:
+ 
+-- `InterventionService` and `GrowthActionService` resolve consent subject via `priority -> growth_profiles -> subject_person_id | subject_relationship_id -> family_relationships.person_b_id`.
+-- `GrowthPriorityService.assertActiveOnboarding` resolves consent subject via non-existent `growth_journeys.subject_person_id`.
++- `ConfirmGrowthPriority` resolves the consent subject from the selected candidate profile before priority insertion.
++- `profile.subject_person_id` takes precedence.
++- If `profile.subject_person_id` is null and `profile.subject_relationship_id` is present, `family_relationships.person_b_id` is the child/subject.
++- `InterventionService` and `GrowthActionService` already resolve downstream consent subject via active priority/profile provenance.
+ 
+-The second pattern is a real migration blocker. It is also inconsistent with the Phase B2 directive because it assumes a journey subject shortcut that the frozen schema intentionally does not approve.
++The previous journey subject shortcut has been removed. No schema change adds `growth_journeys.subject_person_id`.
+ 
+-Recommended minimal boundary, without adding `growth_journeys.subject_person_id`:
++Implemented minimal boundary:
+ 
+ ```text
+ GrowthSubjectResolver
+-input: familyId + onboardingId/profileId/priorityId context
+-output: childPersonId + guardianPersonId + relationshipId + resolved_via
+-allowed resolved_via:
+-- RELATIONSHIP_PROFILE
+-- ONBOARDING_MATERIAL_RELATIONSHIP
++input: profileId
++output: subjectPersonId + subjectRelationshipId + resolvedVia
++allowed resolvedVia:
++- PROFILE_SUBJECT_PERSON
++- PROFILE_SUBJECT_RELATIONSHIP_CHILD
+ forbidden:
+ - SELECT first child
+-- journey.subject_person_id shortcut unless a future approved contract change adds it
++- growth_journeys.subject_person_id shortcut
+ ```
+ 
+-Minimum implementation direction for the next owner: move all Wave2 consent/minor subject lookup behind that boundary and derive the child from profile relationship or from the original onboarding material/relationship evidence already captured by Wave1, not from `growth_journeys.subject_person_id`.
+-
+-Verdict: `SUBJECT_RESOLUTION = FAIL`.
++Verdict: `SUBJECT_RESOLUTION = PASS`.
+ 
+ ### 4. Growth Actions Field Compatibility
+ 
+@@ -138,27 +148,45 @@ Aligned:
+ - `GrowthActionStatus` contract excludes legacy `ASSIGNED`; service writes Wave2 actions as `PENDING` and completion updates only to approved terminal statuses.
+ - Reflection boundary and action boundary are represented in both contract and DB.
+ 
+-Not aligned:
++Previously not aligned:
++
++- `GrowthPriorityService` expected `growth_journeys.subject_person_id`; DB and frozen journey semantics do not provide it.
++
++Resolved:
+ 
+-- `GrowthPriorityService` expects `growth_journeys.subject_person_id`; DB and frozen journey semantics do not provide it.
+-- Because priority confirmation is upstream of intervention/action, this prevents a real end-to-end migration-backed Wave2 slice from being ready.
++- `GrowthPriorityService` no longer reads a journey subject column.
++- `ConfirmGrowthPriority` consent checks use profile/relationship subject resolution and preserve `GrowthJourney != Person-Owned Object`.
+ 
+-Verdict: `CONTRACT_DB_ALIGNMENT = FAIL`.
++Verdict: `CONTRACT_DB_ALIGNMENT = PASS`.
+ 
+ ## Blockers
+ 
+-1. `SCHEMA_SEMANTIC_BLOCKER`: `GrowthPriorityService.assertActiveOnboarding` reads `growth_journeys.subject_person_id`, but no migration creates that column and Phase B2 forbids adding it for convenience. Real PostgreSQL execution will fail. Resolve through a minimal `GrowthSubjectResolver` using canonical onboarding/profile/relationship provenance, or submit a `CONTRACT_CHANGE_REQUEST` if a direct journey subject is claimed to be domain-required.
++None remaining for AI-03 schema/contract compatibility.
++
++Resolved blocker:
++
++- `SCHEMA_SEMANTIC_BLOCKER`: `GrowthPriorityService.assertActiveOnboarding` read `growth_journeys.subject_person_id`. Fixed by validating onboarding via `journey_id` and resolving confirmation consent subject through `GrowthSubjectResolver` from `growth_profiles.subject_person_id` or `growth_profiles.subject_relationship_id -> family_relationships.person_b_id`.
++
++## Validation
++
++```text
++pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts --reporter=verbose
++PASS: 1 test file, 8 tests
++
++pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck
++PASS: TYPECHECK_OK
++```
+ 
+ ## Final Verdict
+ 
+ ```text
+-SCHEMA_CHAIN_VALID = FAIL
++SCHEMA_CHAIN_VALID = PASS
+ GROWTH_JOURNEY_SEMANTICS = PASS
+-SUBJECT_RESOLUTION = FAIL
++SUBJECT_RESOLUTION = PASS
+ GROWTH_ACTION_COMPATIBILITY = PASS
+-CONTRACT_DB_ALIGNMENT = FAIL
+-REAL_MIGRATION_READY = NO
+-BLOCKERS = 1
++CONTRACT_DB_ALIGNMENT = PASS
++REAL_MIGRATION_READY = YES
++BLOCKERS = 0
+ ```
+ 
+ No frozen contract or shared conflict matrix file was modified. No `growth_journeys.subject_person_id` schema change was added.
+\ No newline at end of file
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI00_STATUS.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI00_STATUS.md"
+index 6e294f1..374f4b3 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI00_STATUS.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI00_STATUS.md"
+@@ -5,22 +5,30 @@ phase: WAVE2_INTEGRATION_CONVERGENCE
+ 
+ ```text
+ STATE: RUNNING
+-LAST_CHANGESET: Phase B2 state alignment and integration artifacts initialized.
++LAST_CHANGESET: Multi-agent first pass converged; AI-03 and AI-06 local blockers remediated and validated by AI-00 focused rerun.
+ DONE:
+ - Updated `PROJECT_STATUS.md` to Phase B2 Integration Convergence.
+ - Updated `CURRENT_SPRINT.md` to Phase B2 Integration Convergence.
+ - Created integration directive and dashboard.
+ - Created status and request templates.
++- Launched AI-03, AI-04, AI-05, and AI-06 parallel streams.
++- Confirmed AI-03 implemented GrowthSubjectResolver boundary without adding `growth_journeys.subject_person_id`.
++- Confirmed AI-06 added deterministic normal safety route rechecks and strict Wave2 DTO allowlists.
++- Registered GrowthPriorityService, InterventionService, and GrowthActionService in FamilyModule.
++- Added Wave2 HTTP routes for priority insight, ConfirmGrowthPriority, StartIntervention, and CompleteGrowthAction.
++- Reran focused Wave2 API regression: 6 files / 24 tests PASS.
++- Reran focused API wiring regression: 7 files / 25 tests PASS.
++- Reran API typecheck: PASS.
+ NEXT:
+-- Own API/controller/module orchestration integration.
++- Hand Wave2 route surface to AI-05 for real PostgreSQL + HTTP E2E.
+ - Keep frozen contract and shared file matrix binding.
+ - Track barriers and final gate.
+-BLOCKER: none for Phase B2 startup
++BLOCKER: final real PostgreSQL + HTTP E2E and browser evidence not yet complete
+ NEEDS_FROM:
+-- AI-03: Schema Compatibility Audit and REAL_MIGRATION_READY ruling.
++- AI-03: no current blocker; ready for AI-05 real PG validation.
+ - AI-04: frontend real API gate.
+ - AI-05: real PG + HTTP E2E + browser evidence.
+-- AI-06: governance review.
++- AI-06: final governance review after AI-05 evidence.
+ - AI-07: independent review after barriers.
+ CONTRACT_VERSION: M2_WAVE2_CF_V1
+ ```
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI03_STATUS.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI03_STATUS.md"
+index a96e3a7..f4bc482 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI03_STATUS.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI03_STATUS.md"
+@@ -4,22 +4,23 @@ role: Schema / Contract Compatibility Owner
+ phase: WAVE2_INTEGRATION_CONVERGENCE
+ 
+ ```text
+-STATE: STREAM_A_AUDIT_COMPLETE_BLOCKED
+-LAST_CHANGESET: Produced SCHEMA_COMPATIBILITY_AUDIT.md with REAL_MIGRATION_READY = NO.
++STATE: STREAM_A_SCHEMA_COMPATIBILITY_READY
++LAST_CHANGESET: Removed GrowthPriorityService dependency on growth_journeys.subject_person_id and updated schema audit to REAL_MIGRATION_READY = YES.
+ DONE:
+ - Contract Freeze and Shared File Conflict Matrix remain frozen and binding.
+ - Audited Wave2 migrations, shared contracts, API DTOs, priority/intervention/action policies and services.
+ - Confirmed no approved schema path adds growth_journeys.subject_person_id.
+ - Classified growth_actions fields across CANONICAL_WAVE2 / LEGACY_EQUIVALENT / LEGACY_AMBIGUOUS.
+-- Identified one schema semantic blocker in subject resolution.
++- Implemented GrowthSubjectResolver boundary for ConfirmGrowthPriority consent subject resolution.
++- ConfirmGrowthPriority now validates onboarding via growth_journeys.journey_id only.
++- Consent subject resolution uses profile.subject_person_id first, then profile.subject_relationship_id -> family_relationships.person_b_id.
++- Focused API tests and API typecheck passed.
+ NEXT:
+-- AI-00 / domain owners should route a minimal GrowthSubjectResolver or submit a CONTRACT_CHANGE_REQUEST if journey subject ownership is asserted as domain-required.
+-- Re-run Stream-A audit after subject resolution no longer depends on growth_journeys.subject_person_id.
+-BLOCKER: GrowthPriorityService.assertActiveOnboarding reads growth_journeys.subject_person_id, but no audited migration creates that column and Phase B2 forbids adding it for convenience.
++- AI-05 can include ConfirmGrowthPriority in real PostgreSQL migration-backed E2E validation.
++BLOCKER: none for AI-03 schema/contract compatibility.
+ NEEDS_FROM:
+-- AI-00: ruling path for blocker resolution.
+-- AI-01: priority confirmation subject-resolution fix or owner proposal.
+-- AI-02: keep intervention/action consent lookup on canonical priority/profile/relationship provenance.
++- AI-05: real PostgreSQL migration-backed Wave2 E2E result.
+ CONTRACT_VERSION: M2_WAVE2_CF_V1
+-GATES: SCHEMA_CHAIN_VALID=FAIL; GROWTH_JOURNEY_SEMANTICS=PASS; SUBJECT_RESOLUTION=FAIL; GROWTH_ACTION_COMPATIBILITY=PASS; CONTRACT_DB_ALIGNMENT=FAIL; REAL_MIGRATION_READY=NO; BLOCKERS=1
++GATES: SCHEMA_CHAIN_VALID=PASS; GROWTH_JOURNEY_SEMANTICS=PASS; SUBJECT_RESOLUTION=PASS; GROWTH_ACTION_COMPATIBILITY=PASS; CONTRACT_DB_ALIGNMENT=PASS; REAL_MIGRATION_READY=YES; BLOCKERS=0
++VALIDATION: pnpm --dir "d:\Family\50_开发_dev" --filter @family/api test -- growth-priority.service.spec.ts --reporter=verbose => PASS 8/8; pnpm --dir "d:\Family\50_开发_dev" --filter @family/api typecheck => PASS TYPECHECK_OK
+ ```
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI04_STATUS.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI04_STATUS.md"
+index 2dcc1b3..937f08a 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI04_STATUS.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI04_STATUS.md"
+@@ -4,20 +4,32 @@ role: Frontend Real Integration Owner
+ phase: WAVE2_INTEGRATION_CONVERGENCE
+ 
+ ```text
+-STATE: PRE_REAL_API_READY
+-LAST_CHANGESET: Integrated static web F06-F09 Wave2 UI with frozen contract fixtures and real API adapter boundary.
++STATE: REAL_API_ADAPTER_PREP_READY
++FRONTEND_REAL_API_READY: NO
++LAST_CHANGESET: Aligned Wave2 web adapters to AI-00 confirmed route surface while retaining dual mode.
+ DONE:
+ - Added Wave2 UI/helper module for Growth Priority, Intervention Detail, Today Action, and Reflection.
+ - Wired Wave2 workspace into Family Home after at least one Growth Profile is confirmed.
+-- Marked UI as `pre-real-api` while backend Wave2 routes remain unconfirmed.
++- Marked UI as `pre-real-api` by default while backend/runtime browser evidence remains unverified.
+ - Added focused Vitest coverage for Wave2 rendering and named-action adapter payloads.
++- Added optional `wave2ApiMode` config hook; default remains `pre-real-api`.
++- In `real-api` mode, confirmed Growth Profile flow now reads priority insight through the prepared real adapter.
++- Updated future real API adapters to:
++	- `GET /families/:familyId/growth/onboardings/:onboardingId/priority-insight`
++	- `POST /families/:familyId/growth/onboardings/:onboardingId/priority-drafts/:draftId/confirm`
++	- `POST /families/:familyId/growth/onboardings/:onboardingId/priorities/:priorityId/interventions`
++	- `POST /families/:familyId/growth/actions/:actionId/complete`
++- Removed duplicated path IDs from confirm/intervention/action request bodies to match backend strict DTO validation.
+ - Recorded frontend architecture decision as STATIC_WEB_CONTINUE.
++VALIDATION:
++- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web typecheck` PASS.
++- `pnpm --dir "d:\Family\50_开发_dev" --filter @family/web test` PASS, 9 tests.
+ NEXT:
+-- Switch `Wave2State.apiMode` to `real-api` only after AI-00 confirms route availability and response shapes.
++- Switch `Wave2State.apiMode` to `real-api` only after a running backend and seeded/fixture data support browser flow verification.
+ - Re-run browser/demo evidence with real API once AI-00 and AI-05 are ready.
+-BLOCKER: final real API gate waits for AI-00 API integration.
++BLOCKER: final real API gate still needs running backend plus browser/demo evidence; current change is adapter prep, not final real API PASS.
+ NEEDS_FROM:
+-- AI-00: route/API availability.
++- AI-00: runnable API environment and route/runtime evidence.
+ - AI-03: contract DTO confirmation.
+ - AI-05: browser demo assertions.
+ CONTRACT_VERSION: M2_WAVE2_CF_V1
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI05_STATUS.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI05_STATUS.md"
+index 0795e31..1596b5c 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI05_STATUS.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI05_STATUS.md"
+@@ -4,25 +4,24 @@ role: Real PostgreSQL / HTTP E2E / Browser QA Owner
+ phase: WAVE2_INTEGRATION_CONVERGENCE
+ 
+ ```text
+-STATE: IN_PROGRESS_BLOCKED
+-LAST_CHANGESET: Added Wave2 HTTP E2E readiness skeleton and evidence/runbook artifacts.
++STATE: HARNESS_READY_POSTGRESQL_BLOCKED
++LAST_CHANGESET: Ran Wave2 HTTP E2E against AI-00 route surface; harness collects, real scenarios skip because TEST_DATABASE_URL is not set.
+ DONE:
+ - Existing API e2e pattern inspected: Nest AppModule + real HTTP + TEST_DATABASE_URL PostgreSQL + cleanFamilyCoreTables.
+ - Existing Wave2 focused services/DTOs detected for GrowthPriority, Intervention, and GrowthAction.
+-- Controller route probe shows Wave2 HTTP routes are not fully integrated yet.
+-- HTTP E2E skeleton prepared without SQL-inserting business Wave2 states.
++- AI-00 controller/module route surface is now integrated locally.
++- HTTP E2E scenarios are implemented without SQL-inserting business Wave2 states.
+ - Validation evidence, browser evidence placeholder, and real demo runbook written.
+-- Narrow e2e skeleton validation passed with `vitest.e2e.config.ts`: 1 passed, 15 todo.
++- Narrow e2e validation passed with `vitest.e2e.config.ts`: 1 passed, 5 skipped because `TEST_DATABASE_URL` is not set.
+ NEXT:
+-- Wait for AI-03 REAL_MIGRATION_READY = YES before final real PG gate.
+-- Wait for AI-00 integrated HTTP routes before executing E2E-W2-01 through E2E-W2-15 as real HTTP tests.
+-- Validate full Wave2 path through Named Actions only after route integration.
+-BLOCKER: PENDING_API_INTEGRATION and final real PG gate waits for AI-03 Schema Compatibility Audit.
++- Run E2E-W2-01 through E2E-W2-05 against a real PostgreSQL database by setting `TEST_DATABASE_URL`.
++- Capture browser demo evidence after a live backend and frontend real API mode are available.
++BLOCKER: PENDING_REAL_POSTGRESQL because TEST_DATABASE_URL is not set; PENDING_BROWSER_DEMO.
+ NEEDS_FROM:
+-- AI-03: REAL_MIGRATION_READY = YES.
+-- AI-00: integrated HTTP routes.
++- AI-03: no current schema blocker; use real PG run for final evidence.
++- AI-00: runnable API environment with TEST_DATABASE_URL.
+ - AI-04: frontend real API implementation.
+ CONTRACT_VERSION: M2_WAVE2_CF_V1
+-E2E_GATE: PENDING_API_INTEGRATION
+-REAL_POSTGRESQL_GATE: NOT_RUN_WAITING_REAL_MIGRATION_READY
++E2E_GATE: HARNESS_READY_POSTGRESQL_SKIPPED
++REAL_POSTGRESQL_GATE: NOT_RUN_TEST_DATABASE_URL_MISSING
+ ```
+diff --git "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI06_STATUS.md" "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI06_STATUS.md"
+index 340162c..dc6a556 100644
+--- "a/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI06_STATUS.md"
++++ "b/50_\345\274\200\345\217\221_dev/reports/m2/wave2/integration/status/AI06_STATUS.md"
+@@ -4,18 +4,21 @@ role: Governance Pre-Review Owner
+ phase: WAVE2_INTEGRATION_CONVERGENCE
+ 
+ ```text
+-STATE: PRE_REVIEW_COMPLETE_FAIL
+-LAST_CHANGESET: Wrote `GOVERNANCE_PRE_REVIEW.md` with blockers for safety recheck, minor subject resolution, strict DTO rejection, and final E2E governance evidence.
++STATE: LOCAL_REMEDIATION_COMPLETE_BLOCKED_ON_FINAL_E2E
++LAST_CHANGESET: Added deterministic normal safety route rechecks and strict Wave2 DTO allowlists; updated `GOVERNANCE_PRE_REVIEW.md` to one remaining integration evidence blocker.
+ DONE:
+ - Reviewed M2-104/M2-105 services, policies, DTOs, migration evidence, Phase B2 directive, AI-03 schema audit, and Problems/search results.
+ - Produced `reports/m2/wave2/integration/GOVERNANCE_PRE_REVIEW.md`.
++- Added `normal-safety-route.policy.ts` and wired it into `ConfirmGrowthPriority`, `StartIntervention`, and `CompleteGrowthAction` before mutation.
++- Added strict body allowlists for `confirm-growth-priority.dto.ts`, `start-intervention.dto.ts`, and `complete-growth-action.dto.ts`.
++- Added focused DTO specs and service specs for normal-route blocking behavior.
++- Ran focused API regression and API typecheck.
+ NEXT:
+-- Wait for blocker fixes/evidence, then re-review governance gate.
+-BLOCKER: GOV-BLOCKER-01 safety recheck missing; GOV-BLOCKER-02 canonical minor subject resolution unresolved; GOV-BLOCKER-03 strict DTO rejection missing; GOV-BLOCKER-04 final governance E2E evidence missing.
++- Wait for final real PostgreSQL + HTTP E2E evidence, then re-review governance gate.
++BLOCKER: GOV-BLOCKER-04 final governance E2E evidence missing. GOV-BLOCKER-01 and GOV-BLOCKER-03 are locally remediated; GOV-BLOCKER-02 is resolved by current AI-03 evidence.
+ NEEDS_FROM:
+-- AI-03: subject resolution fix/ruling and REAL_MIGRATION_READY = YES after repair.
+ - AI-00: integrated API behavior and approved safety/subject wiring path.
+-- AI-01/AI-02: M2-104/M2-105 repairs for safety recheck and strict DTO rejection where owned.
+ - AI-05: E2E-W2-12 through E2E-W2-15 evidence.
+ CONTRACT_VERSION: M2_WAVE2_CF_V1
++VALIDATION: focused API regression PASS 24/24; API typecheck PASS on rerun with `--pretty false`.
+ ```

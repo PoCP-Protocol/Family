@@ -1,0 +1,43 @@
+version: 0.2
+action: CompleteGrowthAction
+purpose: Record a guardian check-in for one assigned growth action without converting reflection into outcome evidence.
+wave: M2
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - action_id
+    - completion_status
+    - reflection
+    - occurred_at
+    - idempotency_key
+  completion_status_values:
+    - COMPLETED
+    - PARTIAL
+    - NOT_COMPLETED
+preconditions:
+  - family_exists
+  - actor_has_family_manage_permission
+  - growth_action_exists
+  - intervention_episode_is_active
+  - growth_action_status_is_check_in_recordable
+  - required_growth_consents_active
+  - safety_route_is_NORMAL
+effects:
+  - update_growth_action_check_in
+  - append_audit_record
+  - emit_GrowthActionCompleted_compat_event
+boundaries:
+  - action_is_not_outcome
+  - reflection_is_raw_material_not_outcome
+  - no_profile_write
+  - no_outcome_write
+  - no_milestone_write
+  - no_ai_personalization
+idempotency: required
+audit: required
+outbox: required
+compatibility:
+  event_name: GrowthActionCompleted
+  note: Existing runtime event name is retained for Wave2 compatibility even when completion_status is PARTIAL or NOT_COMPLETED. Preferred future contract name is GrowthActionCheckInRecorded and requires a CCR before runtime rename.
+policy_version: M2_105_DETERMINISTIC_V1

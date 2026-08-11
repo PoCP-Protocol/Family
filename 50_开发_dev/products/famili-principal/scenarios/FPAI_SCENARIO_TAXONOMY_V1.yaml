@@ -1,0 +1,32 @@
+version: FPAI_SCENARIO_TAXONOMY_V1
+scenarios:
+  screen_time:
+    label: 屏幕时间冲突
+    default_route: NORMAL
+  defiance:
+    label: 顶嘴和对抗
+    default_route: NORMAL
+  homework_drag:
+    label: 作业拖拉
+    default_route: NORMAL
+  low_motivation_school_refusal_concern:
+    label: 低动力或上学回避担忧
+    default_route: REVIEW
+  parent_blowup:
+    label: 家长情绪失控
+    default_route: REVIEW
+  parent_second_growth:
+    label: 家长二次成长
+    default_route: NORMAL
+  sibling_attention:
+    label: 手足注意力竞争
+    default_route: NORMAL
+  intergenerational_parenting:
+    label: 隔代育儿冲突
+    default_route: NORMAL
+  sensitive_child:
+    label: 敏感孩子互动
+    default_route: REVIEW
+  education_disagreement_between_parents:
+    label: 父母教育分歧
+    default_route: NORMAL

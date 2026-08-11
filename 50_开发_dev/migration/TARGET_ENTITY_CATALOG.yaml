@@ -1,0 +1,51 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+targets:
+  - target_entity: Family
+    owner: Family Core
+    write_policy: Migration Named Action only after approval
+    migration_dependency: external identity resolution
+  - target_entity: Parent
+    owner: Family Core
+    write_policy: Migration Named Action only after approval
+    migration_dependency: verified guardian or contact mapping
+  - target_entity: Child
+    owner: Family Core
+    write_policy: Migration Named Action only after approval
+    migration_dependency: guardian relationship review when ambiguous
+  - target_entity: FamilyRelationship
+    owner: Family Core
+    write_policy: Migration Named Action only after approval
+    migration_dependency: relationship evidence and review gate
+  - target_entity: Consent
+    owner: Safety Service
+    write_policy: active consent only with subject, guardian, purpose, policy_version, timestamp, and proof
+    migration_dependency: consent proof validation
+  - target_entity: Historical Assessment Evidence
+    owner: Assessment / Evidence
+    write_policy: evidence import only; no direct GrowthProfile mutation
+    migration_dependency: instrument and score semantics mapped
+  - target_entity: HistoricalPerspective
+    owner: Growth OS
+    write_policy: perspective import only; not Fact
+    migration_dependency: source and captured_at retained
+  - target_entity: Historical AI Hypothesis
+    owner: AI Governance
+    write_policy: fact_status must be NOT_FACT
+    migration_dependency: source model and generated_at retained
+  - target_entity: Historical GrowthAction
+    owner: Journey Service
+    write_policy: historical provenance required; completion does not imply Outcome
+    migration_dependency: action semantics mapped
+  - target_entity: Timeline Event
+    owner: Event Service
+    write_policy: provenance and source payload reference required
+    migration_dependency: event type mapped
+  - target_entity: OrderRef
+    owner: Commerce Adapter
+    write_policy: reference only
+    migration_dependency: external order system remains system of record
+  - target_entity: PaymentRef
+    owner: Commerce Adapter
+    write_policy: reference only
+    migration_dependency: external payment system remains system of record

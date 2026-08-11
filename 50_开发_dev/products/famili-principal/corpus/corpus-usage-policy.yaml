@@ -1,0 +1,46 @@
+version: FPAI_CORPUS_USAGE_POLICY_V1
+phase: FP0
+rights_status_allowed:
+  - UNKNOWN
+  - INTERNAL_AUTHORIZED
+  - AUTHORIZED_FOR_ANALYSIS
+  - AUTHORIZED_FOR_TRAINING
+  - RESTRICTED
+usage_tiers:
+  T0_SOURCE_ONLY:
+    allowed: preserve, inventory, checksum, lineage
+    forbidden: model_training, public_generation, direct_quote_without_review
+  T1_ANALYSIS:
+    allowed: manual_review, extraction, taxonomy_mapping
+    forbidden: training, automatic_gold_promotion
+  T2_RETRIEVAL:
+    allowed: retrieval_after_rights_review, citation, internal_prototype
+    forbidden: core_state_mutation
+  T3_EVAL:
+    allowed: eval_case_design, reviewer_calibration
+    forbidden: training_target
+  T4_TRAINING:
+    allowed: training_only_after_explicit_authorization
+    forbidden: inferred_rights, identity_mimicry
+transition_rules:
+  - from: T1_ANALYSIS
+    to: T4_TRAINING
+    automatic: false
+    required: explicit_rights_evidence, human_review, safety_review, lineage_preserved
+  - from: T0_SOURCE_ONLY
+    to: T2_RETRIEVAL
+    automatic: false
+    required: rights_review, privacy_review, source_registry_update
+  - from: any
+    to: public_product_copy
+    automatic: false
+    required: owner_decision, rights_review, brand_review
+training:
+  started: false
+  large_scale_sft_authorized: false
+  lora_authorized: false
+  note: File names containing train or sft do not prove training rights.
+privacy:
+  personal_data_risk_must_be_marked: true
+  minor_data_risk_must_be_marked: true
+  deidentification_required_before_dataset_promotion: true

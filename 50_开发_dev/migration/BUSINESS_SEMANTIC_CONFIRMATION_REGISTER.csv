@@ -1,0 +1,4 @@
+system,entity,field,technical_meaning,business_meaning,example_meaning,historical_change,business_owner,confirmation_status,discovery_source,discovered_at,discovered_by,environment,evidence_ref,verification_status
+CRM,customer,customer_id,Legacy customer primary identifier,TBD,TBD,TBD,OWNER_REQUIRED,UNREVIEWED,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNVERIFIED
+Assessment,assessment,score,Legacy assessment score,TBD,TBD,TBD,OWNER_REQUIRED,UNREVIEWED,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNVERIFIED
+LMS,enrollment,status,Legacy learning enrollment status,TBD,TBD,TBD,OWNER_REQUIRED,UNREVIEWED,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNVERIFIED

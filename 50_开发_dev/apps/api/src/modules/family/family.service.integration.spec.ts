@@ -75,14 +75,14 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-start-onboarding-1',
     }, meta);
     const second = await service.startGrowthOnboarding({
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-start-onboarding-1',
     }, meta);
 
@@ -96,7 +96,12 @@ describe('FamilyService CreateFamily integration', () => {
       target_dimensions: ['P03', 'R03', 'R04', 'R05'],
       status: 'ACTIVE',
       phase: 'ONBOARDING',
-      safety_screening_result: 'LOW',
+      safety_disposition: {
+        severity: 'LOW',
+        disposition: 'NORMAL',
+        policy_version: 'M2_102_DETERMINISTIC_V1',
+        signals: ['NONE'],
+      },
       ai_personalization_enabled: false,
     });
 
@@ -118,7 +123,7 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-start-onboarding-missing-consent',
     }, meta)).rejects.toThrow('missing_required_consent:GROWTH_TRACKING');
 
@@ -126,16 +131,16 @@ describe('FamilyService CreateFamily integration', () => {
     expect(journeys.rowCount).toBe(0);
   });
 
-  it('blocks non-LOW safety screening without writing normal onboarding state', async () => {
+  it('blocks safety-risk signals without writing normal onboarding state', async () => {
     const { family, parent, child, meta } = await seedM2ReadyFamily();
 
     await expect(service.startGrowthOnboarding({
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'MEDIUM',
+      structured_safety_signals: ['SELF_HARM'],
       idempotency_key: 'idem-start-onboarding-medium-risk',
-    }, meta)).rejects.toThrow('human_gate_required_for_safety_screening');
+    }, meta)).rejects.toThrow('human_gate_required_for_safety_signals');
 
     const journeys = await pool.query('select * from growth_journeys');
     const growthEvents = await pool.query('select * from growth_events');
@@ -149,7 +154,7 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-m2-102-onboarding-1',
     }, meta);
 
@@ -257,7 +262,7 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-m2-102-onboarding-risk',
     }, meta);
 
@@ -507,7 +512,7 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: family.family.family_id,
       child_id: child.child.person_id,
       guardian_person_id: parent.parent.person_id,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'idem-m2-102-onboarding-subject-mismatch',
     }, meta);
 
@@ -584,7 +589,7 @@ describe('FamilyService CreateFamily integration', () => {
       family_id: familyId,
       child_id: childId,
       guardian_person_id: parentId,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: `idem-m2-103-onboarding-${crypto.randomUUID()}`,
     }, meta);
     await service.recordPerspective({

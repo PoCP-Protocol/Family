@@ -1,0 +1,23 @@
+version: BOBO_METHOD_TAXONOMY_V1
+note: These are FPAI extraction categories. They do not claim Bobo used these exact names unless source evidence later supports it.
+method_families:
+  CONNECT_BEFORE_CORRECT:
+    description: 先恢复连接，再进入规则或纠正。
+  LISTEN_BEFORE_RESPOND:
+    description: 先听见对方真实诉求，再回应。
+  REDUCE_DEFENSIVENESS:
+    description: 降低羞耻、对抗和自我保护。
+  REPAIR_BEFORE_TEACHING:
+    description: 冲突后先修复关系，再讲道理。
+  PARENT_SELF_REGULATION:
+    description: 家长先处理自身情绪和动作。
+  SMALL_ACTION_FIRST:
+    description: 先做一件低剂量、可复盘的小事。
+  CO_CREATE_BOUNDARIES:
+    description: 与孩子共同形成边界，而不是单向压制。
+  OBSERVE_BEFORE_LABEL:
+    description: 先看行为链条，不贴人格标签。
+  SEPARATE_BEHAVIOR_FROM_PERSON:
+    description: 行为可调整，人不被问题定义。
+  PARENT_SECOND_GROWTH:
+    description: 把亲子困境也看作家长二次成长入口。

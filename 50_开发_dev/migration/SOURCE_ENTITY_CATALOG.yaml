@@ -1,0 +1,93 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+entities:
+  - source_entity: Customer
+    source_system: legacy_crm
+    matrix_ids: [M001]
+    migration_route: TRANSFORM
+    target_entities: [Family, Family CRM View, external_entity_refs]
+    priority: P0
+  - source_entity: Contact
+    source_system: legacy_crm
+    matrix_ids: [M002]
+    migration_route: TRANSFORM
+    target_entities: [Parent, Consent subject candidate, external_entity_refs]
+    priority: P0
+  - source_entity: Student
+    source_system: legacy_family_identity
+    matrix_ids: [M003]
+    migration_route: TRANSFORM
+    target_entities: [Child, Guardian relationship candidate, external_entity_refs]
+    priority: P0
+  - source_entity: FamilyLink
+    source_system: legacy_family_identity
+    matrix_ids: [M004]
+    migration_route: TRANSFORM
+    target_entities: [FamilyRelationship]
+    priority: P0
+  - source_entity: AssessmentRecord
+    source_system: legacy_assessment
+    matrix_ids: [M005]
+    migration_route: MIGRATE_AS_EVIDENCE
+    target_entities: [Assessment, Historical Assessment Evidence]
+    priority: P0
+  - source_entity: AIDiagnosis
+    source_system: legacy_assessment
+    matrix_ids: [M006]
+    migration_route: TRANSFORM_AS_HYPOTHESIS
+    target_entities: [Historical AI Hypothesis]
+    priority: P0
+  - source_entity: LegacyProfileOrTag
+    source_system: legacy_assessment
+    matrix_ids: [M007, M044]
+    migration_route: TRANSFORM_AS_PERSPECTIVE_OR_EVIDENCE
+    target_entities: [HistoricalPerspective, Evidence input]
+    priority: P0
+  - source_entity: Course
+    source_system: legacy_learning
+    matrix_ids: [M008]
+    migration_route: RETAIN_AND_REORGANIZE
+    target_entities: [Course, KnowledgeCard, Intervention]
+    priority: P0
+  - source_entity: ProgramOrCamp
+    source_system: legacy_learning
+    matrix_ids: [M009, M010, M011]
+    migration_route: RETAIN_AND_REORGANIZE
+    target_entities: [GrowthProgram, GrowthCycle, GrowthJourney]
+    priority: P0
+  - source_entity: Task
+    source_system: legacy_learning
+    matrix_ids: [M013]
+    migration_route: MIGRATE_HISTORICAL_ACTION
+    target_entities: [Historical GrowthAction]
+    priority: P0
+  - source_entity: CheckIn
+    source_system: legacy_learning
+    matrix_ids: [M014]
+    migration_route: MIGRATE_HISTORICAL_EVENT
+    target_entities: [ActionCompletion Event]
+    priority: P0
+  - source_entity: ServiceNote
+    source_system: legacy_service
+    matrix_ids: [M015, M018, M043]
+    migration_route: TRANSFORM_WITH_REVIEW
+    target_entities: [ServiceInteraction, HumanObservation, Perspective]
+    priority: P0
+  - source_entity: Order
+    source_system: legacy_commerce
+    matrix_ids: [M037]
+    migration_route: INTEGRATE
+    target_entities: [OrderRef]
+    priority: P0
+  - source_entity: Payment
+    source_system: legacy_commerce
+    matrix_ids: [M038]
+    migration_route: INTEGRATE
+    target_entities: [PaymentRef]
+    priority: P0
+  - source_entity: ConsentRecord
+    source_system: legacy_crm
+    matrix_ids: [M052]
+    migration_route: VERIFY_OR_RECONSENT
+    target_entities: [Consent evidence, LEGACY_CONSENT_UNVERIFIED]
+    priority: P0

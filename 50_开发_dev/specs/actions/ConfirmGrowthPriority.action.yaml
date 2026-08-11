@@ -1,0 +1,49 @@
+version: 0.2
+action: ConfirmGrowthPriority
+purpose: Record a guardian-confirmed seven-day practice focus for an active M2 growth onboarding, or explicitly defer with no hidden priority state.
+wave: M2
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - onboarding_id
+    - draft_id
+    - decision
+    - idempotency_key
+  decision_values:
+    - P03
+    - R03
+    - R04
+    - R05
+    - NO_PRIORITY_YET
+preconditions:
+  - family_exists
+  - actor_has_family_manage_permission
+  - onboarding_is_active
+  - onboarding_journey_type_is_PARENT_CHILD_COMMUNICATION_CONFLICT
+  - safety_route_is_NORMAL
+  - no_active_intervention_episode_for_onboarding
+  - draft_matches_current_confirmed_profiles
+  - selected_dimension_is_eligible_when_decision_is_dimension
+  - required_growth_consents_active_when_priority_is_written
+effects:
+  - when_decision_is_dimension_supersede_existing_active_priority
+  - when_decision_is_dimension_create_growth_priority
+  - when_decision_is_NO_PRIORITY_YET_create_no_growth_priority
+  - append_audit_record
+  - emit_GrowthPriorityConfirmed_compat_event
+boundaries:
+  - priority_is_not_profile
+  - priority_is_not_diagnosis
+  - priority_is_not_score
+  - priority_is_human_confirmed_practice_focus
+  - no_family_total_score
+  - no_family_ranking
+  - action_does_not_create_outcome
+idempotency: required
+audit: required
+outbox: required
+compatibility:
+  event_name: GrowthPriorityConfirmed
+  note: Existing runtime event name is retained for Wave2 compatibility. Consumers must inspect decision and priority=null to distinguish NO_PRIORITY_YET from a written priority.
+policy_version: M2_104_DETERMINISTIC_V2

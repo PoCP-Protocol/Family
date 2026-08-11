@@ -1,0 +1,69 @@
+{
+  "sourceSystem": "bole-ai",
+  "sourceRoots": [
+    "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill",
+    "D:\\Bole.AI\\apps\\api\\data"
+  ],
+  "targetDirectory": "50_开发_dev/integrations/sources/bole-ai/distillation",
+  "capturedAt": "2026-08-10",
+  "governance": {
+    "classification": "external-source-data-package",
+    "evidenceLimit": "E1 unless independently verified through Family evidence gates",
+    "importBoundary": "Do not write directly to Family core ontology or domain state. Route through adapter validation and FamilyImportCommand/Named Action only.",
+    "excludedTargets": [
+      "30_素材_materials",
+      "20_知识_knowledge/library/*.yaml",
+      "Family core database tables"
+    ]
+  },
+  "files": [
+    {
+      "file": "corpus_11k.jsonl",
+      "sourcePath": "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill\\corpus_11k.jsonl",
+      "bytes": 3388629,
+      "lines": 3589,
+      "sha256": "2128694bed455ba625755ed04f538bf1c03e26ebe68d5076303c8b57e64ff30f",
+      "keys": ["id", "title", "text", "snippet", "url", "kind", "platform", "evidenceGrade", "themeIds", "source", "useFor", "compliance", "collectedAt", "sourceFile", "synthetic"]
+    },
+    {
+      "file": "evidence_index.jsonl",
+      "sourcePath": "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill\\evidence_index.jsonl",
+      "bytes": 2965562,
+      "lines": 4697,
+      "sha256": "b5fc5263f22419f36c13b77137b7fbb44dca17b1ab1b0b60ad9de0b6df4ca452",
+      "keys": ["id", "title", "snippet", "url", "region", "kind", "evidenceGrade", "themeIds", "useFor", "source", "compliance", "sourceFile", "indexedAt"]
+    },
+    {
+      "file": "family_edu_sft.jsonl",
+      "sourcePath": "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill\\family_edu_sft.jsonl",
+      "bytes": 22323893,
+      "lines": 6322,
+      "sha256": "8e09212b517ebda092cc79279e2cf34a28ec93d463bf3a108739eb17a3a1e4f7",
+      "keys": ["instruction", "input", "output", "rationale", "kind", "region", "signals"]
+    },
+    {
+      "file": "family_edu_train_mix.jsonl",
+      "sourcePath": "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill\\family_edu_train_mix.jsonl",
+      "bytes": 12011589,
+      "lines": 10000,
+      "sha256": "c6e4ae600afe500702b63914cfb349bdefe68aa00350e8889fac8ef4de9c5160",
+      "keys": ["instruction", "input", "output", "rationale", "kind", "region", "signals"]
+    },
+    {
+      "file": "golden_digitize.jsonl",
+      "sourcePath": "D:\\Bole.AI\\docs\\knowledge\\family-education\\distill\\golden_digitize.jsonl",
+      "bytes": 64703442,
+      "lines": 247,
+      "sha256": "922a3fed98c18468717d3cb5fae8f1f8375765c2873b285260f6be08d73f365a",
+      "keys": ["label", "fingerIndex", "width", "height", "gray8B64", "expected"]
+    },
+    {
+      "file": "short_video_signals_ingested.jsonl",
+      "sourcePath": "D:\\Bole.AI\\apps\\api\\data\\short_video_signals\\short_video_signals_ingested.jsonl",
+      "bytes": 2671527,
+      "lines": 4873,
+      "sha256": "6aa5ba8eb53e1411fdb3f10d75305fba10e9e5b1a4487e1bf7be5db6baddb8d8",
+      "keys": ["id", "source", "evidenceGrade", "painId", "topicIds", "text", "absorb", "videoTitle", "platform"]
+    }
+  ]
+}

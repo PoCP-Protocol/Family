@@ -1,0 +1,33 @@
+version: 0.1
+action: CloseInterventionCycle
+purpose: Close a reviewed intervention episode through an approved Named Action with explicit authorization, consent, safety, idempotency, audit, and outbox.
+wave: M2_WAVE3
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - subject_person_id
+    - intervention_episode_id
+    - growth_review_id
+    - idempotency_key
+preconditions:
+  - family_exists
+  - subject_belongs_to_family
+  - intervention_episode_exists
+  - growth_review_completed
+  - actor_authorized
+  - required_growth_consents_active
+  - safety_route_allows_normal_close
+effects:
+  - mark_intervention_episode_reviewed_or_closed
+  - append_audit_record
+  - emit_InterventionCycleClosed
+boundaries:
+  - no_hidden_state_mutation
+  - no_profile_mutation
+  - no_next_action_start
+  - no_ai_runtime_call
+idempotency: required
+audit: required
+outbox: required
+policy_version: M2_WAVE3_DETERMINISTIC_V1

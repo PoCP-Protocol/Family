@@ -1,0 +1,40 @@
+version: 0.1
+action: RecordNextStepDecision
+purpose: Record the family's next-step intent from a completed review without starting another intervention or changing confirmed priority/profile state.
+wave: M2_WAVE3
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - subject_person_id
+    - growth_review_id
+    - decision
+    - idempotency_key
+  optional:
+    - decision_note
+  decision_values:
+    - CONTINUE
+    - ADJUST
+    - PAUSE
+    - REVIEW_REQUIRED
+preconditions:
+  - family_exists
+  - subject_belongs_to_family
+  - growth_review_completed
+  - actor_authorized
+  - required_growth_consents_active
+effects:
+  - record_next_step_decision
+  - append_audit_record
+  - emit_NextStepDecisionRecorded
+boundaries:
+  - next_step_decision_is_not_next_action
+  - no_next_intervention_start
+  - no_growth_priority_confirm
+  - no_growth_profile_write
+  - no_course_create
+  - no_ai_trigger
+idempotency: required
+audit: required
+outbox: required
+policy_version: M2_WAVE3_DETERMINISTIC_V1

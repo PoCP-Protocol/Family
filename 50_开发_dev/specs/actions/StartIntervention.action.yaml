@@ -1,0 +1,40 @@
+version: 0.2
+action: StartIntervention
+purpose: Start Intervention-001 for an active confirmed priority and create exactly seven daily growth actions.
+wave: M2
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - onboarding_id
+    - priority_id
+    - intervention_code
+    - idempotency_key
+  intervention_code_values:
+    - LISTEN_BEFORE_RESPOND
+preconditions:
+  - family_exists
+  - actor_has_family_manage_permission
+  - active_priority_exists
+  - active_priority_rank_is_1
+  - active_priority_dimension_in_P03_R03_R04_R05
+  - related_profile_is_working_and_confirmed
+  - required_growth_consents_active
+  - safety_route_is_NORMAL
+  - no_active_intervention_episode_for_onboarding
+effects:
+  - create_intervention_episode
+  - create_exactly_7_growth_actions
+  - append_audit_record
+  - emit_InterventionStarted
+boundaries:
+  - intervention_is_practice_support_not_treatment
+  - action_is_not_outcome
+  - no_profile_write
+  - no_outcome_write
+  - no_milestone_write
+  - no_ai_personalization
+idempotency: required
+audit: required
+outbox: required
+policy_version: M2_105_DETERMINISTIC_V1

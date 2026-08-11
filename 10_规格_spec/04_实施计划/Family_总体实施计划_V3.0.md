@@ -1,5 +1,8 @@
 # Family 家庭成长AI平台总体实施计划 V3.0
 
+> **STATUS: SUPERSEDED_FOR_EXECUTION / RETAINED_FOR_HISTORY**（自 2026-08-11，M3-RB-002）
+> 当前执行主计划 SSOT 为 `Family_总体实施计划_V3.3.md`。本文件仅保留历史。
+
 版本：V3.0
 日期：2026-08-10
 状态：执行层主计划

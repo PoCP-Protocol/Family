@@ -102,7 +102,7 @@ try {
 // 6) DDL 静态检查(执行需活库,标注)
 for (const f of walk(join(ROOT, 'database'), ['.sql'])) {
   const txt = readFileSync(f, 'utf8');
-  rec('DDL-static', /create\s+(table|type|extension|index)/i.test(txt), `${rel(f)} bytes=${txt.length}`);
+  rec('DDL-static', /(create\s+(table|type|extension|(?:unique\s+)?index)|alter\s+table)/i.test(txt), `${rel(f)} bytes=${txt.length}`);
 }
 
 // 汇总

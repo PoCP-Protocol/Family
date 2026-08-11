@@ -1,0 +1,42 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+rules:
+  - id: NOT_FACT_LEGACY_LABEL
+    source: legacy labels and profile tags
+    target: HistoricalPerspective or Evidence input
+    forbidden_target: canonical Fact
+    review: true
+  - id: NO_PROFILE_DIRECT_WRITE
+    source: legacy scores and assessment outputs
+    target: Historical Assessment Evidence
+    forbidden_target: GrowthProfile state
+    review: false
+  - id: LEGACY_AI_HYPOTHESIS_ONLY
+    source: legacy AI diagnosis or report
+    target: Historical AI Hypothesis
+    required_fields: [source_model, generated_at, text, fact_status]
+    required_values:
+      fact_status: NOT_FACT
+    forbidden_target: Diagnosis
+    review: true
+  - id: HISTORICAL_ACTION_IMPORT
+    source: legacy tasks
+    target: Historical GrowthAction
+    required_fields: [source_system, source_entity_id, original_created_at, provenance]
+    forbidden_inference: Outcome
+    review: true
+  - id: HISTORICAL_EVENT_ONLY
+    source: legacy check-ins
+    target: ActionCompletion Event
+    forbidden_inference: growth improvement
+    review: false
+  - id: FREE_TEXT_CLASSIFICATION
+    source: chat, advisor notes, assistant comments, service records
+    target_options: [ServiceInteraction, ParentPerspective, ChildPerspective, HumanObservation, OperationalNote, SafetySensitiveMaterial]
+    forbidden_target: canonical Fact without independent verification
+    review: true
+  - id: USE_CASE_DRIVEN_COURSE_MAPPING
+    source: legacy courses and camps
+    first_slice_dimensions: [P03, R03, R04, R05]
+    target: [Course, KnowledgeCard, Intervention, GrowthAction candidate]
+    review: true

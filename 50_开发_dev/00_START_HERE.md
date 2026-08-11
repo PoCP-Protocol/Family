@@ -18,10 +18,16 @@
 3. `CURRENT_SPRINT.md`
 4. `docs/01_PRODUCT_NORTH_STAR.md`
 5. `docs/02_ARCHITECTURE_BASELINE.md`
-6. `docs/03_DOMAIN_GLOSSARY.md`
-7. `docs/04_BUILD_VS_INTEGRATE.md`
-8. 当前Task引用的 `specs/**`
-9. 当前Task Pack：`backlog/tasks/**`
+6. `docs/FAMILY_TECH_ARCH_V3.2.md`
+7. `docs/PRODUCT_BOUNDARY_MAP_V3.2.md`
+8. `docs/DATA_OWNERSHIP_MATRIX_V3.2.md`
+9. `docs/EVENT_TAXONOMY_V3.2.md`
+10. `docs/AI_FAMILY_INTEGRATION_CONTRACT_V3.2.md`
+11. `docs/FAMILY_1_0_MOS_ARCHITECTURE_GATE.md`
+12. `docs/03_DOMAIN_GLOSSARY.md`
+13. `docs/04_BUILD_VS_INTEGRATE.md`
+14. 当前Task引用的 `specs/**`
+15. 当前Task Pack：`backlog/tasks/**`
 
 第一次进入时：
 

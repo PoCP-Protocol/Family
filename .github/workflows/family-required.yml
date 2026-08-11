@@ -1,0 +1,114 @@
+name: Family Required Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+      - wave/**
+      - m3/**
+
+jobs:
+  family-required:
+    name: Family M2 required gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: family
+          POSTGRES_PASSWORD: family
+          POSTGRES_DB: family_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U family -d family_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: true
+      TEST_DATABASE_URL: postgres://family:family@localhost:5432/family_test
+      DATABASE_URL: postgres://family:family@localhost:5432/family_test
+
+    defaults:
+      run:
+        working-directory: 50_开发_dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: 50_开发_dev/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build contracts
+        run: pnpm --filter @family/contracts build
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Unit tests
+        run: pnpm run test:unit
+
+      - name: Reset test database
+        run: node tools/testdb.mjs migrate
+
+      - name: Integration tests
+        run: pnpm run test:integration
+
+      - name: HTTP E2E tests
+        run: pnpm run test:e2e
+
+      - name: Web tests
+        run: pnpm --filter @family/web test
+
+      - name: Web build
+        run: pnpm --filter @family/web build
+
+  m3-foundation:
+    name: M3 foundation gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: 50_开发_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: 50_开发_dev/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build contracts + principal-runtime
+        run: pnpm --filter @family/contracts build && pnpm --filter @family/principal-runtime build
+      - name: Principal runtime foundation tests
+        run: pnpm --filter @family/principal-runtime test
+      - name: Contract validation
+        run: node tools/validate-contracts.mjs
+      - name: M3 dangerous authorization scan
+        run: node tools/m3-dangerous-authorization-scan.mjs

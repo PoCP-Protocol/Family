@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://family.local/fpai/principal-action-card.schema.json",
+  "title": "FPAI Principal Action Card",
+  "description": "PrincipalActionCard != Family GrowthAction until explicit future Named Action confirms/imports it.",
+  "type": "object",
+  "required": ["title", "tonight_action", "parent_line", "child_choice", "review_prompt", "risk_route", "not_family_growth_action"],
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string" },
+    "tonight_action": { "type": "string" },
+    "parent_line": { "type": "string" },
+    "child_choice": { "type": "string" },
+    "review_prompt": { "type": "string" },
+    "risk_route": { "enum": ["NORMAL", "REVIEW", "HIGH_RISK"] },
+    "not_family_growth_action": { "const": true }
+  }
+}

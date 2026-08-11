@@ -1,5 +1,10 @@
 # Family Architecture Baseline
 
+Status: BASELINE_FOUNDATION
+Current product-operating architecture: `docs/FAMILY_TECH_ARCH_V3.2.md`
+
+V3.2 does not rewrite this foundation. It keeps Modular Monolith, PostgreSQL, Redis, Outbox, Family Ontology, Growth OS, and Named Actions, then adds product boundaries for Family, Famili Principal, We are Famili, Operations, Analytics, and the 100-family MOS gate.
+
 ## 技术总链
 
 ```text

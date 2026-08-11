@@ -1,0 +1,28 @@
+id,phase,work_item,status,owner_gate
+FP0-001,FP0,Create independent product boundary,DONE,architect
+FP0-002,FP0,Define brand identity and source-teacher boundary,DONE,owner
+FP0-003,FP0,Define Persona DNA,DONE,architect
+FP0-004,FP0,Create corpus usage policy,DONE,legal_review
+FP0-005,FP0,Create Bobo source registry seed,DONE,legal_review
+FP0-006,FP0,Define Bobo Teacher Model,DONE,method_review
+FP0-007,FP0,Define method taxonomy,DONE,method_review
+FP0-008,FP0,Define scenario taxonomy,DONE,method_review
+FP0-009,FP0,Define distillation schemas,DONE,engineering
+FP0-010,FP0,Define transformation policy,DONE,safety_review
+FP0-011,FP0,Define response contracts,DONE,engineering
+FP0-012,FP0,Define safety policy,DONE,safety_review
+FP0-013,FP0,Create gold eval V1,DONE,evaluation
+FP0-014,FP0,Define model architecture,DONE,architecture
+FP0-015,FP0,Define training strategy with training disabled,DONE,owner
+FP0-016,FP0,Run FP0 gate,DONE,architect
+FP1-001,FP1,Build prototype retrieval,AUTHORIZED_TEXT_INTELLIGENCE_MVP,owner
+FP1-002,FP1,Build structured generation prototype,AUTHORIZED_TEXT_INTELLIGENCE_MVP,owner
+DH0-001,DH0,Create Digital Human IP Bible,DONE,chief_architect
+DH0-002,DH0,Create visual direction and static concept exploration,DONE,chief_architect
+DH0-003,DH0,Create non-cloned voice direction,DONE,chief_architect
+DH0-004,DH0,Create multimodal experience map,DONE,chief_architect
+DH0-005,DH0,Create prototype acceptance matrix,DONE,chief_architect
+DH0-006,DH0,Create asset rights and provenance system,DONE,chief_architect
+FP2-001,FP2,Build 21-day companion,NOT_AUTHORIZED,owner
+FP3-001,FP3,Voice avatar or digital human runtime,NOT_AUTHORIZED,owner
+DH1-001,DH1,Build digital human prototype runtime,NOT_AUTHORIZED,owner

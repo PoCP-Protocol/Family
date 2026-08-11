@@ -219,10 +219,11 @@ export class FamilyService {
       assertActorIsGuardian(persons.guardian, meta.actor);
       await assertOnboardingGuardianAuthorized(client, request, persons.guardian, persons.child);
       await assertRequiredGrowthConsents(client, request.family_id, request.child_id);
-      assertLowRiskOnboardingOnly(request);
+      const safetyDisposition = assessStructuredSafetySignals(request.structured_safety_signals);
+      assertNormalSafetyDisposition(safetyDisposition);
       await assertNoActiveGrowthOnboarding(client, request.family_id);
 
-      const onboarding = await insertGrowthOnboarding(client, request);
+      const onboarding = await insertGrowthOnboarding(client, request, safetyDisposition);
       const occurredAt = new Date().toISOString();
       const eventId = randomUUID();
       const response: StartGrowthOnboardingResponse = { onboarding };
@@ -436,7 +437,7 @@ function hashStartGrowthOnboardingRequest(request: StartGrowthOnboardingRequest)
       family_id: request.family_id,
       child_id: request.child_id,
       guardian_person_id: request.guardian_person_id,
-      safety_screening_result: request.safety_screening_result,
+      structured_safety_signals: request.structured_safety_signals,
     }))
     .digest('hex');
 }
@@ -929,12 +930,6 @@ async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: str
   }
 }
 
-function assertLowRiskOnboardingOnly(request: StartGrowthOnboardingRequest): void {
-  if (request.safety_screening_result !== 'LOW') {
-    throw new ForbiddenException('human_gate_required_for_safety_screening');
-  }
-}
-
 async function assertNoActiveGrowthOnboarding(client: pg.PoolClient, familyId: string): Promise<void> {
   const result = await client.query(
     `select journey_id
@@ -951,7 +946,7 @@ async function assertNoActiveGrowthOnboarding(client: pg.PoolClient, familyId: s
   }
 }
 
-async function insertGrowthOnboarding(client: pg.PoolClient, request: StartGrowthOnboardingRequest): Promise<GrowthOnboardingDto> {
+async function insertGrowthOnboarding(client: pg.PoolClient, request: StartGrowthOnboardingRequest, safetyDisposition: SafetyDispositionDto): Promise<GrowthOnboardingDto> {
   const result = await client.query<{
     journey_id: string;
     family_id: string;
@@ -978,7 +973,7 @@ async function insertGrowthOnboarding(client: pg.PoolClient, request: StartGrowt
     target_dimensions: [...M2_ONBOARDING_DIMENSIONS],
     status: row.status,
     phase: row.phase,
-    safety_screening_result: request.safety_screening_result,
+    safety_disposition: safetyDisposition,
     ai_personalization_enabled: false,
     started_at: row.started_at.toISOString(),
     created_at: row.created_at.toISOString(),
@@ -1274,7 +1269,7 @@ async function assertGrowthProfileConfirmationPreconditions(client: pg.PoolClien
       family_id: familyId,
       guardian_person_id: context.guardianPersonId,
       child_id: context.childId,
-      safety_screening_result: 'LOW',
+      structured_safety_signals: ['NONE'],
       idempotency_key: 'confirm-growth-profile-precondition',
     },
     persons.guardian,
@@ -2110,7 +2105,7 @@ async function insertGrowthOnboardingDomainEvent(
         guardian_person_id: onboarding.guardian_person_id,
         life_stage_code: onboarding.life_stage_code,
         target_dimensions: onboarding.target_dimensions,
-        safety_screening_result: onboarding.safety_screening_result,
+        safety_disposition: onboarding.safety_disposition,
         ai_personalization_enabled: onboarding.ai_personalization_enabled,
       }),
     ],

@@ -1,0 +1,14 @@
+{
+  "pass": true,
+  "total_items": 10,
+  "positive_items": 3,
+  "negative_items": 3,
+  "safety_gate_items": 1,
+  "avatar_scene_items": 3,
+  "covered_avatar_modes": [
+    "INTERACTIVE_CHAT",
+    "MICRO_LESSON",
+    "FAMILY_DIALOGUE"
+  ],
+  "failed_checks": []
+}

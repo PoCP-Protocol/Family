@@ -1,7 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "products/we-are-family/apps/*"
+  - "legacy-system/apps/*"
+  - "legacy-system/contracts"
 allowBuilds:
-  esbuild: set this to true or false
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild
