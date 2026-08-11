@@ -5,6 +5,8 @@ export interface StructuredGenerationRequest<TInput extends object, TOutput exte
   input: TInput;
   output_schema: unknown;
   input_refs: string[];
+  /** 可选多模态图片(base64)。Anthropic 适配器会作为 image content block 发送;OpenAI 适配器当前忽略。 */
+  images?: Array<{ media_type: string; data: string }>;
   policy_context: {
     human_confirmation_required: true;
     may_mutate_business_state: false;
@@ -19,7 +21,7 @@ export interface AiGatewayModelConfig {
 }
 
 export interface StructuredGenerationMetadata {
-  model_provider: 'fake' | 'openai-compatible';
+  model_provider: 'fake' | 'openai-compatible' | 'anthropic-compatible';
   model_version?: string;
   latency_ms: number;
   token_usage?: {
@@ -284,3 +286,127 @@ export const AI_GATEWAY_POLICY = {
   schema_failure_returns_raw_text: false,
   timeout_enforced: true,
 } as const;
+
+/**
+ * Anthropic Messages API 适配器(支持多模态图片)。
+ * 用于接 cc switch 本地代理(ANTHROPIC_BASE_URL,Anthropic /v1/messages 格式)及 IBM ICA 后端。
+ * 复用 A5 硬化:AbortController 超时、AiGatewayError 失败分类、retry=0、无 fallback、schema/JSON 失败绝不返原始文本。
+ */
+export class AnthropicAiGateway implements AiGateway {
+  constructor(private readonly config: AiGatewayModelConfig, private readonly httpFetch: JsonFetch = getGlobalFetch()) {}
+
+  async generateStructured<TInput extends object, TOutput extends object>(
+    request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    const startedAt = Date.now();
+    const timeoutMs = this.config.timeoutMs > 0 ? this.config.timeoutMs : 30000;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AiGatewayError('TIMEOUT', `provider timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    const content: Array<Record<string, unknown>> = [];
+    for (const img of request.images ?? []) {
+      content.push({ type: 'image', source: { type: 'base64', media_type: img.media_type, data: img.data } });
+    }
+    content.push({ type: 'text', text: JSON.stringify(request.input) });
+
+    let response: JsonHttpResponse;
+    try {
+      response = await Promise.race([
+        this.httpFetch(`${this.config.baseUrl.replace(/\/$/, '')}/v1/messages`, {
+          method: 'POST',
+          headers: {
+            'x-api-key': this.config.apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: this.config.model,
+            max_tokens: 1024,
+            system: [
+              `use_case=${request.use_case}`,
+              `prompt_version=${request.prompt_version}`,
+              `schema_version=${request.schema_version}`,
+              'Return only one JSON object matching this schema. No markdown, no prose.',
+              `output_schema=${JSON.stringify(request.output_schema)}`,
+            ].join('\n'),
+            messages: [{ role: 'user', content }],
+          }),
+          signal: controller.signal,
+        }),
+        timeout,
+      ]);
+    } catch (err) {
+      if (err instanceof AiGatewayError) throw err;
+      if (controller.signal.aborted) throw new AiGatewayError('TIMEOUT', 'request aborted');
+      throw new AiGatewayError('NETWORK_ERROR', (err as Error)?.message ?? 'network error');
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+
+    if (!response.ok) {
+      const kind: AiGatewayErrorKind = response.status >= 500 ? 'PROVIDER_5XX' : 'PROVIDER_4XX';
+      throw new AiGatewayError(kind, `provider ${response.status} ${response.statusText}`, response.status);
+    }
+
+    let payload: { model?: string; content?: Array<{ type?: string; text?: string }>; usage?: unknown };
+    try {
+      payload = (await response.json()) as typeof payload;
+    } catch {
+      throw new AiGatewayError('INVALID_JSON', 'provider response body is not JSON');
+    }
+    const text = (payload.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
+    if (!text) throw new AiGatewayError('INVALID_JSON', 'provider returned no text content');
+
+    let parsed: TOutput;
+    try {
+      parsed = JSON.parse(text) as TOutput;
+    } catch {
+      throw new AiGatewayError('INVALID_JSON', 'model content is not valid JSON'); // FAIL CLOSED:不返原始文本
+    }
+
+    return {
+      model: payload.model ?? this.config.model,
+      prompt_version: request.prompt_version,
+      schema_version: request.schema_version,
+      input_refs: request.input_refs,
+      generated_at: new Date().toISOString(),
+      validation_status: 'valid',
+      human_status: 'draft',
+      output: parsed,
+      metadata: { model_provider: 'anthropic-compatible', latency_ms: Date.now() - startedAt },
+    };
+  }
+
+  async embed(): Promise<EmbeddingResult> {
+    throw new Error('Embedding not supported by AnthropicAiGateway');
+  }
+}
+
+export function createAnthropicAiGatewayFromEnv(env: Record<string, string | undefined>): AnthropicAiGateway {
+  const baseUrl = env.ANTHROPIC_BASE_URL;
+  const apiKey = env.ANTHROPIC_AUTH_TOKEN ?? env.ANTHROPIC_API_KEY;
+  const model = env.FPAI_MM_MODEL ?? env.ANTHROPIC_MODEL ?? 'claude-opus-4-8';
+  const timeoutMs = Number(env.FPAI_MODEL_TIMEOUT_MS ?? 40000);
+  if (!baseUrl || !apiKey) throw new Error('Missing ANTHROPIC_BASE_URL or ANTHROPIC_AUTH_TOKEN/ANTHROPIC_API_KEY');
+  return new AnthropicAiGateway({ baseUrl, apiKey, model, timeoutMs });
+}
+
+/**
+ * 统一工厂:Anthropic(cc switch,多模态)优先 → OpenAI 兼容 → Fake。
+ * 未配置真实 provider 时回退 FakeAiGateway,确保测试/CI 确定性、无真实调用。
+ */
+export function createAiGatewayFromEnv(env: Record<string, string | undefined>): AiGateway {
+  if ((env.ANTHROPIC_BASE_URL) && (env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY)) {
+    return createAnthropicAiGatewayFromEnv(env);
+  }
+  if (env.FPAI_MODEL_BASE_URL && env.FPAI_MODEL_API_KEY && env.FPAI_MODEL_NAME) {
+    return createOpenAICompatibleAiGatewayFromEnv(env);
+  }
+  return new FakeAiGateway();
+}
