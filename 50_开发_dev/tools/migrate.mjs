@@ -18,12 +18,34 @@ import pg from 'pg';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, '..', 'database', 'migrations');
+const ENV_FILE = join(__dirname, '..', '.env');
 const cmd = process.argv[2] ?? 'status';
+
+loadEnvFile(ENV_FILE);
 const url = process.env.DATABASE_URL;
 
 if (!url) {
   console.error('DATABASE_URL 未设置(见 .env.example)');
   process.exit(1);
+}
+
+function loadEnvFile(file) {
+  try {
+    const content = readFileSync(file, 'utf8');
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      const separatorIndex = line.indexOf('=');
+      if (separatorIndex <= 0) continue;
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim();
+      if (!(key in process.env)) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // Keep existing process.env-only behavior when .env is absent.
+  }
 }
 
 function migrationFiles() {

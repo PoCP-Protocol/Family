@@ -1,9 +1,11 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { ConsentDto, ConsentPurpose, ConsentStatus, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, RelationshipType } from '@family/contracts';
+import type { ConsentDto, ConsentPurpose, ConsentStatus, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrowthOnboardingDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, RelationshipType, SafetyScreeningResult } from '@family/contracts';
 import type pg from 'pg';
 import { FamilyRepository } from './family.repository';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
+const GROWTH_ONBOARDING_STARTED_EVENT = 'GrowthOnboardingStarted';
+const M2_ONBOARDING_JOURNEY_TYPE = 'PARENT_CHILD_COMMUNICATION_CONFLICT';
 
 @Injectable()
 export class FamilyAggregateRepository {
@@ -17,10 +19,81 @@ export class FamilyAggregateRepository {
 			const relationships = await getRelationships(client, familyId);
 			const lifeStages = await getActiveLifeStages(client, familyId);
 			const consents = await getActiveConsents(client, familyId);
+			const currentOnboarding = await getCurrentOnboarding(client, familyId);
 
-			return { family, members, relationships, lifeStages, consents };
+			return { family, members, relationships, lifeStages, consents, currentOnboarding };
 		});
 	}
+}
+
+async function getCurrentOnboarding(client: pg.PoolClient, familyId: string): Promise<GrowthOnboardingDto | null> {
+	const result = await client.query<{
+		journey_id: string;
+		family_id: string;
+		journey_type: 'PARENT_CHILD_COMMUNICATION_CONFLICT';
+		phase: 'ONBOARDING';
+		status: 'ACTIVE';
+		started_at: Date;
+		created_at: Date;
+		child_id: string | null;
+		guardian_person_id: string | null;
+		life_stage_code: LifeStageCode | null;
+		target_dimensions: string[] | null;
+		safety_screening_result: SafetyScreeningResult | null;
+		ai_personalization_enabled: boolean | null;
+	}>(
+		`select gj.journey_id,
+		        gj.family_id,
+		        gj.journey_type,
+		        gj.phase,
+		        gj.status,
+		        gj.started_at,
+		        gj.created_at,
+		        ge.payload->>'child_id' as child_id,
+		        ge.payload->>'guardian_person_id' as guardian_person_id,
+		        ge.payload->>'life_stage_code' as life_stage_code,
+		        coalesce(array(select jsonb_array_elements_text(ge.payload->'target_dimensions')), '{}'::text[]) as target_dimensions,
+		        ge.payload->>'safety_screening_result' as safety_screening_result,
+		        coalesce((ge.payload->>'ai_personalization_enabled')::boolean, false) as ai_personalization_enabled
+		 from growth_journeys gj
+		 left join lateral (
+		   select payload
+		   from growth_events
+		   where family_id = $1
+		     and event_type = $2
+		     and payload->>'onboarding_id' = gj.journey_id::text
+		   order by occurred_at desc
+		   limit 1
+		 ) ge on true
+		 where gj.family_id = $1
+		   and gj.journey_type = $3
+		   and gj.phase = 'ONBOARDING'
+		   and gj.status = 'ACTIVE'
+		 order by gj.started_at desc
+		 limit 1`,
+		[familyId, GROWTH_ONBOARDING_STARTED_EVENT, M2_ONBOARDING_JOURNEY_TYPE],
+	);
+
+	const row = result.rows[0];
+	if (!row || !row.child_id || !row.guardian_person_id || !row.life_stage_code || !row.safety_screening_result) {
+		return null;
+	}
+
+	return {
+		onboarding_id: row.journey_id,
+		family_id: row.family_id,
+		child_id: row.child_id,
+		guardian_person_id: row.guardian_person_id,
+		journey_type: row.journey_type,
+		life_stage_code: row.life_stage_code,
+		target_dimensions: (row.target_dimensions ?? ['P03', 'R03', 'R04', 'R05']) as GrowthOnboardingDto['target_dimensions'],
+		status: row.status,
+		phase: row.phase,
+		safety_screening_result: row.safety_screening_result,
+		ai_personalization_enabled: false,
+		started_at: row.started_at.toISOString(),
+		created_at: row.created_at.toISOString(),
+	};
 }
 
 async function getFamily(client: pg.PoolClient, familyId: string): Promise<FamilyDto> {

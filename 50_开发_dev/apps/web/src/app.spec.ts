@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGrowthApp, createPerspectiveRequest, submitBuildGrowthProfileDrafts, submitConfirmGrowthProfile, submitRecordPerspective, submitStartGrowthOnboarding } from './app.js';
 
 import type { AppConfig } from './app.js';
+import type { FamilyAggregateResponse } from '@family/contracts';
 
 const config: AppConfig = {
   apiBaseUrl: 'http://api.test',
@@ -9,13 +10,14 @@ const config: AppConfig = {
   familyId: '22222222-2222-4222-8222-222222222222',
   childId: '33333333-3333-4333-8333-333333333333',
   guardianPersonId: '11111111-1111-4111-8111-111111111111',
+  runtimeMode: 'real-api',
 };
 
 describe('M2-102 Family web perspective capture', () => {
   it('renders Chinese F01/F02 shell before onboarding starts', () => {
     const root = document.createElement('main');
 
-    createGrowthApp(root, config);
+    createGrowthApp(root, { ...config, initialAggregate: familyAggregateFixture() });
 
     expect(root.textContent).toContain('F01 家庭上下文');
     expect(root.textContent).toContain('F02 成长入口');
@@ -124,7 +126,7 @@ describe('M2-102 Family web perspective capture', () => {
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('main');
 
-    createGrowthApp(root, config);
+    createGrowthApp(root, { ...config, initialAggregate: familyAggregateFixture() });
     root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
     await flushPromises();
 
@@ -186,7 +188,7 @@ describe('M2-102 Family web perspective capture', () => {
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('main');
 
-    createGrowthApp(root, config);
+    createGrowthApp(root, { ...config, initialAggregate: familyAggregateFixture() });
     root.querySelector<HTMLFormElement>('#growth-onboarding-form')?.requestSubmit();
     await flushPromises();
     root.querySelector<HTMLFormElement>('form[data-perspective-form="parent"]')?.requestSubmit();
@@ -229,6 +231,59 @@ function onboardingFixture() {
     ai_personalization_enabled: false,
     started_at: '2026-08-09T00:00:00.000Z',
     created_at: '2026-08-09T00:00:00.000Z',
+  };
+}
+
+function familyAggregateFixture(currentOnboarding = null): FamilyAggregateResponse {
+  return {
+    family: {
+      family_id: config.familyId,
+      display_name: '联调家庭',
+      status: 'ACTIVE',
+      primary_contact_person_id: config.guardianPersonId ?? null,
+      created_at: '2026-08-09T00:00:00.000Z',
+      updated_at: '2026-08-09T00:00:00.000Z',
+      version: 1,
+    },
+    members: [
+      {
+        person_id: config.guardianPersonId!,
+        family_id: config.familyId,
+        person_type: 'PARENT',
+        parent_role: 'GUARDIAN',
+        display_name: '监护人',
+        birth_date: null,
+        account_id: config.actorPersonId,
+        created_at: '2026-08-09T00:00:00.000Z',
+        updated_at: '2026-08-09T00:00:00.000Z',
+      },
+      {
+        person_id: config.childId!,
+        family_id: config.familyId,
+        person_type: 'CHILD',
+        parent_role: null,
+        display_name: '孩子',
+        birth_date: '2012-06-01',
+        account_id: null,
+        created_at: '2026-08-09T00:00:00.000Z',
+        updated_at: '2026-08-09T00:00:00.000Z',
+      },
+    ],
+    relationships: [],
+    lifeStages: [
+      {
+        assignment_id: 'life-stage-1',
+        family_id: config.familyId,
+        child_id: config.childId!,
+        life_stage_code: 'EARLY_ADOLESCENCE_12_15',
+        effective_from: '2026-08-09T00:00:00.000Z',
+        effective_to: null,
+        source: 'MANUAL',
+        created_at: '2026-08-09T00:00:00.000Z',
+      },
+    ],
+    consents: [],
+    currentOnboarding,
   };
 }
 

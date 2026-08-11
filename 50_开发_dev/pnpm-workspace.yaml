@@ -1,7 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "products/*"
+  - "products/*/*"
+  - "products/*/*/*"
 allowBuilds:
-  esbuild: set this to true or false
+  esbuild: true
 onlyBuiltDependencies:
   - esbuild

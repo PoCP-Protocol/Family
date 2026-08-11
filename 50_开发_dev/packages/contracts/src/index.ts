@@ -170,6 +170,7 @@ export interface FamilyAggregateResponse {
   relationships: FamilyRelationshipDto[];
   lifeStages: LifeStageAssignmentDto[];
   consents: ConsentDto[];
+  currentOnboarding: GrowthOnboardingDto | null;
 }
 
 export interface StartGrowthOnboardingRequest {

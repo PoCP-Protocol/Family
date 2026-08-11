@@ -10,6 +10,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck",
     "dev": "turbo run dev --parallel",
     "db:migrate": "node tools/migrate.mjs up",
     "db:migrate:status": "node tools/migrate.mjs status"

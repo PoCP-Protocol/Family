@@ -9,62 +9,83 @@
 /** @typedef {import('@family/contracts').ConfirmGrowthProfileResponse} ConfirmGrowthProfileResponse */
 /** @typedef {import('@family/contracts').GrowthProfileDraftDto} GrowthProfileDraftDto */
 /** @typedef {import('@family/contracts').StructuredSafetySignal} StructuredSafetySignal */
+/** @typedef {import('@family/contracts').FamilyAggregateResponse} FamilyAggregateResponse */
+/** @typedef {import('@family/contracts').PersonDto} PersonDto */
+/** @typedef {import('@family/contracts').LifeStageAssignmentDto} LifeStageAssignmentDto */
 
 /**
  * @typedef {object} AppConfig
  * @property {string} apiBaseUrl
  * @property {string} actorPersonId
  * @property {string} familyId
- * @property {string} childId
- * @property {string} guardianPersonId
+ * @property {string | undefined} childId
+ * @property {string | undefined} guardianPersonId
+ * @property {'real-api'} runtimeMode
+ * @property {FamilyAggregateResponse | undefined} [initialAggregate]
  */
 
 /** @type {AppConfig} */
 const defaultConfig = {
   apiBaseUrl: 'http://localhost:3000',
-  actorPersonId: '11111111-1111-4111-8111-111111111111',
-  familyId: '22222222-2222-4222-8222-222222222222',
-  childId: '33333333-3333-4333-8333-333333333333',
-  guardianPersonId: '11111111-1111-4111-8111-111111111111',
+  actorPersonId: 'dev-actor-1',
+  familyId: '',
+  childId: undefined,
+  guardianPersonId: undefined,
+  runtimeMode: 'real-api',
 };
 
 /**
  * @param {HTMLElement} root
- * @param {AppConfig} config
+ * @param {Partial<AppConfig>} [config]
  */
 export function createGrowthApp(root, config = defaultConfig) {
+  /** @type {AppConfig} */
+  const mergedConfig = { ...defaultConfig, ...config, runtimeMode: 'real-api' };
   const state = {
     status: 'idle',
-    message: '请先启动成长入口，再记录父母视角与孩子视角。安全等级由服务端策略派生。',
+    message: 'REAL API MODE。请选择或创建真实家庭，再进入成长入口。',
+    config: mergedConfig,
+    /** @type {FamilyAggregateResponse | undefined} */
+    aggregate: mergedConfig.initialAggregate,
     /** @type {GrowthOnboardingDto | undefined} */
-    onboarding: undefined,
+    onboarding: mergedConfig.initialAggregate?.currentOnboarding ?? undefined,
     /** @type {PerspectiveSummaryResponse | undefined} */
     summary: undefined,
     /** @type {GrowthInsightResponse | undefined} */
     insight: undefined,
   };
 
+  const context = () => {
+    const aggregate = state.aggregate;
+    const members = aggregate?.members ?? [];
+    const childId = state.config.childId ?? firstChildId(members);
+    const guardianId = state.config.guardianPersonId ?? firstGuardianId(members);
+    return {
+      ...state.config,
+      childId,
+      guardianPersonId: guardianId,
+    };
+  };
+
   const render = () => {
+    const current = context();
+    const aggregate = state.aggregate;
+    const familyPanel = aggregate
+      ? renderFamilyPanel(aggregate, current)
+      : renderFamilySetup(state.config, state.status === 'submitting');
+
     root.innerHTML = `
       <section class="shell" aria-labelledby="family-home-title">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Family Core · M2-102</p>
+            <p class="eyebrow">Family Core · REAL API MODE</p>
             <h1 id="family-home-title">成长视角记录台</h1>
           </div>
-          <span class="slice-badge">青春期亲子沟通</span>
+          <span class="slice-badge">development test actor</span>
         </header>
 
         <section class="workspace" aria-label="成长工作台">
-          <aside class="family-panel" aria-label="家庭上下文">
-            <h2>F01 家庭上下文</h2>
-            <dl>
-              <div><dt>家庭</dt><dd>${config.familyId}</dd></div>
-              <div><dt>监护人</dt><dd>${config.guardianPersonId}</dd></div>
-              <div><dt>孩子</dt><dd>${config.childId}</dd></div>
-              <div><dt>阶段</dt><dd>12-15 岁早期青春期</dd></div>
-            </dl>
-          </aside>
+          ${familyPanel}
 
           <main class="flow-panel">
             <section class="onboarding-panel" aria-labelledby="onboarding-title">
@@ -78,8 +99,22 @@ export function createGrowthApp(root, config = defaultConfig) {
 
               <form id="growth-onboarding-form">
                 <label>
+                  监护人
+                  <select name="guardianPersonId" aria-label="监护人" ${aggregate ? '' : 'disabled'}>
+                    ${renderMemberOptions(aggregate?.members ?? [], current.guardianPersonId, 'PARENT')}
+                  </select>
+                </label>
+
+                <label>
+                  孩子
+                  <select name="childId" aria-label="孩子" ${aggregate ? '' : 'disabled'}>
+                    ${renderMemberOptions(aggregate?.members ?? [], current.childId, 'CHILD')}
+                  </select>
+                </label>
+
+                <label>
                   安全初筛
-                  <select name="safetyScreeningResult" aria-label="安全初筛">
+                  <select name="safetyScreeningResult" aria-label="安全初筛" ${canStartOnboarding(current, aggregate) ? '' : 'disabled'}>
                     ${safetyOption('LOW', 'LOW · 可以进入普通记录')}
                     ${safetyOption('MEDIUM', 'MEDIUM · 需要人工门')}
                     ${safetyOption('HIGH', 'HIGH · 需要人工门')}
@@ -94,7 +129,7 @@ export function createGrowthApp(root, config = defaultConfig) {
                   <span class="optional">AI 非必需</span>
                 </div>
 
-                <button type="submit" ${state.status === 'submitting' ? 'disabled' : ''}>
+                <button type="submit" ${state.status === 'submitting' || !canStartOnboarding(current, aggregate) ? 'disabled' : ''}>
                   ${state.status === 'submitting' ? '启动中...' : '启动成长入口'}
                 </button>
               </form>
@@ -111,11 +146,31 @@ export function createGrowthApp(root, config = defaultConfig) {
       </section>
     `;
 
+    const setupForm = /** @type {HTMLFormElement | null} */ (root.querySelector('#family-context-form'));
+    setupForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(setupForm);
+      await loadFamilyContext({
+        apiBaseUrl: String(formData.get('apiBaseUrl') ?? state.config.apiBaseUrl).trim(),
+        actorPersonId: String(formData.get('actorPersonId') ?? state.config.actorPersonId).trim(),
+        familyId: String(formData.get('familyId') ?? '').trim(),
+        childId: undefined,
+        guardianPersonId: undefined,
+        runtimeMode: 'real-api',
+      });
+    });
+
+    root.querySelector('#create-family-context')?.addEventListener('click', async () => {
+      await createFamilyContext();
+    });
+
     const onboardingForm = /** @type {HTMLFormElement | null} */ (root.querySelector('#growth-onboarding-form'));
     onboardingForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const formData = new FormData(onboardingForm);
-      const safetyScreeningResult = /** @type {SafetyScreeningResult} */ (formData.get('safetyScreeningResult'));
+      const onboardingFormData = new FormData(onboardingForm);
+      state.config.guardianPersonId = String(onboardingFormData.get('guardianPersonId') ?? '').trim() || undefined;
+      state.config.childId = String(onboardingFormData.get('childId') ?? '').trim() || undefined;
+      const safetyScreeningResult = /** @type {SafetyScreeningResult} */ (onboardingFormData.get('safetyScreeningResult'));
       await startOnboarding(safetyScreeningResult);
     });
 
@@ -143,6 +198,14 @@ export function createGrowthApp(root, config = defaultConfig) {
 
   /** @param {SafetyScreeningResult} safetyScreeningResult */
   const startOnboarding = async (safetyScreeningResult) => {
+    const current = context();
+    if (!canStartOnboarding(current, state.aggregate)) {
+      state.status = 'error';
+      state.message = '请先加载真实家庭，并确保存在监护人、孩子与当前发展阶段。';
+      render();
+      return;
+    }
+
     state.status = 'submitting';
     state.message = '正在提交 StartGrowthOnboarding Named Action...';
     state.onboarding = undefined;
@@ -151,10 +214,11 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      const response = await submitStartGrowthOnboarding(config, safetyScreeningResult);
+      const response = await submitStartGrowthOnboarding(current, safetyScreeningResult);
       state.onboarding = response.onboarding;
       state.status = 'started';
       state.message = '成长入口已启动。下一步分别记录父母视角和孩子视角。';
+      writeUrlState(current, response.onboarding.onboarding_id);
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '启动成长入口失败。';
@@ -181,9 +245,10 @@ export function createGrowthApp(root, config = defaultConfig) {
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean);
-      const request = createPerspectiveRequest(config, state.onboarding.onboarding_id, perspectiveKind, responseText, selectedSignals);
-      await submitRecordPerspective(config, state.onboarding.onboarding_id, request);
-      state.summary = await fetchPerspectiveSummary(config, state.onboarding.onboarding_id);
+      const current = context();
+      const request = createPerspectiveRequest(current, state.onboarding.onboarding_id, perspectiveKind, responseText, selectedSignals);
+      await submitRecordPerspective(current, state.onboarding.onboarding_id, request);
+      state.summary = await fetchPerspectiveSummary(current, state.onboarding.onboarding_id);
       state.insight = undefined;
       state.status = 'started';
       state.message = '视角已记录为 Perspective + E1 Evidence。没有写入事实、画像或优先级。';
@@ -205,8 +270,9 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      await submitBuildGrowthProfileDrafts(config, state.onboarding.onboarding_id);
-      state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      const current = context();
+      await submitBuildGrowthProfileDrafts(current, state.onboarding.onboarding_id);
+      state.insight = await fetchGrowthInsight(current, state.onboarding.onboarding_id);
       state.status = 'started';
       state.message = '已生成工作画像草稿。它不是评分，也不是事实判定。';
     } catch (error) {
@@ -228,8 +294,9 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      await submitConfirmGrowthProfile(config, draftId);
-      state.insight = await fetchGrowthInsight(config, state.onboarding.onboarding_id);
+      const current = context();
+      await submitConfirmGrowthProfile(current, draftId);
+      state.insight = await fetchGrowthInsight(current, state.onboarding.onboarding_id);
       state.status = 'started';
       state.message = '画像已确认。当前仍没有写入 Growth Priority、行动或 AI 侧效果。';
     } catch (error) {
@@ -240,7 +307,179 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
   };
 
+  /** @param {Partial<AppConfig>} nextConfig */
+  const loadFamilyContext = async (nextConfig) => {
+    state.status = 'submitting';
+    state.message = '正在读取真实 Family aggregate...';
+    state.config = { ...state.config, ...nextConfig };
+    render();
+
+    try {
+      const aggregate = await fetchFamilyAggregate(state.config);
+      state.aggregate = aggregate;
+      state.config.childId = state.config.childId ?? aggregate.currentOnboarding?.child_id ?? firstChildId(aggregate.members);
+      state.config.guardianPersonId = state.config.guardianPersonId ?? aggregate.currentOnboarding?.guardian_person_id ?? firstGuardianId(aggregate.members);
+      state.onboarding = aggregate.currentOnboarding ?? undefined;
+      if (state.onboarding) {
+        state.summary = await fetchPerspectiveSummary(state.config, state.onboarding.onboarding_id);
+        try {
+          state.insight = await fetchGrowthInsight(state.config, state.onboarding.onboarding_id);
+        } catch {
+          state.insight = undefined;
+        }
+      } else {
+        state.summary = undefined;
+        state.insight = undefined;
+      }
+      state.status = 'idle';
+      state.message = state.onboarding
+        ? '已从真实 API 恢复当前 onboarding 状态。'
+        : '已读取真实家庭。可以继续启动成长入口。';
+      writeUrlState(state.config, state.onboarding?.onboarding_id);
+    } catch (error) {
+      state.aggregate = undefined;
+      state.onboarding = undefined;
+      state.summary = undefined;
+      state.insight = undefined;
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '读取家庭上下文失败。';
+    }
+
+    render();
+  };
+
+  const createFamilyContext = async () => {
+    state.status = 'submitting';
+    state.message = '正在通过真实 API 创建联调家庭...';
+    render();
+
+    try {
+      const created = await bootstrapFamilyContext(state.config);
+      await loadFamilyContext({
+        ...state.config,
+        familyId: created.familyId,
+        childId: created.childId,
+        guardianPersonId: created.guardianPersonId,
+      });
+    } catch (error) {
+      state.status = 'error';
+      state.message = error instanceof Error ? error.message : '创建联调家庭失败。';
+      render();
+    }
+  };
+
+  const initialConfig = readUrlState();
+  state.config = { ...state.config, ...initialConfig };
+
   render();
+
+  if (!state.aggregate && state.config.familyId) {
+    void loadFamilyContext(state.config);
+  }
+}
+
+/**
+ * @param {AppConfig} config
+ * @returns {Promise<FamilyAggregateResponse>}
+ */
+export async function fetchFamilyAggregate(config) {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}`, {
+    method: 'GET',
+    headers: {
+      'X-Actor-Id': config.actorPersonId,
+    },
+  });
+  const body = /** @type {FamilyAggregateResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
+
+  if (!response.ok) {
+    const message = body && 'message' in body && body.message ? body.message : `Family aggregate failed with ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (!body || !('family' in body) || !('members' in body)) {
+    throw new Error('Family aggregate returned an invalid response.');
+  }
+
+  return body;
+}
+
+/** @param {AppConfig} config */
+async function bootstrapFamilyContext(config) {
+  const correlationId = `browser-bootstrap-${Date.now()}`;
+  const family = await postJson(`${config.apiBaseUrl}/families`, {
+    display_name: '联调家庭',
+    idempotency_key: `browser-create-family-${Date.now()}`,
+  }, config, correlationId);
+  const familyId = family.family.family_id;
+  const parent = await postJson(`${config.apiBaseUrl}/families/${familyId}/parents`, {
+    role: 'GUARDIAN',
+    display_name: '监护人',
+    account_id: config.actorPersonId,
+    idempotency_key: `browser-add-parent-${familyId}`,
+  }, { ...config, familyId }, correlationId);
+  const child = await postJson(`${config.apiBaseUrl}/families/${familyId}/children`, {
+    display_name: '孩子',
+    birth_date: '2012-06-01',
+    idempotency_key: `browser-add-child-${familyId}`,
+  }, { ...config, familyId }, correlationId);
+  await postJson(`${config.apiBaseUrl}/families/${familyId}/relationships`, {
+    person_a_id: parent.parent.person_id,
+    person_b_id: child.child.person_id,
+    relationship_type: 'GUARDIAN_CHILD',
+    idempotency_key: `browser-add-relationship-${familyId}`,
+  }, { ...config, familyId }, correlationId);
+  await postJson(`${config.apiBaseUrl}/families/${familyId}/life-stages`, {
+    child_id: child.child.person_id,
+    life_stage_code: 'EARLY_ADOLESCENCE_12_15',
+    effective_from: '2026-08-10T00:00:00.000Z',
+    idempotency_key: `browser-life-stage-${familyId}`,
+  }, { ...config, familyId }, correlationId);
+  for (const purpose of ['SERVICE', 'ASSESSMENT', 'GROWTH_TRACKING']) {
+    await postJson(`${config.apiBaseUrl}/families/${familyId}/consents`, {
+      subjectPersonId: child.child.person_id,
+      guardianPersonId: parent.parent.person_id,
+      purpose,
+      policyVersion: 'browser-bootstrap-v1',
+    }, { ...config, familyId }, correlationId, `browser-consent-${purpose}-${familyId}`);
+  }
+  return {
+    familyId,
+    guardianPersonId: parent.parent.person_id,
+    childId: child.child.person_id,
+  };
+}
+
+/**
+ * @param {string} url
+ * @param {Record<string, unknown>} body
+ * @param {AppConfig} config
+ * @param {string} correlationId
+ * @param {string | undefined} [idempotencyKey]
+ */
+async function postJson(url, body, config, correlationId, idempotencyKey = undefined) {
+  /** @type {Record<string, string>} */
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Actor-Id': config.actorPersonId,
+    'X-Correlation-Id': correlationId,
+    'X-Source': 'family-web-real-api',
+  };
+  if (idempotencyKey) {
+    headers['Idempotency-Key'] = idempotencyKey;
+  }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    const message = payload && typeof payload === 'object' && payload && 'message' in payload && payload.message
+      ? payload.message
+      : `Request failed with ${response.status}`;
+    throw new Error(String(message));
+  }
+  return payload;
 }
 
 /**
@@ -249,6 +488,9 @@ export function createGrowthApp(root, config = defaultConfig) {
  * @returns {Promise<StartGrowthOnboardingResponse>}
  */
 export async function submitStartGrowthOnboarding(config, safetyScreeningResult) {
+  if (!config.childId || !config.guardianPersonId) {
+    throw new Error('Missing child or guardian context for StartGrowthOnboarding.');
+  }
   const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboarding`, {
     method: 'POST',
     headers: {
@@ -439,6 +681,9 @@ export async function submitConfirmGrowthProfile(config, draftId) {
  * @returns {RecordPerspectiveRequest}
  */
 export function createPerspectiveRequest(config, onboardingId, perspectiveKind, responseText, selectedSignals) {
+  if (!config.childId || !config.guardianPersonId) {
+    throw new Error('Missing child or guardian context for RecordPerspective.');
+  }
   const isChildPerspective = perspectiveKind === 'child';
   const prefix = isChildPerspective ? 'child' : 'parent';
   return {
@@ -466,6 +711,153 @@ export function createPerspectiveRequest(config, onboardingId, perspectiveKind, 
  */
 function createIdempotencyKey(prefix, familyId, resourceId) {
   return `${prefix}-${familyId}-${resourceId}`;
+}
+
+/** @returns {Partial<AppConfig>} */
+function readUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  /** @type {Partial<AppConfig>} */
+  const config = { runtimeMode: 'real-api' };
+  const apiBaseUrl = params.get('apiBaseUrl');
+  const actorPersonId = params.get('actorId');
+  const familyId = params.get('familyId');
+  const childId = params.get('childId');
+  const guardianPersonId = params.get('guardianPersonId');
+
+  if (apiBaseUrl) config.apiBaseUrl = apiBaseUrl;
+  if (actorPersonId) config.actorPersonId = actorPersonId;
+  if (familyId) config.familyId = familyId;
+  if (childId) config.childId = childId;
+  if (guardianPersonId) config.guardianPersonId = guardianPersonId;
+
+  return config;
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {string | undefined} [onboardingId]
+ */
+function writeUrlState(config, onboardingId = undefined) {
+  const params = new URLSearchParams();
+  params.set('mode', 'real-api');
+  params.set('apiBaseUrl', config.apiBaseUrl);
+  params.set('actorId', config.actorPersonId);
+  if (config.familyId) params.set('familyId', config.familyId);
+  if (config.childId) params.set('childId', config.childId);
+  if (config.guardianPersonId) params.set('guardianPersonId', config.guardianPersonId);
+  if (onboardingId) params.set('onboardingId', onboardingId);
+  window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {FamilyAggregateResponse | undefined} aggregate
+ */
+function canStartOnboarding(config, aggregate) {
+  return Boolean(aggregate && config.familyId && config.childId && config.guardianPersonId && currentLifeStage(aggregate.lifeStages, config.childId));
+}
+
+/**
+ * @param {AppConfig} config
+ * @param {boolean} disabled
+ */
+function renderFamilySetup(config, disabled) {
+  return `
+    <aside class="family-panel" aria-label="家庭上下文">
+      <h2>F01 家庭上下文</h2>
+      <p class="message">当前未加载家庭。REAL API MODE 下不会自动生成假家庭。</p>
+      <form id="family-context-form">
+        <label>
+          API Base URL
+          <input name="apiBaseUrl" value="${escapeHtml(config.apiBaseUrl)}" aria-label="API Base URL">
+        </label>
+        <label>
+          Development Actor
+          <input name="actorPersonId" value="${escapeHtml(config.actorPersonId)}" aria-label="Development Actor">
+        </label>
+        <label>
+          Family ID
+          <input name="familyId" value="${escapeHtml(config.familyId)}" aria-label="Family ID">
+        </label>
+        <button type="submit" ${disabled ? 'disabled' : ''}>读取真实家庭</button>
+        <button id="create-family-context" type="button" ${disabled ? 'disabled' : ''}>创建联调家庭</button>
+      </form>
+    </aside>
+  `;
+}
+
+/**
+ * @param {FamilyAggregateResponse} aggregate
+ * @param {AppConfig} config
+ */
+function renderFamilyPanel(aggregate, config) {
+  const family = aggregate.family;
+  const members = aggregate.members;
+  const childCount = members.filter((member) => member.person_type === 'CHILD').length;
+  const guardianCount = members.filter((member) => member.person_type === 'PARENT').length;
+  const selectedChild = members.find((member) => member.person_id === config.childId);
+  const selectedGuardian = members.find((member) => member.person_id === config.guardianPersonId);
+  const lifeStage = currentLifeStage(aggregate.lifeStages, config.childId);
+  return `
+    <aside class="family-panel" aria-label="家庭上下文">
+      <h2>F01 家庭上下文</h2>
+      <dl>
+        <div><dt>模式</dt><dd>real-api</dd></div>
+        <div><dt>家庭 ID</dt><dd>${family.family_id}</dd></div>
+        <div><dt>家庭名称</dt><dd>${escapeHtml(family.display_name)}</dd></div>
+        <div><dt>成员数</dt><dd>${members.length}</dd></div>
+        <div><dt>监护人数</dt><dd>${guardianCount}</dd></div>
+        <div><dt>孩子数</dt><dd>${childCount}</dd></div>
+        <div><dt>关系数</dt><dd>${aggregate.relationships.length}</dd></div>
+        <div><dt>当前监护人</dt><dd>${selectedGuardian ? escapeHtml(selectedGuardian.display_name) : '未选择'}</dd></div>
+        <div><dt>当前孩子</dt><dd>${selectedChild ? escapeHtml(selectedChild.display_name) : '未选择'}</dd></div>
+        <div><dt>当前阶段</dt><dd>${lifeStage ? escapeHtml(lifeStage.life_stage_code) : '未配置'}</dd></div>
+        <div><dt>当前 onboarding</dt><dd>${aggregate.currentOnboarding ? aggregate.currentOnboarding.onboarding_id : '无'}</dd></div>
+      </dl>
+    </aside>
+  `;
+}
+
+/**
+ * @param {PersonDto[]} members
+ * @param {string | undefined} selectedId
+ * @param {'PARENT' | 'CHILD'} personType
+ */
+function renderMemberOptions(members, selectedId, personType) {
+  const filtered = members.filter((member) => member.person_type === personType);
+  if (filtered.length === 0) {
+    return '<option value="">暂无可选成员</option>';
+  }
+  return filtered.map((member) => `<option value="${member.person_id}" ${member.person_id === selectedId ? 'selected' : ''}>${escapeHtml(member.display_name)} · ${member.person_id}</option>`).join('');
+}
+
+/** @param {PersonDto[]} members */
+function firstChildId(members) {
+  return members.find((member) => member.person_type === 'CHILD')?.person_id;
+}
+
+/** @param {PersonDto[]} members */
+function firstGuardianId(members) {
+  return members.find((member) => member.person_type === 'PARENT' && member.parent_role === 'GUARDIAN')?.person_id
+    ?? members.find((member) => member.person_type === 'PARENT')?.person_id;
+}
+
+/**
+ * @param {LifeStageAssignmentDto[]} lifeStages
+ * @param {string | undefined} childId
+ */
+function currentLifeStage(lifeStages, childId) {
+  return lifeStages.find((item) => item.child_id === childId && item.effective_to === null) ?? null;
+}
+
+/** @param {string | number | null | undefined} value */
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 /**
