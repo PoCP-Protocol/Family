@@ -32,16 +32,16 @@ DISTILLATION                  = NOT_AUTHORIZED
 DH1 / VOICE / AVATAR          = NOT_AUTHORIZED
 WAF_WF1_C                     = NOT_AUTHORIZED
 
-BLOCKERS (to final PR)        = 1
+BLOCKERS (to final PR)        = 0
   B1 MODEL_ATTEMPT_LEDGER          = DONE
   B2 QUOTA_ATTEMPT_ACCOUNTING      = DONE
   B3 FAILOVER_POLICY_AWARE         = DONE
   B4 M3-RB-002 / m3/family-1-0-mos = DONE (V3.3 SSOT 收敛收口 @ family-1-0-mos commit 6708829)
-  BLOCKER_1 = PR_CI_TYPECHECK  # M3-INT-001-FIX-001:GitHub Family Required Gates 全仓 typecheck FAIL(attempt.spec.ts 泛型 fake);修复中
-                               # 真值:GitHub evidence = FAIL 时不得记 BLOCKERS=0(M3 foundation gates=PASS;family required gates=FAIL)
+  M3-INT-001-FIX-001 (PR_CI_TYPECHECK) = DONE (attempt.spec.ts 泛型 fake 修复;fix commit a93310e)
 
+PR_CI = PASS  # PR #1 merge-commit run 31510089136:Family M2 required gates=PASS(1m36s) + M3 foundation gates=PASS(17s)
 ADMISSION_PR = https://github.com/PoCP-Protocol/Family/pull/1  (DRAFT, base=m3/family-1-0-mos, head=m3/fpai-runtime-admission-fix, AUTO_MERGE=NO)
-M3_W1_RUNTIME_INTEGRATION_FINAL_APPROVAL = HOLD  (待 PR merge-commit 两组 Gate 全绿)
+M3_W1_RUNTIME_INTEGRATION_READY = YES  (待架构师 M3-W1 最终评审 + 批准合并;AUTO_MERGE=NO)
 ```
 
 ## 本 tranche 交付(TRANCHE_1)
