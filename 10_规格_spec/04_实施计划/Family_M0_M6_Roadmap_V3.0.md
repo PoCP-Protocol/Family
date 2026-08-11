@@ -1,5 +1,8 @@
 # Family M0–M6 Roadmap V3.0
 
+> **STATUS: SUPERSEDED_FOR_EXECUTION / RETAINED_FOR_HISTORY**（自 2026-08-11，M3-RB-002）
+> 当前执行 Roadmap SSOT 为 `Family_M0_M6_Roadmap_V3.3.md`。本文件仅保留历史，不再作为当前排期依据。
+
 | Milestone | 名称 | 核心问题 | 关键产出 | 状态 |
 |---|---|---|---|---|
 | M0 | Architecture & Engineering Foundation | 能不能稳定开发？ | 工程底座、契约、PG、测试门禁 | CLOSED |

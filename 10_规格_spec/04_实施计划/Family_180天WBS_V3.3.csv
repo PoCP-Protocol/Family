@@ -1,0 +1,31 @@
+WBS,阶段,时间,工作包,核心产出,Gate,并行治理
+RB-002,Execution Rebaseline,D0,V3.3执行SSOT收敛,V3.3 Roadmap/Master Plan/WBS/PLAN_SSOT + PROJECT_STATUS/CURRENT_SPRINT + CI trigger + program branch,M3_RB_002_V3_3_SSOT_CONVERGENCE_PASS,SSOT drift=0
+M2-HIST,M2 Closed (Historical),D1-D128,M2 First Family Growth Loop,确定性7-14天Growth Loop+Timeline+GrowthReview+NextStepDecision,M2_CLOSED,已闭环保留历史
+M3-W0-01,M3-W0 Operability Foundation,M3-D1-D10,Execution SSOT + Git/Branch/CI Governance,V3.3 SSOT生效/master+m3分支保护/CI触发master+m3,M3_W0_GOVERNANCE_PASS,
+M3-W0-02,M3-W0 Operability Foundation,M3-D8-D20,IAM Pilot Minimum,最小身份/ActorContext契约,IAM_PILOT_MINIMUM_CONTRACT_PASS,GOV-IAM登记
+M3-W0-03,M3-W0 Operability Foundation,M3-D12-D24,WithdrawConsent + Consent UX,撤回同意Action+Consent UX契约,WITHDRAW_CONSENT_CONTRACT_PASS,GOV-CONSENT登记
+M3-W0-04,M3-W0 Operability Foundation,M3-D16-D28,Safety / Human Handoff foundation,安全升级+人工接管路径契约,SAFETY_HANDOFF_FOUNDATION_PASS,
+M3-W0-05,M3-W0 Operability Foundation,M3-D20-D32,ProductEvent/ModelRun/SafetyCase governance,事件/模型运行/安全案例治理契约,GOVERNANCE_DATA_CONTRACT_PASS,
+M3-W0-06,M3-W0 Operability Foundation,M3-D24-D36,BM-0 Hypothesis Register + Metric Contract,WHAT_TO_VALIDATE/MEASURE/EVENTS/DECISION_RULE_STRUCTURE(不做Dashboard),BM0_HYPOTHESIS_CONTRACT_PASS,
+M3-W0-FINAL,M3-W0 Gate,M3-D36-D40,W0收口,可运营基座契约完整,M3_W0_GATE_PASS,
+M3-W1-01,M3-W1 Famili Principal Runtime,M3-D41-D52,M3-000 contract baseline + Context Broker,FPAI契约基线+上下文经纪,M3_W1_CONTEXT_PASS,
+M3-W1-02,M3-W1 Famili Principal Runtime,M3-D48-D62,Canonical Consent Resolver + Consent-aware Runtime,统一同意解析+Principal Runtime,CONSENT_RESOLVER_PASS,
+M3-W1-03,M3-W1 Famili Principal Runtime,M3-D56-D72,M3-101A Controlled Principal Runtime + ModelRun + Safety Pre/Postcheck,受控Principal运行时+安全前后检查,M3_101A_RUNTIME_PASS,
+M3-W1-04,M3-W1 Famili Principal Runtime,M3-D66-D82,Action Proposal → Human Confirm → Action Bridge,提案-人工确认-Action桥接(禁止任意AI GrowthAction/直写Growth DB),ACTION_BRIDGE_HUMAN_GATE_PASS,
+M3-W1-05,M3-W1 Famili Principal Runtime,M3-D74-D86,LISTEN_BEFORE_RESPOND integration,既有Intervention资产集成,LISTEN_BEFORE_RESPOND_INTEGRATED_PASS,
+M3-W1-FINAL,M3-W1 Gate,M3-D86-D90,W1收口,Principal提案+人工确认闭环,M3_W1_GATE_PASS,
+M3-W2-01,M3-W2 Consumer Product Integration,M3-D91-D104,WAF → Famili Principal 集成,WAF运行时接入Principal,WAF_PRINCIPAL_INTEGRATION_PASS,
+M3-W2-02,M3-W2 Consumer Product Integration,M3-D100-D114,Action Proposal → Human Confirm → Growth OS,提案确认进入Growth OS,PROPOSAL_TO_GROWTHOS_PASS,
+M3-W2-03,M3-W2 Consumer Product Integration,M3-D108-D122,Check-in/Reflection → OutcomeObservation,签到反思+结果观察,CHECKIN_OUTCOME_PASS,
+M3-W2-04,M3-W2 Consumer Product Integration,M3-D116-D128,Timeline INTEGRATE_AND_PRODUCTIZE + Minimum Return Journey,Timeline产品化集成+最小返回旅程(不重造Domain/90天旅程DEFER),TIMELINE_RETURN_LOOP_PASS,
+M3-W2-FINAL,M3-W2 Gate,M3-D128-D132,W2收口,完整返回用户旅程主链,M3_W2_GATE_PASS,
+M3-W3-01,M3-W3 Operate & Measure,M3-D133-D144,Ops Console MVP + Human Review Ops,运营台+人工复核操作,OPS_CONSOLE_MVP_PASS,
+M3-W3-02,M3-W3 Operate & Measure,M3-D140-D152,Analytics MVP + Pilot instrumentation,分析MVP+Pilot埋点采集,ANALYTICS_INSTRUMENTATION_PASS,
+M3-W3-03,M3-W3 Operate & Measure,M3-D148-D160,BM hypothesis measurement + Safety Case Operations,假设采集分析裁决+安全案例运营,BM_MEASUREMENT_PASS,
+M3-W3-04,M3-W3 Operate & Measure,M3-D156-D166,Pilot reporting + MOS operational dashboard,Pilot报告+MOS运营看板,MOS_DASHBOARD_PASS,
+M3-W3-FINAL,M3-W3 Gate,M3-D166-D170,W3收口,MEASURE/OPERATE/REVIEW/DECIDE就绪,M3_W3_GATE_PASS,
+M3-MOS,Family 1.0 MOS Gate,M3-D170-D176,MOS整体收口,WAF+Principal+GrowthOS+Ops+Analytics一体化,FAMILY_1_0_MOS_GATE_PASS,
+PILOT-READY,Pilot Readiness,M3-D176-D184,治理与安全收口,IAM/WithdrawConsent/ConsentUX/MinorDataSOP/Safety/HumanReview/FPAI/WAF/Ops/Analytics/PilotMeasurementPlan,PILOT_READINESS_GATE_PASS,
+PILOT-1,100 Family Pilot,M3-D184-D204,100家庭Pilot,真实使用+行为数据+Outcome信号,PILOT_GATE,
+POST-PILOT,Post-Pilot Expansion Review,M3-D204-D214,证据驱动扩量裁决,POST_PILOT_EXPANSION_DECISION_FRAMEWORK应用+数值阈值校准锁定,POST_PILOT_EXPANSION_REVIEW_PASS,阈值CALIBRATE_THEN_FREEZE
+FELS-P1,P1 Parallel (Non-blocking),parallel,FELS/FLM榜样业务,不进MOS Gate/不阻塞/不污染shared files,FELS_P1_LOCAL,MOS_PRIORITY=ABSOLUTE冲突时暂停

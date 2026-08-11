@@ -1,8 +1,8 @@
 # Family Project Status
 
-status_version: 4
-phase: M2_WAVE_3_CLOSED
-milestone: M2_DETERMINISTIC_GROWTH_LOOP_CLOSED
+status_version: 6
+phase: M3_FAMILY_1_0_MOS
+milestone: M3_EXECUTION_REBASELINE_V3_3_CLOSED
 as_of: 2026-08-11
 
 ## Completed Design Baseline
@@ -27,12 +27,15 @@ as_of: 2026-08-11
 
 ## Current Milestone
 
-M2 Wave 3 — OBSERVE & REVIEW — CLOSED
+M3 — FAMILY 1.0 MINIMUM OPERABLE SYSTEM — NOW
 
 ## In Progress
 
-- active_task: none; awaiting separate M3 / Famili Principal Intelligence Architecture & Contract Gate authorization
-- M2 Deterministic Growth Loop closed after final architect signoff
+- active_task: none;M3-RB-002 已收口(V3.3 SSOT 收敛完成);下一步 = M3-INT-001 Runtime Admission PR + M3-W1 最终评审
+- M2 = CLOSED
+- M3_000 = PASS_CLOSED
+- M3_101A = PASS_ACCEPTED
+- M3_101B_108 = INTEGRATION_CANDIDATE(代码在 m3/fpai-runtime-admission-fix;经 M3-INT-001 治理约束;真实外呼默认关闭)
 
 ## Completed
 
@@ -80,10 +83,30 @@ M2 Wave 3 — OBSERVE & REVIEW — CLOSED
 ## Current Ruling
 
 ```text
+M2 = CLOSED
 M2_WAVE_1 = CLOSED
 M2_WAVE_2 = CLOSED
 M2_WAVE_3 = CLOSED
 M2_DETERMINISTIC_GROWTH_LOOP = CLOSED
+M3 = NOW
+M3_DEFINITION = FAMILY_1_0_MINIMUM_OPERABLE_SYSTEM
+M3_000 = PASS_CLOSED
+M3_101A = PASS_ACCEPTED
+M3_101B_108 = INTEGRATION_CANDIDATE
+M3_INT_001 = TRANCHE_1_2_DONE (B1-B3);B4 RB-002 = CLOSED
+M3_RB_001 = PASS_CLOSED
+M3_RB_002 = PASS_CLOSED
+CURRENT_EXECUTION_GATE = M3_INT_001_RUNTIME_ADMISSION_PR_THEN_M3_W1
+AUTHORIZATION_SSOT = governance/AUTHORIZATION_REGISTRY.yaml (admission 分支)
+EXECUTION_SSOT = V3.3
+V3_0 = SUPERSEDED_FOR_EXECUTION
+M2_WAVE4_INTELLIGENCE = SUPERSEDED_FOR_EXECUTION_BY_CCR
+M2_WAVE4_NEW_OWNER = M3_W1_FAMILI_PRINCIPAL_RUNTIME
+M2_REOPEN = NO
+PROGRAM_BASELINE_SHA = 8cadeb65cca205f3d2fe23b141988d6342444cc7
+PROGRAM_INTEGRATION_BRANCH = m3/family-1-0-mos
+DEFAULT_BRANCH = master
+M3_REAL_EXTERNAL_MODEL = NOT_AUTHORIZED
 WAVE3_AI06 = PASS
 WAVE3_AI07 = PASS
 WAVE3_GITHUB_CI = PASS_RUN_31438263608
@@ -133,7 +156,7 @@ STATE_ALIGNMENT = PASS_WAVE3_CLOSED_M3_NOT_AUTHORIZED
 - Family ranking
 - Reinforcement learning
 - World Model training
-- M2 Wave4 Intelligence runtime; deferred to M3/FPAI by CCR-M2-WAVE4-001
+- M2 Wave4 Intelligence: M2_WAVE4_INTELLIGENCE = SUPERSEDED_FOR_EXECUTION_BY_CCR; NEW_OWNER = M3-W1 Famili Principal Runtime; M2_REOPEN = NO
 
 ## Architecture Decisions
 

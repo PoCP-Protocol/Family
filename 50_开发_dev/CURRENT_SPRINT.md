@@ -1,9 +1,36 @@
 # Current Sprint
 
-sprint_id: M2-WAVE3
-sprint_name: M2 Wave 3 — Observe & Review
-sprint_goal: Complete the first deterministic Family Growth Loop with Observation, Review, Timeline, and Next-Step Decision
-status: CLOSED
+sprint_id: M3-RB-002
+sprint_name: Family 1.0 MOS V3.3 Execution Rebaseline
+sprint_goal: Converge STRATEGY = ROADMAP = WBS = PLAN_SSOT = PROJECT_STATUS = CURRENT_SPRINT = M3 EXECUTION onto V3.3
+status: PASS_CLOSED
+
+## M3-RB-002 Current Status
+
+```text
+M3_RB_001 = PASS_CLOSED
+M3_RB_002 = PASS_CLOSED           # V3.3 SSOT 收敛完成(2026-08-11)
+EXECUTION_SSOT = V3.3
+V3_0 = SUPERSEDED_FOR_EXECUTION
+M2 = CLOSED
+M3 = NOW (FAMILY_1_0_MINIMUM_OPERABLE_SYSTEM)
+M3_000 = PASS_CLOSED
+M3_101A = PASS_ACCEPTED           # 架构师裁决正式验收(见 admission 分支 M3_RUNTIME_ARCHITECT_ADJUDICATION)
+M3_101B_108 = INTEGRATION_CANDIDATE  # 代码在 m3/fpai-runtime-admission-fix;经 M3-INT-001 治理约束
+M3_INT_001 = TRANCHE_1_2_DONE (B1-B3);B4=本 RB-002(已收口)
+M3_REAL_EXTERNAL_MODEL = NOT_AUTHORIZED  # 默认外呼关闭;授权唯一来源=governance/AUTHORIZATION_REGISTRY.yaml
+PROGRAM_BASELINE_SHA = 8cadeb65cca205f3d2fe23b141988d6342444cc7
+PROGRAM_INTEGRATION_BRANCH = m3/family-1-0-mos
+DEFAULT_BRANCH = master
+M2_WAVE4_INTELLIGENCE = SUPERSEDED_FOR_EXECUTION_BY_CCR (owner: M3-W1)
+NEXT_GATE = M3-INT-001 Runtime Admission PR (m3/fpai-runtime-admission-fix → m3/family-1-0-mos) → M3-W1 最终评审;AUTO_MERGE=NO
+```
+
+---
+
+# HISTORICAL — M2 Wave 3 (CLOSED)
+
+sprint_id: M2-WAVE3 · status: CLOSED · 仅保留历史，不再作为 Current。
 
 ## Wave3 Closed Status
 
