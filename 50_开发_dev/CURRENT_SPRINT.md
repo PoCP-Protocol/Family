@@ -1,9 +1,43 @@
 # Current Sprint
 
-sprint_id: S00-S01
-sprint_name: Engineering Bootstrap + Family Core
-sprint_goal: M1 Family Core Running
+sprint_id: M2-WAVE3
+sprint_name: M2 Wave 3 — Observe & Review
+sprint_goal: Complete the first deterministic Family Growth Loop with Observation, Review, Timeline, and Next-Step Decision
 status: CLOSED
+
+## Wave3 Closed Status
+
+```text
+M2_WAVE3 = CLOSED
+PHASE_A_CONTRACT_FREEZE = PASS
+API_REAL_POSTGRESQL_HTTP_E2E = PASS_12_TESTS
+WEB_UNIT_TESTS = PASS_19_TESTS
+WEB_TYPECHECK = PASS
+BROWSER_F10_F11_GATE = PASS_REAL_API_DESKTOP_MOBILE
+AI06_INDEPENDENT_GOVERNANCE_REVIEW = PASS
+AI07_INDEPENDENT_ARCHITECTURE_PRODUCT_REVIEW = PASS
+GITHUB_CI = PASS_RUN_31438263608
+GITHUB_REMOTE_CONVERGENCE = PASS_758B1ED_BASELINE
+FINAL_ARCHITECT_SIGNOFF = PASS
+WAVE3_BLOCKERS = 0
+READY_FOR_M3_RUNTIME = NO
+START_M3_RUNTIME = NO
+M3_RUNTIME = NOT_AUTHORIZED
+F12_AI = NOT_STARTED
+```
+
+Latest Wave3 browser evidence:
+
+- `reports/m2/wave3/M2_WAVE3_BROWSER_EVIDENCE.md`
+- `reports/m2/wave3/M2_WAVE3_GOVERNANCE_PRE_REVIEW.md`
+- `reports/m2/wave3/AI06_GOVERNANCE_REVIEW_REPORT.md`
+- `reports/m2/wave3/AI07_ARCHITECTURE_PRODUCT_REVIEW_REPORT.md`
+
+Closure record:
+
+1. Final Wave3 closure certificate reviewed and signed off by the chief architect: FINAL_ARCHITECT_SIGNOFF = PASS.
+2. `PROJECT_STATUS.md` reconciled from authoritative remote HEAD `758b1ed` with targeted Wave3 closure edits; unrelated dirty worktree files left untouched.
+3. WAVE3_BLOCKERS = 0. Next step is a separate M3 / Famili Principal Intelligence Architecture & Contract Gate; M3 runtime remains NOT_AUTHORIZED.
 
 ---
 
@@ -85,7 +119,7 @@ Create Family
 - Schema invalid正确返回
 - Unit / Integration tests通过
 
-Sprint DoD status: PASS. M2 implementation is now authorized only for the active M2-101 task.
+Sprint DoD status: PASS. M1 is closed.
 
 ---
 
@@ -132,16 +166,131 @@ M2 gate blocker: NONE for M2-000.
 
 User approval recorded: automatic review completed and automatic continuation approved on 2026-08-10.
 
-Current Approved Task:
+M2 Wave 1 status: PASS / CLOSED on 2026-08-10.
+
+Completed Wave 1 tasks:
 
 1. `M2-101_START_GROWTH_ONBOARDING`
+2. `M2-102_RECORD_PERSPECTIVE_AND_EVIDENCE`
+3. `M2-103_EVIDENCE_SYNTHESIS_AND_LIMITED_GROWTH_PROFILE`
 
-Task status: COMPLETED on 2026-08-10.
+Last completed task:
 
-Completion evidence:
+```text
+M2-103_EVIDENCE_SYNTHESIS_AND_LIMITED_GROWTH_PROFILE
+```
 
-- Backend `StartGrowthOnboarding` API path, contract, validation, service, audit/outbox/idempotency, and growth event write path implemented.
-- Family Web F01/F02 implemented under `apps/web`.
-- API typecheck, DTO tests, service integration tests, HTTP E2E, web typecheck, web unit tests, and browser demo check passed.
+M2 Wave 2 Phase A status: PASS / CLOSED.
 
-Next boundary: do not start M2-102 or later tasks without explicit next-task approval.
+Approved Phase B task:
+
+```text
+M2-WAVE2-PHASE-B
+```
+
+Current wave:
+
+```text
+M2_WAVE_3_OBSERVE_AND_REVIEW
+```
+
+Current phase:
+
+```text
+PHASE_B_PRODUCT_CLOSURE_IN_PROGRESS
+```
+
+Active task:
+
+```text
+none; Wave3 CLOSED; awaiting separate M3 Contract / Architecture Authorization Gate
+```
+
+Stage ruling:
+
+```text
+M2_WAVE_1 = CLOSED
+M2_WAVE_2_DECIDE_AND_ACT = PASS
+M2_WAVE_2 = CLOSED
+AI05_REAL_SYSTEM = PASS
+WAVE2_AI06_FINAL_GOVERNANCE = PASS_HISTORICAL
+WAVE2_AI07_INDEPENDENT_REVIEW = PASS_HISTORICAL
+WAVE3_AI06_INDEPENDENT_GOVERNANCE = PASS
+WAVE3_AI07_INDEPENDENT_REVIEW = PASS
+BLOCKERS = 0
+V3_2_ARCHITECTURE_REBASELINE = APPROVED
+V3_2_ARCHITECTURE_GATE = PASS
+M2_WAVE_3 = AUTHORIZED
+READY_FOR_WAVE3 = YES
+START_WAVE3 = YES
+M3_RUNTIME = NOT_AUTHORIZED
+```
+
+Wave3 product scope:
+
+```text
+F10 Family Timeline = YES
+F11 Growth Review = YES
+F12 Family AI = NO
+```
+
+Wave3 runtime scope:
+
+```text
+DETERMINISTIC = YES
+LLM_RUNTIME = NO
+MODEL_GATEWAY = NO
+AGENT_RUNTIME = NO
+FPAI_RUNTIME = NO
+WORLD_MODEL = NO
+CAUSAL_ENGINE = NO
+```
+
+Approved Phase A outputs:
+
+- `reports/m2/wave3/CCR-M2-WAVE4-001.md`
+- `reports/m2/wave3/M2_WAVE3_CONTRACT_FREEZE_V1.md`
+- `reports/m2/wave3/M2_WAVE3_SHARED_FILE_MATRIX.md`
+
+Wave3 deterministic F10/F11 implementation, browser validation, governance (AI06/AI07), GitHub Required Gates, remote convergence, and final architect signoff have all passed. Wave3 is CLOSED; M3 runtime remains closed and requires a separate authorization gate.
+
+Stage ruling:
+
+```text
+M2_WAVE_1 = CLOSED
+M2_WAVE_2 = CLOSED
+M2_WAVE_3 = CLOSED
+M2_DETERMINISTIC_GROWTH_LOOP = CLOSED
+FINAL_ARCHITECT_SIGNOFF = PASS
+WAVE3_BLOCKERS = 0
+READY_FOR_M3_RUNTIME = NO
+START_M3_RUNTIME = NO
+M3_RUNTIME = NOT_AUTHORIZED
+STATE_ALIGNMENT = PASS_WAVE3_CLOSED_M3_NOT_AUTHORIZED
+```
+
+Historical Wave2 integration streams:
+
+1. STREAM-A Schema / Contract Compatibility — AI-03
+2. STREAM-B API / Module / Orchestration Integration — AI-00
+3. STREAM-C Frontend F01/F06/F07/F08/F09 Real Integration — AI-04
+4. STREAM-D Real PostgreSQL + HTTP E2E + Browser QA — AI-05
+5. STREAM-E Governance Pre-Review — AI-06
+6. Domain Fix Owner: GrowthPriority — AI-01
+7. Domain Fix Owner: Intervention / GrowthAction — AI-02
+8. Independent Review after Barriers 1-5 — AI-07
+
+Historical Wave2 Phase B boundary:
+
+- `reports/m2/wave2/M2_WAVE2_CONTRACT_FREEZE.md` is immutable baseline `M2_WAVE2_CF_V1`.
+- `reports/m2/wave2/SHARED_FILE_CONFLICT_MATRIX.md` is approved and binding.
+- Any contract change requires `CONTRACT_CHANGE_REQUEST`; no role may freely edit the freeze baseline.
+- Wave 3 planning and deterministic F10/F11 runtime were later authorized by Wave3 Phase A gate and are now browser-verified. M3 runtime code remains forbidden without explicit authorization.
+- `growth_journeys.subject_person_id` is not approved; subject resolution must use canonical Family/Growth/Onboarding/Profile relations or a minimal resolver boundary.
+- `growth_actions` legacy dual-write is allowed only as `TEMPORARY_SCHEMA_COMPATIBILITY` after semantic audit.
+
+Phase B2 status artifacts:
+
+- `reports/m2/wave2/integration/PHASE_B2_INTEGRATION_CONVERGENCE_DIRECTIVE.md`
+- `reports/m2/wave2/integration/INTEGRATION_DASHBOARD.md`
+- `reports/m2/wave2/integration/status/AI00_STATUS.md` through `AI06_STATUS.md`

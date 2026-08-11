@@ -57,7 +57,7 @@ Expected current result:
 contracts build: PASS
 api typecheck: PASS
 evidence-synthesis.service.spec.ts: PASS, 2 tests
-family.service.integration.spec.ts: PASS, 11 tests
+family.service.integration.spec.ts: PASS, 13 tests
 family.e2e-spec.ts via vitest.e2e.config.ts: PASS, 11 tests
 web typecheck: PASS
 web test: PASS, 7 tests
@@ -95,7 +95,7 @@ Manual browser flow:
 6. Confirm the panel shows `我们目前看到的沟通状态`.
 7. Confirm boundary copy appears: `这不是评分，也不是事实判定，而是基于目前信息形成的工作画像。`
 8. Confirm draft cards include parent/relationship dimensions such as `P03 父母倾听与回应方式` and `R03 冲突中被听见的程度`.
-9. Confirm unresolved/insufficient drafts show `信息不足，暂不确认`.
+9. Confirm unresolved/insufficient drafts show `信息不足，暂不确认`. P03 remains unresolved unless there are at least two usable evidence records with parent/direct-child coverage.
 10. Confirm an eligible draft can be confirmed with `这符合我们目前的情况`.
 11. Confirm the post-confirmation message says the confirmation does not automatically generate action.
 

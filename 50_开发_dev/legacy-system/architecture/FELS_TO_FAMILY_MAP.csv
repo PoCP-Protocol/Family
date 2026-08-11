@@ -1,0 +1,20 @@
+FELS Source,Family Destination,Rule
+Customer,Family candidate / Parent candidate,NOT Family directly
+Contact,Parent candidate / Service contact candidate,contact != guardian
+Student,Child candidate,NOT Child directly
+StudentGuardian,FamilyRelationship candidate,requires identity and guardian proof
+AssessmentSession,Historical Evidence candidate,score is not GrowthState
+AssessmentScore,Historical Evidence / Legacy Annotation,LEGACY_DERIVED
+AssessmentReport,Growth Onboarding source candidate,requires reinterpretation
+LegacyAIReport,Historical AI Hypothesis,LEGACY_AI_HYPOTHESIS_NOT_FACT
+TrainingProgram,GrowthJourney candidate,not GrowthJourney in FELS
+LegacyTask,GrowthAction history candidate,not active Family action
+LegacyCheckIn,Action check-in history,check-in != Outcome
+AdvisorNote,HumanObservation / ServiceInteraction candidate,Perspective != Fact
+Course,Knowledge / Intervention source candidate,requires content decomposition
+Order,OrderRef,commerce reference only
+Payment,PaymentRef,commerce reference only
+LegacyConsent,Consent Evidence candidate,must not auto-promote
+CommunityMember,Engagement event candidate,membership != FamilyRelationship
+family_score,RETIRE,forbidden in Family
+ranking,RETIRE,forbidden in Family

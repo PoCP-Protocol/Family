@@ -1,0 +1,49 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+principle: identity_before_business
+identity_order:
+  - External ID
+  - Family
+  - Parent
+  - Child
+  - Relationship
+  - Consent
+  - Growth History
+  - Journey
+  - Action/Event
+  - Service
+  - Content
+legacy_identifiers:
+  - customer_id
+  - user_id
+  - account_id
+  - parent_id
+  - student_id
+  - child_id
+  - contact_id
+  - phone
+  - order_customer_id
+  - assessment_user_id
+  - wecom_external_user_id
+match_status:
+  - PROPOSED
+  - REVIEW_REQUIRED
+  - VERIFIED
+  - REJECTED
+forbidden_auto_merge:
+  - same_phone_only
+  - same_child_name_only
+  - same_age_only
+  - same_group_membership_only
+  - buyer_equals_service_subject_without_evidence
+  - assessment_user_equals_child_without_evidence
+review_questions:
+  - one_customer_multiple_children
+  - one_parent_multiple_accounts
+  - spouses_as_separate_customers
+  - child_attached_to_multiple_accounts
+  - duplicate_or_reused_phone
+  - phone_change_created_new_customer
+  - buyer_equals_service_subject
+  - assessment_subject_equals_child
+  - legacy_merge_history_exists

@@ -1,0 +1,53 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+waves:
+  - id: LM0
+    name: Legacy Discovery
+    timing: now
+    entry_criteria:
+      - V3.1 Legacy Migration Track accepted for discovery
+      - production writes forbidden
+    allowed: [READ, DISCOVER, PROFILE, CLASSIFY, DOCUMENT, DESIGN_CONTRACTS, BUILD_READ_ONLY_TOOLING, BUILD_VALIDATORS, BUILD_LOCAL_STAGING_MODELS]
+    forbidden: [CONFIRMED_MAPPING, SHADOW_IMPORT, PILOT, DUAL_RUN, PRODUCTION_IMPORT, PRODUCTION_LOADER, CORE_ONTOLOGY_CHANGE, CORE_DB_WRITE, GROWTH_PROFILE_SEMANTIC_CHANGE, CUTOVER, DELETE_OLD_DATA]
+    deliverables:
+      - LM0_SYSTEM_DISCOVERY.md
+      - LM0_SCHEMA_DISCOVERY.md
+      - LM0_IDENTITY_DISCOVERY.md
+      - LM0_CONSENT_DISCOVERY.md
+      - LM0_DATA_QUALITY_REPORT.md
+      - LM0_SYSTEM_OF_RECORD_REPORT.md
+      - LM0_BUSINESS_SEMANTIC_REPORT.md
+      - LM0_INDEPENDENT_REVIEW.md
+      - LM0_FINAL_GATE.md
+    gate: LM0_FINAL_GATE
+    rollback_strategy: no production mutation permitted
+  - id: LM1
+    name: Semantic Mapping
+    timing: V3.1
+    allowed: [FIELD_MAPPING, SEMANTIC_RULES, REVIEW_QUEUE_DESIGN, TEST_FIXTURE_DESIGN]
+    entry_criteria:
+      - LM0 = PASS
+      - READY_FOR_LM1 = YES
+      - chief architect approval
+    gate: mapping review
+    forbidden: [SHADOW_IMPORT, PILOT, DUAL_RUN, CUTOVER, PRODUCTION_CORE_WRITE]
+  - id: LM2
+    name: Shadow Migration
+    timing: after Wave2 pass
+    allowed: [SHADOW_DB_IMPORT, RECONCILIATION, VALIDATION]
+    gate: shadow metrics pass
+  - id: LM3
+    name: Pilot Migration
+    timing: M3 early
+    allowed: [30_TO_50_ACTIVE_FAMILIES, DUAL_SYSTEM_USE]
+    gate: business and safety validation
+  - id: LM4
+    name: Dual Run
+    timing: M3 to M4
+    allowed: [ADAPTER_EVENT_SYNC, DOMAIN_SOR_ENFORCEMENT]
+    gate: domain readiness
+  - id: LM5
+    name: Cutover and Retirement
+    timing: M4
+    allowed: [DOMAIN_CUTOVER, ROLLBACK_PLAN, DECOMMISSION_AFTER_SIGNOFF]
+    gate: go/no-go and owner signoff

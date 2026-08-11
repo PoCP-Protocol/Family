@@ -1,0 +1,45 @@
+ID,Phase,Title,Status,Authorization,Primary Deliverable,Gate Evidence
+FELS-000,FELS-0,Repository Reality Audit,DONE,AUTHORIZED,reports/REPO_AUDIT_REPORT.md,Existing repo audit and current implementation evidence
+FELS-001,FELS-0,Architecture Freeze,DONE,AUTHORIZED,legacy-system/FELS_ARCHITECTURE_V1.0.md,FELS0 architecture and executable contracts
+FELS-002,FELS-0,M001-M055 Classification,DONE,AUTHORIZED,legacy-system/architecture/MIGRATION_MATRIX_COVERAGE.csv,55 rows / 55 unique IDs classified; runtime implemented count is separate
+FELS-003,FELS-0,Legacy Entity Model,DONE,AUTHORIZED,legacy-system/contracts/src/index.ts,FELS entity/domain constants and tests
+FELS-004,FELS-0,DB Contract,DONE,AUTHORIZED,legacy-system/db/migrations/0001_fels0_schema.sql,family_legacy / LEGACY_DATABASE_URL only
+FELS-005,FELS-0,Export Contract,DONE,AUTHORIZED,legacy-system/contracts/API_CONTRACT.md,Read-only legacy export paths
+FELS-006,FELS-0,Synthetic / Dirty Data Spec,DONE,AUTHORIZED,legacy-system/synthetic/SYNTHETIC_DATA_SPEC.md,20 dirty scenarios in FELS0 contract
+FELS-101,FELS-1,Customer,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,FELS1 tests
+FELS-102,FELS-1,Contact,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,FELS1 tests
+FELS-103,FELS-1,Student,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,FELS1 tests
+FELS-104,FELS-1,Guardian,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Ambiguity E2E
+FELS-105,FELS-1,Assessment,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
+FELS-106,FELS-1,Course / Product,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
+FELS-107,FELS-1,Order / Payment,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
+FELS-108,FELS-1,Enrollment,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Vertical slice E2E
+FELS-109,FELS-1,Legacy Consent,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Consent discovery smoke
+FELS-110,FELS-1,Source Snapshot,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Domain-runtime snapshot and export tests
+FELS-111,FELS-1,Domain Export Runtime,DONE,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,Static FLM reference discovery; real export HTTP API not yet passed
+FELS-112,FELS-1,Core Domain E2E,DONE,AUTHORIZED,legacy-system/apps/api/src/main.spec.ts,FELS1 PASS_CODE_VALIDATED gate report
+FELS-113,FELS-1,Live PostgreSQL + Real HTTP E2E,PENDING,REQUIRES_LEGACY_DATABASE_URL,legacy-system/tools/legacy-db.mjs,Blocked until independent LEGACY_DATABASE_URL exists
+FELS-201,FELS-2,Training Program,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-202,FELS-2,21-Day Challenge,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-203,FELS-2,90-Day Coaching,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-204,FELS-2,Legacy Task,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-205,FELS-2,Check-In,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-206,FELS-2,Homework,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-207,FELS-2,Staff,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-208,FELS-2,Advisor,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-209,FELS-2,Program Report,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS2 gate
+FELS-301,FELS-3,Membership,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
+FELS-302,FELS-3,Community,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
+FELS-303,FELS-3,Activity,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
+FELS-304,FELS-3,Support,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
+FELS-305,FELS-3,CRM / LMS Reference,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
+FELS-401,FELS-4,Legacy Profile / Tag,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
+FELS-402,FELS-4,Legacy AI Report,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
+FELS-403,FELS-4,Score / Ranking,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
+FELS-404,FELS-4,Dirty Data Factory,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
+FELS-501,FELS-5,FLM Source Adapter,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
+FELS-502,FELS-5,Identity Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
+FELS-503,FELS-5,Consent Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
+FELS-504,FELS-5,Quarantine Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
+FELS-505,FELS-5,Core Migration Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5A gate
+FELS-506,FELS-5,Business Migration Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5B gate

@@ -1,0 +1,12 @@
+inventory_id,source_system,api_or_export,domain,route,priority,owner,status,notes
+LAI-001,legacy_crm,customer export/API,identity,TRANSFORM,P0,平台+产品,DISCOVERY_REQUIRED,Needed for customer to Family mapping.
+LAI-002,legacy_crm,contact export/API,identity,TRANSFORM,P0,数据,DISCOVERY_REQUIRED,Needed for Parent mapping and consent inventory.
+LAI-003,legacy_assessment,assessment export/API,assessment,MIGRATE_AS_EVIDENCE,P0,产品+教研,DISCOVERY_REQUIRED,Must include instrument, score, captured_at, report payload.
+LAI-004,legacy_learning,course export/API,content,RETAIN_AND_REORGANIZE,P0,教研,DISCOVERY_REQUIRED,Course to KnowledgeCard/Intervention mapping.
+LAI-005,legacy_learning,task/check-in export/API,action,MIGRATE_HISTORICAL_ACTION_EVENT,P0,交付+数据,DISCOVERY_REQUIRED,Historical actions/events only.
+LAI-006,legacy_service,service note export/API,service,TRANSFORM_WITH_REVIEW,P0,数据+安全,DISCOVERY_REQUIRED,Free text classification and privacy review.
+LAI-007,legacy_commerce,order API,commerce,INTEGRATE,P0,平台,DISCOVERY_REQUIRED,Reference sync only.
+LAI-008,legacy_commerce,payment API,commerce,INTEGRATE,P0,平台,DISCOVERY_REQUIRED,Reference sync only.
+LAI-009,legacy_lms,class/program API,learning_ops,INTEGRATE,P0,平台,DISCOVERY_REQUIRED,LMS remains master for teaching operations.
+LAI-010,legacy_live,live session API,live,INTEGRATE,P1,平台,DISCOVERY_REQUIRED,LearningSessionRef and timeline reference.
+LAI-011,legacy_support,support ticket API,service,INTEGRATE,P1,运营,DISCOVERY_REQUIRED,SupportInteraction and timeline reference.

@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: We are Famili WF1 API Contract
+  version: 1.0.0
+  description: Frozen WF1 HTTP surface. Implementation is not registered into M2 runtime.
+paths:
+  /waf/home:
+    get:
+      summary: Read WAF discovery home
+      operationId: getWafHome
+  /waf/topics:
+    get:
+      summary: List WF1 topics
+      operationId: listWafTopics
+  /waf/topics/{slug}:
+    get:
+      summary: Read a WF1 topic
+      operationId: getWafTopic
+  /waf/challenges:
+    get:
+      summary: List WF1 challenges
+      operationId: listWafChallenges
+  /waf/challenges/{id}:
+    get:
+      summary: Read a WF1 challenge
+      operationId: getWafChallenge
+  /waf/challenges/{id}/join:
+    post:
+      summary: Join a community challenge; creates CommunityParticipation only
+      operationId: joinWafChallenge
+  /waf/participations/me:
+    get:
+      summary: Read current user's WAF participations
+      operationId: listMyWafParticipations
+  /waf/participations/{id}/today:
+    get:
+      summary: Read today's challenge action prompt
+      operationId: getWafParticipationToday
+  /waf/participations/{id}/actions/accept:
+    post:
+      summary: Accept today's community action
+      operationId: acceptWafAction
+  /waf/participations/{id}/checkins:
+    post:
+      summary: Submit community check-in; does not create GrowthEvent
+      operationId: createWafCheckIn
+  /waf/stories:
+    get:
+      summary: List editorial, anonymized, consented family stories
+      operationId: listWafStories

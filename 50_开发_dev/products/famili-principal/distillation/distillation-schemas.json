@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://family.local/fpai/distillation-schemas.json",
+  "title": "FPAI Distillation Schemas",
+  "$defs": {
+    "Lineage": {
+      "type": "object",
+      "required": ["source_id", "source_ref", "distillation_version", "review_status", "evidence_level"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "distillation_version": { "type": "string", "minLength": 1 },
+        "review_status": { "enum": ["DRAFT", "NEEDS_HUMAN_REVIEW", "APPROVED", "REJECTED"] },
+        "evidence_level": { "enum": ["E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7"] },
+        "rights_status": { "enum": ["UNKNOWN", "INTERNAL_AUTHORIZED", "AUTHORIZED_FOR_ANALYSIS", "AUTHORIZED_FOR_TRAINING", "RESTRICTED"] }
+      }
+    },
+    "SourceExcerpt": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["excerpt", "source_type"],
+          "properties": {
+            "excerpt": { "type": "string" },
+            "source_type": { "enum": ["COURSE", "LIVE", "VIDEO", "ARTICLE", "Q_AND_A", "CASE", "TRAINING_CAMP", "SCRIPT", "BOOK", "OTHER"] }
+          }
+        }
+      ]
+    },
+    "MethodClaim": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["method_family", "claim_text", "claim_status"],
+          "properties": {
+            "method_family": { "type": "string" },
+            "claim_text": { "type": "string" },
+            "claim_status": { "enum": ["HYPOTHESIS", "SOURCE_TEACHER_VIEW", "REVIEWED_METHOD", "REJECTED"] }
+          }
+        }
+      ]
+    },
+    "ScenarioPattern": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["scenario_id", "trigger", "loop"],
+          "properties": {
+            "scenario_id": { "type": "string" },
+            "trigger": { "type": "string" },
+            "loop": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "DecisionPattern": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["notice_first", "ask_before_advice", "avoid"],
+          "properties": {
+            "notice_first": { "type": "array", "items": { "type": "string" } },
+            "ask_before_advice": { "type": "array", "items": { "type": "string" } },
+            "avoid": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    },
+    "LanguagePattern": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["intent", "source_pattern", "famili_rewrite"],
+          "properties": {
+            "intent": { "type": "string" },
+            "source_pattern": { "type": "string" },
+            "famili_rewrite": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "CasePattern": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["trigger", "parent_interpretation", "child_reaction", "repair_opening", "small_action"],
+          "properties": {
+            "trigger": { "type": "string" },
+            "parent_interpretation": { "type": "string" },
+            "child_reaction": { "type": "string" },
+            "repair_opening": { "type": "string" },
+            "small_action": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "FamiliGoldResponseCandidate": {
+      "allOf": [
+        { "$ref": "#/$defs/Lineage" },
+        {
+          "type": "object",
+          "required": ["user_input", "candidate_response", "risk_route", "forbidden_checked"],
+          "properties": {
+            "user_input": { "type": "string" },
+            "candidate_response": { "$ref": "principal-response.schema.json" },
+            "risk_route": { "enum": ["NORMAL", "REVIEW", "HIGH_RISK"] },
+            "forbidden_checked": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    }
+  }
+}

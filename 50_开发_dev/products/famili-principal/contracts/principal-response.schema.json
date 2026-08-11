@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://family.local/fpai/principal-response.schema.json",
+  "title": "FPAI Principal Response",
+  "type": "object",
+  "required": ["opening", "what_i_hear", "possible_pattern", "not_the_label", "say_it_tonight", "one_small_action", "look_for", "boundary", "risk_route", "method_refs"],
+  "additionalProperties": false,
+  "properties": {
+    "opening": { "type": "string", "minLength": 1 },
+    "what_i_hear": { "type": "string", "minLength": 1 },
+    "possible_pattern": { "type": "string", "minLength": 1, "description": "Must be framed as hypothesis, not fact." },
+    "not_the_label": { "type": "string", "minLength": 1 },
+    "say_it_tonight": { "type": "string", "minLength": 1 },
+    "one_small_action": { "type": "string", "minLength": 1 },
+    "look_for": { "type": "string", "minLength": 1 },
+    "boundary": { "type": "string", "minLength": 1 },
+    "risk_route": { "enum": ["NORMAL", "REVIEW", "HIGH_RISK"] },
+    "method_refs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "source_refs": { "type": "array", "items": { "type": "string" } }
+  }
+}

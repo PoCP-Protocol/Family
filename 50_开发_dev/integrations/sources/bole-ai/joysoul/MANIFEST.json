@@ -1,0 +1,50 @@
+{
+  "sourceSystem": "joysoul-via-aisoul-bole-ai-search",
+  "sourceRoots": [
+    "D:\\AiSoul\\platform\\datasets",
+    "D:\\AiSoul\\platform\\datasets\\train_export",
+    "D:\\JoySoul_corpus_backup\\20260708_081106\\platform\\datasets"
+  ],
+  "targetDirectory": "50_开发_dev/integrations/sources/bole-ai/joysoul",
+  "capturedAt": "2026-08-10",
+  "selectionPolicy": {
+    "included": "Current JoySoul JSONL distillation, SFT, legal-clean, review, exemplar, scenario, fleet, and chain datasets from D:\\AiSoul\\platform\\datasets and train_export.",
+    "excluded": "_precleanup_backup, recovered-only backups, Kaggle/third-party datasets, model weights, tokenizer/vocab files, node_modules, database files, and archive tarballs.",
+    "backupEvidence": "D:\\JoySoul_corpus_backup\\20260708_081106 contains overlapping historical copies; not copied because current AiSoul datasets are larger/newer primary packages."
+  },
+  "governance": {
+    "classification": "external-source-data-package",
+    "evidenceLimit": "E1 unless independently verified through Family evidence gates",
+    "importBoundary": "Do not write directly to Family core ontology or domain state. Route through adapter validation and FamilyImportCommand/Named Action only.",
+    "excludedTargets": [
+      "30_素材_materials",
+      "20_知识_knowledge/library/*.yaml",
+      "Family core database tables"
+    ]
+  },
+  "summary": {
+    "files": 18,
+    "bytes": 548604866,
+    "lines": 585912
+  },
+  "files": [
+    { "file": "joysoul_distill_api.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_api.jsonl", "bytes": 33352386, "lines": 51428, "sha256": "b38d4d38585125dd08d1062f98eeecfc139e318c65494d6b1cad9dcd81f32cad", "keys": ["instruction", "input", "output", "kind", "region", "signals"] },
+    { "file": "joysoul_distill_chain_deepseek.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_chain_deepseek.jsonl", "bytes": 4290431, "lines": 1579, "sha256": "c445a2ebef5725893826083c0c7623f44f187621f95293eee9059664c3e8defb", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_chain_gpt4o.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_chain_gpt4o.jsonl", "bytes": 4168630, "lines": 1715, "sha256": "1756b15ea7c7f1ad0f92895b542b67af9f85f806eaa0d946e989eb7899e258b8", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_chain_granite.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_chain_granite.jsonl", "bytes": 3994096, "lines": 1728, "sha256": "117132cf45915b69b719c83285ca215da86f48094f99a30bb3bf32ad8c76baf3", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_fleet_chain.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_fleet_chain.jsonl", "bytes": 7561573, "lines": 4686, "sha256": "1cb0c8e45272feae24843c1912d88fc10e5b37440604c7590266848b94a543ea", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_fleet_scenexp.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_fleet_scenexp.jsonl", "bytes": 7264375, "lines": 10420, "sha256": "fb100cf1537a5eeef8661c82c8bdee1192f955225a16178c95ee8de68fc2276e", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_multilang.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_multilang.jsonl", "bytes": 26958828, "lines": 32409, "sha256": "7394416d59ca3cdc71f0f579a1ef37322be17daea9ec8811da0a8ed45ee31dfd", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_recX_v4sft.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_recX_v4sft.jsonl", "bytes": 20272137, "lines": 30563, "sha256": "d3e03364ab1338446cd7c215b422402a510ac0644c0f3983a454d6b27ae1c1db", "keys": ["instruction", "input", "output", "kind", "signals"] },
+    { "file": "joysoul_distill_scenarios_claude.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_scenarios_claude.jsonl", "bytes": 3759025, "lines": 2309, "sha256": "4af6dfa15149d4d08c108f98070118ddf560f34be30325fc83de3e2c79671239", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_scenarios_deepseek.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_scenarios_deepseek.jsonl", "bytes": 7498229, "lines": 7107, "sha256": "bbd4a1140eadad3c60ee5ab52803771f600c0e04842fd04d860208c11ffec956", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_distill_scenarios_gpt4o.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_distill_scenarios_gpt4o.jsonl", "bytes": 2976760, "lines": 3214, "sha256": "17dc1765ab91377539a148fccab82bd156694092b70a22b5c13dd967235e049d", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] },
+    { "file": "joysoul_exemplar_bank.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\train_export\\joysoul_exemplar_bank.jsonl", "bytes": 113747157, "lines": 139907, "sha256": "726a55a39cae4f6efca8ac30202aa668d7d95684b659890e774c88b61169cccf", "keys": ["q", "a", "rat", "kind", "sig"] },
+    { "file": "joysoul_ft_legalclean.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\train_export\\joysoul_ft_legalclean.jsonl", "bytes": 21901362, "lines": 18784, "sha256": "88cb18ff49fd30afdd2ace5700ae935667d8276bc161efe4a3a1153c1967f1ce", "keys": ["messages"] },
+    { "file": "joysoul_ft_review.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\train_export\\joysoul_ft_review.jsonl", "bytes": 46712314, "lines": 39670, "sha256": "ea75dd18434f9ca79d606d9f4d52aad46676f5ea4f4b7c93745257e0983e20bb", "keys": ["messages"] },
+    { "file": "joysoul_ft_v4_sft.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\train_export\\joysoul_ft_v4_sft.jsonl", "bytes": 78920694, "lines": 66138, "sha256": "e7e4ddbdbcd9c91de364bf1313eb52e04a342572c522bb6dfeea68e7d2bdd45c", "keys": ["messages"] },
+    { "file": "joysoul_needs_expert_v2.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_needs_expert_v2.jsonl", "bytes": 28567689, "lines": 15564, "sha256": "057a8cb2cf915c7b8636b77a33ef4df3f397ac1d0e4e30c503f1fb6e4923893e", "keys": ["instruction", "input", "output", "kind", "region", "signals"] },
+    { "file": "joysoul_train_ready_v2.gold.clean.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_train_ready_v2.gold.clean.jsonl", "bytes": 118868057, "lines": 139907, "sha256": "cc52fcf62fc4b37da9e45f12f2e7c53c7a1a64892bb619fac2934e99b08ba588", "keys": ["instruction", "input", "output", "kind", "region", "signals"] },
+    { "file": "joysoul_train_ready_v2.legalclean.jsonl", "sourcePath": "D:\\AiSoul\\platform\\datasets\\joysoul_train_ready_v2.legalclean.jsonl", "bytes": 17791123, "lines": 18784, "sha256": "477096f157002986026401b644841d08792dc8206df7bf21b1ab6795b8f35558", "keys": ["instruction", "input", "output", "rationale", "kind", "signals"] }
+  ]
+}

@@ -1,0 +1,56 @@
+ID,FELS module,FELS entity,Family destination,FELS1 classification
+M001,CRM,"customer, lead",Family Account / Family candidate,IMPLEMENTED_FELS1
+M002,CUSTOMER_CONTACT,contact,Parent candidate,IMPLEMENTED_FELS1
+M003,STUDENT_GUARDIAN,student,Child candidate,IMPLEMENTED_FELS1
+M004,STUDENT_GUARDIAN,student_guardian,FamilyRelationship candidate,IMPLEMENTED_FELS1
+M005,ASSESSMENT,"assessment_session, assessment_report",Assessment + Growth Onboarding source,IMPLEMENTED_FELS1
+M006,LEGACY_AI_ANALYTICS,legacy_ai_report,Growth Insight / Recommendation candidate,PLANNED_FELS4
+M007,LEGACY_AI_ANALYTICS,legacy_profile,GrowthProfile + FamilyTimeline source,PLANNED_FELS4
+M008,COURSE_LMS,"course, lesson",Course + KnowledgeCard + Intervention source,IMPLEMENTED_FELS1
+M009,PROGRAM_COACHING,"training_program, program_enrollment",GrowthProgram candidate,PLANNED_FELS2
+M010,PROGRAM_COACHING,"training_program, legacy_task, legacy_checkin",21-Day GrowthCycle candidate,PLANNED_FELS2
+M011,PROGRAM_COACHING,"training_program, advisor_session, legacy_checkin",90-Day GrowthJourney candidate,PLANNED_FELS2
+M012,COMMERCE_MEMBERSHIP,membership,Family Growth Membership,PLANNED_FELS3
+M013,TASK_CHECKIN_HOMEWORK,legacy_task,GrowthAction history candidate,PLANNED_FELS2
+M014,TASK_CHECKIN_HOMEWORK,legacy_checkin,ActionCompletion Event candidate,PLANNED_FELS2
+M015,TASK_CHECKIN_HOMEWORK,homework_review,HumanObservation / Feedback candidate,PLANNED_FELS2
+M016,HUMAN_SERVICE,"staff, homework_review",Growth Companion + Human Copilot source,PLANNED_FELS4
+M017,HUMAN_SERVICE,"staff, service_case",Growth Advisor / Service Owner candidate,PLANNED_FELS4
+M018,HUMAN_SERVICE,"staff, advisor_session, advisor_note",Human Growth Advisor candidate,PLANNED_FELS4
+M019,HUMAN_SERVICE,"staff, service_case",Expert + Specialist Intervention candidate,PLANNED_FELS4
+M020,COMMUNITY_ACTIVITY,"community, community_member",GrowthCommunity source,EXTERNAL_INTEGRATION
+M021,COMMUNITY_ACTIVITY,activity,FamilyActivity candidate,PLANNED_FELS3
+M022,COMMUNITY_ACTIVITY,activity,City Growth Network,EXTERNAL_INTEGRATION
+M023,COURSE_LMS,"course, lesson",Executable Workflow source,PLANNED_FELS4
+M024,HUMAN_SERVICE,"service_case, advisor_note",Growth Service Workflow source,PLANNED_FELS4
+M025,CRM,"follow_up, opportunity",Growth Operations Workflow source,PLANNED_FELS4
+M026,ASSESSMENT,"assessment_report, legacy_growth_report",Outcome Measurement Workflow source,PLANNED_FELS4
+M027,COMMERCE_MEMBERSHIP,"order, membership",Next Growth Journey Decision source,PLANNED_FELS4
+M028,LEGACY_GOVERNANCE,"audit_log, service_case",Quality & Eval Platform source,PLANNED_FELS4
+M029,LEGACY_AI_ANALYTICS,legacy_growth_report,Family Growth Review source,PLANNED_FELS4
+M030,LEGACY_AI_ANALYTICS,legacy_success_case,OutcomeCase candidate,PLANNED_FELS4
+M031,CRM,lead,Growth Discovery Content reference,EXTERNAL_INTEGRATION
+M032,COMMUNITY_ACTIVITY,"community, community_member",Family Engagement source,EXTERNAL_INTEGRATION
+M033,COMMERCE_MEMBERSHIP,membership,Growth Referral source,PLANNED_FELS3
+M034,COMMERCE_MEMBERSHIP,membership,Membership Benefit,PLANNED_FELS3
+M035,LEGACY_AI_ANALYTICS,legacy_profile.ranking,N/A,RETIRED
+M036,LEGACY_AI_ANALYTICS,legacy_profile.family_score,GrowthProfile States source only,RETIRED
+M037,COMMERCE_MEMBERSHIP,order,OrderRef,IMPLEMENTED_FELS1
+M038,COMMERCE_MEMBERSHIP,payment,PaymentRef,IMPLEMENTED_FELS1
+M039,COURSE_LMS,lesson,LearningSessionRef,EXTERNAL_INTEGRATION
+M040,COURSE_LMS,"class, enrollment, attendance",Program/Class Reference,IMPLEMENTED_FELS1
+M041,CRM,"lead, opportunity, customer",Family CRM View source,EXTERNAL_INTEGRATION
+M042,HUMAN_SERVICE,service_case,SupportInteraction source,EXTERNAL_INTEGRATION
+M043,HUMAN_SERVICE,"advisor_note, service_case",ServiceInteraction / Perspective source,PLANNED_FELS4
+M044,LEGACY_AI_ANALYTICS,legacy_profile,GrowthProfile source candidate,PLANNED_FELS4
+M045,COURSE_LMS,"course, lesson",Knowledge Foundry source,PLANNED_FELS4
+M046,LEGACY_AI_ANALYTICS,legacy_ai_report,Parent Growth Companion source,PLANNED_FELS4
+M047,LEGACY_AI_ANALYTICS,legacy_ai_report,Child Growth Companion deferred source,PLANNED_FELS4
+M048,LEGACY_AI_ANALYTICS,"legacy_ai_report, legacy_alert",Human Copilot source,PLANNED_FELS4
+M049,LEGACY_AI_ANALYTICS,legacy_ai_report,Growth Planner source,PLANNED_FELS4
+M050,LEGACY_AI_ANALYTICS,legacy_ai_report,Management Copilot source,EXTERNAL_INTEGRATION
+M051,LEGACY_AI_ANALYTICS,legacy_alert,Alert + Safety Gate source,PLANNED_FELS4
+M052,LEGACY_GOVERNANCE,"legacy_consent, legacy_agreement",Consent evidence candidate,IMPLEMENTED_FELS1
+M053,LEGACY_AI_ANALYTICS,"legacy_profile, legacy_growth_report",Family Timeline/Event source,PLANNED_FELS4
+M054,LEGACY_GOVERNANCE,audit_log,Causal Evidence Registry source,FAMILY_NEW_CAPABILITY
+M055,LEGACY_AI_ANALYTICS,"legacy_success_case, legacy_growth_report",CausalEpisode source candidate,FAMILY_NEW_CAPABILITY

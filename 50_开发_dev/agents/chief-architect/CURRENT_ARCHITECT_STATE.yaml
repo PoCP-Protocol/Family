@@ -1,0 +1,106 @@
+project: FAMILY
+architecture_version: V3.2
+fca_version: 1.0
+current_date: 2026-08-10
+
+milestones:
+  M0:
+    name: Architecture & Engineering Foundation
+    status: CLOSED
+  M1:
+    name: Real Family Core
+    status: CLOSED
+  M2:
+    name: First Family Growth Loop
+    status: RUNNING
+  M3:
+    name: Family Growth Product
+    status: FUTURE
+  M4:
+    name: Scale + Human + Business Integration
+    status: FUTURE
+  M5:
+    name: Causal Learning
+    status: FUTURE
+  M6:
+    name: Family Growth World Model
+    status: FUTURE
+
+current_wave:
+  id: M2_WAVE_3
+  name: OBSERVE_AND_REVIEW
+  status: IN_PROGRESS_PHASE_A_CONTRACT_FREEZE
+
+last_completed_task:
+  id: M2-103
+  name: EVIDENCE_SYNTHESIS_AND_LIMITED_GROWTH_PROFILE
+  status: PASS
+  verified_capability_level: L5
+  note: "Real DB/API/frontend/demo evidence exists for limited deterministic GrowthProfile draft and confirmation flow. No outcome or pilot validation claimed."
+
+next_candidate:
+  wave: M2_WAVE_3
+  name: OBSERVE_AND_REVIEW
+  status: AUTHORIZED
+
+authorization:
+  next_wave: AUTHORIZED
+  start_next: true
+  rule: "READY_FOR_NEXT does not imply START_NEXT."
+  ready_for_wave3: true
+  ai07: PASS
+  blockers: []
+
+active_scenario:
+  name: adolescent_communication_conflict
+  age_range: "12-15"
+
+active_dimensions:
+  - P03
+  - R03
+  - R04
+  - R05
+
+active_interventions:
+  - LISTEN_BEFORE_RESPOND
+
+ai_autonomy:
+  max_level: AL2
+  current_m2_wave2_policy: DETERMINISTIC_NO_AI
+  current_m2_wave3_policy: DETERMINISTIC_NO_AI
+
+forbidden:
+  - FAMILY_TOTAL_SCORE
+  - FAMILY_RANKING
+  - WORLD_MODEL_RUNTIME
+  - CAUSAL_ENGINE
+  - AI_DIRECT_CORE_STATE_WRITE
+  - GRAPHDB_M2
+  - MICROSERVICES_M2
+  - FULL_AGENT_PLATFORM_M2
+
+governance_debt:
+  GOV-001:
+    name: WITHDRAW_CONSENT
+    required_before: EXTERNAL_PILOT
+  GOV-002:
+    name: IAM_HARDENING
+    required_before: EXTERNAL_PILOT
+  GOV-003:
+    name: FULL_BROWSER_CLICK_DEMO_AUTOMATION
+    required_before: REPEATABLE_RELEASE_GATE
+
+recent_architecture_artifacts:
+  - reports/m2/task-103/M2_103_GATE.md
+  - reports/m2/demo/M2_WAVE1_REAL_DEMO_RUNBOOK.md
+  - reports/m2/wave2/M2_WAVE2_CONTRACT_FREEZE.md
+  - reports/m2/wave2/SHARED_FILE_CONFLICT_MATRIX.md
+  - reports/m2/wave2/integration/status/AI05_STATUS.md
+  - reports/m2/wave2/integration/status/AI06_STATUS.md
+  - reports/m2/wave2/integration/status/AI07_STATUS.md
+  - docs/FAMILY_1_0_MOS_ARCHITECTURE_GATE.md
+  - reports/m2/wave3/CCR-M2-WAVE4-001.md
+  - reports/m2/wave3/M2_WAVE3_CONTRACT_FREEZE_V1.md
+  - reports/m2/wave3/M2_WAVE3_SHARED_FILE_MATRIX.md
+
+state_update_rule: "Update this file after each architect-approved wave/stage verdict. Do not update it as a side effect of ordinary coding work."

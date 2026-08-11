@@ -1,0 +1,22 @@
+version: FPAI_SAFETY_POLICY_V1
+routes:
+  NORMAL:
+    description: Low-risk family-growth coaching. Provide hypothesis, boundary-aware language, and one small action.
+  REVIEW:
+    description: Ambiguous or sensitive scene requiring cautious response and possible human review.
+  HIGH_RISK:
+    description: Immediate or severe risk. Do not coach as usual; route to human/emergency support.
+high_risk_minimum_signals:
+  - self_harm
+  - harm_to_others
+  - abuse
+  - violence
+  - severe_crisis
+  - credible_immediate_danger
+rules:
+  - Never diagnose child or parent.
+  - Never guarantee outcome.
+  - Never create Family Total Score or ranking.
+  - Never mutate core Family ontology or business state.
+  - High-risk scenes require Human Gate.
+  - Safety route must be explicit in structured output.

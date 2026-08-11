@@ -1,0 +1,16 @@
+legacy_system,legacy_entity,legacy_field,family_target,route,rule,priority,review_required,notes
+legacy_crm,Customer,customer_id,external_entity_refs.source_entity_id,INTEGRATE,DIRECT_REF,P0,false,Family ID remains owned by Family.
+legacy_crm,Customer,customer_name,Family.display_name,TRANSFORM,NORMALIZE_DISPLAY_NAME,P0,true,Do not infer household membership from name alone.
+legacy_crm,Contact,phone,Parent.contact_method,TRANSFORM,NORMALIZE_PHONE,P0,true,Phone can support matching but cannot auto-merge families alone.
+legacy_crm,Contact,relationship_note,FamilyRelationship evidence,TRANSFORM,HUMAN_REVIEW_RELATIONSHIP,P0,true,Relationship is not consent.
+legacy_family_identity,Student,student_id,external_entity_refs.source_entity_id,TRANSFORM,DIRECT_REF,P0,false,Legacy student ID remains external reference.
+legacy_family_identity,Student,birth_date,Child profile input,TRANSFORM,DATE_NORMALIZATION,P0,true,Birth date alone does not assign canonical life stage.
+legacy_assessment,AssessmentRecord,score,Historical Assessment Evidence payload,MIGRATE,NO_PROFILE_DIRECT_WRITE,P0,false,Old score must not become Growth State.
+legacy_assessment,AssessmentRecord,label,HistoricalPerspective,TRANSFORM,NOT_FACT,P0,true,Old label must not become Fact.
+legacy_assessment,AIDiagnosis,text,Historical AI Hypothesis,TRANSFORM,FACT_STATUS_NOT_FACT,P0,true,Old AI diagnosis must not become Diagnosis.
+legacy_learning,Task,title,Historical GrowthAction,TRANSFORM,HISTORICAL_ACTION_IMPORT,P0,true,Must bind to dimension/intervention before active reuse.
+legacy_learning,CheckIn,completed,ActionCompletion Event,MIGRATE,HISTORICAL_EVENT_ONLY,P0,false,Completion does not imply Outcome or growth improvement.
+legacy_service,ServiceNote,note_text,ServiceInteraction / Perspective,TRANSFORM,CLASSIFY_FREE_TEXT,P0,true,Free text is not Fact; privacy/safety review may apply.
+legacy_commerce,Order,order_id,OrderRef,INTEGRATE,DIRECT_REF,P0,false,Order system remains system of record.
+legacy_commerce,Payment,payment_id,PaymentRef,INTEGRATE,DIRECT_REF,P0,false,Payment system remains system of record.
+legacy_crm,ConsentRecord,consent_payload,Consent evidence,VERIFY,CONSENT_PROOF_REQUIRED,P0,true,Legacy consent is active only when purpose/proof requirements pass.

@@ -3,7 +3,7 @@ import { WebSocketServer } from 'ws';
 import { RealtimeSessionMachine } from '../../../../../packages/realtime-session/src/sessionMachine';
 import { FakeSpeechToTextGateway, FakeTextToSpeechGateway } from '../../../../../packages/speech-gateway/src';
 import { FakeAvatarGateway } from '../../../../../packages/avatar-gateway/src';
-import { PrincipalPerformancePlanner } from '../../../../../packages/principal-ai/src/performancePlanner';
+import { PrincipalPerformancePlanner } from '../../../../../packages/fpai-performance-planner/src/performancePlanner';
 import type { PrincipalAiOutput, RealtimeClientCommand, RealtimeServerEvent } from '../../../../../packages/fpai-multimodal-contracts/src';
 
 const server = createServer();

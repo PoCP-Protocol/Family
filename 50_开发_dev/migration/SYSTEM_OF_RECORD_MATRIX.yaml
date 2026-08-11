@@ -1,0 +1,59 @@
+version: 1.0
+status: LM0_DISCOVERY_DRAFT
+domains:
+  family_identity:
+    master: Family
+    external_systems: [legacy_crm, legacy_family_identity]
+    integration: external_entity_refs
+  relationship:
+    master: Family
+    external_systems: [legacy_crm, legacy_service, legacy_community]
+    integration: semantic review and evidence links
+  consent:
+    master: Family
+    external_systems: [legacy_crm, legacy_user_systems]
+    integration: consent evidence only unless proof is complete
+  growth_profile:
+    master: Family
+    external_systems: [legacy_assessment, legacy_ai_reports]
+    integration: evidence and perspective inputs only
+  growth_priority:
+    master: Family
+    external_systems: []
+    integration: human-confirmed focus
+  intervention:
+    master: Family
+    external_systems: [legacy_learning]
+    integration: KnowledgeCard and Intervention mapping
+  growth_action:
+    master: Family
+    external_systems: [legacy_learning]
+    integration: historical actions with provenance
+  outcome:
+    master: Family
+    external_systems: [legacy_reports, legacy_cases]
+    integration: no outcome inferred from completion or purchase
+  lead_opportunity:
+    master: CRM
+    external_systems: [legacy_crm]
+    integration: CRM Adapter linked to family_id
+  order:
+    master: Order System
+    external_systems: [legacy_commerce]
+    integration: OrderRef
+  payment:
+    master: Payment System
+    external_systems: [legacy_commerce]
+    integration: PaymentRef
+  class_teaching_ops:
+    master: LMS
+    external_systems: [legacy_learning]
+    integration: LMS Adapter and Program/Class Reference
+  live_delivery:
+    master: Live SaaS
+    external_systems: [legacy_live]
+    integration: LearningSessionRef
+  support_channel:
+    master: Support System
+    external_systems: [legacy_service]
+    integration: SupportInteraction and Timeline reference

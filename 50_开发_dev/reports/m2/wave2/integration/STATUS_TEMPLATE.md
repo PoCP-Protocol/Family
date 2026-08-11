@@ -1,0 +1,11 @@
+# Role Status Template
+
+```text
+STATE:
+LAST_COMMIT / CHANGESET:
+DONE:
+NEXT:
+BLOCKER:
+NEEDS_FROM:
+CONTRACT_VERSION:
+```

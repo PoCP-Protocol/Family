@@ -1,0 +1,26 @@
+version: 0.2
+event: GrowthActionCompleted
+immutable: true
+wave: M2
+compatibility_status: existing_runtime_event
+semantic_note: Existing runtime event name is broader than its name. It records a check-in for completion_status COMPLETED, PARTIAL, or NOT_COMPLETED. Runtime rename to GrowthActionCheckInRecorded requires a CCR.
+required_fields:
+  - event_id
+  - occurred_at
+  - actor_id
+  - correlation_id
+  - action
+  - reflection_boundary
+payload_rules:
+  - action.completion_status_must_be_COMPLETED_PARTIAL_or_NOT_COMPLETED
+  - action.boundary_must_be_ACTION_IS_NOT_OUTCOME
+  - reflection_boundary_must_be_REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME
+  - no_outcome_payload_allowed
+  - no_profile_payload_allowed
+  - no_milestone_payload_allowed
+boundaries:
+  - action_is_not_outcome
+  - reflection_is_raw_material_not_outcome
+metadata_required:
+  - source
+  - schema_version

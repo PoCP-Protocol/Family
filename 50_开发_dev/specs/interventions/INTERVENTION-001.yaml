@@ -1,0 +1,35 @@
+version: 0.2
+intervention_id: INTERVENTION-001
+intervention_code: LISTEN_BEFORE_RESPOND
+name_zh: 先听后回应
+wave: M2
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+duration_days: 7
+target_dimensions:
+  - P03
+  - R03
+  - R04
+  - R05
+purpose: Provide one small seven-day parent-child communication practice after a human-confirmed priority is active.
+why: 家长先听见孩子表达，再回应。
+behavior: 每天选择一次低风险沟通场景，先复述孩子表达，再给出回应。
+expected_mediator: 亲子沟通中的理解确认频率
+expected_outcome: 不承诺结果改善，仅观察沟通过程变化。
+action_template: 今天找一个低风险话题，先复述孩子的意思，再回应自己的看法。
+contraindications:
+  - safety_route_not_normal
+  - required_growth_consent_missing
+  - active_intervention_episode_exists
+boundaries:
+  - intervention_is_practice_support_not_treatment
+  - action_is_not_outcome
+  - recommendation_not_decision_not_action
+  - no_ai_personalization
+  - no_profile_write
+  - no_outcome_write
+  - no_milestone_write
+runtime_alignment:
+  policy_file: apps/api/src/modules/family/intervention.policy.ts
+  action: StartIntervention
+  event: InterventionStarted
+policy_version: M2_105_DETERMINISTIC_V1

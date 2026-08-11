@@ -1,0 +1,31 @@
+version: 1.0
+status: PROPOSED_CANONICAL_CONTRACT
+lm0_scope: design_only
+contract: ExternalEntityRef
+fields:
+  external_ref_id: string
+  source_system: string
+  source_entity_type: string
+  source_entity_id: string
+  family_id: string nullable
+  person_id: string nullable
+  relationship_id: string nullable
+  journey_id: string nullable
+  mapping_version: string
+  mapping_status: enum
+  created_at: datetime
+  verified_at: datetime nullable
+mapping_status:
+  - PROPOSED
+  - REVIEW_REQUIRED
+  - VERIFIED
+  - REJECTED
+identity_key:
+  - source_system
+  - source_entity_type
+  - source_entity_id
+  - mapping_version
+rules:
+  - CRM_ID, Student_ID, and Order_User_ID must not become Family canonical IDs.
+  - Legacy IDs are external references only.
+  - VERIFIED requires identity evidence and review trail.

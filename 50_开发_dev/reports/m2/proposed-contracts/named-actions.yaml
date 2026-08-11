@@ -35,3 +35,23 @@ named_actions:
     writes: [milestones, outcomes, growth_reviews]
     requires_human_gate: MEDIUM
     ai_allowed: AL1_AL2_SUMMARIZE_ONLY
+  - id: RecordOutcomeObservation
+    phase: M2_WAVE3
+    writes: [outcome_observations]
+    invariant: Observation != Fact; OutcomeObservation != CausalEffect
+    ai_allowed: false
+  - id: CompleteGrowthReview
+    phase: M2_WAVE3
+    writes: [growth_reviews]
+    invariant: GrowthReview != GrowthProfile; GrowthReview != Diagnosis
+    ai_allowed: false
+  - id: CloseInterventionCycle
+    phase: M2_WAVE3
+    writes: [intervention_episodes]
+    invariant: No hidden state mutation; no next action start
+    ai_allowed: false
+  - id: RecordNextStepDecision
+    phase: M2_WAVE3
+    writes: [next_step_decisions]
+    invariant: NextStepDecision != NextAction
+    ai_allowed: false

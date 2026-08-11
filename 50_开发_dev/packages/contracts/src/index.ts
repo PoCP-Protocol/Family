@@ -176,7 +176,7 @@ export interface StartGrowthOnboardingRequest {
   family_id: string;
   child_id: string;
   guardian_person_id: string;
-  safety_screening_result: SafetyScreeningResult;
+  structured_safety_signals: StructuredSafetySignal[];
   idempotency_key: string;
 }
 
@@ -190,7 +190,7 @@ export interface GrowthOnboardingDto {
   target_dimensions: ['P03', 'R03', 'R04', 'R05'];
   status: GrowthOnboardingStatus;
   phase: GrowthOnboardingPhase;
-  safety_screening_result: SafetyScreeningResult;
+  safety_disposition: SafetyDispositionDto;
   ai_personalization_enabled: false;
   started_at: string;
   created_at: string;
@@ -393,6 +393,334 @@ export interface ConfirmGrowthProfileRequest {
 export interface ConfirmGrowthProfileResponse {
   profile: GrowthProfileDto;
   draft: GrowthProfileDraftDto;
+}
+
+export type GrowthPriorityPolicyVersion = 'M2_104_DETERMINISTIC_V2';
+export type GrowthPriorityStatus = 'ACTIVE' | 'SUPERSEDED';
+export type GrowthPriorityDecision = M2GrowthDimensionId | 'NO_PRIORITY_YET';
+export type GrowthPriorityEligibility = 'ELIGIBLE' | 'REVIEW_REQUIRED' | 'NO_PRIORITY_YET';
+export type GrowthPriorityBoundary = 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS';
+export type GrowthPriorityReasonCode =
+  | 'RECENTLY_CONFIRMED_PROFILE'
+  | 'PRACTICE_READY'
+  | 'PROFILE_UNRESOLVED'
+  | 'PROFILE_UNCONFIRMED'
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'PERSPECTIVE_DIVERGENCE'
+  | 'SAFETY_NOT_ELIGIBLE'
+  | 'CONSENT_NOT_ACTIVE';
+export type GrowthPriorityLimitation =
+  | 'PROFILE_REQUIRED'
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'PERSPECTIVE_DIVERGENCE'
+  | 'STALE_PROFILE'
+  | 'SAFETY_BLOCKED'
+  | 'CONSENT_REQUIRED';
+
+export interface GrowthPriorityCandidateDto {
+  dimension_id: M2GrowthDimensionId;
+  profile_id: string;
+  profile_version: number;
+  state_snapshot: GrowthState;
+  reason_codes: GrowthPriorityReasonCode[];
+  evidence_summary: {
+    supporting_evidence_count: number;
+    limitations: ProfileLimitation[];
+    agreement_level: AgreementLevel;
+    confidence: ProfileConfidence;
+  };
+  eligibility: GrowthPriorityEligibility;
+  boundary: GrowthPriorityBoundary;
+  why: string;
+  expected_change: string;
+  limitations: GrowthPriorityLimitation[];
+  policy_version: GrowthPriorityPolicyVersion;
+  created_at: string;
+}
+
+export interface GrowthPriorityDraftDto {
+  draft_id: string;
+  family_id: string;
+  onboarding_id: string;
+  decision: GrowthPriorityDecision;
+  candidate: GrowthPriorityCandidateDto | null;
+  profile_refs: Array<{
+    profile_id: string;
+    version: number;
+    dimension_id: M2GrowthDimensionId;
+  }>;
+  evidence_refs: string[];
+  confidence: ProfileConfidence;
+  policy_version: GrowthPriorityPolicyVersion;
+  profile_snapshot: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface GrowthPriorityDto {
+  priority_id: string;
+  family_id: string;
+  onboarding_id: string;
+  profile_id: string;
+  dimension_id: M2GrowthDimensionId;
+  status: GrowthPriorityStatus;
+  version: number;
+  boundary: GrowthPriorityBoundary;
+  reason_codes: GrowthPriorityReasonCode[];
+  evidence_refs: string[];
+  policy_version: GrowthPriorityPolicyVersion;
+  confirmed_by_actor_id: string;
+  confirmed_at: string;
+  superseded_at: string | null;
+  previous_priority_id: string | null;
+  created_at: string;
+}
+
+export interface GrowthPriorityInsightResponse {
+  onboarding_id: string;
+  family_id: string;
+  draft: GrowthPriorityDraftDto;
+  active_priority: GrowthPriorityDto | null;
+}
+
+export interface ConfirmGrowthPriorityRequest {
+  family_id: string;
+  onboarding_id: string;
+  draft_id: string;
+  decision: GrowthPriorityDecision;
+  idempotency_key: string;
+}
+
+export interface ConfirmGrowthPriorityResponse {
+  priority: GrowthPriorityDto | null;
+  decision: GrowthPriorityDecision;
+  draft: GrowthPriorityDraftDto;
+}
+
+export type InterventionCode = 'LISTEN_BEFORE_RESPOND';
+export type InterventionId = 'INTERVENTION-001';
+export type InterventionPolicyVersion = 'M2_105_DETERMINISTIC_V1';
+export type InterventionEpisodeStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type GrowthActionStatus = 'PENDING' | 'COMPLETED' | 'PARTIAL' | 'NOT_COMPLETED';
+export type GrowthActionBoundary = 'ACTION_IS_NOT_OUTCOME';
+export type ReflectionBoundary = 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME';
+
+export interface InterventionCardDto {
+  intervention_id: InterventionId;
+  intervention_code: InterventionCode;
+  name_zh: '先听后回应';
+  duration_days: 7;
+  why: string;
+  target: string;
+  behavior: string;
+  applicability: string[];
+  contraindications: string[];
+  safety_notes: string[];
+  expected_mediator: string;
+  expected_outcome: string;
+  action_template: string;
+  policy_version: InterventionPolicyVersion;
+}
+
+export interface InterventionEpisodeDto {
+  episode_id: string;
+  family_id: string;
+  onboarding_id: string;
+  priority_id: string;
+  intervention_id: InterventionId;
+  intervention_code: InterventionCode;
+  status: InterventionEpisodeStatus;
+  started_by_actor_id: string;
+  started_at: string;
+  planned_days: 7;
+  policy_version: InterventionPolicyVersion;
+  created_at: string;
+}
+
+export interface GrowthActionDto {
+  action_id: string;
+  family_id: string;
+  onboarding_id: string;
+  priority_id: string;
+  intervention_episode_id: string;
+  day_index: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  status: GrowthActionStatus;
+  assignment_text: string;
+  due_date: string;
+  completed_at: string | null;
+  completion_status: GrowthActionStatus | null;
+  reflection: string | null;
+  reflection_boundary: ReflectionBoundary | null;
+  boundary: GrowthActionBoundary;
+  created_at: string;
+}
+
+export interface StartInterventionRequest {
+  family_id: string;
+  onboarding_id: string;
+  priority_id: string;
+  intervention_code: InterventionCode;
+  idempotency_key: string;
+}
+
+export interface StartInterventionResponse {
+  intervention: InterventionCardDto;
+  episode: InterventionEpisodeDto;
+  actions: GrowthActionDto[];
+}
+
+export interface CompleteGrowthActionRequest {
+  family_id: string;
+  action_id: string;
+  completion_status: Exclude<GrowthActionStatus, 'PENDING'>;
+  reflection: string;
+  occurred_at: string;
+  idempotency_key: string;
+}
+
+export interface CompleteGrowthActionResponse {
+  action: GrowthActionDto;
+  reflection_boundary: ReflectionBoundary;
+}
+
+export type Wave3PolicyVersion = 'M2_106_DETERMINISTIC_V1';
+export type OutcomeObservationPerspective = 'PARENT_OBSERVATION' | 'CHILD_OBSERVATION';
+export type OutcomeObservationBoundary = 'OBSERVATION_IS_NOT_FACT_OR_CAUSAL_EFFECT';
+export type GrowthReviewStatus = 'COMPLETED';
+export type GrowthReviewBoundary = 'REVIEW_IS_NOT_PROFILE_MUTATION_OR_DIAGNOSIS';
+export type GrowthReviewLimitation =
+  | 'MISSING_CHECK_INS'
+  | 'PARENT_CHILD_DIVERGENCE'
+  | 'PARENT_OBSERVATION_ONLY'
+  | 'CHILD_OBSERVATION_ONLY'
+  | 'NO_OUTCOME_OBSERVATION'
+  | 'SAFETY_ROUTE_NOT_NORMAL'
+  | 'CONSENT_REQUIRED';
+export type NextStepDecision = 'CONTINUE' | 'ADJUST' | 'PAUSE' | 'REVIEW_REQUIRED';
+export type NextStepDecisionBoundary = 'NEXT_STEP_DECISION_IS_NOT_NEXT_ACTION';
+export type FamilyTimelineEventType =
+  | 'INTERVENTION_STARTED'
+  | 'GROWTH_ACTION_COMPLETED'
+  | 'OUTCOME_OBSERVATION_RECORDED'
+  | 'GROWTH_REVIEW_COMPLETED'
+  | 'NEXT_STEP_DECISION_RECORDED';
+
+export interface OutcomeObservationDto {
+  observation_id: string;
+  family_id: string;
+  subject_person_id: string;
+  observer_person_id: string;
+  intervention_episode_id: string;
+  perspective_type: OutcomeObservationPerspective;
+  observation_text: string;
+  action_refs: string[];
+  reflection_refs: string[];
+  evidence_refs: string[];
+  limitations: string[];
+  observed_at: string;
+  boundary: OutcomeObservationBoundary;
+  policy_version: Wave3PolicyVersion;
+  created_at: string;
+}
+
+export interface RecordOutcomeObservationRequest {
+  family_id: string;
+  subject_person_id: string;
+  observer_person_id: string;
+  intervention_episode_id: string;
+  perspective_type: OutcomeObservationPerspective;
+  observation_text: string;
+  action_refs?: string[];
+  reflection_refs?: string[];
+  evidence_refs?: string[];
+  limitations?: string[];
+  observed_at: string;
+  idempotency_key: string;
+}
+
+export interface RecordOutcomeObservationResponse {
+  observation: OutcomeObservationDto;
+}
+
+export interface GrowthReviewActionSummaryDto {
+  total_actions: 7;
+  completed: number;
+  partial: number;
+  not_completed: number;
+  missing: number;
+}
+
+export interface GrowthReviewDto {
+  review_id: string;
+  family_id: string;
+  onboarding_id: string;
+  intervention_episode_id: string;
+  priority_id: string;
+  dimension_id: M2GrowthDimensionId;
+  status: GrowthReviewStatus;
+  action_summary: GrowthReviewActionSummaryDto;
+  observation_ids: string[];
+  limitations: GrowthReviewLimitation[];
+  boundary: GrowthReviewBoundary;
+  policy_version: Wave3PolicyVersion;
+  completed_by_actor_id: string;
+  completed_at: string;
+  created_at: string;
+}
+
+export interface CompleteGrowthReviewRequest {
+  family_id: string;
+  intervention_episode_id: string;
+  idempotency_key: string;
+}
+
+export interface CompleteGrowthReviewResponse {
+  review: GrowthReviewDto;
+  observations: OutcomeObservationDto[];
+}
+
+export interface NextStepDecisionDto {
+  decision_id: string;
+  family_id: string;
+  review_id: string;
+  intervention_episode_id: string;
+  decision: NextStepDecision;
+  rationale: string | null;
+  boundary: NextStepDecisionBoundary;
+  policy_version: Wave3PolicyVersion;
+  decided_by_actor_id: string;
+  decided_at: string;
+  created_at: string;
+}
+
+export interface RecordNextStepDecisionRequest {
+  family_id: string;
+  review_id: string;
+  decision: NextStepDecision;
+  rationale?: string;
+  idempotency_key: string;
+}
+
+export interface RecordNextStepDecisionResponse {
+  decision: NextStepDecisionDto;
+}
+
+export interface FamilyTimelineEventDto {
+  event_id: string;
+  family_id: string;
+  intervention_episode_id: string;
+  event_type: FamilyTimelineEventType;
+  occurred_at: string;
+  source: 'INTERVENTION_EPISODE' | 'GROWTH_ACTION' | 'OUTCOME_OBSERVATION' | 'GROWTH_REVIEW' | 'NEXT_STEP_DECISION';
+  resource_id: string;
+  title: string;
+  payload: Record<string, unknown>;
+  boundary: 'TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING';
+}
+
+export interface FamilyTimelineResponse {
+  family_id: string;
+  intervention_episode_id: string;
+  events: FamilyTimelineEventDto[];
 }
 
 /** 审计元数据:每个关键写 Action 必带(CLAUDE C06)。 */

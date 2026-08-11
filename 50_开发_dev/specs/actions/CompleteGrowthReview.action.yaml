@@ -1,0 +1,55 @@
+version: 0.1
+action: CompleteGrowthReview
+purpose: Complete a deterministic growth review that summarizes attempted actions, recorded and missing evidence, parent/child observations, divergence, limitations, and selected next-step intent without claiming efficacy or mutating GrowthProfile.
+wave: M2_WAVE3
+scenario: PARENT_CHILD_COMMUNICATION_CONFLICT_12_15
+input:
+  required:
+    - family_id
+    - subject_person_id
+    - intervention_episode_id
+    - review_summary
+    - evidence_limitations
+    - next_step_decision
+    - idempotency_key
+  optional:
+    - observation_ids
+    - agreement_divergence
+    - what_was_attempted
+    - what_was_recorded
+    - what_was_not_recorded
+  next_step_decision_values:
+    - CONTINUE
+    - ADJUST
+    - PAUSE
+    - REVIEW_REQUIRED
+eligibility:
+  any_of:
+    - planned_intervention_period_has_ended
+    - all_planned_actions_terminal_check_in_state
+preconditions:
+  - family_exists
+  - subject_belongs_to_family
+  - intervention_episode_exists
+  - required_growth_consents_active
+  - safety_route_is_NORMAL
+effects:
+  - create_growth_review
+  - append_audit_record
+  - emit_GrowthReviewCompleted
+boundaries:
+  - growth_review_is_not_growth_profile
+  - growth_review_is_not_diagnosis
+  - outcome_observation_is_not_causal_effect
+  - missing_check_ins_remain_missing_evidence
+  - no_pending_to_not_completed_auto_conversion
+  - no_profile_write
+  - no_profile_dimension_write
+  - no_next_intervention_start
+  - no_course_create
+  - no_ai_recommendation
+  - no_score_or_ranking
+idempotency: required
+audit: required
+outbox: required
+policy_version: M2_WAVE3_DETERMINISTIC_V1

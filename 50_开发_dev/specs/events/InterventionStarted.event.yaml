@@ -1,0 +1,26 @@
+version: 0.2
+event: InterventionStarted
+immutable: true
+wave: M2
+required_fields:
+  - event_id
+  - occurred_at
+  - actor_id
+  - correlation_id
+  - intervention
+  - episode
+  - actions
+payload_rules:
+  - intervention.intervention_id_must_be_INTERVENTION-001
+  - intervention.intervention_code_must_be_LISTEN_BEFORE_RESPOND
+  - episode.planned_days_must_be_7
+  - actions_count_must_be_7
+  - every_action_boundary_must_be_ACTION_IS_NOT_OUTCOME
+  - no_outcome_payload_allowed
+  - no_profile_payload_allowed
+boundaries:
+  - intervention_is_practice_support_not_treatment
+  - action_is_not_outcome
+metadata_required:
+  - source
+  - schema_version

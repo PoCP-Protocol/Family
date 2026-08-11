@@ -75,7 +75,8 @@ describe('TASK-107 M1 Family Core aggregate E2E', () => {
 		await expectCount('growth_journeys', 0);
 		await expectCount('growth_events', 0);
 		await expectCount('growth_actions', 0);
-		await expectCount('interventions', 0);
+		// Wave2 migration seeds one immutable intervention catalog entry; M1 flow creates none.
+		await expectCount('interventions', 1);
 	});
 
 	it('M1-E2E-02 denies unauthorized aggregate read', async () => {
