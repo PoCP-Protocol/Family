@@ -6,6 +6,19 @@ schema_version: AUTH_REGISTRY_V1
 maintained_by: family-chief-architect
 updated_at: "2026-08-11"
 
+# M3-W1 收口(架构师 M3_W1_RUNTIME_INTEGRATION_FINAL_REVIEW = PASS,授权合并 PR #1)
+program_gates:
+  M3_INT_001: PASS_CLOSED            # FPAI Runtime Admission & Governance Reconciliation
+  M3_W1_FAMILI_PRINCIPAL_RUNTIME: PASS_CLOSED
+  FPAI_RUNTIME_ADMITTED_TO_MOS: YES  # merge commit 4398a857 → m3/family-1-0-mos;post-merge CI green
+  # 代码已并入 ≠ 下述能力被授权;以下继续 NOT_AUTHORIZED:
+  REAL_MODEL_DEFAULT_ENABLED: NO
+  IMAGE_EXTERNAL_RUNTIME: NOT_AUTHORIZED
+  PRODUCTION_PROVIDER_APPROVED: NO
+  PUBLIC_FPAI_RUNTIME: NO
+  PILOT_READY: NO
+  NEXT_PROGRAM_STAGE: M3-W2_CONSUMER_PRODUCT_INTEGRATION
+
 # 授权级别语义(布尔逐级递进,后者不因前者自动为真):
 #   architecture_authorized     契约/架构已批
 #   code_authorized             允许在仓库存在实现代码

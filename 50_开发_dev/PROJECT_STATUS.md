@@ -31,11 +31,15 @@ M3 — FAMILY 1.0 MINIMUM OPERABLE SYSTEM — NOW
 
 ## In Progress
 
-- active_task: none;M3-RB-002 已收口(V3.3 SSOT 收敛完成);下一步 = M3-INT-001 Runtime Admission PR + M3-W1 最终评审
+- active_task: M3-W2-000 Consumer Golden Journey Integration Contract Gate(WAF → Principal/Growth OS 接线,不改 AI 后台)
 - M2 = CLOSED
 - M3_000 = PASS_CLOSED
 - M3_101A = PASS_ACCEPTED
-- M3_101B_108 = INTEGRATION_CANDIDATE(代码在 m3/fpai-runtime-admission-fix;经 M3-INT-001 治理约束;真实外呼默认关闭)
+- M3_INT_001 = PASS_CLOSED;M3_W1_FAMILI_PRINCIPAL_RUNTIME = PASS_CLOSED
+- FPAI_RUNTIME_ADMITTED_TO_MOS = YES(merge commit 4398a857 → m3/family-1-0-mos;post-merge CI green run 31511460551)
+- FROZEN_BRANCHES = m3/fpai-runtime-readiness(@99d4797)+ m3/fpai-runtime-admission-fix(@0a65018);NO_NEW_DEVELOPMENT,保留不删
+- 持续 NOT_AUTHORIZED:REAL_MODEL_DEFAULT_ENABLED=NO / IMAGE_EXTERNAL=NO / PRODUCTION_PROVIDER=NO / PILOT=NO / SFT / DH1 / VOICE / AVATAR
+- FPAI_BACKEND_FEATURE_EXPANSION = HOLD(除非 W2 暴露真实 blocker)
 
 ## Completed
 

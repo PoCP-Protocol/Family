@@ -3,8 +3,26 @@
 date: 2026-08-11
 branch: `m3/fpai-runtime-admission-fix`(off frozen evidence `99d4797`)
 evidence_baseline (frozen): `m3/fpai-runtime-readiness @ 99d479755510cd85f55a19fbc7127a6fee16c3d0`
-status: **TRANCHE_1+2_DONE — 安全/治理阻断项 + Attempt 账本/配额口径/policy-aware provider 已闭合;仅剩 B4(RB-002/MOS 程序分支)。**
-mission: 不加功能,把高质量隔离研发线变成可合法并入 Family 1.0 MOS 的 Runtime Candidate。
+status: **PASS_CLOSED — M3-INT-001 = PASS_CLOSED;M3-W1 = PASS_CLOSED;FPAI Runtime 已并入 Family 1.0 MOS(merge commit 4398a857)。**
+mission: 不加功能,把高质量隔离研发线合法并入 Family 1.0 MOS。已完成并经架构师 M3-W1 最终评审批准合并。
+
+## M3-W1 收口(post-merge)
+```
+M3_INT_001 = PASS_CLOSED
+M3_W1_FAMILI_PRINCIPAL_RUNTIME = PASS_CLOSED
+FPAI_RUNTIME_ADMITTED_TO_MOS = YES
+MERGE = m3/fpai-runtime-admission-fix → m3/family-1-0-mos (merge commit 4398a857;非 squash;未入 master)
+POST_MERGE_CI = PASS  (run 31511460551 @ 4398a857:Family M2 required gates=success + M3 foundation gates=success)
+FROZEN_BRANCHES = m3/fpai-runtime-readiness(@99d4797)+ m3/fpai-runtime-admission-fix(@0a65018)  # NO_NEW_DEVELOPMENT,保留审计,不删
+# 持续 NOT_AUTHORIZED(代码存在≠授权):
+REAL_MODEL_DEFAULT_ENABLED = NO
+IMAGE_EXTERNAL_RUNTIME = NO
+PRODUCTION_PROVIDER_APPROVED = NO
+PUBLIC_FPAI_RUNTIME = NO
+PILOT_READY = NO
+SFT / DISTILLATION / DH1 / VOICE / AVATAR = NOT_AUTHORIZED
+NEXT_PROGRAM_STAGE = M3-W2_CONSUMER_PRODUCT_INTEGRATION (M3-W2-000)
+```
 
 ## 判定矩阵(§45)
 ```
