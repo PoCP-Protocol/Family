@@ -1,0 +1,213 @@
+# FPAI / Family Authorization Registry — machine-readable authorization SSOT
+# M3-INT-001. 本文件是「授权来源」;Gate Report 只是「证据」,不得自我宣称授权。
+# 原则:任何 runtime capability 若在此登记为未授权,危险授权扫描 = FAIL。
+# 授权只能由总架构师(或其上级)通过 authorized_by + authorization_ref 落记;AI Agent 不得自增授权。
+schema_version: AUTH_REGISTRY_V1
+maintained_by: family-chief-architect
+updated_at: "2026-08-11"
+
+# 授权级别语义(布尔逐级递进,后者不因前者自动为真):
+#   architecture_authorized     契约/架构已批
+#   code_authorized             允许在仓库存在实现代码
+#   runtime_authorized          允许在受控内部运行时执行
+#   live_external_call_authorized 允许发起真实外部模型调用(对外数据发送)
+#   pilot_authorized            允许对真实(试点)用户开启
+#   production_authorized       允许生产环境默认开启
+capabilities:
+  - capability_id: M3_000_CONTRACT
+    stage: M3-000
+    status: PASS_CLOSED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_000_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: 契约基线冻结;不承载 runtime。
+
+  - capability_id: M3_101A_RUNTIME_FOUNDATION
+    stage: M3-101A
+    status: PASS_ACCEPTED_CLOSED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # 受控内部 runtime(Fake/确定性)已正式验收
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_RUNTIME_ARCHITECT_ADJUDICATION.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: A/B/C(Consent Resolver / PrincipalModule+PG+HTTP / Action Bridge)正式接受。
+
+  - capability_id: M3_101B_REAL_EXTERNAL_TEXT
+    stage: M3-101B
+    status: TECHNICAL_PASS_GOVERNANCE_NOT_CLOSED
+    architecture_authorized: true
+    code_authorized: true             # 代码保留
+    runtime_authorized: true          # 仅内部受控 livecheck 手动开
+    live_external_call_authorized: false   # 生产/试点默认外呼未授权
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes:
+      - reports/m3/M3_101B_REAL_MODEL_RUNTIME_GATE.md   # 该 Gate 的“用户已授权”自述不作数
+    notes: 真实文本外呼默认 OFF;仅受控内部环境人工开启。
+
+  - capability_id: M3_102_IMAGE_EXTERNAL
+    stage: M3-102
+    status: TECHNICAL_PASS_PRIVACY_GATE_REQUIRED
+    architecture_authorized: false
+    code_authorized: true
+    runtime_authorized: false         # 图片外呼隔离,默认关闭
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes:
+      - reports/m3/M3_102_103_104_MULTIMODAL_REVIEW_QUOTA_GATE.md
+    notes: 需单独 IMAGE_DATA_PROCESSING_GATE;默认 OFF。
+
+  - capability_id: M3_103_REVIEW_WORKFLOW
+    stage: M3-103
+    status: INTERNAL_ALLOWED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: 内部运行体系可用;不改 Growth canonical。
+
+  - capability_id: M3_104_QUOTA
+    stage: M3-104
+    status: PARTIAL_PASS_REMEDIATION_REQUIRED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: 前置拦截成立;计量须改为 provider attempt / billable(见 attempt ledger 整改)。
+
+  - capability_id: M3_105_ZHIPU_PROVIDER
+    stage: M3-105
+    status: TECHNICAL_PASS_PROVIDER_GOV_PENDING
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: governance/FPAI_PROVIDER_REGISTRY.yaml
+    authorized_at: "2026-08-11"
+    supersedes:
+      - reports/m3/M3_105_ZHIPU_GLM4V_VISION_PROVIDER_GATE.md
+    notes: Adapter 技术验证通过;生产 Provider 批准以 Provider Registry 为准。
+
+  - capability_id: M3_106_FAILOVER
+    stage: M3-106
+    status: TECHNICAL_PASS_ROUTING_GOV_PENDING
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes:
+      - reports/m3/M3_106_107_108_FAILOVER_CONSOLE_QUOTA_ALERT_GATE.md
+    notes: 默认 OFF;须 policy-aware(仅在同一 processing 授权下的 approved provider 间)。
+
+  - capability_id: M3_107_REVIEW_CONSOLE
+    stage: M3-107
+    status: INTERNAL_PROTOTYPE
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # 仅内部,feature-flag 默认 false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: INTERNAL_OPS_ONLY;真实 Ops IAM 前不得试点。
+
+  - capability_id: M3_108_USAGE
+    stage: M3-108
+    status: PARTIAL_PASS_REMEDIATION_REQUIRED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
+    authorized_at: "2026-08-11"
+    supersedes: []
+    notes: used 须基于 provider attempt;内部 Ops only。
+
+  # 明确未授权(危险能力)
+  - capability_id: SFT
+    stage: FUTURE
+    status: NOT_AUTHORIZED
+    architecture_authorized: false
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: null
+    authorization_ref: null
+    authorized_at: null
+    supersedes: []
+    notes: 未授权。
+  - capability_id: DISTILLATION
+    stage: FUTURE
+    status: NOT_AUTHORIZED
+    architecture_authorized: false
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: null
+    authorization_ref: null
+    authorized_at: null
+    supersedes: []
+    notes: 未授权。
+  - capability_id: DH1_DIGITAL_HUMAN
+    stage: FUTURE
+    status: NOT_AUTHORIZED
+    architecture_authorized: false
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: null
+    authorization_ref: null
+    authorized_at: null
+    supersedes: []
+    notes: 未授权(voice/avatar/digital human 同)。

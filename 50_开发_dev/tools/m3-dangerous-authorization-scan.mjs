@@ -69,11 +69,33 @@ if (existsSync(gwDir)) {
   }
 }
 
-// principal runtime module 存在性:M3-000 阶段禁止;M3-101A 架构师裁决已授权受控 runtime → 本约束解除。
-// 仍保留的真正危险检查(上方 DANGER token / FORBIDDEN_SURFACE 直写 canonical / ai-gateway 触碰仓储)一律不放松。
-// 若需在纯 M3-000 契约分支上强制"无 runtime",设 M3_FORBID_PRINCIPAL_RUNTIME=1。
-if (process.env.M3_FORBID_PRINCIPAL_RUNTIME === '1'
-  && existsSync(join(ROOT, 'apps', 'api', 'src', 'modules', 'principal'))) {
+// ---------- M3-INT-001 §8:授权以 AUTHORIZATION_REGISTRY 为唯一来源(Gate 文档不再是授权来源) ----------
+// 原则:代码中存在某 runtime capability,但 registry 未登记其 runtime_authorized=true → FAIL。
+// 这样 Agent 无法靠自己改 Gate 报告完成自授权。
+const govHits = [];
+const REGISTRY = join(ROOT, 'governance', 'AUTHORIZATION_REGISTRY.yaml');
+function registryCapabilityFlag(txt, capId, flag) {
+  // 轻量解析:定位 capability_id 块,读其后到下一个 capability_id 之间的 flag: true/false
+  const re = new RegExp(`capability_id:\\s*${capId}\\b([\\s\\S]*?)(?=\\n\\s*-\\s*capability_id:|$)`);
+  const m = txt.match(re);
+  if (!m) return undefined;
+  const fm = m[1].match(new RegExp(`${flag}:\\s*(true|false)`));
+  return fm ? fm[1] === 'true' : undefined;
+}
+const principalRuntimePresent = existsSync(join(ROOT, 'apps', 'api', 'src', 'modules', 'principal'));
+if (principalRuntimePresent) {
+  if (!existsSync(REGISTRY)) {
+    govHits.push('principal runtime 存在,但 governance/AUTHORIZATION_REGISTRY.yaml 缺失(授权 SSOT 缺失)');
+  } else {
+    const rtxt = readFileSync(REGISTRY, 'utf8');
+    const rtAuth = registryCapabilityFlag(rtxt, 'M3_101A_RUNTIME_FOUNDATION', 'runtime_authorized');
+    if (rtAuth !== true) {
+      govHits.push('principal runtime 存在,但 registry 未授权 M3_101A_RUNTIME_FOUNDATION.runtime_authorized=true');
+    }
+  }
+}
+// 纯 M3-000 契约分支可强制"无 runtime"
+if (process.env.M3_FORBID_PRINCIPAL_RUNTIME === '1' && principalRuntimePresent) {
   surfaceHits.push('apps/api/src/modules/principal 存在(M3_FORBID_PRINCIPAL_RUNTIME=1)');
 }
 
@@ -98,7 +120,9 @@ console.log(`禁止调用面命中 (要求0): ${surfaceHits.length}`);
 surfaceHits.forEach((h) => console.log('  SURFACE ' + h));
 console.log(`缺失必需契约 (要求0): ${missing.length}`);
 missing.forEach((m) => console.log('  MISSING ' + m));
+console.log(`授权治理命中 (要求0): ${govHits.length}`);
+govHits.forEach((h) => console.log('  GOV ' + h));
 
-const fail = dangerHits.length + surfaceHits.length + missing.length;
-console.log(fail === 0 ? '\nM3-000 STATIC SCAN: PASS (0 hits)' : `\nM3-000 STATIC SCAN: FAIL (${fail})`);
+const fail = dangerHits.length + surfaceHits.length + missing.length + govHits.length;
+console.log(fail === 0 ? '\nM3 STATIC + GOVERNANCE SCAN: PASS (0 hits)' : `\nM3 STATIC + GOVERNANCE SCAN: FAIL (${fail})`);
 process.exit(fail ? 1 : 0);

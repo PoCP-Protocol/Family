@@ -39,24 +39,57 @@ describe('A2 resolvePrincipalConsent', () => {
   });
 });
 
-describe('A3 evaluateProcessing', () => {
+describe('A3 evaluateProcessing (M3-INT-001 强化)', () => {
   const granted = resolvePrincipalConsent([row('AI_PERSONALIZATION', 'GRANTED')], 'child-1');
-  const base = { consent: granted, policyVersion: 'v1', subjectPersonId: 'child-1', guardianPersonId: 'mom-1', minorData: true } as const;
-  it('FAKE + minimal + granted → allowed', () => {
-    expect(evaluateProcessing({ ...base, dataCategory: 'MINIMAL_GROWTH_CONTEXT', providerClass: 'FAKE' }).allowed).toBe(true);
+  // 默认:外部处理关闭、provider 未批、policy 未批、无对外类别白名单(即 internal profile)
+  const base = {
+    consent: granted, policyVersion: 'v1', policyVersionApproved: false,
+    subjectPersonId: 'child-1', guardianPersonId: 'mom-1', minorData: false,
+    providerApproved: false, externalProcessingEnabled: false,
+    authorizedExternalCategories: [] as const,
+  };
+  // 一个"全部对外门打开"的外呼上下文(仅用于验证 ALLOW 路径)
+  const externalOpen = {
+    ...base, providerClass: 'EXTERNAL_PROVIDER' as const, providerApproved: true,
+    externalProcessingEnabled: true, policyVersionApproved: true,
+    authorizedExternalCategories: ['USER_PROVIDED_TEXT', 'MINIMAL_GROWTH_CONTEXT'] as const,
+  };
+
+  it('FAKE + 文本 + granted → ALLOW(无对外出口)', () => {
+    const d = evaluateProcessing({ ...base, dataCategory: 'USER_PROVIDED_TEXT', providerClass: 'FAKE' });
+    expect(d.decision).toBe('ALLOW');
   });
-  it('EXTERNAL_PROVIDER → FAIL_CLOSED', () => {
-    expect(evaluateProcessing({ ...base, dataCategory: 'MINIMAL_GROWTH_CONTEXT', providerClass: 'EXTERNAL_PROVIDER' }).allowed).toBe(false);
+  it('FAKE + 图片 → DENY(图片需显式授权)', () => {
+    expect(evaluateProcessing({ ...base, dataCategory: 'USER_PROVIDED_IMAGE', providerClass: 'FAKE' }).allowed).toBe(false);
   });
-  it('PRIVATE_TEXT → 拒绝(超最小必要)', () => {
-    expect(evaluateProcessing({ ...base, dataCategory: 'PRIVATE_TEXT', providerClass: 'FAKE' }).allowed).toBe(false);
+  it('EXTERNAL 默认关闭 → DENY', () => {
+    expect(evaluateProcessing({ ...base, dataCategory: 'USER_PROVIDED_TEXT', providerClass: 'EXTERNAL_PROVIDER' }).decision).toBe('DENY');
   });
-  it('FAMILY_AGGREGATE → 拒绝', () => {
-    expect(evaluateProcessing({ ...base, dataCategory: 'FAMILY_AGGREGATE', providerClass: 'FAKE' }).allowed).toBe(false);
+  it('EXTERNAL 全门通过 → ALLOW', () => {
+    expect(evaluateProcessing({ ...externalOpen, dataCategory: 'USER_PROVIDED_TEXT' }).decision).toBe('ALLOW');
   });
-  it('consent 未允许 → 拒绝', () => {
+  it('EXTERNAL provider 未批 → DENY', () => {
+    expect(evaluateProcessing({ ...externalOpen, providerApproved: false, dataCategory: 'USER_PROVIDED_TEXT' }).allowed).toBe(false);
+  });
+  it('EXTERNAL policy 未批 → DENY', () => {
+    expect(evaluateProcessing({ ...externalOpen, policyVersionApproved: false, dataCategory: 'USER_PROVIDED_TEXT' }).allowed).toBe(false);
+  });
+  it('EXTERNAL 类别不在白名单 → DENY', () => {
+    expect(evaluateProcessing({ ...externalOpen, dataCategory: 'FAMILY_PRIVATE_TEXT' }).allowed).toBe(false);
+  });
+  it('EXTERNAL 未成年人数据未授权 → DENY', () => {
+    expect(evaluateProcessing({ ...externalOpen, dataCategory: 'USER_PROVIDED_TEXT', minorData: true }).allowed).toBe(false);
+  });
+  it('EXTERNAL 图片 → DENY(M3-102 隔离)', () => {
+    const withImg = { ...externalOpen, authorizedExternalCategories: ['USER_PROVIDED_IMAGE'] as const };
+    expect(evaluateProcessing({ ...withImg, dataCategory: 'USER_PROVIDED_IMAGE' }).allowed).toBe(false);
+  });
+  it('FAMILY_AGGREGATE → DENY', () => {
+    expect(evaluateProcessing({ ...externalOpen, dataCategory: 'FAMILY_AGGREGATE' }).allowed).toBe(false);
+  });
+  it('consent 未允许 → DENY', () => {
     const denied = resolvePrincipalConsent([], 'child-1');
-    expect(evaluateProcessing({ ...base, consent: denied, dataCategory: 'MINIMAL_GROWTH_CONTEXT', providerClass: 'FAKE' }).allowed).toBe(false);
+    expect(evaluateProcessing({ ...externalOpen, consent: denied, dataCategory: 'USER_PROVIDED_TEXT' }).allowed).toBe(false);
   });
 });
 

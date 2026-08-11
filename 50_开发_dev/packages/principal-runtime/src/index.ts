@@ -50,35 +50,68 @@ export function resolvePrincipalConsent(
   return { allowed: false, reason: 'no AI_PERSONALIZATION consent; 禁止由 SERVICE/GROWTH_TRACKING/ASSESSMENT 推导' };
 }
 
-// ---------- A3 PrincipalAiProcessingPolicy ----------
+// ---------- A3 PrincipalAiProcessingPolicy (M3-INT-001 §9-14 强化) ----------
+// 数据类别:userMessage 本身即家庭私有文本,不得再当成"非 Family data"。
+export type ProcessingDataCategory =
+  | 'MINIMAL_GROWTH_CONTEXT'
+  | 'USER_PROVIDED_TEXT'
+  | 'FAMILY_PRIVATE_TEXT'
+  | 'MINOR_PRIVATE_TEXT'
+  | 'USER_PROVIDED_IMAGE'
+  | 'FAMILY_AGGREGATE';
+
+export type ProcessingOutcome = 'ALLOW' | 'DENY' | 'REVIEW';
+
 export interface ProcessingRequest {
   consent: ConsentDecision;
   policyVersion: string;
+  policyVersionApproved: boolean;      // 该 policy_version 是否已被治理批准
   subjectPersonId: string;
   guardianPersonId: string;
-  dataCategory: 'MINIMAL_GROWTH_CONTEXT' | 'PRIVATE_TEXT' | 'FAMILY_AGGREGATE';
+  dataCategory: ProcessingDataCategory;
   minorData: boolean;
   providerClass: ProviderClass;
+  providerApproved: boolean;           // Provider Registry:目标环境下该 provider 是否获批
+  externalProcessingEnabled: boolean;  // Runtime Profile:是否总体允许对外处理(默认 false)
+  authorizedExternalCategories: readonly ProcessingDataCategory[]; // 允许对外的类别白名单
 }
+
 export interface ProcessingDecision {
-  allowed: boolean;
+  decision: ProcessingOutcome;
+  allowed: boolean;                    // === (decision === 'ALLOW')
   reason: string;
 }
 
+const deny = (reason: string): ProcessingDecision => ({ decision: 'DENY', allowed: false, reason });
+const allow = (reason: string): ProcessingDecision => ({ decision: 'ALLOW', allowed: true, reason });
+
 /**
- * FakeAiGateway + consent 允许 + 最小必要数据 → 允许(受控内部测试)。
- * EXTERNAL_PROVIDER → FAIL_CLOSED,直到其 processing scope 被明确授权。
- * 私有文本 / 整体 FamilyAggregate → 本阶段一律拒绝(最小必要,非最大可用)。
+ * 顺序:Consent → Processing Policy → Provider Policy。任一不满足 → FAIL CLOSED(DENY)。
+ * FAKE(无对外出口)允许文本类内部处理;FAMILY_AGGREGATE 永不外发且不做整体处理。
+ * EXTERNAL_PROVIDER 需同时满足:总开关开、provider 获批、policy 版本获批、类别在白名单、未成年人/图片单独授权。
  */
 export function evaluateProcessing(req: ProcessingRequest): ProcessingDecision {
-  if (!req.consent.allowed) return { allowed: false, reason: 'consent not allowed' };
-  if (req.providerClass === 'EXTERNAL_PROVIDER') {
-    return { allowed: false, reason: 'EXTERNAL_PROVIDER FAIL_CLOSED (scope 未授权)' };
+  if (!req.consent.allowed) return deny('consent not allowed');
+  if (req.dataCategory === 'FAMILY_AGGREGATE') return deny('FAMILY_AGGREGATE 不做处理/外发');
+
+  if (req.providerClass === 'FAKE') {
+    // 无对外出口:文本类内部确定性处理允许;图片仍需显式授权(避免误判"已支持图片")。
+    if (req.dataCategory === 'USER_PROVIDED_IMAGE') return deny('image 需显式授权(即使 FAKE)');
+    return allow('FAKE provider(无对外出口)+ consent 允许');
   }
-  if (req.dataCategory !== 'MINIMAL_GROWTH_CONTEXT') {
-    return { allowed: false, reason: `dataCategory ${req.dataCategory} 超出最小必要` };
+
+  // EXTERNAL_PROVIDER:逐门 FAIL CLOSED
+  if (!req.externalProcessingEnabled) return deny('external processing 默认关闭(runtime profile)');
+  if (!req.providerApproved) return deny('provider 未在目标环境获批(Provider Registry)');
+  if (!req.policyVersionApproved) return deny(`policy_version ${req.policyVersion} 未获批`);
+  if (!req.authorizedExternalCategories.includes(req.dataCategory)) {
+    return deny(`dataCategory ${req.dataCategory} 未授权对外处理`);
   }
-  return { allowed: true, reason: 'FAKE provider + AI_PERSONALIZATION + 最小必要' };
+  if (req.minorData && !req.authorizedExternalCategories.includes('MINOR_PRIVATE_TEXT')) {
+    return deny('未成年人数据未授权对外处理');
+  }
+  if (req.dataCategory === 'USER_PROVIDED_IMAGE') return deny('图片对外处理未授权(M3-102 隔离)');
+  return allow('external provider 全部治理门通过');
 }
 
 // ---------- A4 Typed Context Broker（禁止 Record<string, unknown>) ----------

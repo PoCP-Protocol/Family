@@ -44,6 +44,27 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   await pool.query('delete from families');
 }
 
+/**
+ * M3-INT-001:seed 一个带 AI_PERSONALIZATION GRANTED consent 的真实 subject(person uuid)。
+ * 供 live/negative 测试用真实 consent 触发/验证外呼门。返回 { familyId, subjectRef=childPersonId, guardianRef }。
+ */
+export async function seedAiConsentSubject(
+  pool: pg.Pool,
+  opts: { purpose?: 'AI_PERSONALIZATION'; status?: 'GRANTED' | 'WITHDRAWN' | 'EXPIRED' } = {},
+): Promise<{ familyId: string; subjectRef: string; guardianRef: string }> {
+  const fam = await pool.query(`insert into families(display_name) values ('AI consent fam') returning family_id`);
+  const familyId = fam.rows[0].family_id;
+  const g = await pool.query(`insert into persons(family_id, person_type, parent_role, display_name) values ($1,'PARENT','GUARDIAN','监护人') returning person_id`, [familyId]);
+  const c = await pool.query(`insert into persons(family_id, person_type, display_name, birth_date) values ($1,'CHILD','孩子','2013-05-01') returning person_id`, [familyId]);
+  const status = opts.status ?? 'GRANTED';
+  await pool.query(
+    `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version${status === 'WITHDRAWN' ? ', withdrawn_at' : ''})
+       values ($1,$2,$3,'AI_PERSONALIZATION',$4,'policy-ai-v1'${status === 'WITHDRAWN' ? ', now()' : ''})`,
+    [familyId, c.rows[0].person_id, g.rows[0].person_id, status],
+  );
+  return { familyId, subjectRef: c.rows[0].person_id, guardianRef: g.rows[0].person_id };
+}
+
 /** 清 Principal 域表(FK 安全序);若库未迁移 0011 则逐表跳过,便于 Family-core-only 测试库复用。 */
 export async function cleanPrincipalTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [

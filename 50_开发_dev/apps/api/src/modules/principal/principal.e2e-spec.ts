@@ -25,6 +25,7 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
 
   beforeAll(async () => {
     process.env.DATABASE_URL = getTestDatabaseUrl();
+    process.env.FPAI_INTERNAL_OPS = 'true'; // M3-INT-001:显式开启内部 Ops 面以测试 usage/console
     pool = createTestPool();
     app = await NestFactory.create(AppModule, { logger: ['error'] });
     await app.listen(0);
@@ -142,6 +143,17 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     expect(u.cap).toBe(0);
     expect(u.state).toBe('UNLIMITED');
     expect(u.remaining).toBeNull();
+  });
+
+  it('M3-INT-001: internal ops surface (console/usage) is DEFAULT-OFF -> 404 without FPAI_INTERNAL_OPS', async () => {
+    const prev = process.env.FPAI_INTERNAL_OPS;
+    delete process.env.FPAI_INTERNAL_OPS;
+    try {
+      const c = await fetch(`${baseUrl}/families/${familyId}/principal/review-console`);
+      expect(c.status).toBe(404);
+      const u = await fetch(`${baseUrl}/families/${familyId}/principal/usage`, { headers: { 'x-actor-id': 'advisor-1' } });
+      expect(u.status).toBe(404);
+    } finally { process.env.FPAI_INTERNAL_OPS = prev; }
   });
 
   it('M3-107 review console: GET returns self-contained HTML operator page', async () => {

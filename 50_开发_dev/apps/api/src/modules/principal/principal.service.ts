@@ -7,11 +7,33 @@ import {
   runPrincipalTextMvp, safetyPrecheck,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
-import { resolvePrincipalConsent } from '@family/principal-runtime';
+import { resolvePrincipalConsent, evaluateProcessing, type ProcessingDataCategory } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
 
 /** DI token:Principal 真实模型网关(env-gated)。未配置真实 provider 时为 null → 确定性回退(不发外部调用)。 */
 export const PRINCIPAL_AI_GATEWAY = 'PRINCIPAL_AI_GATEWAY';
+
+/**
+ * M3-INT-001 §34 Runtime Feature Profile。默认 internal:真实外呼/图片/failover 全关。
+ * internal_livecheck 仅供本机受控测试开启外呼(pilot/production 仍默认关,待治理授权)。
+ * 图片对外始终隔离(§15/§17),不随 profile 打开。
+ */
+interface RuntimeProfile {
+  name: string;
+  externalText: boolean;
+  authorizedExternalCategories: readonly ProcessingDataCategory[];
+}
+function resolveRuntimeProfile(): RuntimeProfile {
+  const p = process.env.FPAI_RUNTIME_PROFILE || 'internal';
+  if (p === 'internal_livecheck') {
+    return {
+      name: p, externalText: true,
+      // 受控内部测试环境:文本类可外呼(含未成年人);图片仍隔离(不在白名单)。
+      authorizedExternalCategories: ['USER_PROVIDED_TEXT', 'MINIMAL_GROWTH_CONTEXT', 'MINOR_PRIVATE_TEXT', 'FAMILY_PRIVATE_TEXT'],
+    };
+  }
+  return { name: 'internal', externalText: false, authorizedExternalCategories: [] };
+}
 
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
 
@@ -65,9 +87,32 @@ export class PrincipalService {
     const consents = await this.repo.loadConsents(familyId, subjectRef);
     const consent = resolvePrincipalConsent(consents, subjectRef);
 
-    // M3-104 每日配额:仅约束真实外部模型成本。危机(precheck=HIGH_RISK)不受配额影响;确定性回退无外呼不计。
+    // M3-INT-001 §9-14 P0:真实外呼前强制 Consent → Processing Policy → Provider 门。
+    // userMessage 即家庭私有文本(USER_PROVIDED_TEXT);Family 场景默认按未成年人从严。
+    const profile = resolveRuntimeProfile();
+    const processing = evaluateProcessing({
+      consent, policyVersion: consent.matched?.policy_version ?? 'unknown',
+      policyVersionApproved: profile.externalText, // 受控 env 视为已批;生产以治理为准
+      subjectPersonId: subjectRef, guardianPersonId: consent.matched?.guardian_person_id ?? 'unknown',
+      dataCategory: 'USER_PROVIDED_TEXT', minorData: true,
+      providerClass: this.gateway ? 'EXTERNAL_PROVIDER' : 'FAKE',
+      providerApproved: profile.externalText,          // 受控 env approved;生产以 Provider Registry 为准
+      externalProcessingEnabled: profile.externalText, // 默认 internal → false
+      authorizedExternalCategories: profile.authorizedExternalCategories,
+    });
+    // 只有 processing 判定 ALLOW 且存在真实网关,才真正对外调用;否则确定性回退(零外呼)。
+    const willCallExternal = !!this.gateway && processing.allowed;
+    if (this.gateway && !processing.allowed) {
+      await this.repo.recordProductEvent('principal_processing_denied', familyId, sessionId, correlationId, { decision: processing.decision, reason: processing.reason });
+    }
+    // §15 图片隔离:图片对外处理未授权 → 一律不随请求外发(仅确定性内部处理忽略图片)。
+    if (images?.length) {
+      await this.repo.recordProductEvent('principal_image_quarantined', familyId, sessionId, correlationId, { image_count: images.length });
+    }
+
+    // M3-104 每日配额:仅约束真实外部模型成本。危机(precheck=HIGH_RISK)不受配额影响;不外呼不计。
     const cap = Number(process.env.FPAI_PRINCIPAL_DAILY_CAP ?? 0);
-    if (this.gateway && cap > 0 && safetyPrecheck({ user_message: userMessage }) !== 'HIGH_RISK') {
+    if (willCallExternal && cap > 0 && safetyPrecheck({ user_message: userMessage }) !== 'HIGH_RISK') {
       const used = await this.repo.countRealModelRunsToday(familyId);
       if (used >= cap) {
         await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'quota', 'REVIEWER');
@@ -81,7 +126,7 @@ export class PrincipalService {
       request_id: requestId, session_id: sessionId, entry_point: 'ASK_FAMILI_PRINCIPAL',
       user_message: userMessage,
       consent_context: { fpai_lab_consent: consent.allowed, family_context_read_allowed: consent.allowed },
-      ...(images?.length ? { images } : {}), // 多模态:runPrincipalTextMvp 仅在 precheck!=HIGH_RISK 时转发给网关
+      // 图片隔离:不注入 images(即使收到);外呼由 willCallExternal 决定。
     };
 
     // 安全编排全部在 runPrincipalTextMvp 内(已单测,101B 唯一接入点):
@@ -90,7 +135,7 @@ export class PrincipalService {
     // FAIL CLOSED:真实网关任何失败(超时/网络/4xx/5xx/非法JSON/schema)绝不 500、绝不返原始文本 —— 安全降级到人工复核。
     let run: Awaited<ReturnType<typeof runPrincipalTextMvp>>;
     try {
-      run = await runPrincipalTextMvp(input, this.gateway ?? undefined);
+      run = await runPrincipalTextMvp(input, willCallExternal ? (this.gateway ?? undefined) : undefined);
     } catch (e) {
       const kind = (e as { kind?: string })?.kind ?? 'MODEL_ERROR';
       await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'model_error', 'REVIEWER');

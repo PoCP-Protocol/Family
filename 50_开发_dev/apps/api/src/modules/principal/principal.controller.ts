@@ -9,6 +9,12 @@ function requireActor(actorId?: string): string {
 function corr(id?: string): string {
   return id && id.trim() ? id.trim() : randomUUID();
 }
+/** M3-INT-001 §31-33:内部 Ops 面(复核运营台 + 用量)默认关闭,须 FPAI_INTERNAL_OPS=true 显式开启。 */
+function assertInternalOps(): void {
+  if (process.env.FPAI_INTERNAL_OPS !== 'true') {
+    throw new NotFoundException('internal ops surface disabled (set FPAI_INTERNAL_OPS=true)');
+  }
+}
 
 /**
  * M3-107 REVIEW 队列操作台(自包含静态页,无构建链;调用同域 handoffs / resolve 端点)。
@@ -111,6 +117,7 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Headers('x-actor-id') actorId?: string,
   ) {
+    assertInternalOps();
     requireActor(actorId);
     return this.service.getUsage(familyId);
   }
@@ -118,6 +125,7 @@ export class PrincipalController {
   @Get('review-console')
   @Header('Content-Type', 'text/html; charset=utf-8')
   reviewConsole(@Param('familyId') familyId: string): string {
+    assertInternalOps();
     return renderReviewConsole(familyId);
   }
 
