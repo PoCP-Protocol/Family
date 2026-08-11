@@ -69,9 +69,12 @@ if (existsSync(gwDir)) {
   }
 }
 
-// principal runtime module 本阶段不得存在
-if (existsSync(join(ROOT, 'apps', 'api', 'src', 'modules', 'principal'))) {
-  surfaceHits.push('apps/api/src/modules/principal 存在(M3-000 禁止 principal runtime module)');
+// principal runtime module 存在性:M3-000 阶段禁止;M3-101A 架构师裁决已授权受控 runtime → 本约束解除。
+// 仍保留的真正危险检查(上方 DANGER token / FORBIDDEN_SURFACE 直写 canonical / ai-gateway 触碰仓储)一律不放松。
+// 若需在纯 M3-000 契约分支上强制"无 runtime",设 M3_FORBID_PRINCIPAL_RUNTIME=1。
+if (process.env.M3_FORBID_PRINCIPAL_RUNTIME === '1'
+  && existsSync(join(ROOT, 'apps', 'api', 'src', 'modules', 'principal'))) {
+  surfaceHits.push('apps/api/src/modules/principal 存在(M3_FORBID_PRINCIPAL_RUNTIME=1)');
 }
 
 // 必需契约文件存在

@@ -8,11 +8,11 @@ const req = () => ({
 const okGw = (tag: string): AiGateway => ({
   async generateStructured() { return { model: tag, output: { from: tag } } as unknown as StructuredGenerationResult<object>; },
   async embed() { return { model: tag, generated_at: '', vectors: [] }; },
-});
+} as unknown as AiGateway);
 const failGw = (kind: 'TIMEOUT' | 'NETWORK_ERROR' | 'PROVIDER_5XX' | 'PROVIDER_4XX' | 'INVALID_JSON'): AiGateway => ({
   async generateStructured() { throw new AiGatewayError(kind, kind); },
   async embed() { return { model: 'x', generated_at: '', vectors: [] }; },
-});
+} as unknown as AiGateway);
 
 describe('RoutingAiGateway (M3-106 controlled failover)', () => {
   it('falls over to next provider on infra error (5xx -> success)', async () => {
@@ -27,7 +27,7 @@ describe('RoutingAiGateway (M3-106 controlled failover)', () => {
 
   it('does NOT fall over on 4xx (fail closed immediately, secondary never tried)', async () => {
     let secondaryTried = false;
-    const secondary: AiGateway = { async generateStructured() { secondaryTried = true; return okGw('s').generateStructured(req()); }, async embed() { return { model: '', generated_at: '', vectors: [] }; } };
+    const secondary = { async generateStructured() { secondaryTried = true; return okGw('s').generateStructured(req()); }, async embed() { return { model: '', generated_at: '', vectors: [] }; } } as unknown as AiGateway;
     await expect(new RoutingAiGateway([failGw('PROVIDER_4XX'), secondary]).generateStructured(req())).rejects.toMatchObject({ kind: 'PROVIDER_4XX' });
     expect(secondaryTried).toBe(false);
   });
