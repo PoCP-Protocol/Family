@@ -1,18 +1,38 @@
 import { describe, it, expect } from 'vitest';
-import { AttemptRecordingGateway, RoutingAiGateway, AiGatewayError, type AiGateway, type AttemptSink, type StructuredGenerationResult } from './index';
+import { AttemptRecordingGateway, RoutingAiGateway, AiGatewayError, type AiGateway, type AttemptSink, type StructuredGenerationRequest, type StructuredGenerationResult } from './index';
 
 const req = () => ({
   use_case: 'test', prompt_version: 'p', schema_version: 's',
   input: { request_id: 'R1', session_id: 'S1', q: 'x' }, output_schema: {}, input_refs: [],
   policy_context: { human_confirmation_required: true as const, may_mutate_business_state: false as const },
 });
+
+// 测试替身真正实现 AiGateway 的泛型契约(不使用 as unknown as 掩盖接口)。
 const okGw = (): AiGateway => ({
-  async generateStructured() { return { model: 'm', output: {} } as unknown as StructuredGenerationResult<object>; },
-  async embed() { return { model: 'm', generated_at: '', vectors: [] }; },
+  async generateStructured<TInput extends object, TOutput extends object>(
+    request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    return {
+      model: 'test-model',
+      prompt_version: request.prompt_version,
+      schema_version: request.schema_version,
+      input_refs: request.input_refs,
+      generated_at: new Date(0).toISOString(),
+      validation_status: 'valid',
+      human_status: 'draft',
+      output: {} as TOutput,
+      metadata: { model_provider: 'anthropic-compatible', latency_ms: 1 },
+    };
+  },
+  async embed() { return { model: 'test-model', generated_at: new Date(0).toISOString(), vectors: [] }; },
 });
 const failGw = (kind: 'PROVIDER_5XX' | 'TIMEOUT' | 'PROVIDER_4XX'): AiGateway => ({
-  async generateStructured() { throw new AiGatewayError(kind, kind); },
-  async embed() { return { model: 'm', generated_at: '', vectors: [] }; },
+  async generateStructured<TInput extends object, TOutput extends object>(
+    _request: StructuredGenerationRequest<TInput, TOutput>,
+  ): Promise<StructuredGenerationResult<TOutput>> {
+    throw new AiGatewayError(kind, kind);
+  },
+  async embed() { return { model: 'test-model', generated_at: new Date(0).toISOString(), vectors: [] }; },
 });
 function recorder() {
   const rows: Array<Record<string, unknown>> = [];
