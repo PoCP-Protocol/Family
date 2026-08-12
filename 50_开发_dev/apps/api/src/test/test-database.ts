@@ -68,6 +68,7 @@ export async function seedAiConsentSubject(
 /** 清 Principal 域表(FK 安全序);若库未迁移 0011 则逐表跳过,便于 Family-core-only 测试库复用。 */
 export async function cleanPrincipalTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [
+    'identity_sessions', // IAM-101:FK 引用 persons/families,须先于其清理
     'principal_action_proposals', 'principal_feedback', 'principal_model_attempts', 'principal_model_runs',
     'principal_human_handoffs', 'principal_messages', 'principal_responses',
     'principal_sessions', 'product_events',

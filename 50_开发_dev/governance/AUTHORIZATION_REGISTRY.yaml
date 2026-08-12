@@ -196,6 +196,21 @@ capabilities:
     supersedes: []
     notes: W2-101 消费端校长章节;内部端到端可建可验,试点须先过 IAM gate。
 
+  - capability_id: IAM_101_IDENTITY_SESSION
+    stage: M3-W2
+    status: INTERNAL_ALLOWED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # 签发仅内部(FPAI_INTERNAL_OPS);真实 OTP/微信验证器 = IAM-102
+    live_external_call_authorized: false
+    pilot_authorized: false           # 消费路径强制 + x-actor-id 降级 = IAM-103
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2_IAM_000_GATE.md
+    authorized_at: "2026-08-12"
+    supersedes: []
+    notes: 不透明 Bearer 会话令牌(sha256 存储)绑定 person∈family;复用 persons.account_id。尚未强制消费路径(IAM-103)。
+
   # 明确未授权(危险能力)
   - capability_id: SFT
     stage: FUTURE
