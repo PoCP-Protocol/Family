@@ -25,10 +25,10 @@
 | `scenarios/` | 单位经济情景参数(YAML),每个参数标注出处 | **不存在** |
 | `findings/` | 裁决结论卡与报告输出 | **不存在** |
 | `docs/METHODOLOGY.md` | 方法论:证据等级、来源门、证伪协议 | **不存在** |
-| `docs/GUARDRAILS.md` | 红线:合规、伦理、不越界 | **不存在** —— 但 README 与根 `README.md` 都引用了它 |
+| `docs/GUARDRAILS.md` | 红线:合规、伦理、不越界 | **已存在**(2026-08-12 GOV-001 核实;README 与根 `README.md` 的引用不再悬空) |
 | `tests/` | 测试 | **不存在** |
 
-`docs/GUARDRAILS.md` 缺失影响面最大:它被多处引用为红线出处,目前是**悬空引用**。
+`docs/GUARDRAILS.md` 现已存在,悬空引用已消除。仍缺失影响面最大的是 `hypothesis.py` 等裁决装置(见下)。
 
 ## README 里跑不起来的命令
 
@@ -47,7 +47,7 @@ pytest -q
 
 ## 建议的建设顺序
 
-1. **`docs/GUARDRAILS.md`** —— 先把红线写下来,它已被多处引用,且不依赖任何代码。
+1. ~~**`docs/GUARDRAILS.md`**~~ —— 已存在(2026-08-12 GOV-001 核实),此项完成。
 2. **`hypotheses/*.yaml`** —— 从 `..\30_素材_materials` 提取假设并登记,每条必须带 `falsifier`(什么证据出现就算被推翻)。注意:**只能从原始 PPT 提取,不能用自家生成的解读文档**,否则构成 E1 自证;详见 `..\30_素材_materials\PROVENANCE.md`。
 3. **`hypothesis.py`** —— 裁决装置。复用 `..\20_知识_knowledge\byresearch\evidence.py` 的 `Grade` / `Provenance` / `NON_DECISIVE`,不要另写一套等级。
 4. **`econ.py` + `scenarios/`** —— 单位经济。所有输出必须标 `SIMULATED` 溯源,按门禁**永远不能用于裁决"成立"**,只能生成假设和设定验收门槛。

@@ -1,0 +1,125 @@
+# M3 GLOBAL SHARED-FILE CONFLICT MATRIX
+# Owner: family-chief-architect governance (GOV-001 / M3-OPT-001 TRACK 0)
+# 由历史 TASK 级 SHARED_FILE_CONFLICT_MATRIX 升级为 M3 全局治理级。
+# 目的: 对跨轨道/跨会话高争用文件声明唯一 integration owner 与写入模式,
+#       任何并行写入前必须在此登记并向 integration_owner 报备。
+#
+# write_mode 语义:
+#   SINGLE_OWNER_ONLY     只有 owner_track 可写,其他轨道改动一律走 owner 汇总
+#   INTEGRATION_OWNER_ONLY 只能由 integration_owner 在集成时改(如 lockfile / module 装配)
+#   APPEND_ONLY           只追加不改旧内容(如 00_复盘、reports)
+#   CCR_REQUIRED          改动需变更评审(Change Control Request)+ 架构师批准
+#
+# parallel_write_allowed: 是否允许两个轨道同一冲刺内并行写(默认 false)
+
+version: 1
+maintained_by: family-chief-architect
+updated_at: "2026-08-12"
+
+files:
+  - path: 50_开发_dev/PROJECT_STATUS.md
+    owner_track: GOV / program-integration
+    write_mode: SINGLE_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: program-integration
+    note: SSOT。曾发生上下段自相矛盾(GOV-001 已修)。任何轨道不得各自改。
+
+  - path: 50_开发_dev/CURRENT_SPRINT.md
+    owner_track: program-integration
+    write_mode: SINGLE_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: program-integration
+
+  - path: 50_开发_dev/04_实施计划/PLAN_SSOT_V3.3.md   # 及任何 PLAN_SSOT*
+    owner_track: program-integration
+    write_mode: CCR_REQUIRED
+    parallel_write_allowed: false
+    integration_owner: family-chief-architect
+
+  - path: 50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml
+    owner_track: family-chief-architect
+    write_mode: CCR_REQUIRED
+    parallel_write_allowed: false
+    integration_owner: family-chief-architect
+    note: 授权唯一真相。任何 runtime 能力开关只此处生效,dangerous-auth-scan 以它为准。
+
+  - path: 50_开发_dev/governance/FPAI_PROVIDER_REGISTRY.yaml
+    owner_track: family-chief-architect
+    write_mode: CCR_REQUIRED
+    parallel_write_allowed: false
+    integration_owner: family-chief-architect
+
+  - path: 50_开发_dev/governance/WORKTREE_OWNERSHIP_REGISTRY.yaml
+    owner_track: GOV
+    write_mode: SINGLE_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: GOV
+
+  - path: pnpm-lock.yaml
+    owner_track: any (但集成时统一)
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: program-integration
+    note: 依赖变更须集中,避免多分支 lockfile 冲突。
+
+  - path: 50_开发_dev/apps/api/src/app.module.ts
+    owner_track: api-integration
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: api-integration
+    note: NestJS 装配点,多模块争用高发。
+
+  - path: 50_开发_dev/apps/api/src/modules/family/family.module.ts
+    owner_track: family-core
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: family-core
+
+  - path: 50_开发_dev/apps/api/src/test/test-database.ts
+    owner_track: api-integration
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: api-integration
+    note: E2E 测试库装配,改动影响全部集成测试。
+
+  - path: 50_开发_dev/specs/api/openapi-family-platform-v0.2.yaml   # 及任何 OpenAPI
+    owner_track: contract
+    write_mode: CCR_REQUIRED
+    parallel_write_allowed: false
+    integration_owner: contract
+    note: 契约冻结,改动走 CCR。
+
+  - path: 50_开发_dev/database/migrations/**
+    owner_track: schema-integration
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: schema-integration
+    note: 迁移序号唯一递增;禁止两轨道同时新增迁移(序号碰撞)。B4/B5 不得未经 CCR 改 M2 schema。
+
+  - path: .github/workflows/**
+    owner_track: ci
+    write_mode: INTEGRATION_OWNER_ONLY
+    parallel_write_allowed: false
+    integration_owner: ci
+
+  - path: 00_复盘/**
+    owner_track: any
+    write_mode: APPEND_ONLY
+    parallel_write_allowed: true
+    integration_owner: none
+    note: 按日期新建,不覆盖旧文件。
+
+  - path: 50_开发_dev/reports/**
+    owner_track: any
+    write_mode: APPEND_ONLY
+    parallel_write_allowed: true
+    integration_owner: none
+
+discipline:
+  single_commit_ownership: true
+  rules:
+    - 会话进入先 git fetch + rebase;退出前必须 commit 或 stash 自己的改动,不留悬空脏文件。
+    - 提交必须带精确 pathspec,禁止 git add -A / git add .(会吞并他人 staged 工作)。
+    - 对 SINGLE_OWNER_ONLY / INTEGRATION_OWNER_ONLY / CCR_REQUIRED 文件,非 owner 改动前先在本矩阵登记并报备。
+    - 治理关闭前禁止 broad reset:git reset --hard / git restore . / git checkout -- . / git clean -fd。
+    - 分类为 UNOWNED_UNKNOWN 的脏文件:DO_NOT_RESTORE / DO_NOT_COMMIT,先确认来源。

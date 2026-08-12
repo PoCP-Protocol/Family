@@ -1,0 +1,149 @@
+# WORKTREE OWNERSHIP REGISTRY
+# Owner: family-chief-architect governance track (GOV-001 / M3-OPT-001 TRACK 0)
+# Purpose: 单一真相地登记本机所有 git worktree 的归属、HEAD、脏文件与允许写入范围,
+#          以杜绝多会话共享 worktree 污染(2026-08-11 复盘曾记 61 未提交混合)。
+# 纪律: 见 M3_SHARED_FILE_CONFLICT_MATRIX.yaml。治理关闭前禁止 broad reset
+#       (git reset --hard / git restore . / git checkout -- . / git clean -fd)。
+#
+# verified_by: GOV-001 read-only survey
+# verified_at: "2026-08-12"
+# repo: PoCP-Protocol/Family
+# default_branch: master
+# master_head: fff1a5d (Merge PR#2 m3/family-1-0-mos -> master)
+
+worktrees:
+  - path: D:/Family
+    branch: wave/m2-wave2-integration
+    head_sha: 91156bd
+    owner_session: FELS/legacy-line (concurrent)
+    purpose: 主检出;当前承载 legacy-system(FELS)与多租户设计的进行中工作
+    status: DIRTY_ACTIVE
+    allowed_write_paths:
+      - 50_开发_dev/legacy-system/**
+      - 50_开发_dev/docs/**
+    forbidden_shared_paths:
+      - 50_开发_dev/PROJECT_STATUS.md
+      - 50_开发_dev/CURRENT_SPRINT.md
+      - 50_开发_dev/governance/**
+    dirty_files:
+      - path: 50_开发_dev/docs/MULTI_TENANCY_DESIGN_V0.1.md
+        classification: OWNED_ACTIVE   # +59/-? net additive design work
+      - path: 50_开发_dev/legacy-system/apps/api/src/http-server.spec.ts
+        classification: OWNED_ACTIVE   # +25 test additions
+      - path: 50_开发_dev/legacy-system/apps/api/src/pg-fels-repository.ts
+        classification: OWNED_ACTIVE   # +6 net additive
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family/.tmp/ci-policy-worktree
+    branch: (detached)
+    head_sha: da11740
+    owner_session: ci-transient
+    purpose: CI policy 临时 worktree(.tmp,非留存)
+    status: TRANSIENT
+    allowed_write_paths: []
+    forbidden_shared_paths: ["**"]
+    dirty_files: []
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family-m3-fpai
+    branch: m3/fpai-intelligence-contract-gate
+    head_sha: 8cadeb6
+    owner_session: fpai-intelligence (historical)
+    purpose: FPAI intelligence contract gate(历史证据)
+    status: CLEAN
+    allowed_write_paths: []
+    forbidden_shared_paths: ["**"]
+    dirty_files: []
+    frozen: true
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family-m3-fpai-runtime
+    branch: m3/w2-consumer-integration   # 注意:该 worktree 现承载 W2 消费者集成线(非 admission-fix)
+    head_sha: 7dfa89c
+    owner_session: m3-w2-consumer-line (concurrent)
+    purpose: M3-W2 消费者集成分支的检出;含 7dfa89c=W2-101 法咪莉校长 chapter(见 GOV 风险条 R-1)
+    status: DIRTY_ACTIVE
+    allowed_write_paths:
+      - 50_开发_dev/apps/web/src/**
+    forbidden_shared_paths:
+      - 50_开发_dev/PROJECT_STATUS.md
+      - 50_开发_dev/governance/**
+    dirty_files:
+      - path: 50_开发_dev/apps/web/src/principal.js
+        classification: OWNED_ACTIVE   # +6/-1 W2-101 建设中
+      - path: 50_开发_dev/apps/web/src/principal.spec.ts
+        classification: OWNED_ACTIVE   # +1/-1
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family-m3-mos
+    branch: m3/family-1-0-mos
+    head_sha: 3a5bd94
+    owner_session: program-integration
+    purpose: 程序集成分支(已并入 master@fff1a5d);本地落后于 master 一个 merge
+    status: CLEAN_STALE   # 干净但落后 origin/master;用前先 fetch/rebase
+    allowed_write_paths: []
+    forbidden_shared_paths: ["**"]
+    dirty_files: []
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family-m3-w2
+    branch: m3/w2-consumer-integration-contract
+    head_sha: 4398a85
+    owner_session: claude (GOV/复盘会话所建;空分支未提交)
+    purpose: 早前为 W2 契约临时开的隔离 worktree;无提交无改动
+    status: CLEAN_DISPOSABLE   # 可安全移除:git worktree remove D:/Family-m3-w2 + 删分支
+    allowed_write_paths: []
+    forbidden_shared_paths: ["**"]
+    dirty_files: []
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family_fpai-multimodal-ip-mm1
+    branch: feature/fpai-multimodal-ip-mm1
+    head_sha: 6f6f8ef
+    owner_session: fpai-multimodal (parallel/HOLD)
+    purpose: 多模态 IP 特性线(本轮 HOLD)
+    status: CLEAN
+    allowed_write_paths: []
+    forbidden_shared_paths: ["**"]
+    dirty_files: []
+    last_verified_at: "2026-08-12"
+
+  - path: D:/Family-gov
+    branch: gov/m3-repo-hygiene
+    head_sha: fff1a5d
+    owner_session: claude (GOV-001)
+    purpose: 治理清理分支;承载本 registry / 共享矩阵 / SSOT 漂移修复 / 2026-08-12 复盘
+    status: DIRTY_ACTIVE
+    allowed_write_paths:
+      - 50_开发_dev/governance/**
+      - 50_开发_dev/PROJECT_STATUS.md
+      - 25_研究_research/README.md
+      - 25_研究_research/BACKLOG.md
+      - 00_复盘/**
+      - 50_开发_dev/reports/architecture/**
+    forbidden_shared_paths: []
+    dirty_files: []   # 由本会话产出,提交时逐一 pathspec
+    last_verified_at: "2026-08-12"
+
+# ---- 分类图例 ----
+# OWNED_ACTIVE        某会话正在开发,勿动
+# OWNED_READY_TO_COMMIT 可提交
+# STALE_RESIDUE       旧回滚残渣,可 restore --source=HEAD 单文件
+# UNOWNED_UNKNOWN     来源不明 -> DO_NOT_RESTORE / DO_NOT_COMMIT,先确认
+# GENERATED           生成物
+
+summary:
+  total_worktrees: 8
+  dirty_worktrees: 3            # D:/Family, D:/Family-m3-fpai-runtime, D:/Family-gov(本会话)
+  total_dirty_files_excluding_gov: 5
+  untracked_junk: 0            # porcelain 无 '??' 项
+  unowned_unknown: 0
+  stale_residue: 0
+  verdict: >
+    2026-08-11 复盘所记的 "61 未提交混合污染" 已基本收敛。当前仅 5 个脏文件、
+    分布 2 个 worktree,全部 OWNED_ACTIVE(FELS 线 + W2-101 线),无残渣、无未跟踪垃圾。
+    WORKTREE_CONTAMINATION 由 P0_TO_VERIFY 降级为 LOW_VERIFIED。本 registry + 共享矩阵
+    作为前置治理长期防复发。
+  cleanup_recommendation:
+    - "D:/Family-m3-w2(空隔离 worktree)可移除:git worktree remove D:/Family-m3-w2"
+    - "D:/Family-m3-mos 用前先 git fetch + rebase origin/master(落后一个 merge)"
