@@ -398,6 +398,43 @@ export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = saf
   };
 }
 
+// ---------- W2R-103 循证检索(消费 knowledge/compiled bundle;纯函数,不读文件) ----------
+export interface KnowledgeChainNode {
+  id: string; title?: string; summary?: string;
+  evidence_level: string; non_decisive: boolean;
+  source_refs?: string[]; grounded_in?: string; targets?: string[]; uses?: string[];
+}
+export interface KnowledgeChainBundle {
+  schema_version: string; intervention_id: string;
+  theories?: KnowledgeChainNode[]; constructs?: KnowledgeChainNode[];
+  methods?: KnowledgeChainNode[]; modalities?: KnowledgeChainNode[];
+}
+export interface GroundedKnowledge {
+  intervention_id: string; grounded: boolean;
+  theory_ids: string[]; construct_ids: string[]; method_ids: string[]; modality_ids: string[];
+  knowledge_refs: string[]; all_non_decisive: boolean;
+}
+
+/**
+ * 取某 intervention 的循证链(供真校长作 grounded 依据)。
+ * 全部 ResearchEvidence 恒 NON_DECISIVE(不对某家庭裁决);不匹配 → grounded=false 空引用(不空谈也不编造)。
+ */
+export function retrieveGroundedKnowledge(bundle: KnowledgeChainBundle | null | undefined, interventionId: string): GroundedKnowledge {
+  const empty: GroundedKnowledge = { intervention_id: interventionId, grounded: false, theory_ids: [], construct_ids: [], method_ids: [], modality_ids: [], knowledge_refs: [], all_non_decisive: true };
+  if (!bundle || bundle.intervention_id !== interventionId) return empty;
+  const all = [...(bundle.theories ?? []), ...(bundle.constructs ?? []), ...(bundle.methods ?? []), ...(bundle.modalities ?? [])];
+  return {
+    intervention_id: interventionId,
+    grounded: all.length > 0,
+    theory_ids: (bundle.theories ?? []).map((n) => n.id),
+    construct_ids: (bundle.constructs ?? []).map((n) => n.id),
+    method_ids: (bundle.methods ?? []).map((n) => n.id),
+    modality_ids: (bundle.modalities ?? []).map((n) => n.id),
+    knowledge_refs: [...new Set(all.flatMap((n) => n.source_refs ?? []))],
+    all_non_decisive: all.every((n) => n.non_decisive === true),
+  };
+}
+
 export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult }, PrincipalAiOutput> {
   const soul = new PrincipalSoulCompiler().compile();
   const retrieval = retrievePrincipalAssets(input);

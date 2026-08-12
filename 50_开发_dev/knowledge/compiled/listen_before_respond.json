@@ -1,0 +1,81 @@
+{
+  "schema_version": "KNOWLEDGE_CHAIN_V1",
+  "intervention_id": "LISTEN_BEFORE_RESPOND",
+  "maintained_by": "family-knowledge",
+  "theories": [
+    {
+      "id": "THEORY_CONNECTION_BEFORE_CORRECTION",
+      "title": "先连接再纠正",
+      "summary": "当关系通道未打开时,纠正/讲道理会触发防御,先建立\"被听见\"再进入规则更有效。",
+      "evidence_level": "E1_REVIEWED_METHOD_ASSET",
+      "non_decisive": true,
+      "source_refs": [
+        "FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT"
+      ]
+    }
+  ],
+  "constructs": [
+    {
+      "id": "CONSTRUCT_FELT_LISTENING",
+      "title": "被听见感(felt-listening)",
+      "summary": "说话者感到对方真的听懂了其在意的点,而非急于评价或纠正。",
+      "evidence_level": "E1_REVIEWED_METHOD_ASSET",
+      "non_decisive": true,
+      "grounded_in": "THEORY_CONNECTION_BEFORE_CORRECTION",
+      "source_refs": [
+        "FPAI-SCENARIO-TAXONOMY-V1:communication_defiance"
+      ]
+    },
+    {
+      "id": "CONSTRUCT_DEFENSIVE_LOOP",
+      "title": "防御循环",
+      "summary": "一方一开口另一方即防御/顶嘴/退出,双方都更难继续对话。",
+      "evidence_level": "E1_REVIEWED_METHOD_ASSET",
+      "non_decisive": true,
+      "grounded_in": "THEORY_CONNECTION_BEFORE_CORRECTION",
+      "source_refs": [
+        "FPAI-SCENARIO-TAXONOMY-V1:screen_time"
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "id": "METHOD_CONNECT_BEFORE_CORRECT",
+      "title": "先连接再纠正",
+      "summary": "先让对话能继续(复述/低防御提问),再进入规则或纠正。",
+      "evidence_level": "E1_REVIEWED_METHOD_ASSET",
+      "non_decisive": true,
+      "grounded_in": "THEORY_CONNECTION_BEFORE_CORRECTION",
+      "targets": [
+        "CONSTRUCT_FELT_LISTENING",
+        "CONSTRUCT_DEFENSIVE_LOOP"
+      ],
+      "uses": [
+        "MODALITY_ONE_SMALL_ACTION_TEXT"
+      ],
+      "contraindications": [
+        "存在即时人身危险或暴力升级时不适用",
+        "转人工/专业支持"
+      ],
+      "source_refs": [
+        "FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT"
+      ]
+    }
+  ],
+  "modalities": [
+    {
+      "id": "MODALITY_ONE_SMALL_ACTION_TEXT",
+      "title": "今晚一件小事(文本引导)",
+      "summary": "低剂量、可执行、可复盘的一个小动作(如先复述一句再回应)。",
+      "evidence_level": "E1_REVIEWED_METHOD_ASSET",
+      "non_decisive": true
+    }
+  ],
+  "dimension_grounding": [
+    {
+      "dimension_id": "R03",
+      "grounded_in": "CONSTRUCT_FELT_LISTENING"
+    }
+  ],
+  "compiled_from": "listen_before_respond.knowledge.yaml"
+}

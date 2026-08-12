@@ -210,3 +210,32 @@ describe('@family/principal-ai FP1 text intelligence MVP', () => {
     });
   });
 });
+
+// W2R-103 循证检索(内联 bundle 测检索逻辑;真实 YAML→bundle 由 tools/compile-knowledge.mjs 校验)
+import { retrieveGroundedKnowledge, type KnowledgeChainBundle } from './index';
+
+describe('W2R-103 evidence-grounded retrieval', () => {
+  const bundle: KnowledgeChainBundle = {
+    schema_version: 'KNOWLEDGE_BUNDLE_V1', intervention_id: 'LISTEN_BEFORE_RESPOND',
+    theories: [{ id: 'THEORY_CONNECTION_BEFORE_CORRECTION', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, source_refs: ['FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT'] }],
+    constructs: [{ id: 'CONSTRUCT_FELT_LISTENING', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, grounded_in: 'THEORY_CONNECTION_BEFORE_CORRECTION' }],
+    methods: [{ id: 'METHOD_CONNECT_BEFORE_CORRECT', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, grounded_in: 'THEORY_CONNECTION_BEFORE_CORRECTION', targets: ['CONSTRUCT_FELT_LISTENING'], uses: ['MODALITY_ONE_SMALL_ACTION_TEXT'], source_refs: ['FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT'] }],
+    modalities: [{ id: 'MODALITY_ONE_SMALL_ACTION_TEXT', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true }],
+  };
+
+  it('compiled LISTEN_BEFORE_RESPOND chain retrieves grounded refs (Theory→Construct→Method→Modality)', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    expect(g.grounded).toBe(true);
+    expect(g.method_ids).toContain('METHOD_CONNECT_BEFORE_CORRECT');
+    expect(g.theory_ids.length).toBeGreaterThan(0);
+    expect(g.construct_ids.length).toBeGreaterThan(0);
+    expect(g.knowledge_refs.length).toBeGreaterThan(0);
+    expect(g.all_non_decisive).toBe(true); // ResearchEvidence 恒 NON_DECISIVE
+  });
+
+  it('unknown intervention -> not grounded, empty refs (不编造)', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'NOT_A_REAL_INTERVENTION');
+    expect(g.grounded).toBe(false);
+    expect(g.knowledge_refs).toEqual([]);
+  });
+});
