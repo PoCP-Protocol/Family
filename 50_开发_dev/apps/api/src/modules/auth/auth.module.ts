@@ -2,13 +2,20 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
+import { OtpService, StubOtpSender, OTP_SENDER } from './otp.service';
 
 /**
- * M3-W2 IAM-101 身份会话模块。令牌机制 + 服务端 actor 解析;导出 AuthService 供后续消费路径强制(IAM-103)复用。
+ * M3-W2 IAM 身份模块。IAM-101 令牌机制 + 服务端 actor 解析;IAM-102 OTP 验证流程(stub sender)。
+ * 导出 AuthService 供消费路径强制(IAM-103)复用。真实短信/微信 provider 需凭证,单独接。
  */
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository],
+  providers: [
+    AuthService,
+    AuthRepository,
+    OtpService,
+    { provide: OTP_SENDER, useClass: StubOtpSender }, // 真实厂商 adapter 在此替换(env-gated,需凭证)
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}

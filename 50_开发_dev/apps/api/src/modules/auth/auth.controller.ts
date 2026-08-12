@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Headers, Inject, NotFoundException, Post, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Inject, NotFoundException, Post, UnauthorizedException } from '@nestjs/common';
 import { AuthService, bearerToken } from './auth.service';
+import { OtpService } from './otp.service';
 
 /**
  * IAM-101 身份会话端点。
@@ -8,7 +9,23 @@ import { AuthService, bearerToken } from './auth.service';
  */
 @Controller('auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(OtpService) private readonly otp: OtpService,
+  ) {}
+
+  // IAM-102 OTP 登录:请求验证码 → 验证 → 签发会话令牌。短信投递默认 stub(真实厂商需凭证,单独接)。
+  @Post('otp/request')
+  async otpRequest(@Body() body: { phone?: string }) {
+    if (!body?.phone) throw new BadRequestException('phone is required');
+    return this.otp.requestCode(body.phone);
+  }
+
+  @Post('otp/verify')
+  async otpVerify(@Body() body: { phone?: string; code?: string }) {
+    if (!body?.phone || !body?.code) throw new BadRequestException('phone and code are required');
+    return this.otp.verifyCode(body.phone, body.code);
+  }
 
   @Post('session')
   async issue(@Body() body: { person_id?: string; family_id?: string; account_id?: string }) {
