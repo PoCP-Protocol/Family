@@ -61,7 +61,7 @@ Gate C/D 的 PASS 多为【定义/计划】层;真正实现(模型优先默认�
 
 ## 结论
 ```
-M3_RB_003 = PASS_PROPOSED(Gate A-E 均达标;BLOCKERS=0)
-待总架构师终裁 PASS_CLOSED。之后进入 M3-W2R(对象化上下文 + 模型优先校长 + 循证 + Named Action + Outcome 闭环)。
-在 RB-003 PASS_CLOSED 前:FEATURE_EXPANSION=HOLD;真实模型默认=NO_CHANGE;W2-103+/IAM-103+ = HOLD。
+M3_RB_003 = PASS_CLOSED(总架构师终裁 2026-08-12;Gate A-E 均达标;BLOCKERS=0)
+下一阶段 = M3-W2R:W2R-101 对象化 Principal 上下文 → W2R-102 受控模型优先内部门(真实模型内部默认打开,需 registry 授权 + 单一获批模型 + 内部 dogfood + 真实 consent + 获批 provider + 真实 ModelRun/Attempt 账本;仍非 100-family pilot)→ W2R-103 循证检索 → W2R-104 智能 eval → W2R-105 Human Confirmation 闭环 → W2R-106 Check-in/Timeline/Return → W2R-107 Golden Family 浏览器 E2E。
+边界:真实模型内部默认的翻转在 W2R-102 单独门 + AUTHORIZATION_REGISTRY 落记;pilot 仍未授权。
 ```
