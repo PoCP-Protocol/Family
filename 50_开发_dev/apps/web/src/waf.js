@@ -358,9 +358,10 @@ export function createWafCommunityApp(root, options = {}) {
 
     root.querySelectorAll('button[data-waf-principal]').forEach((button) => {
       button.addEventListener('click', () => {
-        state.notice = '法咪莉校长入口已为 WF1 保留；正式咨询会在单独授权后开启。';
         emit('waf_principal_entry_clicked');
+        state.notice = '正在打开法咪莉校长陪练…';
         render();
+        try { if (typeof window !== 'undefined') window.location.assign('?product=principal'); } catch { /* jsdom/test 环境忽略导航 */ }
       });
     });
 
