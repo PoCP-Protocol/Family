@@ -75,6 +75,18 @@ describe('W2R-101 object-aware Principal context', () => {
     const { state } = await handle([], 'internal_livecheck', '孩子写作业拖拉怎么办');
     expect(state.lastFamilyContext).toBeUndefined();
   });
+
+  it('W2R-102 model_first_internal profile → real model default ON (external called + object context)', async () => {
+    const { state } = await handle([row('GRANTED')], 'model_first_internal', '孩子写作业拖拉怎么办');
+    expect(state.called).toBe(true);                         // 内部默认走真实模型
+    expect(state.lastFamilyContext).toBeTruthy();            // 对象化上下文注入
+  });
+
+  it('W2R-102 crisis still short-circuits under model_first_internal (no external call)', async () => {
+    const { state, res } = await handle([row('GRANTED')], 'model_first_internal', '孩子说不想活了');
+    expect(state.called).toBe(false);                        // 危机不外呼
+    expect(res.human_handoff).toBe(true);
+  });
 });
 
 describe('PrincipalService processing enforcement (M3-INT-001)', () => {

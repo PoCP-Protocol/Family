@@ -25,10 +25,12 @@ interface RuntimeProfile {
 }
 function resolveRuntimeProfile(): RuntimeProfile {
   const p = process.env.FPAI_RUNTIME_PROFILE || 'internal';
-  if (p === 'internal_livecheck') {
+  // W2R-102 受控模型优先内部门(架构师授权,provider=anthropic-cc-switch):
+  //   model_first_internal = 内部 dogfood 默认走真实模型(仍需 gateway+consent+processing 门);pilot/production 仍未授权。
+  //   与 internal_livecheck 同为受控外呼档(文本类;图片始终隔离);默认(unset)= internal = 关,CI 零外呼不变。
+  if (p === 'internal_livecheck' || p === 'model_first_internal') {
     return {
       name: p, externalText: true,
-      // 受控内部测试环境:文本类可外呼(含未成年人);图片仍隔离(不在白名单)。
       authorizedExternalCategories: ['USER_PROVIDED_TEXT', 'MINIMAL_GROWTH_CONTEXT', 'MINOR_PRIVATE_TEXT', 'FAMILY_PRIVATE_TEXT'],
     };
   }

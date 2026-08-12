@@ -20,7 +20,9 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
   const requested = spec.split(',').map((s) => s.trim()).filter(Boolean);
   if (!requested.length) return null;
   const profile = env.FPAI_RUNTIME_PROFILE || 'internal';
-  const approvedSet = profile === 'internal_livecheck'
+  // W2R-102:internal_livecheck 与 model_first_internal(受控内部默认,已授权 provider=anthropic-cc-switch)自动批准请求的 vendor;
+  // pilot/production 仍须 FPAI_APPROVED_PROVIDERS 显式批准。
+  const approvedSet = (profile === 'internal_livecheck' || profile === 'model_first_internal')
     ? new Set(requested)
     : new Set((env.FPAI_APPROVED_PROVIDERS || '').split(',').map((s) => s.trim()).filter(Boolean));
   const approved = requested.filter((v) => approvedSet.has(v));

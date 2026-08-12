@@ -58,20 +58,35 @@ capabilities:
     notes: A/B/C(Consent Resolver / PrincipalModule+PG+HTTP / Action Bridge)正式接受。
 
   - capability_id: M3_101B_REAL_EXTERNAL_TEXT
-    stage: M3-101B
-    status: TECHNICAL_PASS_GOVERNANCE_NOT_CLOSED
+    stage: M3-101B → W2R-102
+    status: INTERNAL_DEFAULT_AUTHORIZED   # W2R-102:内部 dogfood 默认真实外呼已授权(provider=anthropic-cc-switch)
     architecture_authorized: true
-    code_authorized: true             # 代码保留
-    runtime_authorized: true          # 仅内部受控 livecheck 手动开
-    live_external_call_authorized: false   # 生产/试点默认外呼未授权
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: true    # W2R-102:仅【内部 dogfood】(profile=model_first_internal);pilot/production 仍 NO
     pilot_authorized: false
     production_authorized: false
     authorized_by: family-chief-architect
-    authorization_ref: reports/m3/M3_INT_001_FPAI_RUNTIME_ADMISSION_GATE.md
-    authorized_at: "2026-08-11"
+    authorization_ref: reports/m3/M3_W2R_102_MODEL_FIRST_INTERNAL_GATE.md
+    authorized_at: "2026-08-12"
     supersedes:
       - reports/m3/M3_101B_REAL_MODEL_RUNTIME_GATE.md   # 该 Gate 的“用户已授权”自述不作数
-    notes: 真实文本外呼默认 OFF;仅受控内部环境人工开启。
+    notes: W2R-102 架构师授权:profile=model_first_internal 时内部默认走真实模型;approved provider=anthropic-cc-switch;consent(AI_PERSONALIZATION)+ processing 门 + 危机短路仍强制;真实家庭 pilot 未授权。
+
+  - capability_id: W2R_102_MODEL_FIRST_INTERNAL
+    stage: M3-W2R
+    status: INTERNAL_ALLOWED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # FPAI_RUNTIME_PROFILE=model_first_internal
+    live_external_call_authorized: true    # 内部 dogfood only
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2R_102_MODEL_FIRST_INTERNAL_GATE.md
+    authorized_at: "2026-08-12"
+    supersedes: []
+    notes: 单一获批模型=anthropic-cc-switch;内部 dogfood(x-actor-id);真实 consent;真实 ModelRun/Attempt 账本;非 pilot。CI/未设 profile 仍确定性零外呼。质量闸=W2R-104 智能 eval。
 
   - capability_id: M3_102_IMAGE_EXTERNAL
     stage: M3-102
