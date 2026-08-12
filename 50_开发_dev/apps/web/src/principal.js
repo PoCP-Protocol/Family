@@ -16,11 +16,13 @@ export const defaultPrincipalConfig = {
 };
 
 let idemCounter = 0;
+/** @param {string} prefix @param {string} familyId */
 function idemKey(prefix, familyId) {
   idemCounter += 1;
   return `${prefix}-${familyId}-${idemCounter}-${globalThis.crypto?.randomUUID?.() ?? idemCounter}`;
 }
 
+/** @param {PrincipalConfig} config */
 const H = (config) => ({ 'Content-Type': 'application/json', 'X-Actor-Id': config.actorPersonId });
 
 /**
@@ -54,13 +56,15 @@ export async function confirmProposal(config, { proposalId }) {
   return { status: res.status, ok: res.ok, body: await res.json().catch(() => null) };
 }
 
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/** @param {unknown} s */
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => /** @type {Record<string,string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 
 /**
  * @param {HTMLElement} root
  * @param {PrincipalConfig} [config]
  */
 export function createPrincipalApp(root, config = defaultPrincipalConfig) {
+  /** @type {{ phase: string, question: string, notice: string, result: any, growth: any, busy: boolean }} */
   const state = { phase: 'ask', question: '', notice: '', result: null, growth: null, busy: false };
 
   const safetyCard = () => `
@@ -72,6 +76,7 @@ export function createPrincipalApp(root, config = defaultPrincipalConfig) {
       <button type="button" class="secondary-action" data-fp-reset>返回</button>
     </section>`;
 
+  /** @param {any} r */
   const answerCard = (r) => `
     <section class="fp-card fp-answer" aria-labelledby="fp-answer-title">
       <h2 id="fp-answer-title">法咪莉校长的回应</h2>

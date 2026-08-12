@@ -6,7 +6,7 @@ const json = (status: number, body: unknown) => ({ ok: status >= 200 && status <
 
 /** route mock: session -> message -> accept */
 function mockFetch(routes: { message?: unknown; accept?: { status: number; body: unknown } }) {
-  return vi.fn(async (url: string) => {
+  return vi.fn(async (url: string, _init?: RequestInit) => {
     if (url.endsWith('/principal/sessions')) return json(201, { session_id: 'sess-1' });
     if (url.includes('/messages')) return json(201, routes.message ?? {});
     if (url.includes('/accept')) return json(routes.accept?.status ?? 201, routes.accept?.body ?? {});
