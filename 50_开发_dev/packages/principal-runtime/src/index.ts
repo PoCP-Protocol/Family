@@ -159,3 +159,6 @@ export function buildPrincipalFamilyContext(
     recentPermittedObservationSummary: [...slice.recentPermittedObservationSummary],
   };
 }
+
+// M3-RB-003 最小真实 Skill 运行时(声明规范见 architecture/rb-003/FAMILY_SKILL_MODEL_V1.md)
+export * from './skill';
