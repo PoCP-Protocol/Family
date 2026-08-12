@@ -14,7 +14,7 @@ interface MatrixClassificationRow {
   id: string;
   classification: MatrixClassification;
 }
-type IdPrefix = 'cus' | 'con' | 'stu' | 'gua' | 'tpl' | 'asm' | 'scr' | 'rep' | 'crs' | 'prd' | 'ord' | 'itm' | 'pay' | 'enr' | 'cns' | 'snp';
+type IdPrefix = 'cus' | 'con' | 'stu' | 'gua' | 'tpl' | 'asm' | 'scr' | 'rep' | 'crs' | 'prd' | 'ord' | 'itm' | 'pay' | 'enr' | 'cns' | 'snp' | 'cmp' | 'cen' | 'dtk' | 'chk' | 'adv' | 'mbr';
 
 export interface LegacyCustomer {
   customer_id: string;
@@ -180,6 +180,74 @@ export interface LegacyConsentRecord {
   semantic_classification: 'CONSENT_EVIDENCE_CANDIDATE';
 }
 
+export interface LegacyTrainingCamp {
+  training_camp_id: string;
+  camp_code: string;
+  title: string;
+  course_id?: string;
+  duration_days: number;
+  status: 'ACTIVE' | 'RETIRED';
+  created_at: string;
+  semantic_classification: 'LEGACY_PROGRAM_NOT_JOURNEY';
+}
+
+export interface LegacyCampEnrollment {
+  camp_enrollment_id: string;
+  training_camp_id: string;
+  student_id: string;
+  enrollment_id?: string;
+  status: 'JOINED' | 'ACTIVE' | 'FINISHED' | 'DROPPED';
+  joined_at: string;
+  finished_at?: string;
+  semantic_classification: 'LEGACY_PROGRAM_STATUS_NOT_OUTCOME';
+}
+
+export interface LegacyDailyTask {
+  daily_task_id: string;
+  training_camp_id: string;
+  day_index: number;
+  title: string;
+  instruction_text?: string;
+  created_at: string;
+  semantic_classification: 'LEGACY_TASK_NOT_GROWTH_ACTION';
+}
+
+export interface LegacyTaskCheckin {
+  task_checkin_id: string;
+  daily_task_id: string;
+  camp_enrollment_id: string;
+  student_id: string;
+  checkin_status: 'DONE' | 'PARTIAL' | 'MISSED';
+  legacy_completion_text?: string;
+  checked_in_at: string;
+  semantic_classification: 'LEGACY_CHECKIN_NOT_OUTCOME';
+}
+
+export interface LegacyAdvisorNote {
+  advisor_note_id: string;
+  customer_id?: string;
+  student_id?: string;
+  training_camp_id?: string;
+  advisor_name: string;
+  note_type: 'FOLLOW_UP' | 'CONCERN' | 'PROGRESS' | 'RENEWAL_INTENT';
+  note_text: string;
+  created_at: string;
+  semantic_classification: 'LEGACY_ADVISOR_TEXT_NOT_FACT';
+}
+
+export interface LegacyMembership {
+  membership_id: string;
+  customer_id: string;
+  membership_level: 'BASIC' | 'PREMIUM' | 'VIP';
+  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  started_at: string;
+  expires_at?: string;
+  renewal_count: number;
+  last_renewed_at?: string;
+  created_at: string;
+  semantic_classification: 'LEGACY_MEMBERSHIP_STATE';
+}
+
 export interface LegacySourceSnapshot {
   snapshot_id: string;
   source_system: 'FELS';
@@ -207,6 +275,12 @@ export interface FelsRecords {
   payments: LegacyPaymentRecord[];
   enrollments: LegacyEnrollment[];
   legacyConsents: LegacyConsentRecord[];
+  trainingCamps: LegacyTrainingCamp[];
+  campEnrollments: LegacyCampEnrollment[];
+  dailyTasks: LegacyDailyTask[];
+  taskCheckins: LegacyTaskCheckin[];
+  advisorNotes: LegacyAdvisorNote[];
+  memberships: LegacyMembership[];
   snapshots: LegacySourceSnapshot[];
 }
 
@@ -256,6 +330,12 @@ function emptyRecords(): FelsRecords {
     payments: [],
     enrollments: [],
     legacyConsents: [],
+    trainingCamps: [],
+    campEnrollments: [],
+    dailyTasks: [],
+    taskCheckins: [],
+    advisorNotes: [],
+    memberships: [],
     snapshots: [],
   };
 }
@@ -443,6 +523,72 @@ export class Fels1Runtime {
     return consent;
   }
 
+  createTrainingCamp(input: Omit<LegacyTrainingCamp, 'training_camp_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyTrainingCamp>) {
+    const camp: LegacyTrainingCamp = {
+      training_camp_id: input.training_camp_id ?? id('cmp', this.sequence++),
+      created_at: input.created_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_PROGRAM_NOT_JOURNEY',
+    };
+    this.records.trainingCamps.push(camp);
+    return camp;
+  }
+
+  createCampEnrollment(input: Omit<LegacyCampEnrollment, 'camp_enrollment_id' | 'joined_at' | 'semantic_classification'> & Partial<LegacyCampEnrollment>) {
+    const enrollment: LegacyCampEnrollment = {
+      camp_enrollment_id: input.camp_enrollment_id ?? id('cen', this.sequence++),
+      joined_at: input.joined_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_PROGRAM_STATUS_NOT_OUTCOME',
+    };
+    this.records.campEnrollments.push(enrollment);
+    return enrollment;
+  }
+
+  createDailyTask(input: Omit<LegacyDailyTask, 'daily_task_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyDailyTask>) {
+    const task: LegacyDailyTask = {
+      daily_task_id: input.daily_task_id ?? id('dtk', this.sequence++),
+      created_at: input.created_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_TASK_NOT_GROWTH_ACTION',
+    };
+    this.records.dailyTasks.push(task);
+    return task;
+  }
+
+  createTaskCheckin(input: Omit<LegacyTaskCheckin, 'task_checkin_id' | 'checked_in_at' | 'semantic_classification'> & Partial<LegacyTaskCheckin>) {
+    const checkin: LegacyTaskCheckin = {
+      task_checkin_id: input.task_checkin_id ?? id('chk', this.sequence++),
+      checked_in_at: input.checked_in_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_CHECKIN_NOT_OUTCOME',
+    };
+    this.records.taskCheckins.push(checkin);
+    return checkin;
+  }
+
+  createAdvisorNote(input: Omit<LegacyAdvisorNote, 'advisor_note_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyAdvisorNote>) {
+    const note: LegacyAdvisorNote = {
+      advisor_note_id: input.advisor_note_id ?? id('adv', this.sequence++),
+      created_at: input.created_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_ADVISOR_TEXT_NOT_FACT',
+    };
+    this.records.advisorNotes.push(note);
+    return note;
+  }
+
+  createMembership(input: Omit<LegacyMembership, 'membership_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyMembership>) {
+    const membership: LegacyMembership = {
+      membership_id: input.membership_id ?? id('mbr', this.sequence++),
+      created_at: input.created_at ?? NOW,
+      ...input,
+      semantic_classification: 'LEGACY_MEMBERSHIP_STATE',
+    };
+    this.records.memberships.push(membership);
+    return membership;
+  }
+
   createSourceSnapshot() {
     const snapshot: LegacySourceSnapshot = {
       snapshot_id: id('snp', this.sequence++),
@@ -491,6 +637,10 @@ export function createCleanSmallDataset() {
   const runtime = new Fels1Runtime();
   const course = runtime.createCourse({ course_code: 'LEG-COMM-001', title: '青春期亲子沟通课', description: 'Synthetic legacy course', category: 'COMMUNICATION', status: 'ACTIVE', total_lessons: 8 });
   const product = runtime.createProduct({ product_code: 'P-COMM-001', title: '沟通测评与课程包', product_type: 'COURSE', course_id: course.course_id, price: 1999, status: 'ACTIVE' });
+  const camp = runtime.createTrainingCamp({ camp_code: 'CAMP-COMM-21D', title: '21天沟通训练营', course_id: course.course_id, duration_days: 21, status: 'ACTIVE' });
+  const dailyTasks = [1, 2, 3].map((day) =>
+    runtime.createDailyTask({ training_camp_id: camp.training_camp_id, day_index: day, title: `第${day}天任务`, instruction_text: `Synthetic legacy daily task ${day}` }),
+  );
   for (let index = 1; index <= 12; index++) {
     const customer = runtime.createCustomer({ display_name: `Synthetic Customer ${index}`, phone: `1390000${index.toString().padStart(4, '0')}`, customer_level: index % 2 === 0 ? 'A' : 'B', source_channel: 'synthetic' });
     const contact = runtime.addContact(customer.customer_id, { name: `Synthetic Contact ${index}`, phone: customer.phone, relationship_text: index % 2 === 0 ? '妈妈' : '爸爸', is_primary_contact: true });
@@ -503,8 +653,14 @@ export function createCleanSmallDataset() {
     runtime.generateAssessmentReport(assessment.assessment_id, { summary: 'Synthetic legacy assessment report', legacy_family_type: 'COMMUNICATION_NEEDS_SUPPORT', legacy_risk_score: 20 + index });
     const { order, orderItems } = runtime.createOrder({ customer_id: customer.customer_id, buyer_contact_id: contact.contact_id, order_status: 'PENDING', total_amount: product.price }, [{ product_id: product.product_id, quantity: 1, amount: product.price }]);
     runtime.addPayment(order.order_id, { payment_status: 'PAID', paid_amount: product.price, paid_at: NOW, payment_method: 'SIMULATED_TRANSFER' });
-    runtime.createEnrollment({ student_id: student.student_id, course_id: course.course_id, order_item_id: orderItems[0].order_item_id, status: 'ACTIVE' });
+    const enrollment = runtime.createEnrollment({ student_id: student.student_id, course_id: course.course_id, order_item_id: orderItems[0].order_item_id, status: 'ACTIVE' });
     runtime.createLegacyConsent({ customer_id: customer.customer_id, student_id: student.student_id, contact_id: contact.contact_id, agreement_code: 'ASSESSMENT_AUTH', agreement_version: 'v1', accepted_at: NOW, guardian_proof_status: 'VERIFIED', purpose_text: 'Synthetic assessment authorization', source: 'LEGACY_WEB' });
+    const campEnrollment = runtime.createCampEnrollment({ training_camp_id: camp.training_camp_id, student_id: student.student_id, enrollment_id: enrollment.enrollment_id, status: 'ACTIVE' });
+    for (const task of dailyTasks) {
+      runtime.createTaskCheckin({ daily_task_id: task.daily_task_id, camp_enrollment_id: campEnrollment.camp_enrollment_id, student_id: student.student_id, checkin_status: task.day_index === 3 && index % 4 === 0 ? 'MISSED' : 'DONE', legacy_completion_text: 'Synthetic legacy checkin' });
+    }
+    runtime.createAdvisorNote({ customer_id: customer.customer_id, student_id: student.student_id, training_camp_id: camp.training_camp_id, advisor_name: `Advisor ${index % 3 + 1}`, note_type: index % 3 === 0 ? 'RENEWAL_INTENT' : 'PROGRESS', note_text: 'Synthetic legacy advisor note (opinion, not fact)' });
+    runtime.createMembership({ customer_id: customer.customer_id, membership_level: index % 2 === 0 ? 'PREMIUM' : 'BASIC', status: 'ACTIVE', started_at: NOW, expires_at: '2027-08-10T00:00:00.000Z', renewal_count: index % 3 === 0 ? 1 : 0, last_renewed_at: index % 3 === 0 ? NOW : undefined });
   }
   runtime.createSourceSnapshot();
   return runtime;
@@ -706,6 +862,12 @@ function recordCounts(records: FelsRecords) {
     legacy_payments: records.payments.length,
     legacy_enrollments: records.enrollments.length,
     legacy_consent_records: records.legacyConsents.length,
+    legacy_training_camps: records.trainingCamps.length,
+    legacy_camp_enrollments: records.campEnrollments.length,
+    legacy_daily_tasks: records.dailyTasks.length,
+    legacy_task_checkins: records.taskCheckins.length,
+    legacy_advisor_notes: records.advisorNotes.length,
+    legacy_memberships: records.memberships.length,
     legacy_source_snapshots: records.snapshots.length,
   };
 }
