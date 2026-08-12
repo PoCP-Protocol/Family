@@ -38,7 +38,30 @@ runRealHttp('FELS real HTTP API over family_legacy (read-only)', () => {
     const body = (await res.json()) as any;
     expect(body.mode).toBe('READ_ONLY');
     expect(body.source_kind).toBe('REFERENCE_IMPLEMENTATION');
-    expect(body.entities).toEqual(expect.arrayContaining(['customers', 'students', 'consents']));
+    expect(body.entities).toEqual(
+      expect.arrayContaining(['customers', 'students', 'consents', 'programs', 'tasks', 'checkins', 'advisor-notes', 'memberships']),
+    );
+  });
+
+  it('exports the legacy program lifecycle with preserved legacy semantics', async () => {
+    const programs = (await (await fetch(`${base}/legacy-export/programs`)).json()) as any;
+    expect(programs.entity_type).toBe('programs');
+    expect(programs.items.length).toBeGreaterThanOrEqual(1);
+    expect(programs.items[0].semantic_classification).toBe('LEGACY_PROGRAM_NOT_JOURNEY');
+
+    const tasks = (await (await fetch(`${base}/legacy-export/tasks`)).json()) as any;
+    expect(tasks.items[0].semantic_classification).toBe('LEGACY_TASK_NOT_GROWTH_ACTION');
+
+    const checkins = (await (await fetch(`${base}/legacy-export/checkins`)).json()) as any;
+    expect(checkins.items.length).toBeGreaterThanOrEqual(10);
+    expect(checkins.items[0].semantic_classification).toBe('LEGACY_CHECKIN_NOT_OUTCOME');
+
+    const notes = (await (await fetch(`${base}/legacy-export/advisor-notes`)).json()) as any;
+    expect(notes.items[0].semantic_classification).toBe('LEGACY_ADVISOR_TEXT_NOT_FACT');
+
+    const memberships = (await (await fetch(`${base}/legacy-export/memberships`)).json()) as any;
+    expect(memberships.items.length).toBeGreaterThanOrEqual(10);
+    expect(memberships.items[0].semantic_classification).toBe('LEGACY_MEMBERSHIP_STATE');
   });
 
   it('exports customers from real PostgreSQL through HTTP', async () => {

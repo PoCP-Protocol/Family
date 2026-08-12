@@ -405,6 +405,12 @@ function countRecords(records: FelsRecords) {
     legacy_payments: records.payments.length,
     legacy_enrollments: records.enrollments.length,
     legacy_consent_records: records.legacyConsents.length,
+    legacy_training_camps: records.trainingCamps.length,
+    legacy_camp_enrollments: records.campEnrollments.length,
+    legacy_daily_tasks: records.dailyTasks.length,
+    legacy_task_checkins: records.taskCheckins.length,
+    legacy_advisor_notes: records.advisorNotes.length,
+    legacy_memberships: records.memberships.length,
     legacy_source_snapshots: records.snapshots.length,
   };
 }

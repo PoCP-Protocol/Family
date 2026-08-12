@@ -1,6 +1,8 @@
 # Family 多租户移植设计 V0.1(RLS-first)
 
-status: PROPOSAL_NOT_AUTHORIZED
+status: SUPERSEDED_BY_V0.2_REANALYSIS
+note: 本 V0.1 自底向上借鉴 Bole"机构/加盟商"范式;经用户要求从 Family 自身架构/规格重新分析,产出 V0.2。V0.1 保留作演进记录,勿据此实施。
+_original_status: PROPOSAL_NOT_AUTHORIZED
 author: Claude(借鉴 Bole.ai 多租户范式)
 as_of: 2026-08-11
 depends_on: 本文档是治理输入,**不含代码/schema 变更**。落地须走 `CONTRACT_CHANGE_REQUEST` + AI-00 批准,且不得早于相应 Sprint 授权。
@@ -20,8 +22,9 @@ depends_on: 本文档是治理输入,**不含代码/schema 变更**。落地须�
 
 ### 范围内(本设计覆盖)
 - `tenants` 根表 + 每业务表 `tenant_id`。
-- PostgreSQL RLS 隔离机制。
-- NestJS 请求级租户上下文(AsyncLocalStorage)+ Guard。
+- **`branches` 租户内二级组织(校区/门店/班级)+ `families.branch_id` + 应用层 branch_scope 过滤**(Q3=本期做)。
+- PostgreSQL RLS 隔离机制(tenant 硬隔离)。
+- NestJS 请求级租户/branch 上下文(AsyncLocalStorage)+ Guard。
 - 认证从裸 `x-actor-id` 升级到可解析主体的分阶段路径。
 
 ### 范围外(本设计明确不做 / 后置)
@@ -57,6 +60,8 @@ depends_on: 本文档是治理输入,**不含代码/schema 变更**。落地须�
 | D5 | 认证**分阶段**:先保留 `x-actor-id` 但加 `x-tenant-id`(或从 principal 解析),后续再上 JWT/ApiKey | 不一次性推翻现有薄认证,降低对冻结契约冲击 |
 | D6 | `tenant_id` 一旦写入**不可变**(no UPDATE across tenant) | 防越权搬数据;RLS `WITH CHECK` 强制 |
 | D7 | **Branch(校区/门店/班级)= 租户内二级组织**;`branch_id` **只挂锚点表 `families`**,子表经 `family_id` 派生;**tenant=RLS 硬隔离,branch=应用层软范围**(非合规边界) | 对齐 Bole:branch 是运营可见范围不是安全墙;只挂锚点避免反规范化漂移;family 整户归属一个 branch |
+| D8 | **branch_scope 必须服务端从认证身份推导,不得取自客户端 header**(header 仅 dev)。为此**把最小身份切片提前到本期**:`users` + `user_branches` + 登录签发 JWT;Guard 从 DB 解析 branch_scope | 首批上线即需"店长只看本店"强约束(用户裁定"需要");header 可伪造,不能作安全边界 |
+| D9 | **只提前 authN + branch 数据范围;细粒度动作授权(RBAC action 矩阵 / 套餐门)仍后置** | 画最小线:"能看哪些 branch" 现在做,"能做哪些操作" 后置;避免把整套 Bole RBAC 一次性拉进来 |
 
 ---
 
@@ -101,6 +106,34 @@ CREATE TABLE IF NOT EXISTS branches (
 ```
 
 > 对齐 Bole `Branch`(tenant_id + code 租户内唯一 + contact + is_active),`is_active`→`status` 三态,PK 用 uuid `branch_id`。`branches` 自身也是受 RLS 管的业务表(带 `tenant_id`)。
+
+### 4.1c 最小身份切片(D8/D9,本期提前,**不含完整 RBAC**)
+
+```sql
+-- 租户内人类用户(仅身份 + 是否全 branch,不含 role/permission 矩阵)
+CREATE TABLE IF NOT EXISTS users (
+  user_id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id           uuid NOT NULL REFERENCES tenants(tenant_id),
+  username            varchar(64) NOT NULL,
+  display_name        varchar(120) NOT NULL DEFAULT '',
+  password_hash       varchar(128) NOT NULL DEFAULT '',
+  password_salt       varchar(64)  NOT NULL DEFAULT '',
+  is_active           boolean NOT NULL DEFAULT true,
+  access_all_branches boolean NOT NULL DEFAULT false,   -- true=租户管理员,看全租户
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ux_users_tenant_username UNIQUE (tenant_id, username)
+);
+
+-- 用户↔branch 数据范围(对齐 Bole UserBranch);空 + access_all_branches=false → 空集
+CREATE TABLE IF NOT EXISTS user_branches (
+  tenant_id  uuid NOT NULL REFERENCES tenants(tenant_id),
+  user_id    uuid NOT NULL REFERENCES users(user_id),
+  branch_id  uuid NOT NULL REFERENCES branches(branch_id),
+  PRIMARY KEY (user_id, branch_id)
+);
+```
+
+> **明确不做**(后置 P3):`roles` / `user_roles` / 模块授权 / `permission_level` 动作矩阵 / 套餐门。本期只回答"你是谁 + 能看哪些 branch",不回答"能做哪些操作"。
 
 ### 4.2 `tenant_id` 铺设清单(19 张表逐表裁定)
 
@@ -175,10 +208,12 @@ CREATE POLICY tenant_isolation ON families
 - 否则按 `principal.branch_scope`(允许的 `branch_id` 列表)过滤:family-anchored 查询 `WHERE families.branch_id = ANY(:scope)`;子表经 `family_id` JOIN `families` 再过滤。
 - `branch_scope` 为空 → **返回空集**(与 Bole 语义一致,fail-closed)。
 
-### 5b.3 用户→branch_scope 的来源(⚠️ 受现状约束)
-Family 现无 users/RBAC(仅 `x-actor-id`),`branch_scope` 无处可取。分阶段:
-- **P1(本期)**:家庭创建时可带 `branch_code` 归属;branch 过滤机制与 `branches` CRUD 落地;`branch_scope` 暂由 header `x-branch-scope`(逗号分隔 `branch_id`)提供,缺省=`access_all_branches`(等于不启用 branch 限制,不破坏现有流程)。
-- **P2/P3**:随 RBAC 引入 `user_branches`(对齐 Bole `UserBranch`),`branch_scope` 从用户角色解析,header 兜底废弃。
+### 5b.3 用户→branch_scope 的来源(D8:服务端推导,不信 header)
+首批上线即需"店长只看本店"强约束,故本期落**最小身份切片**(§4.1c):
+- **登录**:`/v1/auth/login`(租户内 username+password)→ 服务端签发 **JWT**(claims:`sub=user_id`, `tenant_id`)。
+- **Guard**:验签 JWT → 从 DB 载 `users` 行 → `access_all_branches=true` 则放行全租户;否则查 `user_branches` 得 `branch_scope`(`branch_id` 列表)→ 写入 ALS。**branch_scope 全程服务端计算,客户端无法伪造。**
+- **header `x-branch-scope`**:降级为**仅本地 dev/测试**便利,生产构建**禁用**(编译期开关,类比 Bole `VITE_ENABLE_PLATFORM_ADMIN`)。
+- 家庭创建时带 `branch_code` 归属 → `families.branch_id`。
 
 ### 5b.4 历史归属
 family 迁店 = `families.branch_id` 单行 UPDATE。历史事件按"家庭当前 branch"归属(运营可见性够用);若将来需事件级 branch 快照,再评估,不在本期。
@@ -209,10 +244,11 @@ family 迁店 = `families.branch_id` 单行 UPDATE。历史事件按"家庭当�
 
 | 阶段 | 主体来源 | 说明 |
 |---|---|---|
+> **注**:因 D8(可信 branch 约束),原 P2 的"身份/JWT"切片已**提前并入本期**;RBAC 动作矩阵仍留 P3。
+
 | P0(现状) | `x-actor-id` | 无租户 |
-| P1(本设计最小落地) | `x-tenant-id` + `x-actor-id`(+ 可选 `x-branch-scope`) | 加租户维度 + branch 过滤机制;认证仍薄;先让隔离机制跑起来 |
-| P2 | JWT(`sub`+`tenant_id` claim)/ `x-api-key` 反查 | 对齐 Bole Principal;人类登录 + 机器主体 |
-| P3 | 平台 Admin Key + 租户生命周期 API + 租户内 RBAC + `user_branches` | 对齐 Bole 全量(含 branch_scope 从角色解析);独立 Sprint |
+| **P1(本期,含身份切片)** | 登录→**JWT**(`sub`+`tenant_id`)+ `x-tenant-id`;`x-api-key`(机器主体,可后半期) | 租户维度 + **服务端 branch_scope**;`users`+`user_branches` 落地;认证不再靠裸 header |
+| P3 | 平台 Admin Key + 租户生命周期 API + **完整 RBAC**(roles/动作矩阵/套餐门) | 对齐 Bole 全量;独立 Sprint;**本期不做** |
 
 ---
 
@@ -224,6 +260,7 @@ family 迁店 = `families.branch_id` 单行 UPDATE。历史事件按"家庭当�
 3. `0013_tenant_indexes` — 复合索引(含 `families(tenant_id, branch_id)`)。
 4. `0014_enable_rls` — ENABLE/FORCE RLS + 策略(含 `branches`;branch 过滤不进 RLS,见 §5b.1)。
 5. `0015_idempotency_outbox_scope` — 幂等键/outbox 唯一键并入 `tenant_id`。
+6. `0016_users_and_user_branches` — 建 `users` + `user_branches`(D8 最小身份切片);种子默认租户一个管理员(`access_all_branches=true`,首登强制改密)。
 
 > 每步可回滚;`0014` 上线前须有"漏挂 `SET LOCAL` 即查不到数据"的负向测试兜底。
 
@@ -237,6 +274,7 @@ family 迁店 = `families.branch_id` 单行 UPDATE。历史事件按"家庭当�
 
 ### 9.2 对现有 API / 测试
 - 所有集成/E2E 测试当前用裸 `x-actor-id`(如 `account_id:'architect-1'`),需补 `x-tenant-id` 或默认租户中间件,否则 RLS 生效后全部查空 → **改造面主要在测试夹具**,业务逻辑几乎不动(隔离下沉到 DB/连接层)。
+- **Family 创建 API** 需新增可选 `branch_code`(归属校区);branch 缺省时 `branch_id` 为 NULL、`branch_scope` 缺省=`access_all_branches`,**不破坏现有单店流程**。OpenAPI 随之升级。
 - `growth_actions` legacy dual-write 与 `growth_journeys.subject_person_id` 的既有约束需在改造中保持,不借机偷加列。
 
 ### 9.3 对 Family 硬规则(全部兼容,无冲突)
@@ -269,6 +307,7 @@ family 迁店 = `families.branch_id` 单行 UPDATE。历史事件按"家庭当�
 - `T-MT-003` RLS 启用 + 策略 + 负向测试(`0014`)
 - `T-MT-004` NestJS TenantContext(ALS,含 branchScope)+ 连接层 `SET LOCAL`
 - `T-MT-005` TenantGuard(P1:`x-tenant-id`)+ branch_scope 过滤(`apply_branch_scope` 等价)+ 测试夹具改造
+- `T-MT-005b` 最小身份切片:`users`+`user_branches`(`0016`)+ `/v1/auth/login` JWT 签发 + Guard 服务端解析 branch_scope(D8)
 - `T-MT-006` OpenAPI 契约升级 + CCR 关闭
 - (后置)`T-MT-100+` P2 认证 / RBAC / 租户生命周期 API / Branch
 
