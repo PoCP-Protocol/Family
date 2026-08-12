@@ -211,7 +211,50 @@ capabilities:
     supersedes: []
     notes: 不透明 Bearer 会话令牌(sha256 存储)绑定 person∈family;复用 persons.account_id。尚未强制消费路径(IAM-103)。
 
+  - capability_id: IAM_102_OTP_VERIFIER
+    stage: M3-W2
+    status: INTERNAL_ALLOWED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # OTP 流程真实(生成/哈希/过期/限流/尝试/验证→签发);短信投递=stub
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2_IAM_000_GATE.md
+    authorized_at: "2026-08-12"
+    supersedes: []
+    notes: 仅登录既有绑定手机(注册=未来)。真实短信厂商(阿里云/腾讯云)= 独立 adapter,需凭证 → 见下 NOT_AUTHORIZED。
+
   # 明确未授权(危险能力)
+  - capability_id: IAM_REAL_SMS_PROVIDER
+    stage: M3-W2
+    status: NOT_AUTHORIZED   # 真实短信投递需选定厂商 + 凭证 + 合规审批(架构师决,勿硬编码)
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: null
+    authorization_ref: null
+    authorized_at: null
+    supersedes: []
+    notes: OtpSender 已留 adapter seam;真实发短信须凭证与合规,未授权。
+  - capability_id: IAM_WECHAT_VERIFIER
+    stage: M3-W2
+    status: NOT_AUTHORIZED   # 微信 OAuth 需 App 凭证;未建 live
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: null
+    authorization_ref: null
+    authorized_at: null
+    supersedes: []
+    notes: 与 OTP 同为 verifier;真实微信登录需 App 凭证,未授权。
   - capability_id: SFT
     stage: FUTURE
     status: NOT_AUTHORIZED

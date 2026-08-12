@@ -52,4 +52,45 @@ export class AuthRepository {
     const r = await this.pool.query(`update identity_sessions set revoked_at=now() where token_hash=$1 and revoked_at is null`, [tokenHash]);
     return (r.rowCount ?? 0) > 0;
   }
+
+  // ---------- IAM-102 OTP ----------
+  async countRecentChallenges(destinationHash: string, windowMinutes: number): Promise<number> {
+    const r = await this.pool.query<{ n: string }>(
+      `select count(*)::int n from otp_challenges where destination_hash=$1 and created_at > now() - ($2 || ' minutes')::interval`,
+      [destinationHash, String(windowMinutes)],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  }
+
+  async createChallenge(destinationHash: string, codeHash: string, purpose: string, ttlMs: number, maxAttempts: number): Promise<void> {
+    await this.pool.query(
+      `insert into otp_challenges(destination_hash, code_hash, purpose, max_attempts, expires_at)
+         values ($1,$2,$3,$4, now() + ($5 || ' milliseconds')::interval)`,
+      [destinationHash, codeHash, purpose, maxAttempts, String(ttlMs)],
+    );
+  }
+
+  async findActiveChallenge(destinationHash: string): Promise<{ challenge_id: string; code_hash: string; attempts: number; max_attempts: number } | null> {
+    const r = await this.pool.query(
+      `select challenge_id, code_hash, attempts, max_attempts from otp_challenges
+        where destination_hash=$1 and consumed_at is null and expires_at > now()
+        order by created_at desc limit 1`,
+      [destinationHash],
+    );
+    return r.rows[0] ?? null;
+  }
+
+  async incrementAttempt(challengeId: string): Promise<void> {
+    await this.pool.query(`update otp_challenges set attempts = attempts + 1 where challenge_id=$1`, [challengeId]);
+  }
+
+  async consumeChallenge(challengeId: string): Promise<void> {
+    await this.pool.query(`update otp_challenges set consumed_at=now() where challenge_id=$1`, [challengeId]);
+  }
+
+  /** 由外部账号(如 'phone:138...')解析已绑定的 person∈family(仅登录;注册=未来)。 */
+  async findPersonByAccountId(accountId: string): Promise<{ person_id: string; family_id: string } | null> {
+    const r = await this.pool.query(`select person_id, family_id from persons where account_id=$1 limit 1`, [accountId]);
+    return r.rows[0] ?? null;
+  }
 }
