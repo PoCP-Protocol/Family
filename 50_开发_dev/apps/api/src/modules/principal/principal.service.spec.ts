@@ -13,10 +13,10 @@ const VALID_OUTPUT = {
 };
 
 function spyGateway() {
-  const state = { called: false, lastImages: undefined as unknown };
+  const state = { called: false, lastImages: undefined as unknown, lastFamilyContext: undefined as unknown };
   const gw: AiGateway = {
-    async generateStructured(req: { images?: unknown }) {
-      state.called = true; state.lastImages = req.images;
+    async generateStructured(req: { images?: unknown; input?: { family_context?: unknown } }) {
+      state.called = true; state.lastImages = req.images; state.lastFamilyContext = req.input?.family_context;
       return {
         model: 'spy', prompt_version: 'p', schema_version: 's', input_refs: [], generated_at: '',
         validation_status: 'valid', human_status: 'draft', output: { ...VALID_OUTPUT },
@@ -33,7 +33,13 @@ function fakeRepo(consents: CanonicalConsentRow[]) {
     addMessage: vi.fn(async () => {}),
     recordProductEvent: vi.fn(async () => {}),
     loadConsents: vi.fn(async () => consents),
+    loadFamilyContextSlice: vi.fn(async () => ({
+      familyRef: 'fam-1', subjectRef: 'child-1', lifeStage: 'EARLY_ADOLESCENCE_12_15',
+      confirmedGrowthPriority: ['R03'], activeIntervention: ['LISTEN_BEFORE_RESPOND'],
+      recentGrowthActionState: ['PENDING'], recentPermittedObservationSummary: [],
+    })),
     countRealModelRunsToday: vi.fn(async () => 0),
+    countRealAttemptsToday: vi.fn(async () => 0),
     saveModelRun: vi.fn(async () => {}),
     saveHandoff: vi.fn(async () => {}),
     saveResponse: vi.fn(async () => ({ response_id: 'r1' })),
@@ -51,6 +57,25 @@ async function handle(consents: CanonicalConsentRow[], profile: string | undefin
   const res = await svc.handleMessage('fam-1', 'sess-1', 'child-1', 'actor-1', message, 'corr-1', images);
   return { state, res };
 }
+
+describe('W2R-101 object-aware Principal context', () => {
+  afterEach(() => { delete process.env.FPAI_RUNTIME_PROFILE; });
+
+  it('consent granted → typed Family Object Context injected (allowlist fields, truth=FACT/state)', async () => {
+    const { state } = await handle([row('GRANTED')], 'internal_livecheck', '孩子写作业拖拉怎么办');
+    expect(state.called).toBe(true);
+    const ctx = state.lastFamilyContext as Record<string, unknown> | undefined;
+    expect(ctx).toBeTruthy();
+    expect(ctx).toMatchObject({ contextVersion: 'v1', lifeStage: 'EARLY_ADOLESCENCE_12_15', confirmedGrowthPriority: ['R03'], activeIntervention: ['LISTEN_BEFORE_RESPOND'] });
+    // 最小必要:不外露私有文本/AI_INFERENCE(仅 allowlist V1 字段)
+    expect(Object.keys(ctx as object)).not.toContain('privateText');
+  });
+
+  it('no consent → NO object context injected (输出=0,不偷偷降级)', async () => {
+    const { state } = await handle([], 'internal_livecheck', '孩子写作业拖拉怎么办');
+    expect(state.lastFamilyContext).toBeUndefined();
+  });
+});
 
 describe('PrincipalService processing enforcement (M3-INT-001)', () => {
   afterEach(() => { delete process.env.FPAI_RUNTIME_PROFILE; });

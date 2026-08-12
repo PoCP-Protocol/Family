@@ -7,7 +7,7 @@ import {
   runPrincipalTextMvp, safetyPrecheck,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
-import { resolvePrincipalConsent, evaluateProcessing, type ProcessingDataCategory } from '@family/principal-runtime';
+import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, type ProcessingDataCategory } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
 
 /** DI token:Principal 真实模型网关(env-gated)。未配置真实 provider 时为 null → 确定性回退(不发外部调用)。 */
@@ -121,11 +121,25 @@ export class PrincipalService {
       }
     }
 
+    // W2R-101 对象化上下文:仅在 consent 允许时,注入【最小 allowlist】typed PrincipalFamilyContextV1
+    // (canonical FACT/状态,不含私有文本/AI_INFERENCE)。否则 null(输出=0,不偷偷降级)。
+    let familyContext: Record<string, unknown> | undefined;
+    if (consent.allowed) {
+      const slice = await this.repo.loadFamilyContextSlice(familyId, subjectRef);
+      const ctx = buildPrincipalFamilyContext(slice, consent);
+      if (ctx) {
+        familyContext = ctx as unknown as Record<string, unknown>;
+        await this.repo.recordProductEvent('principal_object_context_injected', familyId, sessionId, correlationId,
+          { life_stage: ctx.lifeStage, priorities: ctx.confirmedGrowthPriority.length, interventions: ctx.activeIntervention.length });
+      }
+    }
+
     const requestId = randomUUID();
     const input: PrincipalAiInput = {
       request_id: requestId, session_id: sessionId, entry_point: 'ASK_FAMILI_PRINCIPAL',
       user_message: userMessage,
       consent_context: { fpai_lab_consent: consent.allowed, family_context_read_allowed: consent.allowed },
+      ...(familyContext ? { family_context: familyContext } : {}),
       // 图片隔离:不注入 images(即使收到);外呼由 willCallExternal 决定。
     };
 

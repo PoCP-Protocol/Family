@@ -55,6 +55,41 @@ export class PrincipalRepository {
     return r.rows as CanonicalConsentRow[];
   }
 
+  /**
+   * W2R-101 对象化上下文:从真实 Growth read model 取【最小 allowlist】slice(仅 canonical FACT/状态,
+   * 不含私有文本/全量 perspectives/AI_INFERENCE)。供 buildPrincipalFamilyContext 构造 PrincipalFamilyContextV1。
+   * subjectRef 须为 person uuid(consent 允许时才调用)。
+   */
+  async loadFamilyContextSlice(familyId: string, subjectRef: string): Promise<{
+    familyRef: string; subjectRef: string; lifeStage: string;
+    confirmedGrowthPriority: string[]; activeIntervention: string[];
+    recentGrowthActionState: string[]; recentPermittedObservationSummary: string[];
+  }> {
+    const ls = await this.pool.query<{ life_stage_code: string }>(
+      `select life_stage_code from life_stage_assignments where family_id=$1 and child_id=$2 order by effective_from desc limit 1`,
+      [familyId, subjectRef],
+    );
+    const pr = await this.pool.query<{ dimension_id: string }>(
+      `select dimension_id from growth_priorities where family_id=$1 and status='ACTIVE' order by created_at desc limit 5`,
+      [familyId],
+    );
+    const iv = await this.pool.query<{ intervention_code: string }>(
+      `select intervention_code from intervention_episodes where family_id=$1 and status='ACTIVE' order by created_at desc limit 5`,
+      [familyId],
+    );
+    const ga = await this.pool.query<{ status: string }>(
+      `select status from growth_actions where family_id=$1 order by created_at desc limit 7`,
+      [familyId],
+    );
+    return {
+      familyRef: familyId, subjectRef, lifeStage: ls.rows[0]?.life_stage_code ?? 'UNKNOWN',
+      confirmedGrowthPriority: pr.rows.map((x) => x.dimension_id),
+      activeIntervention: iv.rows.map((x) => x.intervention_code),
+      recentGrowthActionState: ga.rows.map((x) => x.status),
+      recentPermittedObservationSummary: [], // 最小必要:观察摘要暂不外露(敏感);allowlist 空
+    };
+  }
+
   async addMessage(sessionId: string, familyId: string, sender: string, body: string, correlationId: string): Promise<void> {
     await this.pool.query(
       `insert into principal_messages(session_id, family_id, sender, body, correlation_id) values ($1,$2,$3,$4,$5)`,
