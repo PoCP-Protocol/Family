@@ -2,6 +2,10 @@ import pg from 'pg';
 import type {
   FelsRecords,
   LegacyAdvisorNote,
+  LegacyAiReport,
+  LegacyAlert,
+  LegacyProfile,
+  LegacyTag,
   LegacyAssessmentReport,
   LegacyAssessmentScore,
   LegacyAssessmentSession,
@@ -84,6 +88,10 @@ export class PgFelsRepository implements FelsRepository {
       await this.insertTaskCheckins(records.taskCheckins);
       await this.insertAdvisorNotes(records.advisorNotes);
       await this.insertMemberships(records.memberships);
+      await this.insertLegacyProfiles(records.profiles);
+      await this.insertLegacyTags(records.tags);
+      await this.insertLegacyAiReports(records.aiReports);
+      await this.insertLegacyAlerts(records.alerts);
       await this.insertSourceSnapshots(records.snapshots);
       await this.client.query('COMMIT');
       return countRecords(records);
@@ -96,6 +104,10 @@ export class PgFelsRepository implements FelsRepository {
   private async clearFels1RuntimeTables() {
     await this.client.query(`TRUNCATE TABLE
       fels.legacy_source_snapshots,
+      fels.legacy_alerts,
+      fels.legacy_ai_reports,
+      fels.legacy_tags,
+      fels.legacy_profiles,
       fels.legacy_memberships,
       fels.legacy_advisor_notes,
       fels.legacy_task_checkins,
@@ -261,6 +273,34 @@ export class PgFelsRepository implements FelsRepository {
     );
   }
 
+  private async insertLegacyProfiles(rows: LegacyProfile[]) {
+    for (const row of rows) await this.client.query(
+      `INSERT INTO fels.legacy_profiles(legacy_profile_id, customer_id, student_id, family_type, family_score, ranking, customer_level, student_level, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [row.legacy_profile_id, row.customer_id, row.student_id ?? null, row.family_type ?? null, row.family_score ?? null, row.ranking ?? null, row.customer_level ?? null, row.student_level ?? null, row.semantic_classification, row.created_at],
+    );
+  }
+
+  private async insertLegacyTags(rows: LegacyTag[]) {
+    for (const row of rows) await this.client.query(
+      `INSERT INTO fels.legacy_tags(legacy_tag_id, customer_id, student_id, tag_category, tag_value, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [row.legacy_tag_id, row.customer_id ?? null, row.student_id ?? null, row.tag_category, row.tag_value, row.semantic_classification, row.created_at],
+    );
+  }
+
+  private async insertLegacyAiReports(rows: LegacyAiReport[]) {
+    for (const row of rows) await this.client.query(
+      `INSERT INTO fels.legacy_ai_reports(legacy_ai_report_id, customer_id, student_id, assessment_id, report_type, ai_conclusion, recommended_action, has_supporting_evidence, semantic_classification, generated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [row.legacy_ai_report_id, row.customer_id, row.student_id ?? null, row.assessment_id ?? null, row.report_type, row.ai_conclusion, row.recommended_action ?? null, row.has_supporting_evidence, row.semantic_classification, row.generated_at],
+    );
+  }
+
+  private async insertLegacyAlerts(rows: LegacyAlert[]) {
+    for (const row of rows) await this.client.query(
+      `INSERT INTO fels.legacy_alerts(legacy_alert_id, customer_id, student_id, alert_type, risk_score, severity_label, legacy_disposition, semantic_classification, triggered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [row.legacy_alert_id, row.customer_id, row.student_id ?? null, row.alert_type, row.risk_score ?? null, row.severity_label ?? null, row.legacy_disposition ?? null, row.semantic_classification, row.triggered_at],
+    );
+  }
+
   private async insertSourceSnapshots(rows: LegacySourceSnapshot[]) {
     for (const row of rows) await this.client.query(
       `INSERT INTO fels.legacy_source_snapshots(snapshot_id, source_system, schema_version, created_at, record_counts, checksum_metadata) VALUES ($1,$2,$3,$4,$5,$6)`,
@@ -299,6 +339,10 @@ const EXPORT_QUERIES = {
   checkins: 'SELECT task_checkin_id, daily_task_id, camp_enrollment_id, student_id, checkin_status, legacy_completion_text, semantic_classification, checked_in_at FROM fels.legacy_task_checkins ORDER BY task_checkin_id',
   'advisor-notes': 'SELECT advisor_note_id, customer_id, student_id, training_camp_id, advisor_name, note_type, note_text, semantic_classification, created_at FROM fels.legacy_advisor_notes ORDER BY advisor_note_id',
   memberships: 'SELECT membership_id, customer_id, membership_level, status, started_at, expires_at, renewal_count, last_renewed_at, semantic_classification, created_at FROM fels.legacy_memberships ORDER BY membership_id',
+  profiles: 'SELECT legacy_profile_id, customer_id, student_id, family_type, family_score, ranking, customer_level, student_level, semantic_classification, created_at FROM fels.legacy_profiles ORDER BY legacy_profile_id',
+  tags: 'SELECT legacy_tag_id, customer_id, student_id, tag_category, tag_value, semantic_classification, created_at FROM fels.legacy_tags ORDER BY legacy_tag_id',
+  'ai-reports': 'SELECT legacy_ai_report_id, customer_id, student_id, assessment_id, report_type, ai_conclusion, recommended_action, has_supporting_evidence, semantic_classification, generated_at FROM fels.legacy_ai_reports ORDER BY legacy_ai_report_id',
+  alerts: 'SELECT legacy_alert_id, customer_id, student_id, alert_type, risk_score, severity_label, legacy_disposition, semantic_classification, triggered_at FROM fels.legacy_alerts ORDER BY legacy_alert_id',
 } as const;
 
 export type LegacyExportEntity = keyof typeof EXPORT_QUERIES;
@@ -375,6 +419,10 @@ export class PgFelsReadRepository {
       'legacy_task_checkins',
       'legacy_advisor_notes',
       'legacy_memberships',
+      'legacy_profiles',
+      'legacy_tags',
+      'legacy_ai_reports',
+      'legacy_alerts',
       'legacy_source_snapshots',
     ];
     return this.readOnly(async (client) => {
@@ -411,6 +459,10 @@ function countRecords(records: FelsRecords) {
     legacy_task_checkins: records.taskCheckins.length,
     legacy_advisor_notes: records.advisorNotes.length,
     legacy_memberships: records.memberships.length,
+    legacy_profiles: records.profiles.length,
+    legacy_tags: records.tags.length,
+    legacy_ai_reports: records.aiReports.length,
+    legacy_alerts: records.alerts.length,
     legacy_source_snapshots: records.snapshots.length,
   };
 }

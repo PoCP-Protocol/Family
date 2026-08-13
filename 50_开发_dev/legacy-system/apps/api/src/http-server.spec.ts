@@ -1,5 +1,5 @@
 import { startFelsHttpServer, type FelsHttpServer } from './http-server';
-import { createCleanSmallDataset } from './fels1-core';
+import { createFels4CleanDataset } from './fels1-core';
 import { seedDatasetToPostgres } from './pg-fels-repository';
 
 function legacyDbAvailable() {
@@ -16,7 +16,7 @@ runRealHttp('FELS real HTTP API over family_legacy (read-only)', () => {
   let base: string;
 
   beforeAll(async () => {
-    await seedDatasetToPostgres(createCleanSmallDataset().records);
+    await seedDatasetToPostgres(createFels4CleanDataset().records);
     http = await startFelsHttpServer(0);
     base = `http://127.0.0.1:${http.port}`;
   }, 60_000);
@@ -62,6 +62,22 @@ runRealHttp('FELS real HTTP API over family_legacy (read-only)', () => {
     const memberships = (await (await fetch(`${base}/legacy-export/memberships`)).json()) as any;
     expect(memberships.items.length).toBeGreaterThanOrEqual(10);
     expect(memberships.items[0].semantic_classification).toBe('LEGACY_MEMBERSHIP_STATE');
+  });
+
+  it('exports FELS-4 dirty-world entities with preserved non-canonical semantics', async () => {
+    const profiles = (await (await fetch(`${base}/legacy-export/profiles`)).json()) as any;
+    expect(profiles.entity_type).toBe('profiles');
+    expect(profiles.items.length).toBeGreaterThanOrEqual(1);
+    expect(profiles.items[0].semantic_classification).toBe('LEGACY_PROFILE_SNAPSHOT_NOT_STATE');
+
+    const tags = (await (await fetch(`${base}/legacy-export/tags`)).json()) as any;
+    expect(tags.items[0].semantic_classification).toBe('LEGACY_TAG_CATEGORY_NOT_OFFICIAL');
+
+    const aiReports = (await (await fetch(`${base}/legacy-export/ai-reports`)).json()) as any;
+    expect(aiReports.items[0].semantic_classification).toBe('LEGACY_AI_HYPOTHESIS_NOT_FACT');
+
+    const alerts = (await (await fetch(`${base}/legacy-export/alerts`)).json()) as any;
+    expect(alerts.items[0].semantic_classification).toBe('LEGACY_ALERT_SIGNAL_NOT_THRESHOLD');
   });
 
   it('exports customers from real PostgreSQL through HTTP', async () => {

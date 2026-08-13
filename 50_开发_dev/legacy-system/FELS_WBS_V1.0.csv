@@ -33,10 +33,11 @@ FELS-302,FELS-3,Community,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
 FELS-303,FELS-3,Activity,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
 FELS-304,FELS-3,Support,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
 FELS-305,FELS-3,CRM / LMS Reference,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS3 gate
-FELS-401,FELS-4,Legacy Profile / Tag,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
-FELS-402,FELS-4,Legacy AI Report,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
-FELS-403,FELS-4,Score / Ranking,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
-FELS-404,FELS-4,Dirty Data Factory,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS4 gate
+FELS-401,FELS-4,Legacy Profile / Tag,DONE_CODE_VALIDATED,AUTHORIZED,legacy-system/db/migrations/0004_fels4_legacy_ai_analytics.sql,FELS4 gate report; legacy_profiles/legacy_tags with NOT_* semantics
+FELS-402,FELS-4,Legacy AI Report,DONE_CODE_VALIDATED,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,legacy_ai_reports LEGACY_AI_HYPOTHESIS_NOT_FACT + legacy_alerts
+FELS-403,FELS-4,Score / Ranking,DONE_CODE_VALIDATED,AUTHORIZED,legacy-system/contracts/src/index.ts,FELS4_LEGACY_ATTRIBUTE_MAP; family_score/ranking RETIRE; rejectSemanticPollution PASS
+FELS-404,FELS-4,Dirty Data Factory,DONE_CODE_VALIDATED,AUTHORIZED,legacy-system/apps/api/src/fels1-core.ts,createFels4DirtyDataset + 52 dirty scenarios (>=50)
+FELS-413,FELS-4,Live PostgreSQL + Real HTTP + FLM pollution scan,PENDING,REQUIRES_LEGACY_DATABASE_URL,legacy-system/tools/flm-readonly-discovery.mjs,Blocked until independent LEGACY_DATABASE_URL exists
 FELS-501,FELS-5,FLM Source Adapter,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
 FELS-502,FELS-5,Identity Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
 FELS-503,FELS-5,Consent Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate

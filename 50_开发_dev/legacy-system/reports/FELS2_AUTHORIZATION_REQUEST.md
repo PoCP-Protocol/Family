@@ -77,10 +77,26 @@ FAMILY_CANONICAL_WRITE = 0
 - **签署栏**:
 
 ```text
-CHIEF_ARCHITECT_DECISION = ____________________
-AUTHORIZE_FELS2 = YES / NO
-EARLY_FELS23_DISPOSITION = POSITIVE_SPLIT / IN_PLACE / KEEP_FROZEN
-FELS4_PRIORITY = BEFORE_FELS2 / AFTER_FELS2
-LM1_DRAFT_STATUS = KEEP_DRAFT / PROMOTE_REVIEWED
-SIGNOFF = ____________________  DATE = __________
+CHIEF_ARCHITECT_DECISION = APPROVED_RECOMMENDED_COMBO
+AUTHORIZE_FELS2 = NO
+EARLY_FELS23_DISPOSITION = POSITIVE_SPLIT
+FELS4_PRIORITY = BEFORE_FELS2
+LM1_DRAFT_STATUS = PROMOTE_REVIEWED
+SIGNOFF = 创始人/总架构师  DATE = 2026-08-13
 ```
+
+---
+
+## 五、裁决落地记录（signoff 后追加）
+
+```text
+DECISION_APPLIED_AT = 2026-08-13
+APPLIED_ON_BRANCH = fels/fels4-dirty-world (基线=fels/fels1-closure HEAD)
+```
+
+- **裁决1 = NO**:FELS-2 维持 `NOT_AUTHORIZED`,暂缓正式开发。
+- **裁决3 = BEFORE_FELS2**:授权 **FELS-4「脏世界」优先开发**,以尽早硬化 FLM 对语义污染的拒绝证据。落点:`FELS_MASTER_PLAN_V1.0.md` §4 `FELS4 = AUTHORIZED (PRIORITY_BEFORE_FELS2)`、`FELS_ROADMAP_V1.0.md` §6 `AUTHORIZED_IN_PROGRESS`。
+- **裁决2 = POSITIVE_SPLIT**:早期 FELS-2/3 六表(camp/task/checkin/advisor/membership)处置方法定为**正向拆分(revert + 新分支重建)**;**执行时点 = 未来授权 FELS-2 时另起专门会话**,本轮不动这六表(维持 `QUARANTINE_PENDING / DO_NOT_MERGE`)。
+- **裁决4 = PROMOTE_REVIEWED**:`architecture/FELS_LM1_SEMANTIC_MAPPING_DRAFT_V0_1.md` 升为 `LM1_MAPPING_REVIEWED`(仅对 FELS 参考源;真实邦阳源保持 `SUSPENDED_NOT_BLOCKED`,不视为对真实源的映射确认)。
+
+> 边界不变:Family 正典库写入 = 0;不 shadow/pilot/canonical import;不改写任何已 push 历史。

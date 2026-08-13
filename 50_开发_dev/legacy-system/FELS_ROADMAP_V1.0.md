@@ -107,7 +107,7 @@ FRESH_DB = PASS_LOCAL_REBUILD (reset -> 3 FELS migrations applied -> no pending;
 ## 4. FELS-2 Program & Human Service
 
 Target Duration: 2-3 weeks
-Current Status: NOT_AUTHORIZED
+Current Status: NOT_AUTHORIZED (deferred by signoff 2026-08-13; FELS-4 prioritized first)
 
 Scope after explicit authorization only:
 
@@ -178,7 +178,7 @@ ADAPTER_REFERENCE_READY = YES
 ## 6. FELS-4 Legacy Intelligence & Dirty World
 
 Target Duration: 1-2 weeks
-Current Status: NOT_AUTHORIZED
+Current Status: AUTHORIZED_IN_PROGRESS (signoff 2026-08-13, PRIORITY_BEFORE_FELS2)
 
 Scope:
 

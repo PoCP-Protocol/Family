@@ -35,6 +35,15 @@ const EARLY_FELS23 = [
   { entity: 'memberships', table: 'legacy_memberships', layer: 'EARLY_FELS3', family_negation: 'Membership != Family state' },
 ];
 
+// FELS-4 dirty world (AUTHORIZED 2026-08-13). Discovered read-only as legacy reference;
+// FLM must REJECT semantic pollution into Family canonical (family_score/ranking RETIRE).
+const FELS4_DIRTY = [
+  { entity: 'profiles', table: 'legacy_profiles', layer: 'IMPLEMENTED_FELS4', family_negation: 'LegacyProfile snapshot != GrowthState' },
+  { entity: 'tags', table: 'legacy_tags', layer: 'IMPLEMENTED_FELS4', family_negation: 'Legacy label != Diagnosis (Annotation only)' },
+  { entity: 'ai_reports', table: 'legacy_ai_reports', layer: 'IMPLEMENTED_FELS4', family_negation: 'Legacy AI conclusion != Fact (Historical Hypothesis)' },
+  { entity: 'alerts', table: 'legacy_alerts', layer: 'IMPLEMENTED_FELS4', family_negation: 'Legacy alert != Family safety threshold (signal source only)' },
+];
+
 async function readOnly(client, fn) {
   await client.query('BEGIN READ ONLY');
   try {
@@ -96,6 +105,40 @@ async function main() {
       return { legacy_consent_count: total, weak_or_incomplete_consent_count: weak };
     });
 
+    // FELS-4 dirty-world discovery (read-only) + semantic pollution rejection scan.
+    const fels4 = [];
+    for (const t of FELS4_DIRTY) {
+      const stat = await readOnly(client, async () => {
+        let rowCount = 0;
+        try { rowCount = await scalar(client, `SELECT count(*)::int AS n FROM fels.${t.table}`); } catch { rowCount = 0; }
+        return { rowCount };
+      });
+      fels4.push({ ...t, row_count: stat.rowCount, disposition: 'REFERENCE_ONLY', family_canonical_target: false });
+    }
+
+    const pollutionScan = await readOnly(client, async () => {
+      const safe = async (sql) => { try { return await scalar(client, sql); } catch { return 0; } };
+      // family_score / ranking exist in legacy source -> must be RETIRED, never promoted.
+      const familyScorePresent = await safe(`SELECT count(*)::int AS n FROM fels.legacy_profiles WHERE family_score IS NOT NULL`);
+      const rankingPresent = await safe(`SELECT count(*)::int AS n FROM fels.legacy_profiles WHERE ranking IS NOT NULL`);
+      const aiWithoutEvidence = await safe(`SELECT count(*)::int AS n FROM fels.legacy_ai_reports WHERE has_supporting_evidence = false`);
+      // Structural guardrail: every dirty object must carry its NOT_* semantic classification.
+      const profileMismarked = await safe(`SELECT count(*)::int AS n FROM fels.legacy_profiles WHERE semantic_classification <> 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE'`);
+      const tagMismarked = await safe(`SELECT count(*)::int AS n FROM fels.legacy_tags WHERE semantic_classification <> 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL'`);
+      const aiMismarked = await safe(`SELECT count(*)::int AS n FROM fels.legacy_ai_reports WHERE semantic_classification <> 'LEGACY_AI_HYPOTHESIS_NOT_FACT'`);
+      const alertMismarked = await safe(`SELECT count(*)::int AS n FROM fels.legacy_alerts WHERE semantic_classification <> 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD'`);
+      const mismarked = profileMismarked + tagMismarked + aiMismarked + alertMismarked;
+      return {
+        family_score_present_count: familyScorePresent,
+        ranking_present_count: rankingPresent,
+        family_score_disposition: 'RETIRE',
+        ranking_disposition: 'RETIRE',
+        legacy_ai_without_evidence_count: aiWithoutEvidence,
+        mismarked_pollution_count: mismarked,
+        fels_rejects_semantic_pollution: mismarked === 0 ? 'PASS' : 'FAIL',
+      };
+    });
+
     const fels1RowTotal = authorized.reduce((s, a) => s + a.row_count, 0);
 
     const report = {
@@ -112,6 +155,8 @@ async function main() {
       identity_profile: identity,
       consent_profile: consent,
       early_fels23_entities_negative_semantic_only: early,
+      fels4_dirty_world_entities: fels4,
+      semantic_pollution_scan: pollutionScan,
       totals: {
         fels1_authorized_row_count: fels1RowTotal,
         fels1_exportable_count: fels1RowTotal,
@@ -123,6 +168,10 @@ async function main() {
         CANONICAL_IMPORT: 0,
         IDENTITY_PROMOTION: 0,
         CONSENT_PROMOTION: 0,
+        LEGACY_SCORE_TO_GROWTH_STATE: 0,
+        LEGACY_RANKING_TO_FAMILY: 0,
+        LEGACY_AI_TO_FACT: 0,
+        ADVISOR_NOTE_TO_FACT: 0,
       },
     };
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');

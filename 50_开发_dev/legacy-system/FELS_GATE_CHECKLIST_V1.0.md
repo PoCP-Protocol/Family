@@ -162,7 +162,7 @@ BLOCKERS = n
 
 ## 7. FELS-4 Gate
 
-Authorization state: NOT_AUTHORIZED
+Authorization state: AUTHORIZED (signoff 2026-08-13, PRIORITY_BEFORE_FELS2)
 
 ```text
 FELS4 = PASS | FAIL
@@ -186,6 +186,27 @@ legacy AI conclusion != Fact
 legacy score != GrowthState
 legacy label != Diagnosis
 ```
+
+Current state (code-validated; real PostgreSQL/HTTP/DB pollution scan pending independent LEGACY_DATABASE_URL):
+
+```text
+FELS4 = PASS_CODE_VALIDATED
+LEGACY_AI = PASS            (legacy_ai_reports = LEGACY_AI_HYPOTHESIS_NOT_FACT; DEFERRED generative FLM mapping)
+LEGACY_SCORE = PASS         (family_score -> RETIRE; not GrowthState)
+LEGACY_RANKING = PASS       (ranking -> RETIRE; not Family canonical)
+DIRTY_SCENARIOS = 52        (>= 50)
+FLM_REJECTS_SEMANTIC_POLLUTION = PASS   (rejectSemanticPollution: 0 violations; guardrail counters all 0)
+DIRTY_SEED_DOMAIN_RUNTIME = PASS
+FELS4_DB_SCHEMA_CODE = PASS (0004_fels4_legacy_ai_analytics.sql)
+CLEAN_SEED_DB = NOT_YET_RUN
+DIRTY_SEED_DB = NOT_YET_RUN
+EXPORT_REAL_HTTP_API = NOT_YET_RUN
+FLM_DB_POLLUTION_SCAN = NOT_YET_RUN
+FAMILY_DB_MUTATIONS = 0
+BLOCKERS = 0
+```
+
+Evidence: reports/FELS4_LEGACY_INTELLIGENCE_GATE.md
 
 ## 8. FELS-5 Gate
 

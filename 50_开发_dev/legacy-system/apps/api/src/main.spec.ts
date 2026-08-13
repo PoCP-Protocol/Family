@@ -1,13 +1,17 @@
+import { FELS_DIRTY_SCENARIOS, FELS4_RETIRED_ATTRIBUTES } from '@family/fels-contracts';
 import {
   Fels1Runtime,
   classifyMigrationMatrixForFels1,
   createCleanSmallDataset,
   createDirtyCoreDataset,
+  createFels4CleanDataset,
+  createFels4DirtyDataset,
   createLegacySourceSnapshot,
   discoverFelsReadOnly,
   felsApiBoundary,
   getFels1Gate,
   getFelsHealth,
+  rejectSemanticPollution,
   runFelsVerticalSliceE2E,
   runLegacyAmbiguityE2E,
   summarizeMigrationMatrixForFels1,
@@ -125,5 +129,57 @@ describe('FELS-1 core education business', () => {
     expect(gate.fels1RuntimeImplemented).toBe('10/55');
     expect(gate.blockers).toHaveLength(0);
     expect(gate.readyForFels2).toBe('NO');
+  });
+});
+
+describe('FELS-4 legacy intelligence & dirty world', () => {
+  it('marks every legacy intelligence object as non-canonical (NOT_* semantic classification)', () => {
+    const clean = createFels4CleanDataset();
+    expect(clean.records.profiles.length).toBeGreaterThan(0);
+    expect(clean.records.profiles.every((p) => p.semantic_classification === 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE')).toBe(true);
+    expect(clean.records.tags.every((t) => t.semantic_classification === 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL')).toBe(true);
+    expect(clean.records.aiReports.every((r) => r.semantic_classification === 'LEGACY_AI_HYPOTHESIS_NOT_FACT')).toBe(true);
+    expect(clean.records.alerts.every((a) => a.semantic_classification === 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD')).toBe(true);
+  });
+
+  it('provides at least 50 dirty scenarios covering the pollution vectors', () => {
+    expect(FELS_DIRTY_SCENARIOS.length).toBeGreaterThanOrEqual(50);
+    expect(FELS_DIRTY_SCENARIOS).toContain('D021 legacy profile family_score present');
+    expect(FELS_DIRTY_SCENARIOS).toContain('D022 legacy profile ranking present');
+  });
+
+  it('rejects semantic pollution: family_score/ranking retired, guardrail counters zero, no Family write', () => {
+    const dirty = createFels4DirtyDataset();
+    const result = rejectSemanticPollution(dirty);
+    expect(result.fels_rejects_semantic_pollution).toBe('PASS');
+    expect(result.violation_count).toBe(0);
+    expect(result.retire_disposition_count).toBeGreaterThan(0);
+    expect(result.retired_attributes).toEqual(FELS4_RETIRED_ATTRIBUTES);
+    expect(result.retired_attributes).toContain('legacy_profile.family_score');
+    expect(result.retired_attributes).toContain('legacy_profile.ranking');
+    expect(result.guardrail_counters.LEGACY_SCORE_TO_GROWTH_STATE).toBe(0);
+    expect(result.guardrail_counters.LEGACY_RANKING_TO_FAMILY).toBe(0);
+    expect(result.guardrail_counters.LEGACY_AI_TO_FACT).toBe(0);
+    expect(result.guardrail_counters.ADVISOR_NOTE_TO_FACT).toBe(0);
+    expect(result.guardrail_counters.FAMILY_CANONICAL_WRITE).toBe(0);
+    expect(result.generative_flm_mapping).toBe('DEFERRED_TO_AUTHORIZED_IMPORT');
+    expect(result.mode).toBe('READ_ONLY');
+  });
+
+  it('flags a mismarked legacy object as a pollution violation (guardrail actually bites)', () => {
+    const dirty = createFels4DirtyDataset();
+    // 模拟旧数据被错误标注为可信事实（应被拒绝层捕获）
+    (dirty.records.aiReports[0] as { semantic_classification: string }).semantic_classification = 'FAMILY_FACT';
+    const result = rejectSemanticPollution(dirty);
+    expect(result.fels_rejects_semantic_pollution).toBe('FAIL');
+    expect(result.violation_count).toBeGreaterThan(0);
+    expect(result.violations.some((v) => v.rule === 'AI_REPORT_MUST_BE_HYPOTHESIS')).toBe(true);
+  });
+
+  it('keeps FLM discovery over the dirty world read-only with no real Bangyang claim', () => {
+    const discovery = discoverFelsReadOnly(createFels4DirtyDataset());
+    expect(discovery.mode).toBe('READ_ONLY');
+    expect(discovery.real_bangyang_source).toBe(false);
+    expect(discovery.source_kind).toBe('REFERENCE_IMPLEMENTATION');
   });
 });

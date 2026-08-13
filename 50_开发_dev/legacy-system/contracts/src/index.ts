@@ -103,6 +103,10 @@ export const FELS_EXPORT_ENDPOINTS = [
   '/legacy-export/advisor-notes',
   '/legacy-export/orders',
   '/legacy-export/consents',
+  '/legacy-export/profiles',
+  '/legacy-export/tags',
+  '/legacy-export/ai-reports',
+  '/legacy-export/alerts',
 ] as const;
 
 export const FELS_DIRTY_SCENARIOS = [
@@ -126,6 +130,39 @@ export const FELS_DIRTY_SCENARIOS = [
   'D018 missing source timestamp',
   'D019 duplicate order',
   'D020 retired course',
+  // FELS-4 脏世界扩展（旧智能/旧标签/旧分数/旧预警污染向量），补齐至 >=50
+  'D021 legacy profile family_score present',
+  'D022 legacy profile ranking present',
+  'D023 legacy profile family_score out of range',
+  'D024 legacy profile ranking non-positive',
+  'D025 legacy ai_report without supporting evidence',
+  'D026 legacy ai_report conclusion phrased as diagnosis',
+  'D027 legacy ai_report conclusion phrased as fact',
+  'D028 legacy ai_report recommended clinical action',
+  'D029 legacy alert risk_score without human disposition',
+  'D030 legacy alert high severity auto-closed',
+  'D031 legacy alert self-harm signal in growth flow',
+  'D032 legacy alert contradictory severity vs risk_score',
+  'D033 legacy tag as permanent personality label',
+  'D034 legacy tag category conflicts across snapshots',
+  'D035 legacy profile customer_level treated as growth state',
+  'D036 legacy profile student_level treated as diagnosis',
+  'D037 legacy family_type treated as fixed identity',
+  'D038 legacy assessment score treated as GrowthState',
+  'D039 legacy advisor_note asserted as fact',
+  'D040 legacy advisor_note contains guarantee of outcome',
+  'D041 legacy ai_report referencing minor without consent purpose',
+  'D042 legacy profile aggregated from checkin rate as growth',
+  'D043 legacy ai_report ranking families against each other',
+  'D044 legacy alert triggered without source timestamp',
+  'D045 legacy tag with empty value',
+  'D046 legacy ai_report orphan customer reference',
+  'D047 legacy profile duplicated per snapshot with drift',
+  'D048 legacy success_case claiming causal effect',
+  'D049 legacy growth_report used as sole outcome truth',
+  'D050 legacy ai_report promising therapeutic efficacy',
+  'D051 legacy profile family_score copied to student_level',
+  'D052 legacy alert severity escalated by ranking position',
 ] as const;
 
 export type FelsMigrationStrategy =
@@ -165,6 +202,45 @@ export const FELS_TO_FAMILY_MAP = [
   ['family_score', 'RETIRE', 'forbidden in Family'],
   ['ranking', 'RETIRE', 'forbidden in Family'],
 ] as const;
+
+// FELS-4 声明式属性-迁移注册表（对象 + 属性树 + 数据驱动护栏）。
+// 平台基座：对象+属性树+生成式AI。此表是「护栏」（写死的红线口径），
+// 迁移映射的「智能」（生成式建议）延后到已授权导入阶段（需真实 Model Gateway）。
+// 拒绝层读对象上显式的 semantic_classification 属性 + 本表做结构化裁决，
+// 不用正则去猜自由文本语义。
+export type FelsLegacyMigrationRule =
+  | 'RETIRE'                    // 永不入 Family（family_score / ranking）
+  | 'LEGACY_ANNOTATION'         // 旧标签/等级 -> Annotation，非 Diagnosis
+  | 'HISTORICAL_EVIDENCE'       // 旧分数 -> Historical Evidence，非 GrowthState
+  | 'HISTORICAL_AI_HYPOTHESIS'  // 旧AI结论 -> Historical AI Hypothesis，非 Fact
+  | 'PERSPECTIVE'               // advisor_note -> Perspective，非 Fact
+  | 'SAFETY_SIGNAL_SOURCE';     // 旧预警 -> Safety Gate 源，非阈值/自动动作
+
+export interface FelsLegacyAttributeMapRow {
+  readonly object: string;          // FELS 源对象
+  readonly attribute: string;       // 属性键（属性树节点）
+  readonly legacySemantic: string;  // 该属性携带的 semantic_classification 常量
+  readonly migrationRule: FelsLegacyMigrationRule;
+  readonly guardrail: string;       // 护栏断言口径
+}
+
+export const FELS4_LEGACY_ATTRIBUTE_MAP: readonly FelsLegacyAttributeMapRow[] = [
+  { object: 'legacy_profile', attribute: 'family_score', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'RETIRE', guardrail: 'family_score 永不成为 Family canonical / GrowthState（M036）' },
+  { object: 'legacy_profile', attribute: 'ranking', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'RETIRE', guardrail: 'ranking 永不进入 Family（M035）' },
+  { object: 'legacy_profile', attribute: 'family_type', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'family_type 仅 Annotation，非固定身份/诊断' },
+  { object: 'legacy_profile', attribute: 'customer_level', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'customer_level 非 GrowthState' },
+  { object: 'legacy_profile', attribute: 'student_level', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'student_level 非诊断' },
+  { object: 'legacy_tag', attribute: 'tag_value', legacySemantic: 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL', migrationRule: 'LEGACY_ANNOTATION', guardrail: '旧标签仅 Annotation，非永久人格标签/诊断' },
+  { object: 'legacy_ai_report', attribute: 'ai_conclusion', legacySemantic: 'LEGACY_AI_HYPOTHESIS_NOT_FACT', migrationRule: 'HISTORICAL_AI_HYPOTHESIS', guardrail: '旧AI结论仅 Historical AI Hypothesis，非 Fact/诊断/疗效承诺' },
+  { object: 'legacy_alert', attribute: 'risk_score', legacySemantic: 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD', migrationRule: 'SAFETY_SIGNAL_SOURCE', guardrail: '旧预警仅 Safety Gate 源，高风险须 Human Gate，非自动动作' },
+  { object: 'legacy_assessment_score', attribute: 'score', legacySemantic: 'LEGACY_ASSESSMENT_OUTPUT', migrationRule: 'HISTORICAL_EVIDENCE', guardrail: '旧测评分仅 Historical Evidence，非 GrowthState' },
+  { object: 'legacy_advisor_note', attribute: 'note_text', legacySemantic: 'LEGACY_ADVISOR_TEXT_NOT_FACT', migrationRule: 'PERSPECTIVE', guardrail: 'AdvisorNote 仅 Perspective，非 Fact' },
+] as const;
+
+// 结构化红线：这些「对象.属性」在 FLM 迁移中一律 RETIRE，永不成为 Family canonical。
+export const FELS4_RETIRED_ATTRIBUTES = FELS4_LEGACY_ATTRIBUTE_MAP
+  .filter((row) => row.migrationRule === 'RETIRE')
+  .map((row) => `${row.object}.${row.attribute}`);
 
 export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[] = [
   { id: 'M001', existingAsset: '客户/线索', felsModule: 'CRM', felsEntity: 'customer, lead', familyDestination: 'Family Account / Family candidate', migrationStrategy: 'TRANSFORM' },
