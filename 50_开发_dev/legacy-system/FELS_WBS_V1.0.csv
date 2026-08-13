@@ -37,7 +37,7 @@ FELS-401,FELS-4,Legacy Profile / Tag (FLM-AC-001 fixture),DONE_CODE_VALIDATED_LO
 FELS-402,FELS-4,Legacy AI Report (FLM-AC-001 fixture),DONE_CODE_VALIDATED_LOCAL,FLM_AC_001_FIXTURE_ONLY,legacy-system/apps/api/src/fels1-core.ts,legacy_ai_reports LEGACY_AI_HYPOTHESIS_NOT_FACT + legacy_alerts
 FELS-403,FELS-4,Score / Ranking (FLM-AC-001 fixture),DONE_CODE_VALIDATED_LOCAL,FLM_AC_001_FIXTURE_ONLY,legacy-system/contracts/src/index.ts,FELS4_LEGACY_ATTRIBUTE_MAP; family_score/ranking RETIRE; rejectSemanticPollution PASS
 FELS-404,FELS-4,Dirty Data Factory (FLM-AC-001 fixture),DONE_CODE_VALIDATED_LOCAL,FLM_AC_001_FIXTURE_ONLY,legacy-system/apps/api/src/fels1-core.ts,createFels4DirtyDataset + 52 dirty scenarios (>=50)
-FELS-413,FELS-4,FLM_AC_002 Real Reference DB/HTTP/scan,IN_PROGRESS,FLM_AC_002_AUTHORIZED,legacy-system/tools/flm-readonly-discovery.mjs,Real independent family_legacy_dirty PostgreSQL closure (order FLM-AC-002)
+FELS-413,FELS-4,FLM_AC_002 Real Reference DB/HTTP/scan,DONE_REAL_SYSTEM_VALIDATED,FLM_AC_002_AUTHORIZED,legacy-system/reports/FLM_AC_002_REAL_REFERENCE_GATE.md,Real family_legacy_dirty PostgreSQL: fresh DB + clean/dirty seed + real HTTP + FLM read-only scan + Family canonical delta=0
 FELS-501,FELS-5,FLM Source Adapter,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
 FELS-502,FELS-5,Identity Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate
 FELS-503,FELS-5,Consent Simulation,NOT_STARTED,NOT_AUTHORIZED,TBD,FELS5 gate

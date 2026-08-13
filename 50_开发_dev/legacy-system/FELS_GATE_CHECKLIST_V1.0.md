@@ -201,15 +201,18 @@ DIRTY_SCENARIOS = 52        (>= 50)
 FLM_REJECTS_SEMANTIC_POLLUTION = PASS   (rejectSemanticPollution: 0 violations; guardrail counters all 0)
 DIRTY_SEED_DOMAIN_RUNTIME = PASS
 FELS4_DB_SCHEMA_CODE = PASS (0004_flm_dirty_world_reference.sql)
-CLEAN_SEED_DB = NOT_YET_RUN
-DIRTY_SEED_DB = NOT_YET_RUN
-EXPORT_REAL_HTTP_API = NOT_YET_RUN
-FLM_DB_POLLUTION_SCAN = NOT_YET_RUN
+FLM_AC_002 = PASS (real family_legacy_dirty PostgreSQL closure)
+FRESH_REFERENCE_DB = PASS
+CLEAN_SEED_DB = PASS
+DIRTY_SEED_DB = PASS
+EXPORT_REAL_HTTP_API = PASS_REAL_HTTP
+FLM_DB_POLLUTION_SCAN = PASS (guardrails all 0)
+FAMILY_CANONICAL_DELTA = 0 (real before/after fingerprint)
 FAMILY_DB_MUTATIONS = 0
 BLOCKERS = 0
 ```
 
-Evidence: reports/FELS4_LEGACY_INTELLIGENCE_GATE.md
+Evidence: reports/FLM_AC_001_DIRTY_WORLD_CODE_GATE.md (code) + reports/FLM_AC_002_REAL_REFERENCE_GATE.md (real system)
 
 ## 8. FELS-5 Gate
 
