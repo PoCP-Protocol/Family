@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "program": "FAMILY_1_0_MOS",
+  "dev_os": "FAMILY_DEV_OS_V1",
+  "execution_policy": {
+    "no_gate_leap": true,
+    "agent_self_authorization": false,
+    "direct_push_master": false,
+    "auto_merge_class_c": false,
+    "one_task_one_branch_one_agent": true,
+    "default_execution_mode": "PLAN_ONLY",
+    "real_agent_requires_explicit_runner": true
+  },
+  "current_truth": {
+    "master_baseline_note": "Resolve live master at runtime; do not trust a hard-coded SHA.",
+    "m3_rb_003": "PASS_CLOSED",
+    "pilot": "NO",
+    "real_family_100": "NO"
+  },
+  "hold_capabilities": [
+    "OBJECT_TREE_P2",
+    "OBJECT_TREE_P3_GENERATIVE",
+    "FELS2_FULL_RUNTIME",
+    "FELS3",
+    "FELS4_FULL_RUNTIME",
+    "SFT",
+    "LORA",
+    "DISTILLATION",
+    "DIGITAL_HUMAN_RUNTIME",
+    "WORLD_MODEL",
+    "CAUSAL_ENGINE"
+  ]
+}
