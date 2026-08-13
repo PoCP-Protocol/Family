@@ -12,6 +12,13 @@ export const FELS_DATABASE_CONTRACT = {
   schemaOwnership: 'FELS_ONLY',
 } as const;
 
+// Reference source schema version — decoupled from FELS phase name (FLM-AC-002 §11).
+// Do NOT reuse a phase label (e.g. 'fels-1') as a schema version on export envelopes.
+export const FELS_REFERENCE_SCHEMA_VERSION = 'fels-ref-0004' as const;
+
+// Which acceptance surface of the FELS reference source an exported object belongs to.
+export type FelsAcceptanceSurface = 'FELS1' | 'FLM_DIRTY_WORLD' | 'QUARANTINED';
+
 export const FELS_DOMAINS = [
   'CRM',
   'CUSTOMER_CONTACT',

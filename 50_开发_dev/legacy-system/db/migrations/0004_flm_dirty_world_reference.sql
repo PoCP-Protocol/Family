@@ -1,4 +1,9 @@
--- FELS-4 Legacy Intelligence & Dirty World: 旧画像 / 旧标签 / 旧AI报告 / 旧预警
+-- FLM Dirty-World Reference Fixture: 旧画像 / 旧标签 / 旧AI报告 / 旧预警
+-- SOURCE_KIND = FELS_REFERENCE_IMPLEMENTATION
+-- PURPOSE = FLM_ANTI_CORRUPTION_FIXTURE
+-- FELS4_PRODUCT_CAPABILITY = NO
+-- Authorization = FLM_AC_001_DIRTY_WORLD (order FLM-AC-002, 2026-08-14). NOT a FELS-4 build.
+--
 -- Legacy semantics only. These are NOT Family canonical objects and must never be
 -- promoted directly into Family growth ontology by FLM.
 --   LEGACY_PROFILE_SNAPSHOT_NOT_STATE  : legacy profile snapshot != GrowthState
@@ -7,7 +12,6 @@
 --   LEGACY_TAG_CATEGORY_NOT_OFFICIAL   : legacy label = Annotation, != Diagnosis
 --   LEGACY_AI_HYPOTHESIS_NOT_FACT      : legacy AI conclusion = Historical Hypothesis, != Fact
 --   LEGACY_ALERT_SIGNAL_NOT_THRESHOLD  : legacy alert = raw signal, != Family Safety threshold
--- Authorization: FELS4 = AUTHORIZED (signoff 2026-08-13, PRIORITY_BEFORE_FELS2).
 
 CREATE TABLE IF NOT EXISTS fels.legacy_profiles (
   legacy_profile_id text PRIMARY KEY,

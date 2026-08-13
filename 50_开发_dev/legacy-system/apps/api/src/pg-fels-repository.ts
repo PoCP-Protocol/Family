@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { FELS_REFERENCE_SCHEMA_VERSION, type FelsAcceptanceSurface } from '@family/fels-contracts';
 import type {
   FelsRecords,
   LegacyAdvisorNote,
@@ -321,11 +322,21 @@ export async function seedDatasetToPostgres(records: FelsRecords) {
 export interface LegacyExportEnvelope<T> {
   source_system: 'FELS';
   source_kind: 'REFERENCE_IMPLEMENTATION';
+  source_schema_version: typeof FELS_REFERENCE_SCHEMA_VERSION;
+  acceptance_surface: FelsAcceptanceSurface;
   entity_type: string;
-  schema_version: 'fels-1';
   snapshot_id?: string;
   items: T[];
   pagination: { cursor?: string; has_more: boolean };
+}
+
+const FLM_DIRTY_EXPORT_ENTITIES = ['profiles', 'tags', 'ai-reports', 'alerts'];
+const QUARANTINED_EXPORT_ENTITIES = ['programs', 'tasks', 'checkins', 'advisor-notes', 'memberships'];
+
+function acceptanceSurfaceForEntity(entity: string): FelsAcceptanceSurface {
+  if (FLM_DIRTY_EXPORT_ENTITIES.includes(entity)) return 'FLM_DIRTY_WORLD';
+  if (QUARANTINED_EXPORT_ENTITIES.includes(entity)) return 'QUARANTINED';
+  return 'FELS1';
 }
 
 const EXPORT_QUERIES = {
@@ -394,8 +405,9 @@ export class PgFelsReadRepository {
     return {
       source_system: 'FELS',
       source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_schema_version: FELS_REFERENCE_SCHEMA_VERSION,
+      acceptance_surface: acceptanceSurfaceForEntity(entity),
       entity_type: entity,
-      schema_version: 'fels-1',
       snapshot_id: snapshotId,
       items: rows.rows,
       pagination: { has_more: false },

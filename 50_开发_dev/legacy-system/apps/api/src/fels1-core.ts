@@ -1,4 +1,4 @@
-import { FELS_DATABASE_CONTRACT, FELS_MIGRATION_MATRIX_COVERAGE, FELS4_RETIRED_ATTRIBUTES, getFels0Gate } from '@family/fels-contracts';
+import { FELS_DATABASE_CONTRACT, FELS_MIGRATION_MATRIX_COVERAGE, FELS_REFERENCE_SCHEMA_VERSION, FELS4_RETIRED_ATTRIBUTES, getFels0Gate, type FelsAcceptanceSurface } from '@family/fels-contracts';
 
 type Status = 'PASS' | 'FAIL';
 type MatrixClassification =
@@ -341,14 +341,24 @@ export interface FelsRecords {
 export interface LegacyExportEnvelope<T> {
   source_system: 'FELS';
   source_kind: 'REFERENCE_IMPLEMENTATION';
+  source_schema_version: typeof FELS_REFERENCE_SCHEMA_VERSION;
+  acceptance_surface: FelsAcceptanceSurface;
   entity_type: string;
-  schema_version: 'fels-1';
   snapshot_id?: string;
   items: T[];
   pagination: {
     cursor?: string;
     has_more: boolean;
   };
+}
+
+const FLM_DIRTY_STORE_KEYS: StoreKey[] = ['profiles', 'tags', 'aiReports', 'alerts'];
+const QUARANTINED_STORE_KEYS: StoreKey[] = ['trainingCamps', 'campEnrollments', 'dailyTasks', 'taskCheckins', 'advisorNotes', 'memberships'];
+
+export function acceptanceSurfaceForStoreKey(key: StoreKey): FelsAcceptanceSurface {
+  if (FLM_DIRTY_STORE_KEYS.includes(key)) return 'FLM_DIRTY_WORLD';
+  if (QUARANTINED_STORE_KEYS.includes(key)) return 'QUARANTINED';
+  return 'FELS1';
 }
 
 const NOW = '2026-08-10T00:00:00.000Z';
@@ -398,7 +408,12 @@ function emptyRecords(): FelsRecords {
   };
 }
 
-export class Fels1Runtime {
+// FelsReferenceRuntime 表示整个 FELS Reference Source(FLM-AC-002 §9):
+//   ├── FELS1 reference surface（核心教育业务）
+//   ├── quarantined early lifecycle surface（早期 FELS-2/3 六表，冻结）
+//   └── FLM dirty-world reference surface（脏世界 fixture：profiles/tags/ai_reports/alerts）
+// 它不是"世界上所有 FELS 数据"塞进一个类，而是分层的参考源门面。
+export class FelsReferenceRuntime {
   readonly records: FelsRecords;
   private sequence = 1;
 
@@ -712,8 +727,9 @@ export class Fels1Runtime {
     return {
       source_system: 'FELS',
       source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_schema_version: FELS_REFERENCE_SCHEMA_VERSION,
+      acceptance_surface: acceptanceSurfaceForStoreKey(key),
       entity_type: entityType,
-      schema_version: 'fels-1',
       snapshot_id: options.snapshotId,
       items,
       pagination: {
@@ -735,8 +751,14 @@ export class Fels1Runtime {
   }
 }
 
+/**
+ * @deprecated 兼容 alias(FLM-AC-002 §10)。请用 FelsReferenceRuntime。
+ * 独立 Gate 通过后再决定是否完全移除旧名。
+ */
+export class Fels1Runtime extends FelsReferenceRuntime {}
+
 export function createCleanSmallDataset() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const course = runtime.createCourse({ course_code: 'LEG-COMM-001', title: '青春期亲子沟通课', description: 'Synthetic legacy course', category: 'COMMUNICATION', status: 'ACTIVE', total_lessons: 8 });
   const product = runtime.createProduct({ product_code: 'P-COMM-001', title: '沟通测评与课程包', product_type: 'COURSE', course_id: course.course_id, price: 1999, status: 'ACTIVE' });
   const camp = runtime.createTrainingCamp({ camp_code: 'CAMP-COMM-21D', title: '21天沟通训练营', course_id: course.course_id, duration_days: 21, status: 'ACTIVE' });
@@ -832,7 +854,7 @@ export function createFels4DirtyDataset() {
 }
 
 export function runFelsVerticalSliceE2E() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const customer = runtime.createCustomer({ display_name: 'Vertical Slice Customer', phone: '13700000001', source_channel: 'offline' });
   const mother = runtime.addContact(customer.customer_id, { name: 'Mother Contact', phone: customer.phone, relationship_text: '妈妈', is_primary_contact: true });
   const student = runtime.createStudent({ customer_id: customer.customer_id, name: 'Vertical Slice Student', student_level: 'legacy_mid' });
@@ -863,7 +885,7 @@ export function runFelsVerticalSliceE2E() {
 }
 
 export function runLegacyAmbiguityE2E() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const customerA = runtime.createCustomer({ display_name: 'Customer A Buyer', phone: '13600000001' });
   const customerB = runtime.createCustomer({ display_name: 'Customer B Guardian Holder', phone: '13600000002' });
   const contactB = runtime.addContact(customerB.customer_id, { name: 'Guardian Contact B', relationship_text: '监护人', is_primary_contact: true });
@@ -883,7 +905,7 @@ export function runLegacyAmbiguityE2E() {
   };
 }
 
-export function discoverFelsReadOnly(runtime: Fels1Runtime) {
+export function discoverFelsReadOnly(runtime: FelsReferenceRuntime) {
   const duplicatePhones = new Set<string>();
   const seenPhones = new Set<string>();
   for (const customer of runtime.records.customers) {
@@ -920,7 +942,7 @@ export function discoverFelsReadOnly(runtime: Fels1Runtime) {
 // 每个旧脏对象必须携带正确的 NOT_* semantic_classification（数据驱动，不用正则猜自由文本）；
 // family_score / ranking 一律 RETIRE，永不成为 Family canonical。
 // 生成式 FLM 映射建议延后到已授权导入阶段（需真实 Model Gateway）。
-export function rejectSemanticPollution(runtime: Fels1Runtime) {
+export function rejectSemanticPollution(runtime: FelsReferenceRuntime) {
   const violations: Array<{ rule: string; object: string; id: string; detail: string }> = [];
   const requireMark = (
     ok: boolean,

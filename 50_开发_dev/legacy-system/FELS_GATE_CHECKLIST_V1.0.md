@@ -200,7 +200,7 @@ LEGACY_RANKING = PASS       (ranking -> RETIRE; not Family canonical)
 DIRTY_SCENARIOS = 52        (>= 50)
 FLM_REJECTS_SEMANTIC_POLLUTION = PASS   (rejectSemanticPollution: 0 violations; guardrail counters all 0)
 DIRTY_SEED_DOMAIN_RUNTIME = PASS
-FELS4_DB_SCHEMA_CODE = PASS (0004_fels4_legacy_ai_analytics.sql)
+FELS4_DB_SCHEMA_CODE = PASS (0004_flm_dirty_world_reference.sql)
 CLEAN_SEED_DB = NOT_YET_RUN
 DIRTY_SEED_DB = NOT_YET_RUN
 EXPORT_REAL_HTTP_API = NOT_YET_RUN

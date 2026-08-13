@@ -34,7 +34,7 @@ FELS4_FULL_BUILD = NOT_AUTHORIZED ; FELS4_PRODUCT_CAPABILITY = NO
 
 ## 2. 数据模型与脏场景（FELS-401 / 404）
 
-- 迁移 `db/migrations/0004_fels4_legacy_ai_analytics.sql`：`fels.legacy_profiles`（含 family_type/family_score/ranking/customer_level/student_level）、`legacy_tags`、`legacy_ai_reports`（ai_conclusion/has_supporting_evidence）、`legacy_alerts`（risk_score/severity/legacy_disposition）。列式严格沿用 0002/0003；每表默认 `semantic_classification` 为对应 NOT_* 护栏常量。
+- 迁移 `db/migrations/0004_flm_dirty_world_reference.sql`：`fels.legacy_profiles`（含 family_type/family_score/ranking/customer_level/student_level）、`legacy_tags`、`legacy_ai_reports`（ai_conclusion/has_supporting_evidence）、`legacy_alerts`（risk_score/severity/legacy_disposition）。列式严格沿用 0002/0003；每表默认 `semantic_classification` 为对应 NOT_* 护栏常量。
 - 脏场景：`FELS_DIRTY_SCENARIOS` 由 20 扩至 **52**（D021–D052 覆盖 family_score/ranking present、越界、无证据AI诊断、诊断/事实/临床化措辞、自伤信号、矛盾预警、永久人格标签、旧标签当诊断、旧分当 GrowthState 等污染向量）。
 - `createFels4DirtyDataset()` 实际注入计数（domain-runtime seed）：profiles=6, tags=7, ai_reports=7, alerts=7。
 

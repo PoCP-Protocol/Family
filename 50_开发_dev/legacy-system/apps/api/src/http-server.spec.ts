@@ -67,6 +67,8 @@ runRealHttp('FELS real HTTP API over family_legacy (read-only)', () => {
   it('exports FELS-4 dirty-world entities with preserved non-canonical semantics', async () => {
     const profiles = (await (await fetch(`${base}/legacy-export/profiles`)).json()) as any;
     expect(profiles.entity_type).toBe('profiles');
+    expect(profiles.source_schema_version).toBe('fels-ref-0004');
+    expect(profiles.acceptance_surface).toBe('FLM_DIRTY_WORLD');
     expect(profiles.items.length).toBeGreaterThanOrEqual(1);
     expect(profiles.items[0].semantic_classification).toBe('LEGACY_PROFILE_SNAPSHOT_NOT_STATE');
 
@@ -86,7 +88,8 @@ runRealHttp('FELS real HTTP API over family_legacy (read-only)', () => {
     const body = (await res.json()) as any;
     expect(body.source_system).toBe('FELS');
     expect(body.entity_type).toBe('customers');
-    expect(body.schema_version).toBe('fels-1');
+    expect(body.source_schema_version).toBe('fels-ref-0004');
+    expect(body.acceptance_surface).toBe('FELS1');
     expect(body.items.length).toBeGreaterThanOrEqual(10);
     expect(body.items[0]).toHaveProperty('customer_id');
     expect(body.items[0].semantic_classification).toBe('LEGACY_DERIVED');

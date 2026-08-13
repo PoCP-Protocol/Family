@@ -7,7 +7,9 @@ import {
   getFels0Gate,
 } from '@family/fels-contracts';
 export {
+  FelsReferenceRuntime,
   Fels1Runtime,
+  acceptanceSurfaceForStoreKey,
   classifyMigrationMatrixForFels1,
   createCleanSmallDataset,
   createDirtyCoreDataset,
