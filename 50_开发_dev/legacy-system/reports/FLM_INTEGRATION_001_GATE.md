@@ -6,21 +6,33 @@
 
 ---
 
-## 0. 基线
+## 0. 基线（最终核验真相，来自 GitHub，非人工记忆）
 
 ```text
-CLEAN_MASTER_BASE = 7cf13c687982cfb1a7dc97de7d79da0832d290b1 (origin/master)
-BRANCH = flm/integration-001 (isolated worktree, based on origin/master)
+CREATION_BASE_SHA = 7cf13c687982cfb1a7dc97de7d79da0832d290b1
+CURRENT_MASTER_SHA_AT_FINAL_REVIEW = 0da4302c63e1e42f57bf3ae6af185be222713656
+BASE_DRIFT_REASON = PR13_FAMILY_DEVOS_V1_MERGED_AFTER_BRANCH_CREATION
+MERGE_BASE = 7cf13c6 ; integration ahead=1 behind=2
+CURRENT_PR_MERGEABLE = YES
+REBASE_REQUIRED = NO
+GITHUB_REQUIRED_GATES = PASS (Family Required Gates run #74)
+CURRENT_MASTER_CONFLICT_SCAN = PASS (PR mergeable=true + required CI green + no conflicting DevOS paths)
+CHANGED_FILES = 18
+BRANCH = flm/integration-001 (isolated worktree, based on CREATION_BASE)
 SOURCE_EVIDENCE = flm/anti-corruption-dirty-world@35162c6 (frozen, DO_NOT_MERGE)
 METHOD = READ old code -> RECONSTRUCT legal diff -> APPLY to clean master (NO cherry-pick)
 ```
+
+> 说明:创建后 master 因 PR#13 (Family Dev OS V1) 正常前进,当前 PR 不是脏,只是 behind=2。
+> 只要 GitHub mergeability 与 required CI 皆绿,不为"看起来最新"强制 rebase(REBASE_REQUIRED=NO)。
 
 ## 1. Gate 汇总
 
 | 项 | 结果 |
 |---|---|
 | FLM_INTEGRATION_001 | **PASS** |
-| CLEAN_MASTER_BASE | **PASS**(基线=最新 origin/master 7cf13c6) |
+| CLEAN_MASTER_BASE | **PASS**(CREATION_BASE=7cf13c6;current master 已前进至 0da4302c via PR#13,mergeable=YES,REBASE_REQUIRED=NO) |
+| CURRENT_MASTER_CONFLICT_SCAN | **PASS**(mergeable=true + required CI green + no conflicting DevOS paths) |
 | NO_CHERRY_PICK_MIXED_HISTORY | **PASS**(全部正向重建,无 cherry-pick) |
 | NO_0003_DEPENDENCY | **PASS**(迁移链 = 0001,0002,0004) |
 | EARLY_FELS23_PHYSICAL_TABLES | **0** |
