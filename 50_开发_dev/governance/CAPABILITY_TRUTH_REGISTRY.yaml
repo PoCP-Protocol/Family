@@ -98,6 +98,22 @@ capabilities:
     verdict: KEEP
     notes: 提案→确认→既有 Named Action;不旁路 canonical。
 
+  # ---------- 运行时底座(M3-RB-003 P1:对象+属性树+Skill → 运行时)----------
+  - id: object_tree_runtime
+    what: packages/object-tree assertNamedActionWrite(统一写护卫);接入 StartIntervention/CompleteGrowthAction/ConfirmGrowthPriority
+    true_class: DETERMINISTIC_GUARDRAIL   # 声明式写护卫,非能力;把零散 CHECK+纪律收敛成一处强制
+    user_visible: false
+    current_default: true
+    verdict: KEEP
+    notes: 依 Object-Skill 声明强制 mutability;named_action_only FACT 仅在 allowed_named_actions 内可写,AI_INFERENCE/PROPOSAL 永不可写 canonical。与既有命令式守卫互补。蓝图见 architecture/rb-003/FAMILY_OBJECT_RUNTIME_BLUEPRINT_V1.md。无外呼、不写新 canonical、不需 AUTHORIZATION 新条目。
+  - id: attribute_tree_projection
+    what: packages/object-tree projectObject(对象语义视图:多源聚合+分区+truth_type 标注)
+    true_class: DETERMINISTIC_GUARDRAIL   # 投影协议(§7:非通用图库/存储引擎)
+    user_visible: false
+    current_default: true
+    verdict: KEEP
+    notes: 把 ATTRIBUTE_TREE_STANDARD_V1 从文档变运行时投影;AI_INFERENCE/PROPOSAL 分区标记 canonical=false,不可回流为可写事实。复用 skill.ts 的 SkillRegistry/SkillRuntime 原语。
+
   # ---------- Growth OS(M1/M2)----------
   - id: growth_named_actions
     what: StartIntervention / CompleteGrowthAction / ConfirmGrowthPriority 等(apps/api family)

@@ -7,6 +7,7 @@ import { REFLECTION_BOUNDARY, assertCompletableGrowthActionStatus } from './grow
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { assertReflectionSafetyRoute } from './reflection-safety.policy';
+import { assertNamedActionWrite, GROWTH_ACTION_SKILL } from '@family/object-tree';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const COMPLETE_GROWTH_ACTION_ACTION = 'CompleteGrowthAction';
@@ -61,6 +62,8 @@ export class GrowthActionService {
       await assertRequiredGrowthConsents(client, request.family_id, subject.childPersonId);
       await assertNormalSafetyRoute(client, request.family_id, existing.onboarding_id);
       assertReflectionSafetyRoute(request.reflection);
+      // 运行时底座 WriteGuard:GrowthAction.status 只能经 CompleteGrowthAction 写(ACTION_IS_NOT_OUTCOME)。
+      assertNamedActionWrite(GROWTH_ACTION_SKILL, { attribute: 'status', namedAction: COMPLETE_GROWTH_ACTION_ACTION });
       const action = await updateGrowthActionCompletion(client, request);
       const response: CompleteGrowthActionResponse = {
         action,

@@ -21,6 +21,7 @@ import {
 } from './intervention.policy';
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
+import { assertNamedActionWrite, INTERVENTION_EPISODE_SKILL } from '@family/object-tree';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const START_INTERVENTION_ACTION = 'StartIntervention';
@@ -82,6 +83,9 @@ export class InterventionService {
       await assertNormalSafetyRoute(client, request.family_id, request.onboarding_id);
       await assertNoActiveInterventionEpisode(client, request.family_id, request.onboarding_id);
 
+      // 运行时底座 WriteGuard(声明式强制):InterventionEpisode.status 只能经 StartIntervention 写。
+      // 与上方命令式守卫(权限/幂等/consent/safety)互补,不替代。
+      assertNamedActionWrite(INTERVENTION_EPISODE_SKILL, { attribute: 'status', namedAction: START_INTERVENTION_ACTION });
       const episode = await insertInterventionEpisode(client, request, meta);
       const assignments = buildGrowthActionAssignments(meta.occurredAt);
       const actions = await insertGrowthActions(client, request, episode.episode_id, activePriority.dimension_id, assignments);

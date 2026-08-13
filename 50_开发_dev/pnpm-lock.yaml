@@ -35,6 +35,9 @@ importers:
       '@family/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@family/object-tree':
+        specifier: workspace:*
+        version: link:../../packages/object-tree
       '@family/principal-ai':
         specifier: workspace:*
         version: link:../../packages/principal-ai
@@ -218,6 +221,19 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+
+  packages/object-tree:
+    dependencies:
+      '@family/principal-runtime':
+        specifier: workspace:*
+        version: link:../principal-runtime
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(lightningcss@1.33.0)
 
   packages/principal-ai:
     dependencies:

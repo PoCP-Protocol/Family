@@ -20,6 +20,7 @@ import {
 } from './growth-priority.policy';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
+import { assertNamedActionWrite, GROWTH_PRIORITY_SKILL } from '@family/object-tree';
 
 const CREATE_FAMILY_ACTION = 'CreateFamily';
 const CONFIRM_GROWTH_PRIORITY_ACTION = 'ConfirmGrowthPriority';
@@ -109,6 +110,8 @@ export class GrowthPriorityService {
 
       let priority: GrowthPriorityDto | null = null;
       if (candidate) {
+        // 运行时底座 WriteGuard:GrowthPriority.status 只能经 ConfirmGrowthPriority 写(AI 只能提议,不能确认)。
+        assertNamedActionWrite(GROWTH_PRIORITY_SKILL, { attribute: 'status', namedAction: CONFIRM_GROWTH_PRIORITY_ACTION });
         const previousPriority = await getActivePriority(client, request.family_id, request.onboarding_id);
         await supersedeActivePriority(client, request.family_id, request.onboarding_id);
         priority = await insertPriority(client, request, candidate, draft.evidence_refs, previousPriority, meta);
