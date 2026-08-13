@@ -161,3 +161,6 @@ export class FakeTextToSpeechGateway implements TextToSpeechGateway {
     }
   }
 }
+
+// MM1-B1 ¡¤ re-export provider adapters + family-owned mappers so downstream can consume via '@family/speech-gateway'
+export * from './providers';

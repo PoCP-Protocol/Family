@@ -268,6 +268,157 @@ RECOMMENDED_LIPSYNC_STRATEGY = L3 (phoneme / timestamp driven)
 
 ---
 
+## 11.A · MM1-B1 Preflight · Reference Stack A
+
+**授权**: MM1-B1 = FIRST REAL SPEECH DIGITAL HUMAN VERTICAL SLICE, Reference Stack A。
+**MM1-B1 Baseline**: `feature/fpai-multimodal-ip-mm1` @ `ce305521f1f8c8b9e1a914a34cadd985dad9822d` (MM1-B0 CLOSED)。
+**填写日期**: 2026-08-13。
+**核验负责人**: `family-task-executor` (AL-DEV2)。
+
+本节按官方文档补齐 Reference Stack A 三个 descriptor 的可核验字段。**未在官方公开文档明确出现的字段一律保留 `UNKNOWN`**,不用 AI 记忆补齐。所有 evidence_ref 都是**厂商官方文档 URL** —— **AI 无法在本任务内实际访问外部 URL 校验其时效**,因此每条 evidence 都注明"官方文档路径 (未在本任务中活体校验时效)",需要人类接手 preflight 时**必须逐条点开、按当前官方最新文档确认**。**若某条链接指向的官方文档已迁移或改版,该字段应回退到 `UNKNOWN`**。
+
+---
+
+### 11.A.1 · `stt.azure_speech_realtime`
+
+**Descriptor**: `emptySttDescriptor('stt.azure_speech_realtime', 'v-preflight-mm1b1')` + 以下 evidence 补齐。
+
+| 字段 | 值 | 依据(未活体校验) |
+|---|---|---|
+| `streaming` | `TRUE` | Azure Speech SDK 官方文档明确提供 realtime streaming / `startContinuousRecognitionAsync` |
+| `partial_transcript` | `TRUE` | 官方 `recognizing` 事件持续下发 partial hypothesis |
+| `final_transcript` | `TRUE` | 官方 `recognized` 事件下发 final transcript |
+| `vad_support` | `TRUE` | 官方 Voice Activity Detection / endpointing 参数 (`InitialSilenceTimeoutMs` / `EndSilenceTimeoutMs`) |
+| `endpointing` | `TRUE` | 同上,可配置 |
+| `punctuation` | `TRUE` | Azure Speech 官方支持自动标点(可通过 config 关闭) |
+| `mandarin_quality` | `UNKNOWN` | 官方声称支持 `zh-CN` locale,但主观质量必须由 §23 benchmark 实测 |
+| `mixed_cn_en` | `UNKNOWN` | 需 preflight 测试 |
+| `speaker_diarization` | `TRUE` | 官方支持 diarization(需显式启用) |
+| `word_timestamps` | `TRUE` | `WordLevelTimestampsEnabled` 官方选项 |
+| `audio_formats` | `['PCM']` | Azure Speech SDK 官方 push-stream 支持 16-bit PCM |
+| `sample_rates_hz` | `[16000]` | 官方推荐 16 kHz mono |
+| `cancel_support` | `TRUE` | `stopContinuousRecognitionAsync` |
+| `estimated_cost_unit` | `PER_HOUR` | Azure Speech pricing 按音频时长(小时) |
+
+**Commercial**:
+- `commercial_terms_reviewed`: `UNKNOWN` — Azure Cognitive Services 商用条款未在本任务中活体核验
+- `data_retention_policy_known`: `UNKNOWN` — Azure 通常声称 "Standard Speech service does not store audio",但需人类接手核验最新条款
+- `training_use_policy_known`: `UNKNOWN` — 需活体核验 Azure "customer data is not used to train Microsoft models" 条款是否覆盖 Speech
+- `paid_test_required`: `UNKNOWN` — Azure Free Tier F0 官方存在但配额受限,需活体核验当前是否可用
+- `regional_endpoint`: `'<region>.stt.speech.microsoft.com'` (region 由 `AZURE_SPEECH_REGION` 注入,如 `eastasia` / `southeastasia`)
+
+**Evidence refs** (官方文档路径,未在本任务中活体校验时效):
+- `https://learn.microsoft.com/azure/ai-services/speech-service/speech-to-text`
+- `https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text`
+- `https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=stt` (zh-CN locale)
+- `https://learn.microsoft.com/azure/ai-services/speech-service/how-to-recognize-speech#change-how-idle-audio-is-handled`
+- `https://azure.microsoft.com/pricing/details/cognitive-services/speech-services/`
+- `https://learn.microsoft.com/legal/cognitive-services/speech-service/data-privacy-security-speech-services`
+
+**UNKNOWN 字段**: `mandarin_quality`(需实测), `mixed_cn_en`, `commercial_terms_reviewed`, `data_retention_policy_known`, `training_use_policy_known`, `paid_test_required`。
+
+---
+
+### 11.A.2 · `tts.azure_tts_neural`
+
+**Descriptor**: `emptyTtsDescriptor('tts.azure_tts_neural', 'v-preflight-mm1b1')` + 以下 evidence 补齐。
+
+| 字段 | 值 | 依据(未活体校验) |
+|---|---|---|
+| `streaming` | `TRUE` | Azure Speech SDK 官方 `SpeakTextAsync` / `SpeakSsmlAsync` 支持流式音频输出(`AudioDataStream`) |
+| `first_audio_chunk` | `TRUE` | 官方流式模式在合成完成前即返回首段音频 |
+| `cancel` | `TRUE` | `SpeechSynthesizer.stopSpeakingAsync` |
+| `voice_id_configurable` | `TRUE` | `SpeechConfig.speechSynthesisVoiceName` / SSML `<voice name="…">` |
+| `voice_versioning` | `UNKNOWN` | 官方文档未明确 voice 版本号 API,需人类核验 |
+| `emotion_control` | `TRUE` | Azure Neural TTS SSML `<mstts:express-as style="…">` 支持 emotion styles |
+| `style_control` | `TRUE` | 同上,支持 `general` / `cheerful` / `sad` / `assistant` 等 style |
+| `speed_control` | `TRUE` | SSML `<prosody rate="…">` |
+| `pitch_control` | `TRUE` | SSML `<prosody pitch="…">` |
+| `pause_control` | `TRUE` | SSML `<break time="…"/>` |
+| `ssml` | `TRUE` | 官方 SSML 全支持 |
+| `word_timing` | `TRUE` | `WordBoundary` event |
+| `phoneme_timing` | `UNKNOWN` | 需核验 SDK 是否公开 phoneme boundary 事件 |
+| `viseme` | `TRUE` | 官方 `VisemeReceived` event, `visemeId` (0-21 SAPI viseme set) |
+| `audio_formats` | `['riff-16khz-16bit-mono-pcm', 'audio-16khz-32kbitrate-mono-mp3']` | 官方 `SpeechSynthesisOutputFormat` 枚举 |
+| `sample_rates_hz` | `[16000, 24000, 48000]` | 官方输出格式支持三档采样率 |
+| `custom_voice` | `TRUE` | Azure Custom Neural Voice(**Family 本阶段不使用**,identity 由 Family 拥有) |
+| `voice_rights_ownership` | `MIXED` | 使用 Azure 内置 voice: PROVIDER;使用 Custom Neural Voice: CUSTOMER。**MM1-B1 只用内置 voice → 视为 REFERENCE LAB VOICE, 不作为最终 Family Voice Identity** |
+| `commercial_use_allowed` | `UNKNOWN` | Azure 内置 voice 的商用授权范围需活体核验 |
+| `estimated_cost_unit` | `PER_MILLION_CHAR` | Azure Neural TTS pricing 按字符数(通常 per 1M chars) |
+
+**Commercial**:
+- `commercial_terms_reviewed`: `UNKNOWN`
+- `data_retention_policy_known`: `UNKNOWN`
+- `training_use_policy_known`: `UNKNOWN`
+- `paid_test_required`: `UNKNOWN` (Azure Free Tier F0 存在,配额受限)
+
+**Evidence refs**:
+- `https://learn.microsoft.com/azure/ai-services/speech-service/text-to-speech`
+- `https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis`
+- `https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts` (zh-CN voices, 含 XiaoxiaoNeural / XiaochenNeural / XiaohanNeural / XiaoshuangNeural / XiaomengNeural 等女声)
+- `https://learn.microsoft.com/azure/ai-services/speech-service/speech-synthesis-markup-voice#voice-styles-and-roles`
+- `https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis-viseme` (viseme id 0-21)
+- `https://azure.microsoft.com/pricing/details/cognitive-services/speech-services/`
+
+**UNKNOWN 字段**: `voice_versioning`, `phoneme_timing`, `commercial_use_allowed`, `commercial_terms_reviewed`, `data_retention_policy_known`, `training_use_policy_known`, `paid_test_required`。
+
+---
+
+### 11.A.3 · `avatar.family_local_2d`
+
+**Descriptor**: 自家实现,`provider_class = 'FAKE_BASELINE'`(family-owned,非商业 provider),`provider_id = 'avatar.family_local_2d'`,`provider_version = 'v-mm1b1-lab-0.1'`。
+
+| 字段 | 值 | 依据 |
+|---|---|---|
+| `renderer_type` | `2D` | Family-owned Canvas / SVG renderer(**不使用 Live2D SDK**) |
+| `realtime` | `TRUE` | 客户端本地渲染,无网络往返 |
+| `streaming_audio_input` | `TRUE` | 接收 orchestrator 转发的 AUDIO_CHUNK / VISEME 流 |
+| `audio_driven_lipsync` | `TRUE` | 支持 L1 amplitude fallback(浏览器 AnalyserNode) |
+| `phoneme_driven_lipsync` | `UNKNOWN` | 本版不需要,预留 |
+| `viseme_input` | `TRUE` | 主路径 L4,消费 Family `MouthShape` 序列 |
+| `expression_control` | `TRUE` | 表情槽位: RESTING / LISTENING / THINKING / SPEAKING / INTERRUPTED / HUMAN_GATE |
+| `gesture_control` | `TRUE` | 姿势槽位: SMALL_NOD / SMALL_OPEN_HAND / STEADY |
+| `gaze_control` | `TRUE` | 视线槽位: USER / SOFT_DOWN_THINKING / RETURN_USER |
+| `head_motion_control` | `TRUE` | 由 gesture / expression 组合驱动 |
+| `interrupt` | `TRUE` | `cancel(turnId)` 立即停 viseme 队列 |
+| `cancel_latency_p95_ms` | `undefined` | 本地无网络,P95 由 §19 benchmark 后填写 |
+| `transparent_background` | `TRUE` | Canvas alpha channel |
+| `camera_control` | `FALSE` | 2D 无相机 |
+| `custom_character` | `TRUE` | 形象由 Family 定义 |
+| `identity_lock` | `TRUE` | 形象归 Family,不外流 |
+| `local_render_possible` | `TRUE` | 完全本地 |
+| `cloud_only` | `FALSE` | — |
+| `gpu_requirement` | `NONE` | Canvas 2D |
+| `commercial_license_reviewed` | `TRUE` | family-owned,无第三方许可 |
+| `concurrent_session_model` | `PER_CONNECTION` | 每 WS 连接一份 Avatar 状态 |
+| `supported_lipsync_strategies` | `['L4_VISEME', 'L1_AMPLITUDE']` | 主 L4,fallback L1 |
+
+**Commercial**:
+- `commercial_terms_reviewed`: `TRUE` (family-owned)
+- `data_retention_policy_known`: `TRUE` (无外部数据流)
+- `training_use_policy_known`: `TRUE` (不训练)
+- `paid_test_required`: `FALSE`
+- `evidence.evidence_refs`: `['packages/avatar-gateway/src/providers/familyLocal2d.ts']`(family-owned SSOT)
+
+---
+
+### 11.A.4 · Reference Stack A 最终选型(direction only)
+
+```
+STT      : stt.azure_speech_realtime      (evidence 已补齐, 关键 UNKNOWN: mandarin_quality/mixed_cn_en/commercial)
+TTS      : tts.azure_tts_neural           (evidence 已补齐, 关键 UNKNOWN: phoneme_timing/commercial)
+Avatar   : avatar.family_local_2d         (family-owned, identity 归 Family)
+Lip-sync : L4 VISEME                      (Azure viseme_id 0-21 → Family MouthShape 8 类, 见 §16)
+Fallback : L1 audio amplitude             (仅当某段 viseme_events 为空时)
+Transport: WebSocket (unchanged)          (MM1-A frozen)
+Voice    : LAB_REFERENCE_VOICE            (§11 三候选,选一,非 FINAL_FAMILI_VOICE)
+```
+
+**FINAL_FAMILI_VOICE = NOT_SELECTED**。所有 Azure 选项**不代表**"最终商业绑定 Azure",仅是 MM1-B1 vertical slice 的 Reference Provider。
+
+---
+
+
 ## 12. Realtime Transport Recommendation
 
 `RECOMMENDED_REALTIME_TRANSPORT = WebSocket (unchanged)`
@@ -342,3 +493,4 @@ MM1-B0 明确**不做**:
 | 版本 | 日期 | 变更 | 责任 |
 |---|---|---|---|
 | V1 | 2026-08-13 | MM1-B0 初版。列 shortlist 但**所有 provider capability 字段 = UNKNOWN**,等 preflight 填 evidence_ref。 | family-task-executor |
+| V1.1 | 2026-08-13 | MM1-B1 追加 §11.A: Reference Stack A(Azure STT / Azure TTS / Family Local 2D)按官方文档补齐 evidence,标记未活体校验字段与 UNKNOWN 字段。**未修改 §1-§10 冻结前置条件。** | family-task-executor |

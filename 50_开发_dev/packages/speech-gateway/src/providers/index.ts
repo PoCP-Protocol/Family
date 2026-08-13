@@ -8,3 +8,13 @@
 
 export * from './registry';
 export * from './fake';
+
+// MM1-B1 · Family-owned modality-adapter surface (see FPAI_MM1B_PROVIDER_SELECTION_V1 §11.A).
+// 这些模块本身不 import 任何真实 SDK; 真实 SDK 只能出现在 provider 私有 transport 实现里。
+export * from './audioNormalizer';
+export * from './visemeMapper';
+export * from './speechStyleMapper';
+export * from './azure/secretReader';
+export * from './azure/azureSpeechStt';
+export * from './azure/azureSpeechTts';
+export * from './devFallbackPolicy';
