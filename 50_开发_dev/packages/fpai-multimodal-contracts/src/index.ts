@@ -222,3 +222,55 @@ export interface BargeInEvent extends RealtimeServerEvent {
   kind: 'INTERRUPTED';
   turn_id: string;
 }
+
+// ---------------------------------------------------------------------------
+// MM1-B0 · Provider Capability Contract (shared between speech-gateway and
+// avatar-gateway). See:
+//   products/famili-principal/multimodal/FPAI_MM1B_PROVIDER_SELECTION_V1.md
+// ---------------------------------------------------------------------------
+
+/**
+ * Ternary capability marker. `UNKNOWN` = 未经官方文档核验,不得当作 `false`。
+ * `TRUE` / `FALSE` 只有在填了 evidence_ref 后才允许写。
+ */
+export type TernaryCapability = 'TRUE' | 'FALSE' | 'UNKNOWN';
+
+export type ProviderClass = 'FAKE_BASELINE' | 'REAL';
+
+/**
+ * 每个候选 provider 都必须提供 evidence_ref。
+ * 若字段未经官方文档核验,不允许填 `TRUE` / `FALSE`;必须保留 `UNKNOWN`。
+ */
+export interface ProviderEvidence {
+  /** 官方文档 URL / API spec 版本号 / pricing 页 / commercial license 文档标识。 */
+  evidence_refs: string[];
+  /** 官方文档核验的日期(ISO)。 */
+  verified_at?: string;
+  /** 核验负责人(engineer id 或 "unverified")。 */
+  verified_by?: string;
+}
+
+export interface ProviderCommercialContract {
+  commercial_terms_reviewed: TernaryCapability;
+  data_retention_policy_known: TernaryCapability;
+  training_use_policy_known: TernaryCapability;
+  paid_test_required: TernaryCapability;
+  regional_endpoint?: string;
+  known_limitations: string[];
+  evidence: ProviderEvidence;
+}
+
+export interface ProviderHealth {
+  status: 'READY' | 'DEGRADED' | 'DOWN' | 'NOT_CONNECTED';
+  last_check_at?: string;
+  message?: string;
+}
+
+/** 每个 provider descriptor 都实现这个 marker,便于 registry 泛型处理。 */
+export interface ProviderDescriptorBase {
+  provider_id: string;
+  provider_version: string;
+  provider_class: ProviderClass;
+  commercial: ProviderCommercialContract;
+}
+
