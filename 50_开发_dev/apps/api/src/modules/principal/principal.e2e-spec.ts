@@ -104,6 +104,9 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     expect(body.risk_route).toBe('REVIEW');
     expect(body.response_id).toBeTruthy();
     expect(body.action_proposal_id).toBeNull();
+    // W2R-105:REVIEW 响应【扣留】,不展示给家长,human_handoff=true
+    expect(body.response).toBeNull();
+    expect(body.human_handoff).toBe(true);
 
     const list = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: Array<Record<string, unknown>> };
     expect(list.handoffs.length).toBe(1);
@@ -113,6 +116,9 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
 
     const resolve = await post(`/families/${familyId}/principal/handoffs/${handoffId}/resolve`, { resolution: 'APPROVED', note: '已复核' });
     expect(resolve.status).toBe(201);
+    // W2R-105:人工 APPROVED 后释放此前扣留的候选响应
+    const resolveBody = await resolve.json() as Record<string, unknown>;
+    expect(resolveBody.released_response).toBeTruthy();
     const after = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: unknown[] };
     expect(after.handoffs.length).toBe(0);
     // resolving an unknown/closed handoff -> 404

@@ -209,10 +209,14 @@ export class PrincipalService {
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
     await this.repo.recordProductEvent('principal_response_received', familyId, sessionId, correlationId, { response_id: resp.response_id, risk_route: route });
 
-    // REVIEW(含 FAIL_CLOSED 降级)→ 进人工复核队列(REVIEWER),响应已存供复核;不建 proposal。
+    // REVIEW(含 FAIL_CLOSED 降级)→ W2R-105 Human Confirmation 闭环:
+    // 响应已存但【扣留】,response_id 挂到 handoff 供复核;不展示给家长、不建 proposal、human_handoff=true。
+    // 人工复核 APPROVED 后经 resolveHandoff 释放(supersedes W2R-104 的过渡"直接展示 REVIEW 响应")。
     if (route === 'REVIEW') {
-      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, 'review', 'REVIEWER');
+      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, 'review', 'REVIEWER', resp.response_id);
       await this.repo.recordProductEvent('principal_review_queued', familyId, sessionId, correlationId, { response_id: resp.response_id });
+      await this.repo.recordProductEvent('principal_human_handoff_created', familyId, sessionId, correlationId, {});
+      return { session_id: sessionId, response_id: resp.response_id, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
 
     // NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
@@ -264,10 +268,26 @@ export class PrincipalService {
     return this.repo.listOpenHandoffs(familyId);
   }
 
-  async resolveHandoff(familyId: string, handoffId: string, actorId: string, resolution: string, note: string | null, correlationId: string): Promise<boolean> {
+  // W2R-105 Human Confirmation 闭环:复核结论落库;仅 APPROVED 释放此前【扣留】的候选响应给家长。
+  // 返回 released_response:APPROVED 且 handoff 挂有扣留响应 → 释放的响应体;否则 null。
+  async resolveHandoff(familyId: string, handoffId: string, actorId: string, resolution: string, note: string | null, correlationId: string): Promise<{ ok: boolean; released_response: unknown | null }> {
     const ok = await this.repo.resolveHandoff(handoffId, familyId, actorId, resolution, note);
-    if (ok) await this.repo.recordProductEvent('principal_handoff_resolved', familyId, null, correlationId, { handoff_id: handoffId, resolution });
-    return ok;
+    if (!ok) return { ok: false, released_response: null };
+    await this.repo.recordProductEvent('principal_handoff_resolved', familyId, null, correlationId, { handoff_id: handoffId, resolution });
+
+    // 只降级不放宽的对偶:只有人工 APPROVED 才把扣留响应释放给家长(Human Gate);其余 resolution 保持扣留。
+    if (resolution === 'APPROVED') {
+      const ho = await this.repo.loadHandoff(handoffId, familyId);
+      if (ho?.response_id) {
+        const released = await this.repo.markHandoffReleased(handoffId, familyId, ho.response_id);
+        if (released) {
+          const resp = await this.repo.loadResponse(ho.response_id, familyId);
+          await this.repo.recordProductEvent('principal_handoff_response_released', familyId, null, correlationId, { handoff_id: handoffId, response_id: ho.response_id });
+          return { ok: true, released_response: resp?.output ?? null };
+        }
+      }
+    }
+    return { ok: true, released_response: null };
   }
 
   /**
