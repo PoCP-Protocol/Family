@@ -418,6 +418,95 @@ Voice    : LAB_REFERENCE_VOICE            (§11 三候选,选一,非 FINAL_FAMIL
 
 ---
 
+## 11.B · MM1-B1.1 · Azure JavaScript SDK Surface Refresh
+
+**填写日期**: 2026-08-13
+**核验负责人**: `family-task-executor` (AL-DEV2)
+**目标**: MM1-B1.1 SDK Transport Ready。以下条目**只记录 SDK 表面级 API 名 + 事件名**,均以 npm `microsoft-cognitiveservices-speech-sdk` (JavaScript / Node) 官方文档为准。**AI 无法在本任务内活体访问 URL,时效性必须由人类接手时逐条重核**。
+
+### 11.B.1 · JavaScript SDK 版本锚点
+
+| 字段 | 值 |
+|---|---|
+| `AZURE_JS_SDK_PACKAGE` | `microsoft-cognitiveservices-speech-sdk` |
+| `AZURE_JS_SDK_TARGET_SEMVER_RANGE` | `^1.40.0` (**MM1-B1.1 首次锚定,live run 前允许由人类微调**) |
+| `AZURE_JS_SDK_NODE_SUPPORTED` | 官方声称支持 Node.js server-side (`AudioInputStream.createPushStream`) — **需活体重核当前发行版说明** |
+| `AZURE_JS_SDK_BROWSER_SUPPORTED` | 支持,但 **Family 明确禁止在 browser bundle 引入,防止 subscription key 前端泄漏** |
+
+### 11.B.2 · STT (SpeechRecognizer) 表面
+
+| 字段 | Azure JS SDK 表面 | 映射到 Family Transport |
+|---|---|---|
+| 构造 | `new SpeechRecognizer(speechConfig, audioConfig)` | `AzureSpeechSdkSttTransport.open()` 内部 |
+| Config | `SpeechConfig.fromSubscription(key, region)` + `speechRecognitionLanguage='zh-CN'` | server-side; browser 侧不可见 |
+| 音频输入 | `AudioConfig.fromStreamInput(AudioInputStream.createPushStream(AudioStreamFormat.getWaveFormatPCM(16000,16,1)))` | 与 `AudioInputNormalizer` 16k/16bit/mono 完全一致 |
+| Partial | 事件 `recognizing` | `PARTIAL` |
+| Final | 事件 `recognized` (`ResultReason.RecognizedSpeech`) | `FINAL` |
+| Error | 事件 `canceled` (`CancellationReason.Error`) + `sessionStopped` | `ERROR` |
+| Start | `startContinuousRecognitionAsync(cb, err)` | transport `open` |
+| Stop | `stopContinuousRecognitionAsync(cb, err)` | transport `finish` / `cancel` (**参见 §11.B.5**) |
+| Close | `recognizer.close()` + `pushStream.close()` | lifecycle dispose |
+| `NoMatch` | 事件 `recognized` (`ResultReason.NoMatch`) | 不上抛为 FINAL,记录为空 |
+
+### 11.B.3 · TTS (SpeechSynthesizer) 表面
+
+| 字段 | Azure JS SDK 表面 | 映射到 Family Transport |
+|---|---|---|
+| 构造 | `new SpeechSynthesizer(speechConfig, audioConfig?)` — 无 audioConfig 时可通过 `synthesizing` 事件回调获取流式音频 | `AzureSpeechSdkTtsTransport.open()` 内部 |
+| Config | `SpeechConfig.fromSubscription(key, region)` + `speechSynthesisOutputFormat=Raw16Khz16BitMonoPcm` | 与浏览器播放器 16k/16bit/mono 对齐 |
+| 请求 | `speakSsmlAsync(ssml, onResult, onError)` (**Family 一律走 SSML,由 `speechStyleMapper.buildAzureSsml` 生成**) | transport `synthesize` |
+| Audio Chunk | 事件 `synthesizing` (`result.audioData` per chunk) | `AUDIO_CHUNK` |
+| Viseme | 事件 `visemeReceived` (`visemeId`, `audioOffset` in 100ns ticks) | `VISEME` → 经 `visemeMapper` 映射到 Family MouthShape |
+| Word Boundary | 事件 `wordBoundary` (`text`, `audioOffset`) | `WORD_BOUNDARY` |
+| Complete | 事件 `synthesisCompleted` | `COMPLETE` |
+| Cancel/Error | 事件 `SynthesisCanceled` (`CancellationReason.Error` / `.CancelledByUser`) | `ERROR` |
+| Close | `synthesizer.close()` | lifecycle dispose |
+
+### 11.B.4 · Voice Catalog 表面
+
+| 字段 | Azure JS SDK 表面 | 备注 |
+|---|---|---|
+| 列举 | `SpeechSynthesizer.getVoicesAsync('zh-CN')` — 返回 `SynthesisVoicesResult { voices: VoiceInfo[] }` | 无 credential 时 `VOICE_CATALOG_LIVE = BLOCKED_MISSING_CREDENTIAL` |
+| VoiceInfo 字段 | `name`, `shortName`, `locale`, `gender`, `voiceType`, `styleList?` | provider-neutral 化后由 `AzureVoiceCatalogProvider` 输出 |
+
+**未 credential 时不得虚构 catalog**。硬编码候选 `Xiaoxiao/Xiaochen/Xiaohan` 仅作 `DEFAULT_CONFIGURATION_CANDIDATE`,不作 `REGION_AVAILABLE=TRUE`。
+
+### 11.B.5 · Cancel Evidence · JS Provider Native Cancel
+
+**关键**: 官方 JavaScript `SpeechSynthesizer` reference 中,常引用的 stop API 名为 `stopSpeakingAsync(cb, err)`。**但是**:
+
+- 是否与 C# `StopSpeakingAsync` 完全等价、是否真的产生 provider-side "立即停止合成 + 停止扣费" 的效果,**在 JavaScript SDK 的 Node.js 使用姿势下未在本任务内活体校验**。
+- 因此:
+
+```
+AZURE_JS_TTS_NATIVE_CANCEL_EVIDENCE = UNKNOWN_PENDING_LIVE_TEST
+```
+
+Family Barge-in 正确性**不依赖**"provider native cancel 是否 fast": 由三层保证组合而成 —
+
+1. **generation invalidation** (server-side orchestrator + transport `disposed=true`,忽略 stale callback)
+2. **browser audio queue flush** (`StreamingAudioPlayer.flush()`)
+3. **provider transport dispose/best-effort cancel** (`synthesizer.close()` + 若 `stopSpeakingAsync` 存在则最佳努力调用之)
+
+真实指标必须 credential live run 后测:
+
+- `PROVIDER_CANCEL_MODE`
+- `PROVIDER_CANCEL_LATENCY_MS`
+- `BROWSER_AUDIO_STOP_MS`
+- `OVERALL_BARGE_IN_MS`
+
+### 11.B.6 · Evidence Refs (**未活体校验**)
+
+- npm: `https://www.npmjs.com/package/microsoft-cognitiveservices-speech-sdk`
+- SDK Reference (JavaScript): `https://learn.microsoft.com/javascript/api/microsoft-cognitiveservices-speech-sdk/`
+- STT how-to (Node/JS): `https://learn.microsoft.com/azure/ai-services/speech-service/get-started-speech-to-text?pivots=programming-language-javascript`
+- TTS how-to (Node/JS): `https://learn.microsoft.com/azure/ai-services/speech-service/get-started-text-to-speech?pivots=programming-language-javascript`
+- Viseme how-to: `https://learn.microsoft.com/azure/ai-services/speech-service/how-to-speech-synthesis-viseme?tabs=visemeid&pivots=programming-language-javascript`
+- Voices list API: `https://learn.microsoft.com/azure/ai-services/speech-service/how-to-get-voices` 与 SDK `getVoicesAsync`
+- Data privacy for Speech: `https://learn.microsoft.com/legal/cognitive-services/speech-service/data-privacy-security-speech-services`
+
+---
+
 
 ## 12. Realtime Transport Recommendation
 
@@ -494,3 +583,4 @@ MM1-B0 明确**不做**:
 |---|---|---|---|
 | V1 | 2026-08-13 | MM1-B0 初版。列 shortlist 但**所有 provider capability 字段 = UNKNOWN**,等 preflight 填 evidence_ref。 | family-task-executor |
 | V1.1 | 2026-08-13 | MM1-B1 追加 §11.A: Reference Stack A(Azure STT / Azure TTS / Family Local 2D)按官方文档补齐 evidence,标记未活体校验字段与 UNKNOWN 字段。**未修改 §1-§10 冻结前置条件。** | family-task-executor |
+| V1.2 | 2026-08-13 | MM1-B1.1 追加 §11.B: Azure JavaScript SDK 表面级 evidence(SpeechRecognizer/SpeechSynthesizer/PushAudioInputStream/getVoicesAsync);明确 `AZURE_JS_TTS_NATIVE_CANCEL_EVIDENCE = UNKNOWN_PENDING_LIVE_TEST`;Barge-in 三层保证策略。**未修改 §1-§11.A 冻结前置条件。** | family-task-executor |

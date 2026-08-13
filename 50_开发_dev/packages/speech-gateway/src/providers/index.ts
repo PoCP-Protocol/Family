@@ -17,4 +17,5 @@ export * from './speechStyleMapper';
 export * from './azure/secretReader';
 export * from './azure/azureSpeechStt';
 export * from './azure/azureSpeechTts';
+export * from './azure/sdk';
 export * from './devFallbackPolicy';

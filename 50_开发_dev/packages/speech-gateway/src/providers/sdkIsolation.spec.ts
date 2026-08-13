@@ -68,3 +68,49 @@ describe('mm1-b0 · sdk isolation guardrail (R11)', () => {
     });
   }
 });
+
+/**
+ * MM1-B1.1 · Azure JS SDK 白名单硬门 (§6)
+ *
+ * `microsoft-cognitiveservices-speech-sdk` 只允许出现在
+ *   packages/speech-gateway/src/providers/azure/sdk/*.ts
+ * 之内。任何其它文件 (包括 speech-gateway 里的其它文件, adapter, config, tests, 上层 app)
+ * 命中即失败。
+ */
+describe('mm1-b1.1 · azure js sdk import isolation (§6)', () => {
+  const AZURE_SDK_PKG = 'microsoft-cognitiveservices-speech-sdk';
+  const ALLOWED_DIR = path.join(
+    REPO_ROOT,
+    'packages/speech-gateway/src/providers/azure/sdk',
+  );
+
+  it('WS-SDK-ISO-AZURE · azure-sdk require only allowed under azure/sdk/', () => {
+    // 扫描整个 packages/ 与 products/ 下的源码 (排除 node_modules / dist)
+    const roots = [
+      path.join(REPO_ROOT, 'packages'),
+      path.join(REPO_ROOT, 'products'),
+    ];
+    const offenders: string[] = [];
+    for (const root of roots) {
+      const files = walk(root);
+      for (const f of files) {
+        // 允许 sdk/ 目录里的文件
+        if (f.startsWith(ALLOWED_DIR + path.sep)) continue;
+        // spec 文件默认允许(测试 mock 需要引用类型),但只允许通过 __sdkOverride 注入,
+        // 不允许在生产代码 spec 之外走 require。
+        const isSpec = f.endsWith('.spec.ts') || f.endsWith('.spec.tsx') || f.endsWith('.test.ts');
+        const s = fs.readFileSync(f, 'utf8');
+        const bad = s.includes(`from '${AZURE_SDK_PKG}'`)
+          || s.includes(`from "${AZURE_SDK_PKG}"`)
+          || s.includes(`require('${AZURE_SDK_PKG}')`)
+          || s.includes(`require("${AZURE_SDK_PKG}")`)
+          || s.includes(`from '${AZURE_SDK_PKG}/`)
+          || s.includes(`from "${AZURE_SDK_PKG}/`);
+        if (bad && !isSpec) {
+          offenders.push(path.relative(REPO_ROOT, f));
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
