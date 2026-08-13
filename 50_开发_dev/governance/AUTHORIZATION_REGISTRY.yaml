@@ -88,6 +88,21 @@ capabilities:
     supersedes: []
     notes: 单一获批模型=anthropic-cc-switch;内部 dogfood(x-actor-id);真实 consent;真实 ModelRun/Attempt 账本;非 pilot。CI/未设 profile 仍确定性零外呼。质量闸=W2R-104 智能 eval。
 
+  - capability_id: W2R_104_INTELLIGENCE_QUALITY_GATE
+    stage: M3-W2R
+    status: INTERNAL_ALLOWED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # 质量闸随 principal runtime 常开(确定性底座恒运行)
+    live_external_call_authorized: true    # 生成式 judge 仅在 model_first_internal 下复用 W2R-102 同一获批 provider;CI/默认零外呼
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2R_104_INTELLIGENCE_EVAL_GATE.md
+    authorized_at: "2026-08-13"
+    supersedes: []
+    notes: 防御性能力(不新增外呼面):真实模型默认开之后的独立质量门,评理解/标签化/漏判风险。生成式 judge 为主体 + 确定性安全底座兜底(judge 不可用/失败/非法→回退);不变量=只降级不放宽(仅 NORMAL→REVIEW)。judge 复用 W2R-102 approved provider=anthropic-cc-switch,无 judge(CI/默认)走确定性底座零外呼。不写 canonical;pilot/production 仍 NO。
+
   - capability_id: M3_102_IMAGE_EXTERNAL
     stage: M3-102
     status: TECHNICAL_PASS_PRIVACY_GATE_REQUIRED

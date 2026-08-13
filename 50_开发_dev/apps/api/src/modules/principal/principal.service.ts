@@ -4,7 +4,7 @@ import type { InterventionCode, StartInterventionResponse } from '@family/contra
 import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
-  runPrincipalTextMvp, safetyPrecheck,
+  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
 import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, type ProcessingDataCategory } from '@family/principal-runtime';
@@ -159,7 +159,7 @@ export class PrincipalService {
       return { session_id: sessionId, response_id: null, risk_route: 'REVIEW', consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
     const output = run.output;
-    const route = output.risk_route;
+    let route = output.risk_route;
     const schemaPass = run.model_run.schema_validation === 'PASS';
 
     await this.repo.saveModelRun({
@@ -189,6 +189,21 @@ export class PrincipalService {
       await this.repo.recordProductEvent('principal_safety_routed', familyId, sessionId, correlationId, { risk_route: route });
       await this.repo.recordProductEvent('principal_human_handoff_created', familyId, sessionId, correlationId, {});
       return { session_id: sessionId, response_id: null, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
+    }
+
+    // W2R-104 智能质量闸:非 HIGH_RISK 输出经【理解/标签化/漏判风险】独立评估。judge 与主模型同门控
+    // (willCallExternal 才注入真实网关;CI/默认无 judge → 确定性底座,零外呼)。不过 → 安全降级 REVIEW,
+    // 只降级不放宽(仅在 NORMAL 时下调;绝不把 REVIEW/HIGH_RISK 提升)。
+    const verdict = await assessResponseQuality(
+      { user_message: userMessage, output, scenario_id: run.model_run.scenario_id, precheck_route: safetyPrecheck({ user_message: userMessage }) },
+      willCallExternal ? (this.gateway ?? undefined) : undefined,
+    );
+    await this.repo.recordProductEvent('principal_quality_gate_evaluated', familyId, sessionId, correlationId,
+      { pass: verdict.pass, dimensions: verdict.dimensions, judged_by: verdict.judged_by });
+    if (!verdict.pass && route === 'NORMAL') {
+      route = 'REVIEW';
+      await this.repo.recordProductEvent('principal_quality_gate_failed', familyId, sessionId, correlationId,
+        { dimensions: verdict.dimensions, failed_checks: verdict.failed_checks, judged_by: verdict.judged_by });
     }
 
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
