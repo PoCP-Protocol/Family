@@ -9,6 +9,7 @@ import {
 } from '@family/principal-ai';
 import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, type ProcessingDataCategory } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
+import { loadGroundedKnowledge } from './principal-knowledge';
 
 /** DI token:Principal 真实模型网关(env-gated)。未配置真实 provider 时为 null → 确定性回退(不发外部调用)。 */
 export const PRINCIPAL_AI_GATEWAY = 'PRINCIPAL_AI_GATEWAY';
@@ -149,9 +150,11 @@ export class PrincipalService {
     //  precheck=HIGH_RISK → 根本不调用模型;调用后 postcheck;schema 不过 → FAIL_CLOSED(REVIEW,绝不返自由文本)。
     //  gateway=null(默认/CI/测试)→ 确定性回退,零外部调用;gateway=真实(FPAI_PRINCIPAL_PROVIDER=real)→ cc switch(anthropic-compatible)。
     // FAIL CLOSED:真实网关任何失败(超时/网络/4xx/5xx/非法JSON/schema)绝不 500、绝不返原始文本 —— 安全降级到人工复核。
+    // W2R-103B:注入唯一 Intervention(LISTEN_BEFORE_RESPOND)的循证链;找不到 bundle → grounded=false(不编造)。
+    const grounding = loadGroundedKnowledge('LISTEN_BEFORE_RESPOND');
     let run: Awaited<ReturnType<typeof runPrincipalTextMvp>>;
     try {
-      run = await runPrincipalTextMvp(input, willCallExternal ? (this.gateway ?? undefined) : undefined);
+      run = await runPrincipalTextMvp(input, willCallExternal ? (this.gateway ?? undefined) : undefined, grounding);
     } catch (e) {
       const kind = (e as { kind?: string })?.kind ?? 'MODEL_ERROR';
       await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'model_error', 'REVIEWER');
@@ -169,6 +172,18 @@ export class PrincipalService {
       scenario_id: run.model_run.scenario_id, method_refs: run.model_run.method_refs, source_refs: run.model_run.source_refs,
       input_hash: sha256(userMessage), output_hash: run.model_run.output_hash,
       risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
+    });
+
+    // W2R-103B grounding 证据:记录本次响应依据的循证链(已穿进模型输入的同一对象);观测/审计用,不写 canonical。
+    await this.repo.recordProductEvent('principal_knowledge_grounded', familyId, sessionId, correlationId, {
+      intervention_id: run.grounded_knowledge.intervention_id,
+      grounded: run.grounded_knowledge.grounded,
+      theory_ids: run.grounded_knowledge.theory_ids,
+      construct_ids: run.grounded_knowledge.construct_ids,
+      method_ids: run.grounded_knowledge.method_ids,
+      modality_ids: run.grounded_knowledge.modality_ids,
+      knowledge_refs: run.grounded_knowledge.knowledge_refs,
+      all_non_decisive: run.grounded_knowledge.all_non_decisive,
     });
 
     // M3-108 阈值告警:真实外呼(attempt)达到 warn 阈值(默认 80%)发一次 principal_quota_warning(exceeded 由前置守卫另发)。

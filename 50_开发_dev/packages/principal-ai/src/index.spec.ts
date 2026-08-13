@@ -238,4 +238,33 @@ describe('W2R-103 evidence-grounded retrieval', () => {
     expect(g.grounded).toBe(false);
     expect(g.knowledge_refs).toEqual([]);
   });
+
+  // W2R-103B:grounding 穿进【实际模型输入】+ 运行结果携带;无 grounding 时不编造。
+  const input = {
+    request_id: 'r1', session_id: 's1', entry_point: 'ASK_FAMILI_PRINCIPAL' as const,
+    user_message: '孩子写作业拖拉怎么办',
+    consent_context: { fpai_lab_consent: true, family_context_read_allowed: true },
+  };
+
+  it('W2R-103B: grounded_knowledge 穿进 gateway 请求 input + input_refs 携带 knowledge_refs', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    const req = buildPrincipalAiGatewayRequest(input, g);
+    expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toEqual(g);
+    for (const ref of g.knowledge_refs) expect(req.input_refs).toContain(ref);
+  });
+
+  it('W2R-103B: runPrincipalTextMvp 返回 grounded_knowledge(grounded=true)', async () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    const result = await runPrincipalTextMvp(input, undefined, g);
+    expect(result.grounded_knowledge.grounded).toBe(true);
+    expect(result.grounded_knowledge.all_non_decisive).toBe(true);
+    expect(result.grounded_knowledge.method_ids).toContain('METHOD_CONNECT_BEFORE_CORRECT');
+  });
+
+  it('W2R-103B: 未传 grounding → grounded=false,不编造、input 不含 grounded_knowledge', async () => {
+    const result = await runPrincipalTextMvp(input, undefined);
+    expect(result.grounded_knowledge.grounded).toBe(false);
+    const req = buildPrincipalAiGatewayRequest(input);
+    expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toBeUndefined();
+  });
 });

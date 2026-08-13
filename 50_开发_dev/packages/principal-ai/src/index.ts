@@ -138,6 +138,8 @@ export interface PrincipalAiRunResult {
   output: PrincipalAiOutput;
   retrieval: PrincipalRetrievalResult;
   model_run: PrincipalModelRun;
+  /** W2R-103B:本次响应所依据的循证链(与穿进模型输入的是同一对象);未接入时 grounded=false。 */
+  grounded_knowledge: GroundedKnowledge;
 }
 
 export interface PrincipalSoulProfile {
@@ -435,19 +437,25 @@ export function retrieveGroundedKnowledge(bundle: KnowledgeChainBundle | null | 
   };
 }
 
-export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult }, PrincipalAiOutput> {
+export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput, grounding?: GroundedKnowledge): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult; grounded_knowledge?: GroundedKnowledge }, PrincipalAiOutput> {
   const soul = new PrincipalSoulCompiler().compile();
   const retrieval = retrievePrincipalAssets(input);
   // 图片走顶层 images 通道(image content block),不塞进文本 input(避免 base64 污染文本 prompt)。
   const { images, ...textInput } = input;
+  // W2R-103B:把循证链穿进【实际模型输入】(input.grounded_knowledge)+ input_refs 携带 knowledge_refs;
+  // 全部 ResearchEvidence 恒 NON_DECISIVE(不对某家庭裁决),模型据此作 grounded 依据而非编造。
   return {
     use_case: 'FAMILI_PRINCIPAL_TEXT_MVP',
     prompt_version: PRINCIPAL_AI_PROMPT_VERSION,
     schema_version: PRINCIPAL_AI_SCHEMA_VERSION,
-    input: { ...textInput, soul_instruction: soul.instruction, retrieval },
+    input: { ...textInput, soul_instruction: soul.instruction, retrieval, ...(grounding?.grounded ? { grounded_knowledge: grounding } : {}) },
     images,
     output_schema: PRINCIPAL_AI_OUTPUT_SCHEMA,
-    input_refs: ['products/famili-principal/contracts/principal-response.schema.json', ...retrieval.method_cards.flatMap((card) => card.source_refs)],
+    input_refs: [
+      'products/famili-principal/contracts/principal-response.schema.json',
+      ...retrieval.method_cards.flatMap((card) => card.source_refs),
+      ...(grounding?.grounded ? grounding.knowledge_refs : []),
+    ],
     policy_context: {
       human_confirmation_required: true,
       may_mutate_business_state: false,
@@ -455,12 +463,14 @@ export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): Structu
   };
 }
 
-export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiGateway): Promise<PrincipalAiRunResult> {
+export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiGateway, grounding?: GroundedKnowledge): Promise<PrincipalAiRunResult> {
   const startedAt = Date.now();
   const precheckRoute = safetyPrecheck(input);
   const retrieval = retrievePrincipalAssets(input, precheckRoute);
   const soul = new PrincipalSoulCompiler().compile();
-  const request = buildPrincipalAiGatewayRequest(input);
+  // 未传 grounding(默认/CI/测试)→ 空 grounded=false(不空谈也不编造);api 侧从编译 bundle 注入真实链。
+  const groundedKnowledge = grounding ?? retrieveGroundedKnowledge(undefined, 'LISTEN_BEFORE_RESPOND');
+  const request = buildPrincipalAiGatewayRequest(input, groundedKnowledge);
   const gatewayResult = gateway && precheckRoute !== 'HIGH_RISK' ? await gateway.generateStructured(request) : undefined;
   const rawOutput = gatewayResult?.output ?? createDeterministicPrincipalResponse(input, retrieval);
   const postcheckRoute = safetyPostcheck(rawOutput, precheckRoute);
@@ -491,6 +501,7 @@ export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiG
       latency_ms: gatewayResult?.metadata?.latency_ms ?? Date.now() - startedAt,
       token_usage: gatewayResult?.metadata?.token_usage,
     },
+    grounded_knowledge: groundedKnowledge,
   };
 }
 

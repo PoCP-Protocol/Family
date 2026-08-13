@@ -151,10 +151,10 @@ function useCaseAwareGateway(mainOutput: object, judgeVerdict: object) {
 const reflectingOutput = (message: string) => ({ ...VALID_OUTPUT, what_i_hear: `我听到你说:${message}` });
 
 function repoWithSpies(consents: CanonicalConsentRow[]) {
-  const calls = { events: [] as string[], proposalSaved: 0, handoffSaved: 0 };
+  const calls = { events: [] as string[], proposalSaved: 0, handoffSaved: 0, eventPayloads: {} as Record<string, unknown> };
   const repo = {
     addMessage: vi.fn(async () => {}),
-    recordProductEvent: vi.fn(async (name: string) => { calls.events.push(name); }),
+    recordProductEvent: vi.fn(async (name: string, _f?: unknown, _s?: unknown, _c?: unknown, payload?: unknown) => { calls.events.push(name); calls.eventPayloads[name] = payload; }),
     loadConsents: vi.fn(async () => consents),
     loadFamilyContextSlice: vi.fn(async () => ({
       familyRef: 'fam-1', subjectRef: 'child-1', lifeStage: 'EARLY_ADOLESCENCE_12_15',
@@ -200,6 +200,13 @@ describe('W2R-104 intelligence quality gate', () => {
     expect(calls.proposalSaved).toBe(1);
     expect(calls.events).toContain('principal_quality_gate_evaluated');
     expect(calls.events).not.toContain('principal_quality_gate_failed');
+    // W2R-103B:响应发出 grounding 证据事件,且 bundle 加载器找到真实编译链 → grounded=true(NON_DECISIVE)
+    expect(calls.events).toContain('principal_knowledge_grounded');
+    const g = calls.eventPayloads['principal_knowledge_grounded'] as { grounded: boolean; intervention_id: string; all_non_decisive: boolean; knowledge_refs: string[] };
+    expect(g.grounded).toBe(true);
+    expect(g.intervention_id).toBe('LISTEN_BEFORE_RESPOND');
+    expect(g.all_non_decisive).toBe(true);
+    expect(g.knowledge_refs.length).toBeGreaterThan(0);
   });
 
   it('CI/默认 profile → 无 judge 外呼(确定性底座),仍放行正常输出', async () => {
