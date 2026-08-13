@@ -7,17 +7,22 @@ import {
   getFels0Gate,
 } from '@family/fels-contracts';
 export {
+  FelsReferenceRuntime,
   Fels1Runtime,
+  acceptanceSurfaceForStoreKey,
   classifyMigrationMatrixForFels1,
   createCleanSmallDataset,
   createDirtyCoreDataset,
+  createFlmReferenceCleanDataset,
+  createFlmDirtyWorldDataset,
   discoverFelsReadOnly,
   getFels1Gate,
+  rejectSemanticPollution,
   runFelsVerticalSliceE2E,
   runLegacyAmbiguityE2E,
   summarizeMigrationMatrixForFels1,
 } from './fels1-core';
-export { PgFelsRepository, getRequiredLegacyDatabaseUrl, seedDatasetToPostgres } from './pg-fels-repository';
+export { PgFelsRepository, PgFelsReadRepository, LEGACY_EXPORT_ENTITIES, getRequiredLegacyDatabaseUrl, seedDatasetToPostgres, type LegacyExportEntity } from './pg-fels-repository';
 
 export const felsApiBoundary = {
   runtime: 'FELS_1_CORE_EDUCATION_BUSINESS',
@@ -44,7 +49,7 @@ export function createLegacySourceSnapshot() {
   return {
     legacy_snapshot_id: 'fels-snapshot-contract',
     source_system: 'FELS',
-    schema_version: 'fels-1',
+    source_schema_version: 'fels-ref-0004',
     record_counts: Object.fromEntries(FELS_ENTITY_TABLES.map((table) => [table, 0])),
   } as const;
 }

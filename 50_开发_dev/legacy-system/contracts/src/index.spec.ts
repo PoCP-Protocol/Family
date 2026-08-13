@@ -50,10 +50,12 @@ describe('FELS-0 executable architecture contract', () => {
     expect(FELS_EXPORT_ENDPOINTS).toContain('/legacy-export/consents');
   });
 
-  it('defines at least 20 dirty migration scenarios', () => {
-    expect(FELS_DIRTY_SCENARIOS).toHaveLength(20);
+  it('defines at least 50 dirty migration scenarios (FLM dirty-world requirement)', () => {
+    expect(FELS_DIRTY_SCENARIOS.length).toBeGreaterThanOrEqual(50);
     expect(FELS_DIRTY_SCENARIOS).toContain('D011 legacy family score');
     expect(FELS_DIRTY_SCENARIOS).toContain('D013 AI diagnosis without evidence');
+    expect(FELS_DIRTY_SCENARIOS).toContain('D021 legacy profile family_score present');
+    expect(FELS_DIRTY_SCENARIOS).toContain('D025 legacy ai_report without supporting evidence');
   });
 
   it('maps all M001-M055 migration matrix rows exactly once', () => {
@@ -76,11 +78,11 @@ describe('FELS-0 executable architecture contract', () => {
       referenceImplementation: true,
       realBangyangSource: false,
       domains: 12,
-      dirtyScenarios: 20,
       migrationMatrixClassified: 55,
       migrationMatrixCoverage: 55,
       readyForFels1: true,
       startFels1: false,
     });
+    expect(getFels0Gate().dirtyScenarios).toBeGreaterThanOrEqual(50);
   });
 });
