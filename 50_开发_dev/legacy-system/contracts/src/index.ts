@@ -199,7 +199,7 @@ export const FELS_TO_FAMILY_MAP = [
   ['LegacyAIReport', 'Historical AI Hypothesis', 'LEGACY_AI_HYPOTHESIS_NOT_FACT'],
   ['TrainingProgram', 'GrowthJourney candidate', 'not GrowthJourney in FELS'],
   ['LegacyTask', 'GrowthAction history candidate', 'not active Family action'],
-  ['LegacyCheckIn', 'Action check-in history', 'check-in != Outcome'],
+  ['LegacyCheckIn', 'HistoricalActionCheckInEvidence (TRANSFORM)', 'check-in != ActionCompletion Fact != Outcome'],
   ['AdvisorNote', 'HumanObservation / ServiceInteraction candidate', 'Perspective != Fact'],
   ['Course', 'Knowledge / Intervention source candidate', 'requires content decomposition'],
   ['Order', 'OrderRef', 'commerce reference only'],
@@ -263,7 +263,7 @@ export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[]
   { id: 'M011', existingAsset: '90天陪跑', felsModule: 'PROGRAM_COACHING', felsEntity: 'training_program, advisor_session, legacy_checkin', familyDestination: '90-Day GrowthJourney candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M012', existingAsset: '年度会员', felsModule: 'COMMERCE_MEMBERSHIP', felsEntity: 'membership', familyDestination: 'Family Growth Membership', migrationStrategy: 'TRANSFORM' },
   { id: 'M013', existingAsset: '任务', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_task', familyDestination: 'GrowthAction history candidate', migrationStrategy: 'TRANSFORM' },
-  { id: 'M014', existingAsset: '打卡', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_checkin', familyDestination: 'ActionCompletion Event candidate', migrationStrategy: 'TRANSFORM' },
+  { id: 'M014', existingAsset: '打卡', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_checkin', familyDestination: 'HistoricalActionCheckInEvidence (!= ActionCompletion Fact, != Outcome)', migrationStrategy: 'TRANSFORM' },
   { id: 'M015', existingAsset: '作业点评', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'homework_review', familyDestination: 'HumanObservation / Feedback candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M016', existingAsset: '助教', felsModule: 'HUMAN_SERVICE', felsEntity: 'staff, homework_review', familyDestination: 'Growth Companion + Human Copilot source', migrationStrategy: 'TRANSFORM' },
   { id: 'M017', existingAsset: '班主任', felsModule: 'HUMAN_SERVICE', felsEntity: 'staff, service_case', familyDestination: 'Growth Advisor / Service Owner candidate', migrationStrategy: 'TRANSFORM' },
@@ -303,8 +303,8 @@ export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[]
   { id: 'M051', existingAsset: '预警', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_alert', familyDestination: 'Alert + Safety Gate source', migrationStrategy: 'TRANSFORM' },
   { id: 'M052', existingAsset: '用户数据授权', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'legacy_consent, legacy_agreement', familyDestination: 'Consent evidence candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M053', existingAsset: '历史成长数据', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_profile, legacy_growth_report', familyDestination: 'Family Timeline/Event source', migrationStrategy: 'TRANSFORM' },
-  { id: 'M054', existingAsset: '研究/实验数据', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'audit_log', familyDestination: 'Causal Evidence Registry source', migrationStrategy: 'CREATE_NEW_TARGET' },
-  { id: 'M055', existingAsset: '真实干预结果', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_success_case, legacy_growth_report', familyDestination: 'CausalEpisode source candidate', migrationStrategy: 'CREATE_NEW_TARGET' },
+  { id: 'M054', existingAsset: '研究/实验数据', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'audit_log', familyDestination: 'HistoricalEventEvidenceSource + ProvenanceSource (NOT direct causal layer)', migrationStrategy: 'TRANSFORM' },
+  { id: 'M055', existingAsset: '真实干预结果', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_success_case, legacy_growth_report', familyDestination: 'HistoricalOutcomeEvidenceCandidate (CausalEpisodeCreation FORBIDDEN until Causal Gate)', migrationStrategy: 'TRANSFORM' },
 ];
 
 export function getFels0Gate() {
