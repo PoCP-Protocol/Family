@@ -28,6 +28,39 @@ export interface PrincipalRuntimeInput {
   family_context_read_allowed?: boolean;
 }
 
+// 传输层 envelope：只用于把权威 PrincipalAiOutput 打包给客户端展示/telemetry。
+// 领域权威 output 请从 @family/principal-ai 引入,不要在这里重定义业务字段。
+// 注意:此 envelope 不承载核心业务字段(opening/what_i_hear/say_it_tonight/one_small_action/…),
+// 那些必须来自 @family/principal-ai#PrincipalAiOutput。
+export interface PrincipalRealtimeOutputEnvelope {
+  turn_id: string;
+  request_id: string;
+  session_id: string;
+  generation_id: string;
+  entry_point: 'ASK_FAMILI_PRINCIPAL';
+  risk_route: PrincipalSafetyRoute;
+  scenario_id: string;
+  method_refs: string[];
+  source_refs: string[];
+  safety_status: 'SAFE' | 'REVIEW' | 'HIGH_RISK';
+  soul_version: string;
+  model_provider: string;
+  model_name: string;
+  schema_validation: 'PASS' | 'FAIL';
+  principal_latency_ms: number;
+  consent_context: MediaConsentContext;
+  // 权威 output 的 JSON 快照,仅供 UI 呈现:
+  authoritative_output_ref: {
+    prompt_version: string;
+    schema_version: string;
+  };
+}
+
+/**
+ * @deprecated 传输层遗留 envelope,仅供 MM1-A3 前的旧 avatar-lab runtime.ts / main.ts / server.spec.ts
+ * 保持编译通过。**不得**在新代码中使用。领域权威 PrincipalAiOutput 请从 `@family/principal-ai` 引入。
+ * SAFE_TO_REMOVE 时会随旧文件一并清除。
+ */
 export interface PrincipalAiOutput {
   turn_id: string;
   request_id: string;
@@ -152,7 +185,15 @@ export interface RealtimeSessionEvent {
 }
 
 export interface RealtimeClientCommand {
-  kind: 'SESSION_START' | 'AUDIO_CHUNK' | 'TEXT_INPUT' | 'INPUT_END' | 'INTERRUPT' | 'SESSION_CLOSE';
+  kind:
+    | 'SESSION_START'
+    | 'AUDIO_CHUNK'
+    | 'TEXT_INPUT'
+    | 'SIMULATED_VOICE'
+    | 'INPUT_END'
+    | 'INTERRUPT'
+    | 'SESSION_CLOSE'
+    | 'TELEMETRY_REQUEST';
   turn_id?: string;
   session_id?: string;
   text?: string;
@@ -170,7 +211,8 @@ export interface RealtimeServerEvent {
     | 'AVATAR_EVENT'
     | 'SAFETY_ROUTE'
     | 'ERROR'
-    | 'INTERRUPTED';
+    | 'INTERRUPTED'
+    | 'TELEMETRY';
   session_id?: string;
   turn_id?: string;
   payload?: Record<string, unknown>;

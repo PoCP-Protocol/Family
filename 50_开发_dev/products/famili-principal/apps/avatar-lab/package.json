@@ -5,14 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "node src/server.mjs",
-    "build": "vite build",
-    "test": "echo \"avatar lab placeholder test\""
+    "dev:server": "tsx src/server-entry.ts",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build": "pnpm run build:server && vite build",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "@family/ai-gateway": "workspace:*",
+    "@family/avatar-gateway": "workspace:*",
+    "@family/fpai-multimodal-contracts": "workspace:*",
+    "@family/fpai-performance-planner": "workspace:*",
+    "@family/principal-ai": "workspace:*",
+    "@family/speech-gateway": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^20.11.30",
     "@types/ws": "^8.18.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",

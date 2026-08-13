@@ -6,6 +6,8 @@ export interface AvatarGateway {
   applyExpression(turnId: string, expression: string): void;
   applyGesture(turnId: string, gesture: string): void;
   cancel(turnId: string): void;
+  /** 表演结束(由 orchestrator 在 TTS_COMPLETE 后触发)。 */
+  complete(turnId: string): void;
   resetToListening(turnId: string): void;
   onEvent(handler: (event: AvatarEvent) => void): void;
 }
@@ -33,6 +35,10 @@ export class FakeAvatarGateway implements AvatarGateway {
 
   public cancel(turnId: string): void {
     this.emit({ type: 'PERFORMANCE_CANCELLED', turn_id: turnId, timestamp_ms: Date.now() });
+  }
+
+  public complete(turnId: string): void {
+    this.emit({ type: 'PERFORMANCE_COMPLETE', turn_id: turnId, timestamp_ms: Date.now() });
   }
 
   public resetToListening(turnId: string): void {

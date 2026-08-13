@@ -10,7 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@family/fpai-multimodal-contracts": "workspace:*"
+    "@family/fpai-multimodal-contracts": "workspace:*",
+    "@family/principal-ai": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

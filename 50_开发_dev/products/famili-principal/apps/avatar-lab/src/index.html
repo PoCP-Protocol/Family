@@ -3,33 +3,267 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>法咪莉校长 Avatar Lab</title>
+    <title>法咪莉校长 Avatar Lab (MM1-A3)</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 0; padding: 24px; background: #f6f4ff; color: #221c3a; }
-      .panel { background: white; border-radius: 16px; padding: 20px; max-width: 900px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
-      .stage { min-height: 220px; border: 2px dashed #8f7bec; border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-      .avatar { font-size: 54px; }
-      .controls { display: flex; gap: 8px; margin-top: 12px; }
-      button { border: 0; border-radius: 999px; padding: 10px 14px; cursor: pointer; background: #6c4df6; color: white; }
-      .dev { margin-top: 16px; padding: 12px; background: #f3f0ff; border-radius: 12px; font-size: 13px; }
-      .subtitles { min-height: 24px; margin-top: 8px; font-weight: 600; }
+      /* MM1-A3 Browser Client — 严格分区: USER SURFACE vs DEV SURFACE */
+
+      :root {
+        --user-bg: #f6f4ff;
+        --user-panel: #ffffff;
+        --user-fg: #221c3a;
+        --accent: #6c4df6;
+        --accent-soft: #8f7bec;
+        --dev-bg: #f3f0ff;
+        --dev-fg: #3a2c66;
+        --risk-normal: #4b7bec;
+        --risk-review: #f6a723;
+        --risk-high: #d0333a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: var(--user-bg);
+        color: var(--user-fg);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 16px;
+        max-width: 1240px;
+        margin: 0 auto;
+      }
+
+      /* ===================== USER SURFACE ===================== */
+
+      .user-surface {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .user-surface h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .stage {
+        background: var(--user-panel);
+        border-radius: 16px;
+        padding: 20px;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+        border: 2px dashed var(--accent-soft);
+      }
+
+      #avatar { font-size: 84px; line-height: 1; }
+
+      #state {
+        background: var(--user-panel);
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Transcript layer(实时输入层) */
+      .transcript-block { display: flex; flex-direction: column; gap: 6px; }
+      #partial {
+        background: #fafaff;
+        color: #6b6790;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 14px;
+        min-height: 32px;
+      }
+      #finalTranscript {
+        background: var(--user-panel);
+        color: var(--user-fg);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-weight: 600;
+        min-height: 40px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+      }
+
+      /* Principal Intelligence(权威 output 8 字段 + HUMAN_GATE 分支) */
+      #principalPanel {
+        background: var(--user-panel);
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        min-height: 220px;
+      }
+      #principalPanel .p-row {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px dashed #ede7ff;
+      }
+      #principalPanel .p-row:last-child { border-bottom: 0; }
+      #principalPanel .p-key {
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 13px;
+      }
+      #principalPanel .p-val {
+        color: var(--user-fg);
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      #principalPanel .p-humangate {
+        background: #fff3f4;
+        border: 2px solid var(--risk-high);
+        border-radius: 12px;
+        padding: 14px 16px;
+        color: var(--risk-high);
+        line-height: 1.6;
+      }
+      #principalPanel .p-humangate .p-val {
+        color: var(--risk-high);
+        font-weight: 600;
+      }
+      #principalPanel .p-humangate em {
+        color: #6b1d22;
+        font-style: normal;
+        font-size: 13px;
+      }
+
+      /* Digital Human Performance(Performance Planner 输出) */
+      #performancePanel {
+        background: var(--user-panel);
+        border-radius: 14px;
+        padding: 12px 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        font-size: 13px;
+        line-height: 1.6;
+        color: #4a416b;
+      }
+      #performancePanel strong { color: var(--accent); }
+
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 16px;
+        cursor: pointer;
+        background: var(--accent);
+        color: white;
+        font-weight: 600;
+      }
+      button:disabled { background: #c9c1eb; cursor: not-allowed; }
+      #interruptBtn { background: #f26f7a; }
+      #telemetryBtn { background: #4a416b; }
+
+      textarea#input {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #d8d1f2;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: vertical;
+        background: var(--user-panel);
+        color: var(--user-fg);
+      }
+
+      /* ===================== DEV SURFACE ===================== */
+
+      .dev-surface {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .dev-surface h3 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+        color: var(--dev-fg);
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+
+      #devPanel {
+        background: var(--dev-bg);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-family: "Consolas", "Menlo", monospace;
+        font-size: 12px;
+        color: var(--dev-fg);
+        line-height: 1.6;
+        max-height: 460px;
+        overflow-y: auto;
+      }
+      #devPanel .d-key { color: #7860d0; font-weight: 600; }
+      #devPanel .d-val { color: #2b224b; word-break: break-all; }
+
+      #eventLog {
+        background: #ece7ff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-family: "Consolas", "Menlo", monospace;
+        font-size: 11px;
+        color: #4a3d78;
+        max-height: 220px;
+        overflow-y: auto;
+      }
+      #eventLog .log-line { padding: 1px 0; }
     </style>
   </head>
   <body>
-    <div class="panel">
-      <h2>法咪莉校长</h2>
-      <div class="stage">
-        <div id="avatar" class="avatar">◉</div>
-      </div>
-      <div id="state" class="subtitles">状态: 正在听</div>
-      <div id="subtitles" class="subtitles">实时字幕: 等待输入…</div>
-      <div class="controls">
-        <button id="sendBtn">发送</button>
-        <button id="interruptBtn">立即打断</button>
-      </div>
-      <textarea id="input" rows="3" style="width:100%;margin-top:12px;">我儿子每天回来就玩手机，我一说他，他就跟我吵。</textarea>
-      <div class="dev" id="devPanel"></div>
+    <div class="layout">
+      <!-- ==================== USER SURFACE ==================== -->
+      <section class="user-surface" aria-label="用户体验区">
+        <h2>法咪莉校长 · Avatar Lab</h2>
+
+        <div class="stage">
+          <div id="avatar">◉</div>
+        </div>
+
+        <div id="state" data-region="user">状态: 连接中…</div>
+
+        <div class="transcript-block" aria-label="实时输入层">
+          <div id="partial" data-region="user">实时字幕(听中): —</div>
+          <div id="finalTranscript" data-region="user">最终转写: —</div>
+        </div>
+
+        <h3 style="margin: 4px 0 0; color: var(--accent);">Principal Intelligence</h3>
+        <div id="principalPanel" data-region="user" aria-label="校长权威输出">
+          <div class="p-row"><span class="p-key">opening</span><span class="p-val">等待输入…</span></div>
+        </div>
+
+        <h3 style="margin: 4px 0 0; color: var(--accent);">Digital Human Performance</h3>
+        <div id="performancePanel" data-region="user" aria-label="表演计划">
+          <div>等待表演计划…</div>
+        </div>
+
+        <div class="controls">
+          <button id="sendBtn" data-region="user">发送</button>
+          <button id="interruptBtn" data-region="user">立即打断</button>
+          <button id="telemetryBtn" data-region="dev">刷新遥测</button>
+        </div>
+
+        <textarea id="input" rows="3" data-region="user">我儿子每天回来就玩手机，我一说他，他就跟我吵。</textarea>
+      </section>
+
+      <!-- ==================== DEV SURFACE ==================== -->
+      <aside class="dev-surface" aria-label="开发者遥测区">
+        <h3>Developer Telemetry</h3>
+        <div id="devPanel" data-region="dev" aria-label="白名单遥测"></div>
+
+        <h3>Event Log</h3>
+        <div id="eventLog" data-region="dev" aria-label="事件流"></div>
+      </aside>
     </div>
+
     <script type="module" src="./client.ts"></script>
   </body>
 </html>
