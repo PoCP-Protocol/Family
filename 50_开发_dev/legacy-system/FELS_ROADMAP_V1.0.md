@@ -107,7 +107,7 @@ FRESH_DB = PASS_LOCAL_REBUILD (reset -> 3 FELS migrations applied -> no pending;
 ## 4. FELS-2 Program & Human Service
 
 Target Duration: 2-3 weeks
-Current Status: NOT_AUTHORIZED (deferred by signoff 2026-08-13; FELS-4 prioritized first)
+Current Status: NOT_AUTHORIZED
 
 Scope after explicit authorization only:
 
@@ -178,7 +178,10 @@ ADAPTER_REFERENCE_READY = YES
 ## 6. FELS-4 Legacy Intelligence & Dirty World
 
 Target Duration: 1-2 weeks
-Current Status: AUTHORIZED_IN_PROGRESS (signoff 2026-08-13, PRIORITY_BEFORE_FELS2)
+Current Status: FELS4_FULL_BUILD = NOT_AUTHORIZED
+  (Only FLM_AC_001 dirty-world anti-corruption FIXTURE is authorized — order FLM-AC-002, 2026-08-14.
+   The four dirty objects legacy_profile/tag/ai_report/alert exist as FLM reference fixtures,
+   NOT as a FELS-4 product capability. Real reference DB/HTTP/scan gate = FLM_AC_002, NOT_YET_PASS.)
 
 Scope:
 

@@ -1,7 +1,13 @@
-# FELS-4 脏世界 / 旧智能 Gate 报告
+# FLM-AC-001 脏世界防腐 Code Gate 报告
 
-> 依据：总架构师 signoff **2026-08-13**（`reports/FELS2_AUTHORIZATION_REQUEST.md`）——
-> `AUTHORIZE_FELS2=NO`、`FELS4_PRIORITY=BEFORE_FELS2`、`EARLY_FELS23_DISPOSITION=POSITIVE_SPLIT`、`LM1=PROMOTE_REVIEWED`。
+```text
+GATE_KIND = PASS_CODE_VALIDATED_LOCAL
+REAL_REFERENCE_GATE = NOT_YET_PASS   (见 FLM_AC_002_REAL_REFERENCE_GATE.md)
+FELS4_FULL_BUILD = NOT_AUTHORIZED ; FELS4_PRODUCT_CAPABILITY = NO
+```
+
+> ⚠️ 更正(FLM-AC-002, 2026-08-14):本报告原名 `FELS4_LEGACY_INTELLIGENCE_GATE.md`,原据"2026-08-13 自签署"记 `FELS4=PASS_CODE_VALIDATED`。经总架构师复核,该签署非有效外部授权链,已撤销。现更正为 **FLM-AC-001 脏世界防腐 fixture 的本地 Code Gate**;真实独立库闭环见 `FLM_AC_002_REAL_REFERENCE_GATE.md`。
+> 依据：外部开发令 **FLM-AC-002**（`FLM_AC_001_DIRTY_WORLD=AUTHORIZED`、`FLM_AC_001_CODE=PASS_WITH_CORRECTIONS`、`LM1_MAPPING=REVIEW_REQUIRED`）。
 > 平台基座：**对象 + 属性树 + 生成式AI**（护栏写死，智能生成式）。旧世界源忠实僵化；FLM 判定用声明式属性-迁移注册表（数据驱动），生成式 FLM 映射建议延后到已授权导入阶段。
 > 验证方式：`tsc` 全绿 + `vitest` 单测（domain-runtime）+ 脏 seed 运行。**真实 PostgreSQL / HTTP / FLM DB 污染扫描待独立 `LEGACY_DATABASE_URL`**（当前 DB 测试自动 skip，fail-closed）。
 > Family 正典库写入 = **0**；无 shadow/canonical import；不碰真实邦阳源（`SUSPENDED_NOT_BLOCKED`）。
@@ -13,7 +19,8 @@
 
 | Gate 项 | 结果 | 证据 |
 |---|---|---|
-| FELS4 | **PASS_CODE_VALIDATED** | §2–§5;api 15/15 + contracts 10/10 vitest 通过 |
+| FLM_AC_001_CODE | **PASS_CODE_VALIDATED_LOCAL** | §2–§5;api 15/15 + contracts 10/10 vitest 通过 |
+| FELS4_FULL_BUILD | **NOT_AUTHORIZED** | fixture only; FELS4_PRODUCT_CAPABILITY=NO |
 | LEGACY_AI | **PASS** | `legacy_ai_reports` = `LEGACY_AI_HYPOTHESIS_NOT_FACT`（§3） |
 | LEGACY_SCORE | **PASS** | `family_score → RETIRE`，非 GrowthState（§4） |
 | LEGACY_RANKING | **PASS** | `ranking → RETIRE`，非 Family canonical（§4） |

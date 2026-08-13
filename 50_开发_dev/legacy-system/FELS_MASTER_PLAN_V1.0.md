@@ -77,7 +77,8 @@ FLM_FELS_REAL_DB_DISCOVERY = NOT_YET_PASS
 
 FELS2 = NOT_AUTHORIZED
 FELS3 = NOT_AUTHORIZED
-FELS4 = AUTHORIZED (PRIORITY_BEFORE_FELS2, signoff 2026-08-13)
+FELS4_FULL_BUILD = NOT_AUTHORIZED
+FLM_AC_001_DIRTY_WORLD = AUTHORIZED (fixture only; ref order FLM-AC-002 2026-08-14)
 FELS5 = NOT_AUTHORIZED
 
 FAMILY_M2_PRIORITY = HIGHER_THAN_FELS
@@ -95,11 +96,12 @@ Authorization policy remains:
 FELS1 = AUTHORIZED_AFTER_FELS0
 FELS2 = REQUIRES_EXPLICIT_NEW_AUTHORIZATION
 FELS3 = REQUIRES_EXPLICIT_NEW_AUTHORIZATION
-FELS4 = AUTHORIZED_2026_08_13 (PRIORITY_BEFORE_FELS2; ref reports/FELS2_AUTHORIZATION_REQUEST.md)
+FELS4_FULL_BUILD = REQUIRES_EXPLICIT_NEW_AUTHORIZATION (NOT_AUTHORIZED)
+FLM_AC_001_DIRTY_WORLD = AUTHORIZED (order FLM-AC-002, 2026-08-14; anti-corruption fixture only, not a FELS-4 product capability)
 FELS5 = REQUIRES_EXPLICIT_NEW_AUTHORIZATION
 ```
 
-> FELS-4 授权范围仅限「脏世界/旧智能」参考载体(legacy_profile/tag/ai_report/alert)+ FLM 语义污染拒绝证据。仍受铁边界约束:Family 正典写入 = 0,不 shadow/canonical import,不碰真实邦阳源。早期 FELS-2/3 六表维持 QUARANTINE,POSITIVE_SPLIT 待 FELS-2 授权时执行。
+> 更正(FLM-AC-002):上一轮曾据文档自签署把 FELS4 记为 AUTHORIZED —— 已撤销。当前授权仅限 **FLM_AC_001 脏世界防腐 fixture**(legacy_profile/tag/ai_report/alert 作为 FLM 反腐试验场,`FELS4_PRODUCT_CAPABILITY = NO`)。仍受铁边界:Family 正典写入=0,不 shadow/pilot/canonical import,不碰真实邦阳源,不改写已 push 历史。早期 FELS-2/3 六表维持 QUARANTINE,POSITIVE_SPLIT 待 FELS-2 授权时执行。
 
 ## 5. Objectives
 

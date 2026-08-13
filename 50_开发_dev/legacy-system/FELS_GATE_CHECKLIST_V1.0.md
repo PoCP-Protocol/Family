@@ -162,7 +162,9 @@ BLOCKERS = n
 
 ## 7. FELS-4 Gate
 
-Authorization state: AUTHORIZED (signoff 2026-08-13, PRIORITY_BEFORE_FELS2)
+Authorization state: FELS4_FULL_BUILD = NOT_AUTHORIZED
+  (Only FLM_AC_001 dirty-world anti-corruption FIXTURE authorized — order FLM-AC-002, 2026-08-14.
+   Prior "signoff 2026-08-13" was a document self-appended signoff, revoked as invalid external chain.)
 
 ```text
 FELS4 = PASS | FAIL
@@ -187,10 +189,11 @@ legacy score != GrowthState
 legacy label != Diagnosis
 ```
 
-Current state (code-validated; real PostgreSQL/HTTP/DB pollution scan pending independent LEGACY_DATABASE_URL):
+Current state (code-validated LOCAL; real PostgreSQL/HTTP/DB pollution scan under FLM_AC_002):
 
 ```text
-FELS4 = PASS_CODE_VALIDATED
+FELS4_FULL_BUILD = NOT_AUTHORIZED
+FLM_AC_001_CODE = PASS_CODE_VALIDATED_LOCAL
 LEGACY_AI = PASS            (legacy_ai_reports = LEGACY_AI_HYPOTHESIS_NOT_FACT; DEFERRED generative FLM mapping)
 LEGACY_SCORE = PASS         (family_score -> RETIRE; not GrowthState)
 LEGACY_RANKING = PASS       (ranking -> RETIRE; not Family canonical)
