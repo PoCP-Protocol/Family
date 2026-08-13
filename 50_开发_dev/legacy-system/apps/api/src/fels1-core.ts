@@ -806,9 +806,8 @@ export function createDirtyCoreDataset() {
   return runtime;
 }
 
-// FELS-4 clean：良态旧世界智能对象（正确携带 NOT_* 语义分类，供 export 保真测试）。
-export function createFels4CleanDataset() {
-  const runtime = createCleanSmallDataset();
+// 为前若干客户注入良态 FLM 脏世界参考对象（正确携带 NOT_* 语义分类）。
+function addFels4ReferenceObjects(runtime: FelsReferenceRuntime) {
   runtime.records.customers.slice(0, 4).forEach((customer, index) => {
     const student = runtime.records.students.find((s) => s.customer_id === customer.customer_id);
     runtime.createLegacyProfile({
@@ -822,14 +821,21 @@ export function createFels4CleanDataset() {
     runtime.createLegacyAiReport({ customer_id: customer.customer_id, student_id: student?.student_id, report_type: 'COMMUNICATION_ANALYSIS', ai_conclusion: '（旧AI，假设性）该家庭沟通或有改善空间，仅供参考', recommended_action: '建议继续观察并由顾问跟进', has_supporting_evidence: true });
     runtime.createLegacyAlert({ customer_id: customer.customer_id, student_id: student?.student_id, alert_type: 'FOLLOW_UP', risk_score: 20 + index, severity_label: 'LOW', legacy_disposition: 'HUMAN_REVIEWED' });
   });
+}
+
+// FELS-4 clean：良态旧世界智能对象（正确携带 NOT_* 语义分类，供 export 保真测试）。
+export function createFels4CleanDataset() {
+  const runtime = createCleanSmallDataset();
+  addFels4ReferenceObjects(runtime);
   runtime.createSourceSnapshot();
   return runtime;
 }
 
-// FELS-4 dirty：注入脏世界污染向量（D021–D052）。所有对象仍被 runtime 强制打上 NOT_* 语义分类，
-// 用于证明 FLM 结构性拒绝这些污染进入 Family canonical（family_score/ranking 一律 RETIRE）。
+// FELS-4 dirty：在 core dirty（重复手机号/弱同意/歧义监护人/旧打卡）之上，注入脏世界污染向量（D021–D052）。
+// 所有对象仍被 runtime 强制打上 NOT_* 语义分类，用于证明 FLM 结构性拒绝这些污染进入 Family canonical。
 export function createFels4DirtyDataset() {
-  const runtime = createFels4CleanDataset();
+  const runtime = createDirtyCoreDataset();
+  addFels4ReferenceObjects(runtime);
   const anchor = runtime.records.customers[0];
   const anchorStudent = runtime.records.students.find((s) => s.customer_id === anchor.customer_id);
 
