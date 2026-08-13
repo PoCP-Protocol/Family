@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "agents": [
+    {
+      "agent_id": "PROGRAM_CONDUCTOR",
+      "role": "orchestrator",
+      "writes_product_code": false,
+      "may_authorize": false,
+      "purpose": "Read program state, resolve dependencies, dispatch READY tasks, never write product code."
+    },
+    {
+      "agent_id": "AGENT_PRINCIPAL_AI",
+      "role": "principal_ai",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/packages/principal-ai/**", "50_开发_dev/packages/principal-runtime/**", "50_开发_dev/apps/api/src/principal/**", "20_知识_knowledge/**", "50_开发_dev/reports/m3/**"],
+      "purpose": "Principal understanding, evidence grounding, model gateway integration, intelligence evaluation and safety."
+    },
+    {
+      "agent_id": "AGENT_CONSUMER_PRODUCT",
+      "role": "consumer_product",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/apps/web/**", "50_开发_dev/apps/api/src/principal/**", "50_开发_dev/reports/m3/**"],
+      "purpose": "Consumer loop, human confirmation UX, check-in, timeline, return and browser E2E."
+    },
+    {
+      "agent_id": "AGENT_OBJECT_DOMAIN",
+      "role": "object_domain",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/packages/object-tree/**", "50_开发_dev/architecture/rb-003/**", "50_开发_dev/apps/api/src/family/**"],
+      "purpose": "Object semantic runtime, attribute projection and declarative write guards. It never owns generative intelligence."
+    },
+    {
+      "agent_id": "AGENT_TENANCY_IAM",
+      "role": "tenancy_iam",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/architecture/tenancy/**", "50_开发_dev/docs/MULTI_TENANCY_DESIGN*", "50_开发_dev/reports/tenancy/**"],
+      "purpose": "C2C/B2C tenancy and data sovereignty contracts; IAM runtime only after tenancy gate."
+    },
+    {
+      "agent_id": "AGENT_FLM_LEGACY",
+      "role": "flm_legacy",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/legacy-system/**", "50_开发_dev/tools/legacy-migration/**", "50_开发_dev/reports/flm/**", "50_开发_dev/architecture/**"],
+      "purpose": "Legacy reference system and FLM semantic anti-corruption. No Family canonical imports."
+    },
+    {
+      "agent_id": "AGENT_OPS_ANALYTICS",
+      "role": "ops_analytics",
+      "writes_product_code": true,
+      "may_authorize": false,
+      "default_allowed_paths": ["50_开发_dev/apps/api/src/**", "50_开发_dev/apps/web/**", "50_开发_dev/reports/ops/**", "25_研究_research/**"],
+      "purpose": "Operability, analytics, pilot metrics and observability."
+    },
+    {
+      "agent_id": "GOVERNANCE_AUDITOR",
+      "role": "auditor_governance",
+      "writes_product_code": false,
+      "may_authorize": false,
+      "purpose": "Read-only scope, authorization, canonical-write and dangerous-change audit."
+    },
+    {
+      "agent_id": "EVIDENCE_AUDITOR",
+      "role": "auditor_evidence",
+      "writes_product_code": false,
+      "may_authorize": false,
+      "purpose": "Read-only verification that claimed PASS is supported by the required machine evidence."
+    }
+  ]
+}

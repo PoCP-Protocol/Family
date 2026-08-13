@@ -1,0 +1,176 @@
+name: Family Dev OS
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: "Run real coding agents for READY tasks (requires configured runner)"
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 * * * *"
+  push:
+    paths:
+      - "50_开发_dev/family-os/**"
+      - "50_开发_dev/tools/family-devos/**"
+      - ".github/workflows/family-devos.yml"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: family-devos-orchestrator
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate Dev OS
+        working-directory: 50_开发_dev
+        run: |
+          node tools/family-devos/orchestrate.mjs validate
+          node tools/family-devos/selftest.mjs
+      - name: Plan READY tasks
+        id: plan
+        working-directory: 50_开发_dev
+        run: node tools/family-devos/orchestrate.mjs plan --github-output
+      - name: Explain execution mode
+        run: |
+          echo "READY task count=${{ steps.plan.outputs.count }}"
+          echo "Real execution requires workflow input execute=true or FAMILY_DEVOS_AUTO_EXECUTE=true plus FAMILY_AGENT_RUNNER=custom and FAMILY_AGENT_COMMAND."
+
+  mock-smoke:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Start one mock agent (no product writes)
+        working-directory: 50_开发_dev
+        env:
+          FAMILY_AGENT_RUNNER: mock
+          FAMILY_AGENT_RESULT: ${{ runner.temp }}/family-devos-mock-result.json
+        run: |
+          node tools/family-devos/run-agent.mjs W2R_103B
+          node -e "const r=require(process.env.FAMILY_AGENT_RESULT); if(!r.checks?.mock_started || !r.blockers?.includes('REAL_AGENT_RUNNER_NOT_CONFIGURED')) process.exit(1)"
+
+  dispatch:
+    needs: [plan, mock-smoke]
+    if: >-
+      needs.plan.outputs.count != '0' &&
+      ((github.event_name == 'workflow_dispatch' && inputs.execute == true) ||
+       (github.event_name == 'schedule' && github.ref == 'refs/heads/master' && vars.FAMILY_DEVOS_AUTO_EXECUTE == 'true'))
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    env:
+      FAMILY_DEVOS_ROOT: ${{ github.workspace }}/control/50_开发_dev
+      FAMILY_AGENT_RUNNER: ${{ vars.FAMILY_AGENT_RUNNER }}
+      FAMILY_AGENT_COMMAND: ${{ secrets.FAMILY_AGENT_COMMAND }}
+      FAMILY_AGENT_BOOTSTRAP_COMMAND: ${{ secrets.FAMILY_AGENT_BOOTSTRAP_COMMAND }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Checkout task base
+        uses: actions/checkout@v4
+        with:
+          path: work
+          ref: ${{ matrix.base_ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - name: Create isolated task branch
+        working-directory: work
+        run: |
+          BRANCH="agent/${{ matrix.task_id }}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git checkout -b "$BRANCH"
+          echo "FAMILY_TASK_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          echo "FAMILY_TASK_PACKET=$RUNNER_TEMP/family-task-${{ matrix.task_id }}.md" >> "$GITHUB_ENV"
+          echo "FAMILY_AGENT_RESULT=$RUNNER_TEMP/family-result-${{ matrix.task_id }}.json" >> "$GITHUB_ENV"
+
+      - name: Install repository dependencies
+        working-directory: work/50_开发_dev
+        run: pnpm install --frozen-lockfile
+
+      - name: Build task packet
+        working-directory: work
+        run: node ../control/50_开发_dev/tools/family-devos/orchestrate.mjs packet "${{ matrix.task_id }}" > "$FAMILY_TASK_PACKET"
+
+      - name: Fail closed without real runner
+        if: env.FAMILY_AGENT_RUNNER != 'custom'
+        run: |
+          echo "Real coding runner is not configured. Refusing to pretend that task execution happened."
+          exit 78
+
+      - name: Run coding agent
+        working-directory: work
+        run: node ../control/50_开发_dev/tools/family-devos/run-agent.mjs "${{ matrix.task_id }}"
+
+      - name: Governance audit
+        working-directory: work
+        run: node ../control/50_开发_dev/tools/family-devos/governance-audit.mjs "${{ matrix.task_id }}" "origin/${{ matrix.base_ref }}"
+
+      - name: Task-specific tests
+        working-directory: work
+        run: node ../control/50_开发_dev/tools/family-devos/run-task-checks.mjs "${{ matrix.task_id }}"
+
+      - name: Evidence audit
+        working-directory: work
+        run: node ../control/50_开发_dev/tools/family-devos/evidence-audit.mjs "${{ matrix.task_id }}" "$FAMILY_AGENT_RESULT"
+
+      - name: Commit owned changes
+        working-directory: work
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "Agent produced no repository changes" >&2
+            exit 5
+          fi
+          git config user.name "Family Dev OS"
+          git config user.email "family-devos@users.noreply.github.com"
+          git add -A
+          git commit -m "${{ matrix.task_id }}: automated agent delivery"
+          git push -u origin "$FAMILY_TASK_BRANCH"
+
+      - name: Open draft PR
+        working-directory: work
+        run: |
+          cat > "$RUNNER_TEMP/pr-body.md" <<PR
+          Automated by Family Dev OS V1.
+
+          - Task: `${{ matrix.task_id }}`
+          - Agent: `${{ matrix.agent_id }}`
+          - Base: `${{ matrix.base_ref }}`
+          - Merge class: `${{ matrix.merge_class }}`
+          - Governance audit: PASS
+          - Evidence audit: PASS
+          - Task checks: PASS
+
+          This PR is intentionally **draft**. Class C never auto-merges; agents cannot self-authorize.
+          PR
+          gh pr create --draft --base "${{ matrix.base_ref }}" --head "$FAMILY_TASK_BRANCH" --title "${{ matrix.task_id }}: automated agent delivery" --body-file "$RUNNER_TEMP/pr-body.md"
