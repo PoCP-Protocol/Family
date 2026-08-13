@@ -212,25 +212,30 @@ describe('@family/principal-ai FP1 text intelligence MVP', () => {
 });
 
 // W2R-103 循证检索(内联 bundle 测检索逻辑;真实 YAML→bundle 由 tools/compile-knowledge.mjs 校验)
-import { retrieveGroundedKnowledge, type KnowledgeChainBundle } from './index';
+import { retrieveGroundedKnowledge, ungroundedRefs, type KnowledgeChainBundle } from './index';
 
-describe('W2R-103 evidence-grounded retrieval', () => {
+describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
+  // V2 bundle:证据真值由 Python 裁定并写入 evidence_summary;TS 只消费。
   const bundle: KnowledgeChainBundle = {
-    schema_version: 'KNOWLEDGE_BUNDLE_V1', intervention_id: 'LISTEN_BEFORE_RESPOND',
-    theories: [{ id: 'THEORY_CONNECTION_BEFORE_CORRECTION', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, source_refs: ['FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT'] }],
-    constructs: [{ id: 'CONSTRUCT_FELT_LISTENING', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, grounded_in: 'THEORY_CONNECTION_BEFORE_CORRECTION' }],
-    methods: [{ id: 'METHOD_CONNECT_BEFORE_CORRECT', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true, grounded_in: 'THEORY_CONNECTION_BEFORE_CORRECTION', targets: ['CONSTRUCT_FELT_LISTENING'], uses: ['MODALITY_ONE_SMALL_ACTION_TEXT'], source_refs: ['FPAI-METHOD-TAXONOMY-V1:CONNECT_BEFORE_CORRECT'] }],
-    modalities: [{ id: 'MODALITY_ONE_SMALL_ACTION_TEXT', evidence_level: 'E1_REVIEWED_METHOD_ASSET', non_decisive: true }],
+    schema_version: 'KNOWLEDGE_CHAIN_V2', intervention_id: 'LISTEN_BEFORE_RESPOND', bundle_version: 'sha256:test',
+    theories: [{ id: 'TH-001', evidence_grade: 'E2', family_decision_non_decisive: true, source_refs: [] }],
+    constructs: [
+      { id: 'CN-001', evidence_grade: 'E0', family_decision_non_decisive: true, source_refs: [] },
+      { id: 'CN-002', evidence_grade: 'E6', family_decision_non_decisive: true, source_refs: ['doi:10.1017/S0954579414000169'] },
+    ],
+    methods: [{ id: 'MD-001', evidence_grade: 'E7', family_decision_non_decisive: true, source_refs: ['doi:10.1016/j.adolescence.2015.04.005', 'doi:10.1037/dev0000875'] }],
+    modalities: [{ id: 'MM-001', evidence_grade: 'E0', family_decision_non_decisive: true, source_refs: [] }],
+    evidence_summary: { external_verified_count: 4, highest_grade: 'E7', has_third_party_real: true, python_evidence_gate: 'PASS' },
   };
 
-  it('compiled LISTEN_BEFORE_RESPOND chain retrieves grounded refs (Theory→Construct→Method→Modality)', () => {
+  it('gate=PASS 链检出真实 DOI refs + evidence 真值(Theory→Construct→Method→Modality)', () => {
     const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
     expect(g.grounded).toBe(true);
-    expect(g.method_ids).toContain('METHOD_CONNECT_BEFORE_CORRECT');
-    expect(g.theory_ids.length).toBeGreaterThan(0);
-    expect(g.construct_ids.length).toBeGreaterThan(0);
-    expect(g.knowledge_refs.length).toBeGreaterThan(0);
-    expect(g.all_non_decisive).toBe(true); // ResearchEvidence 恒 NON_DECISIVE
+    expect(g.method_ids).toContain('MD-001');
+    expect(g.knowledge_refs).toContain('doi:10.1016/j.adolescence.2015.04.005');
+    expect(g.highest_grade).toBe('E7');
+    expect(g.evidence_gate_status).toBe('PASS');
+    expect(g.family_decision_non_decisive).toBe(true); // 研究证据不决定家庭行为
   });
 
   it('unknown intervention -> not grounded, empty refs (不编造)', () => {
@@ -239,29 +244,52 @@ describe('W2R-103 evidence-grounded retrieval', () => {
     expect(g.knowledge_refs).toEqual([]);
   });
 
-  // W2R-103B:grounding 穿进【实际模型输入】+ 运行结果携带;无 grounding 时不编造。
+  // ---- FAIL CLOSED 负向 ----
+  it('FAIL CLOSED: python_evidence_gate=FAIL → grounded=false(即便有 refs)', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, python_evidence_gate: 'FAIL' as const } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  it('FAIL CLOSED: 缺 evidence_summary → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: undefined };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  it('FAIL CLOSED: external_verified_count=0 → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, external_verified_count: 0 } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  // ---- 防编造:模型响应引用不在 bundle 的 knowledge_ref ----
+  it('governance: 响应编造 bundle 之外的 knowledge_ref → 被检出', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    expect(ungroundedRefs(['doi:10.1016/j.adolescence.2015.04.005'], g)).toEqual([]);
+    expect(ungroundedRefs(['doi:FABRICATED-9999'], g)).toEqual(['doi:FABRICATED-9999']);
+  });
+
+  // ---- W2R-103B(a) 接线:grounding 穿进模型输入 + 运行结果携带 ----
   const input = {
     request_id: 'r1', session_id: 's1', entry_point: 'ASK_FAMILI_PRINCIPAL' as const,
     user_message: '孩子写作业拖拉怎么办',
     consent_context: { fpai_lab_consent: true, family_context_read_allowed: true },
   };
 
-  it('W2R-103B: grounded_knowledge 穿进 gateway 请求 input + input_refs 携带 knowledge_refs', () => {
+  it('grounded_knowledge 穿进 gateway 请求 input + input_refs 携带 knowledge_refs', () => {
     const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
     const req = buildPrincipalAiGatewayRequest(input, g);
     expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toEqual(g);
     for (const ref of g.knowledge_refs) expect(req.input_refs).toContain(ref);
   });
 
-  it('W2R-103B: runPrincipalTextMvp 返回 grounded_knowledge(grounded=true)', async () => {
+  it('runPrincipalTextMvp 返回 grounded_knowledge(grounded=true, gate=PASS)', async () => {
     const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
     const result = await runPrincipalTextMvp(input, undefined, g);
     expect(result.grounded_knowledge.grounded).toBe(true);
-    expect(result.grounded_knowledge.all_non_decisive).toBe(true);
-    expect(result.grounded_knowledge.method_ids).toContain('METHOD_CONNECT_BEFORE_CORRECT');
+    expect(result.grounded_knowledge.evidence_gate_status).toBe('PASS');
+    expect(result.grounded_knowledge.method_ids).toContain('MD-001');
   });
 
-  it('W2R-103B: 未传 grounding → grounded=false,不编造、input 不含 grounded_knowledge', async () => {
+  it('未传 grounding → grounded=false,不编造、input 不含 grounded_knowledge', async () => {
     const result = await runPrincipalTextMvp(input, undefined);
     expect(result.grounded_knowledge.grounded).toBe(false);
     const req = buildPrincipalAiGatewayRequest(input);

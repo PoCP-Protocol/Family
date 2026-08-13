@@ -200,12 +200,14 @@ describe('W2R-104 intelligence quality gate', () => {
     expect(calls.proposalSaved).toBe(1);
     expect(calls.events).toContain('principal_quality_gate_evaluated');
     expect(calls.events).not.toContain('principal_quality_gate_failed');
-    // W2R-103B:响应发出 grounding 证据事件,且 bundle 加载器找到真实编译链 → grounded=true(NON_DECISIVE)
+    // W2R-103B:响应发出 grounding 证据事件;加载器找到 Python 编译的真实链 → gate=PASS、grounded=true
     expect(calls.events).toContain('principal_knowledge_grounded');
-    const g = calls.eventPayloads['principal_knowledge_grounded'] as { grounded: boolean; intervention_id: string; all_non_decisive: boolean; knowledge_refs: string[] };
+    const g = calls.eventPayloads['principal_knowledge_grounded'] as { grounded: boolean; intervention_id: string; family_decision_non_decisive: boolean; knowledge_refs: string[]; evidence_gate_status: string; highest_grade: string };
     expect(g.grounded).toBe(true);
     expect(g.intervention_id).toBe('LISTEN_BEFORE_RESPOND');
-    expect(g.all_non_decisive).toBe(true);
+    expect(g.family_decision_non_decisive).toBe(true);
+    expect(g.evidence_gate_status).toBe('PASS');
+    expect(g.highest_grade).toBe('E7');
     expect(g.knowledge_refs.length).toBeGreaterThan(0);
   });
 

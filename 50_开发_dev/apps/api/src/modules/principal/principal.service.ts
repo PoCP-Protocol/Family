@@ -174,16 +174,17 @@ export class PrincipalService {
       risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
     });
 
-    // W2R-103B grounding 证据:记录本次响应依据的循证链(已穿进模型输入的同一对象);观测/审计用,不写 canonical。
+    // W2R-103B grounding 证据(§13):记录本次响应依据的循证链摘要(已穿进模型输入的同一对象)。
+    // 只记结构化元数据,不写论文/心理原文;不写 canonical。
     await this.repo.recordProductEvent('principal_knowledge_grounded', familyId, sessionId, correlationId, {
       intervention_id: run.grounded_knowledge.intervention_id,
+      bundle_version: run.grounded_knowledge.bundle_version ?? null,
       grounded: run.grounded_knowledge.grounded,
-      theory_ids: run.grounded_knowledge.theory_ids,
-      construct_ids: run.grounded_knowledge.construct_ids,
-      method_ids: run.grounded_knowledge.method_ids,
-      modality_ids: run.grounded_knowledge.modality_ids,
       knowledge_refs: run.grounded_knowledge.knowledge_refs,
-      all_non_decisive: run.grounded_knowledge.all_non_decisive,
+      external_evidence_count: run.grounded_knowledge.external_evidence_count,
+      highest_grade: run.grounded_knowledge.highest_grade,
+      evidence_gate_status: run.grounded_knowledge.evidence_gate_status,
+      family_decision_non_decisive: run.grounded_knowledge.family_decision_non_decisive,
     });
 
     // M3-108 阈值告警:真实外呼(attempt)达到 warn 阈值(默认 80%)发一次 principal_quota_warning(exceeded 由前置守卫另发)。

@@ -1,29 +1,41 @@
 # 理论卡｜学理根系 —— 回答"为什么会这样"
-# id 前缀必须为 TH-。未知字段会直接报错,不要自行加字段。
-# defines 必须指向 constructs.yaml 里真实存在的 CN- 卡片。
+# id 前缀必须为 TH-。defines 必须指向 constructs.yaml 里真实存在的 CN- 卡片。
+# 首条真实链(M3-W2R-103B):情绪社会化 / 先连接再纠正。
 
-theories: []
-
-# 模板(复制到上面的列表里,去掉注释):
-#
-# - id: TH-001
-#   name: 自我决定理论
-#   summary: 一句话说清这个理论在本项目里用来解释什么
-#   core_claim: 自主、胜任、联结三种基本心理需要被满足时,内在动机才可持续
-#   originators: [Deci, Ryan]
-#   year: "1985"
-#   defines: [CN-001, CN-002]        # 定义了哪些构念
-#   boundary: 适用边界与已知反驳 —— 必填,没有边界的理论等于万能解释
-#   china_fit: 在中国家庭情境下的适配与存疑之处
-#   tags: [动机, 自主支持]
-#   open_questions:
-#     - 在高学业压力情境下自主支持是否仍然有效
-#   evidence:
-#     - claim: 自主支持与青少年内在动机正相关
-#       grade: 7                      # E7 = RCT/元分析
-#       provenance: third_party_real   # 已核验的公开文献
-#       source: "10.xxxx/xxxxx"        # DOI,用 citations.py 核验
-#       year: 2017
-#       sample_n: 12000
-#       population: 青少年,多国
-#       note: 效应量与局限
+theories:
+  - id: TH-001
+    name: 情绪社会化与"先连接再纠正"
+    summary: 关系通道未打开时纠正易触发防御;先接住情绪、建立"被听见"再进入规则更有效。
+    core_claim: 家长的情绪教练式回应(承接情绪→命名→再引导)优于急于评价/纠正。
+    originators: [Gottman, Havighurst]
+    year: "1996"
+    defines: [CN-001, CN-002]
+    boundary: 涉即时人身危险/暴力升级不适用,须直接进入 Human Gate;不主张"复述一句必然改善关系"。
+    china_fit: 情绪教练思路跨文化较稳,但表达方式需本土化;高学业压力下家长执行难度更高,存疑。
+    tags: [情绪社会化, 先连接再纠正, theory]
+    open_questions:
+      - Gottman & DeClaire (1997) Raising an Emotionally Intelligent Child 仅作 BACKGROUND_REFERENCE,不入 decisive 证据集。
+      - Gottman 1996 原始文献精确书目/DOI 待 APA/PsycNet 核验后方可升为 decisive。
+    evidence:
+      - claim: >
+          Rogers 提出共情性理解等为治疗关系的必要条件(理论背景描述,非亲子干预效果证据)。
+        grade: 2
+        provenance: third_party_real
+        source: "doi:10.1037/h0045357"
+        year: 1957
+        population: 心理治疗关系(非家庭干预试验)
+        note: >
+          THEORY_BACKGROUND;effect_claim NOT allowed。仅说明"共情性理解"概念源流,
+          不得作为 LISTEN_BEFORE_RESPOND 有效性的证据。
+        tags: [theory-background, rogers, no-effect-claim]
+      - claim: >
+          父母元情绪哲学(情绪教练取向)与儿童情绪调节相关(理论奠基,初步实证)。
+        grade: 6
+        provenance: unverified
+        source: "VERIFY: Gottman, Katz & Hooven (1996), J. Family Psychology 10(3)"
+        year: 1996
+        population: 家庭(需核验精确样本)
+        note: >
+          VERIFY_EXACT_SOURCE(裁决 M3-W2R-CONV-001)。未核验 DOI/书目前 provenance=unverified
+          → NON_DECISIVE,不可用于支撑结论;核验为原始研究后再升 third_party_real/E6。
+        tags: [theory-foundation, verify-pending, non-decisive]
