@@ -105,16 +105,18 @@ capabilities:
 
   - capability_id: W2R_105_HUMAN_CONFIRMATION_CLOSURE
     stage: M3-W2R
-    status: INTERNAL_ALLOWED
+    status: ARCHITECTURE_APPROVED_RUNTIME_AFTER_BASE_INTEGRATION   # 裁决 M3-W2R-CONV-001
     architecture_authorized: true
     code_authorized: true
-    runtime_authorized: true          # Human Gate 闭环随 principal runtime 常开(确定性控制面,不新增外呼)
+    runtime_authorized: false         # 裁决:INTERNAL_RUNTIME = AUTHORIZED_AFTER_BASE_INTEGRATION(w2r-104→master 后方生效)
     live_external_call_authorized: false   # 纯确定性控制面:扣留/释放不调用任何外部模型
     pilot_authorized: false
     production_authorized: false
     authorized_by: family-chief-architect
     authorization_ref: reports/m3/M3_W2R_105_HUMAN_CONFIRMATION_GATE.md
     authorized_at: "2026-08-13"
+    authorization_ratified_at: "2026-08-14"
+    ratification_ref: Chief Architect M3-W2R-CONV-001 ruling   # 架构=APPROVED,代码=AUTHORIZED,内部 runtime=AUTHORIZED_AFTER_BASE_INTEGRATION;pilot/production=NO
     supersedes: [W2R_104_INTERIM_REVIEW_DELIVERY]   # 取代 W2R-104 过渡期"REVIEW 响应直接展示给家长"
     notes: 安全控制面(非生成式能力):W2R-104 质量闸判 REVIEW 的候选响应不再直接展示,而是【扣留】(response=null,human_handoff=true)并把 response_id 挂到 handoff;人工复核 APPROVED 才释放给家长(Human Gate 闭环),REJECTED/ESCALATED/INFO_ONLY 保持扣留。释放为确定性(只 APPROVED 释放,幂等,不可再放宽),生成式 AI 不参与释放决策。不写 canonical;pilot/production 仍 NO。
 
