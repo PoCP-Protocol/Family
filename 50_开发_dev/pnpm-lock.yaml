@@ -293,7 +293,7 @@ importers:
         specifier: workspace:*
         version: link:../fpai-multimodal-contracts
       microsoft-cognitiveservices-speech-sdk:
-        specifier: ^1.51.0
+        specifier: 1.51.0
         version: 1.51.0
     devDependencies:
       typescript:

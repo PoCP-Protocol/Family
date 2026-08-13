@@ -8,3 +8,6 @@ export * from './fake';
 
 // MM1-B1 · Family-owned local 2D avatar (§15/§25/§33/§34)
 export * from './familyLocal2d';
+
+// MM1-B1.1 · Composition root (§J)
+export * from './composition/avatarCompositionRoot';

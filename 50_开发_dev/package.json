@@ -37,7 +37,8 @@
     "legacy:seed:clean-small": "pnpm --filter @family/fels-contracts build && pnpm --filter @family/fels-api build && pnpm --filter @family/fels-api seed:clean-small",
     "legacy:seed:dirty-core": "pnpm --filter @family/fels-contracts build && pnpm --filter @family/fels-api build && pnpm --filter @family/fels-api seed:dirty-core",
     "legacy:test": "pnpm --filter @family/fels-contracts test && pnpm --filter @family/fels-api test && pnpm --filter @family/fels-web test",
-    "fpai:validate:provenance": "node products/famili-principal/tools/validate-fpai-dh-provenance.mjs"
+    "fpai:validate:provenance": "node products/famili-principal/tools/validate-fpai-dh-provenance.mjs",
+    "fpai:mm1b1:live": "node tools/fpai-mm1b1-live.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

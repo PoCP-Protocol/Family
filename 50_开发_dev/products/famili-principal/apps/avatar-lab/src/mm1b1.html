@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>法咪莉 · MM1-B1.1 Offline Gate</title>
+    <style>
+      :root {
+        --user-bg: #f6f4ff;
+        --user-panel: #ffffff;
+        --user-fg: #221c3a;
+        --accent: #6c4df6;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        margin: 0; padding: 24px;
+        background: var(--user-bg); color: var(--user-fg);
+      }
+      h2 { margin-top: 0; }
+      .panel {
+        background: var(--user-panel);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,.05);
+      }
+      button {
+        background: var(--accent);
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 14px;
+        margin-right: 8px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: .4; cursor: not-allowed; }
+      #mm1b1-canvas {
+        display: block;
+        margin: 0 auto;
+        background: #f6f4ff;
+        border-radius: 12px;
+      }
+      code { background: #eae4ff; padding: 2px 6px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h2>法咪莉 · MM1-B1.1 Offline Gate</h2>
+    <p>
+      本页面是 <b>纯离线 gate 演示</b>。<br />
+      · 未接入真实 Azure 调用,<code>LIVE_CALL_COUNT = 0</code>。<br />
+      · 默认 <code>FPAI_REAL_SPEECH_ENABLED=NO</code>,麦克风按钮显示 disabled 但不请求权限。<br />
+      · "假发一句话" 用 fake 静音 PCM + 定时 viseme 驱动 lipsync,验证时钟/嘴型/头/表情联动。
+    </p>
+
+    <div class="panel">
+      <canvas id="mm1b1-canvas" width="360" height="320"></canvas>
+      <div id="mm1b1-state" data-region="user">state=RESTING</div>
+      <div id="mm1b1-status" data-region="user">clock: -</div>
+    </div>
+
+    <div class="panel">
+      <button id="mm1b1-fake-speak">🗣 假发一句话</button>
+      <button id="mm1b1-interrupt">✋ 立即打断</button>
+    </div>
+
+    <div class="panel">
+      <div id="mm1b1-mic-state">mic: -</div>
+      <button id="mm1b1-mic-start">🎙 开始说话</button>
+      <button id="mm1b1-mic-stop">停止说话</button>
+      <p style="margin-top: 8px; font-size: 12px; color: #666;">
+        真实说话通道需 <code>?real_speech=YES</code> 与 <code>.env</code> 里的 Azure credential 都到位。
+        当前均未满足,点开始应回落到 <code>MIC_ERROR</code> / <code>MIC_DISABLED</code>。
+      </p>
+    </div>
+
+    <script type="module" src="./mm1b1AddonEntry.ts"></script>
+  </body>
+</html>
