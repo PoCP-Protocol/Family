@@ -65,6 +65,7 @@
     "external_verified_count": 4,
     "highest_grade": "E7",
     "has_third_party_real": true,
+    "source_registry_gate": "PASS",
     "python_evidence_gate": "PASS",
     "gate_checks": {
       "library_validate_errors": 0,
@@ -73,7 +74,8 @@
       "method_evidence_max_grade": "E7",
       "construct_external_evidence": 1,
       "unverified_decisive_evidence": 0,
-      "fake_or_missing_source": 0
+      "fake_or_missing_source": 0,
+      "unregistered_external_source": 0
     }
   },
   "limitations": [
@@ -83,5 +85,5 @@
     "微动作(今晚复述一句)本身直接效果证据有限;方法效果来自情绪教练式家长干预整体证据。",
     "Gottman 1996 待核验(unverified,非 decisive);Rogers/Gottman&DeClaire 仅理论背景。"
   ],
-  "bundle_version": "sha256:ad10887bec6337cd"
+  "bundle_version": "sha256:77031babcfbb538a"
 }

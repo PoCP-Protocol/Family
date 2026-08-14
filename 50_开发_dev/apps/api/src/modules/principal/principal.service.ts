@@ -184,6 +184,7 @@ export class PrincipalService {
       external_evidence_count: run.grounded_knowledge.external_evidence_count,
       highest_grade: run.grounded_knowledge.highest_grade,
       evidence_gate_status: run.grounded_knowledge.evidence_gate_status,
+      source_registry_gate: run.grounded_knowledge.source_registry_gate,
       family_decision_non_decisive: run.grounded_knowledge.family_decision_non_decisive,
     });
 

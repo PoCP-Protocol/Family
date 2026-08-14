@@ -413,6 +413,7 @@ export interface KnowledgeChainNode {
 export interface KnowledgeEvidenceSummary {
   external_verified_count: number; highest_grade: string;
   has_third_party_real: boolean;
+  source_registry_gate?: 'PASS' | 'FAIL';         // CLOSURE-001:来源机器可核验(verified_sources 注册表)
   python_evidence_gate: 'PASS' | 'FAIL';
   gate_checks?: Record<string, unknown>;
 }
@@ -429,6 +430,7 @@ export interface GroundedKnowledge {
   family_decision_non_decisive: boolean;
   external_evidence_count: number; highest_grade: string;
   evidence_gate_status: string;                 // PASS / FAIL(来自 Python)
+  source_registry_gate: string;                 // CLOSURE-001:PASS / FAIL(来源机器可核验)
   bundle_version?: string;
 }
 
@@ -438,14 +440,16 @@ export interface GroundedKnowledge {
  * 否则 grounded=false(不空谈、不编造)。ResearchEvidence 恒 family_decision_non_decisive(不对某家庭裁决)。
  */
 export function retrieveGroundedKnowledge(bundle: KnowledgeChainBundle | null | undefined, interventionId: string): GroundedKnowledge {
-  const empty: GroundedKnowledge = { intervention_id: interventionId, grounded: false, theory_ids: [], construct_ids: [], method_ids: [], modality_ids: [], knowledge_refs: [], family_decision_non_decisive: true, external_evidence_count: 0, highest_grade: 'E0', evidence_gate_status: 'FAIL' };
+  const empty: GroundedKnowledge = { intervention_id: interventionId, grounded: false, theory_ids: [], construct_ids: [], method_ids: [], modality_ids: [], knowledge_refs: [], family_decision_non_decisive: true, external_evidence_count: 0, highest_grade: 'E0', evidence_gate_status: 'FAIL', source_registry_gate: 'FAIL' };
   if (!bundle || bundle.intervention_id !== interventionId) return empty;
   const all = [...(bundle.theories ?? []), ...(bundle.constructs ?? []), ...(bundle.methods ?? []), ...(bundle.modalities ?? [])];
   const knowledge_refs = [...new Set(all.flatMap((n) => n.source_refs ?? []))];
   const summary = bundle.evidence_summary;
   const gate = summary?.python_evidence_gate ?? 'FAIL';
+  const registryGate = summary?.source_registry_gate ?? 'FAIL';
   const externalCount = summary?.external_verified_count ?? 0;
-  const grounded = gate === 'PASS' && externalCount > 0 && knowledge_refs.length > 0;
+  // FAIL CLOSED:来源须机器可核验(registryGate=PASS)且 evidence gate=PASS。
+  const grounded = gate === 'PASS' && registryGate === 'PASS' && externalCount > 0 && knowledge_refs.length > 0;
   return {
     intervention_id: interventionId,
     grounded,
@@ -458,6 +462,7 @@ export function retrieveGroundedKnowledge(bundle: KnowledgeChainBundle | null | 
     external_evidence_count: externalCount,
     highest_grade: summary?.highest_grade ?? 'E0',
     evidence_gate_status: gate,
+    source_registry_gate: registryGate,
     bundle_version: bundle.bundle_version,
   };
 }

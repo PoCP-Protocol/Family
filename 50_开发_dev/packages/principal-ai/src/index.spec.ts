@@ -225,7 +225,7 @@ describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
     ],
     methods: [{ id: 'MD-001', evidence_grade: 'E7', family_decision_non_decisive: true, source_refs: ['doi:10.1016/j.adolescence.2015.04.005', 'doi:10.1037/dev0000875'] }],
     modalities: [{ id: 'MM-001', evidence_grade: 'E0', family_decision_non_decisive: true, source_refs: [] }],
-    evidence_summary: { external_verified_count: 4, highest_grade: 'E7', has_third_party_real: true, python_evidence_gate: 'PASS' },
+    evidence_summary: { external_verified_count: 4, highest_grade: 'E7', has_third_party_real: true, source_registry_gate: 'PASS', python_evidence_gate: 'PASS' },
   };
 
   it('gate=PASS 链检出真实 DOI refs + evidence 真值(Theory→Construct→Method→Modality)', () => {
@@ -235,6 +235,7 @@ describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
     expect(g.knowledge_refs).toContain('doi:10.1016/j.adolescence.2015.04.005');
     expect(g.highest_grade).toBe('E7');
     expect(g.evidence_gate_status).toBe('PASS');
+    expect(g.source_registry_gate).toBe('PASS');       // CLOSURE-001:来源机器可核验
     expect(g.family_decision_non_decisive).toBe(true); // 研究证据不决定家庭行为
   });
 
@@ -247,6 +248,12 @@ describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
   // ---- FAIL CLOSED 负向 ----
   it('FAIL CLOSED: python_evidence_gate=FAIL → grounded=false(即便有 refs)', () => {
     const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, python_evidence_gate: 'FAIL' as const } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  // CLOSURE-001:来源未通过机器核验(registry FAIL)→ grounded=false(即便 evidence gate 显示 PASS)
+  it('FAIL CLOSED: source_registry_gate=FAIL → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, source_registry_gate: 'FAIL' as const } };
     expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
   });
 

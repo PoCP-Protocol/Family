@@ -28,6 +28,50 @@ INTERVENTION_ROOT_METHOD = {
 
 REAL_PROVENANCE = {Provenance.THIRD_PARTY_REAL, Provenance.PRIMARY_REAL}
 OUT_DIR = Path(__file__).resolve().parents[2] / "50_开发_dev" / "knowledge" / "compiled"
+REGISTRY_PATH = Path(__file__).resolve().parents[1] / "library" / "verified_sources.yaml"
+
+
+def _load_verified_registry() -> set[str]:
+    """机器可读的已核验来源注册表 → {已 VERIFIED 的 doi(小写) 与 'pmid:<n>'}。
+    找不到/解析失败 → 空集(FAIL SAFE:一切外部来源都视为未核验)。"""
+    try:
+        import yaml  # PyYAML(library 加载已依赖)
+        doc = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return set()
+    ids: set[str] = set()
+    for s in (doc.get("sources") or []):
+        if str(s.get("verification_status", "")).upper() != "VERIFIED":
+            continue
+        if s.get("doi"):
+            ids.add(str(s["doi"]).strip().lower())
+        if s.get("pmid"):
+            ids.add("pmid:" + str(s["pmid"]).strip().lower())
+    return ids
+
+
+_VERIFIED_IDS = _load_verified_registry()
+
+
+def _source_ids(source: str) -> set[str]:
+    """从 source 串抽取可比对标识(裸 DOI 与 pmid:<n>)。"""
+    import re
+    s = (source or "").strip().lower()
+    out: set[str] = set()
+    if not s:
+        return out
+    m = re.search(r"(10\.\d{4,9}/[^\s\"]+)", s)
+    if m:
+        out.add(m.group(1).rstrip(").,;"))
+    m2 = re.search(r"pmid[:\s]*([0-9]{5,9})", s)
+    if m2:
+        out.add("pmid:" + m2.group(1))
+    return out
+
+
+def _source_in_registry(source: str) -> bool:
+    """来源是否登记且已核验(机器可验证,不再只看 DOI 形态)。"""
+    return bool(_source_ids(source) & _VERIFIED_IDS)
 
 
 def _is_external_source(source: str) -> bool:
@@ -40,13 +84,26 @@ def _is_external_source(source: str) -> bool:
 
 
 def _external_verified(ev) -> bool:
-    """真实外部已核验证据:real provenance + 真实外部出处。"""
-    return ev.provenance in REAL_PROVENANCE and _is_external_source(ev.source)
+    """真实外部已核验证据:real provenance + 真实外部出处形态 + 【机器可核验(注册表 VERIFIED)】。
+    语法合法但不在注册表的 DOI(含 Agent 自编 DOI)→ False。"""
+    return (
+        ev.provenance in REAL_PROVENANCE
+        and _is_external_source(ev.source)
+        and _source_in_registry(ev.source)
+    )
 
 
 def _decisive_refs(card: Card, min_grade: Grade = Grade.E6) -> list[str]:
-    """节点用于 grounding 的真实外部出处(强度达标的 decisive 证据)。"""
-    return [e.source for e in card.evidence if _external_verified(e) and int(e.grade) >= int(min_grade)]
+    """节点用于 grounding 的真实外部出处:external_verified 且【实际过 Python Evidence.gate(min_grade)】。
+    如 Rogers E2 → gate(E4/E6) FAIL → 不进 decisive refs(背景证据,不洗白)。"""
+    refs: list[str] = []
+    for e in card.evidence:
+        if not _external_verified(e):
+            continue
+        ok, _reason = e.gate(min_grade)  # 逐条真调 Evidence.gate(),Python 为唯一权威
+        if ok:
+            refs.append(e.source)
+    return refs
 
 
 def _node(card: Card) -> dict:
@@ -98,6 +155,10 @@ def compile_bundle(intervention_id: str, lib: Library) -> dict:
     # 防 E7 洗白 / 造假:声称 real provenance 却用内部/缺失出处
     fake_or_missing_source = sum(1 for e in all_ev
                                  if e.provenance in REAL_PROVENANCE and not _is_external_source(e.source))
+    # CLOSURE-001:声称 real provenance + 外部形态出处,却未登记于 verified_sources(含语法合法的假/自编 DOI)
+    unregistered_external = sum(1 for e in all_ev
+                                if e.provenance in REAL_PROVENANCE and _is_external_source(e.source)
+                                and not _source_in_registry(e.source))
     # decisive 却 unverified(结构上不可能,做冗余护栏)
     unverified_decisive = sum(1 for e in all_ev if e.decisive and e.provenance in
                               {Provenance.UNVERIFIED, Provenance.INFERRED, Provenance.SIMULATED, Provenance.UNKNOWN})
@@ -110,7 +171,9 @@ def compile_bundle(intervention_id: str, lib: Library) -> dict:
         "construct_external_evidence": construct_external,
         "unverified_decisive_evidence": unverified_decisive,
         "fake_or_missing_source": fake_or_missing_source,
+        "unregistered_external_source": unregistered_external,
     }
+    source_registry_pass = unregistered_external == 0
     gate_pass = (
         len(validate_errors) == 0
         and external_verified_count >= 2
@@ -119,6 +182,7 @@ def compile_bundle(intervention_id: str, lib: Library) -> dict:
         and construct_external >= 1
         and unverified_decisive == 0
         and fake_or_missing_source == 0
+        and source_registry_pass
     )
 
     highest_grade = max((int(e.grade) for e in external), default=0)
@@ -143,6 +207,7 @@ def compile_bundle(intervention_id: str, lib: Library) -> dict:
             "external_verified_count": external_verified_count,
             "highest_grade": Grade(highest_grade).name if highest_grade else "E0",
             "has_third_party_real": any(e.provenance == Provenance.THIRD_PARTY_REAL for e in external),
+            "source_registry_gate": "PASS" if source_registry_pass else "FAIL",
             "python_evidence_gate": "PASS" if gate_pass else "FAIL",
             "gate_checks": checks,
         },

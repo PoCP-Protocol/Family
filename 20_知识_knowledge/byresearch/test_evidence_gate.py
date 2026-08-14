@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 from .evidence import Evidence, Grade, Provenance
-from .compile_principal_bundle import _is_external_source, _external_verified, compile_bundle
+from .compile_principal_bundle import _is_external_source, _external_verified, _source_in_registry, compile_bundle
 from .library import Library
 
 CASES: list[tuple[str, callable]] = []
@@ -78,8 +78,36 @@ def _c7():
     b = compile_bundle("LISTEN_BEFORE_RESPOND", lib)
     s = b["evidence_summary"]
     assert s["python_evidence_gate"] == "PASS"
+    assert s["source_registry_gate"] == "PASS"  # CLOSURE-001:来源机器可核验
     assert s["gate_checks"]["method_evidence_max_grade"] == "E7"
     assert s["external_verified_count"] >= 2
+
+
+# §CLOSURE-001.1 语法合法但不存在/未登记的假 DOI + real provenance + E7 → 仍不算 external verified
+@case("fake DOI (valid syntax, absent from registry) -> NOT external_verified")
+def _c8():
+    e = Evidence(claim="agent self-minted", grade=Grade.E7, provenance=Provenance.THIRD_PARTY_REAL,
+                 source="doi:10.9999/family.fake.001")
+    assert _is_external_source(e.source)          # 形态合法(旧检查会误判)
+    assert not _source_in_registry(e.source)      # 但不在 verified_sources
+    assert not _external_verified(e)               # → 机器判定未核验,Evidence Grounding FAIL
+
+
+# §CLOSURE-001.2 真实 DOI 语法但未登记于 verified_sources → NOT verified(Agent 不能自编 DOI 再自给 E7)
+@case("real-DOI syntax absent from verified_sources -> NOT verified")
+def _c9():
+    e = Evidence(claim="unregistered", grade=Grade.E7, provenance=Provenance.THIRD_PARTY_REAL,
+                 source="doi:10.1234/not.registered.2020")
+    assert not _external_verified(e)
+
+
+# §CLOSURE-001.3 已登记来源(TinT 2015)→ external_verified 且过 gate
+@case("registered TinT 2015 -> external_verified + gate PASS")
+def _c10():
+    e = Evidence(claim="method effect", grade=Grade.E7, provenance=Provenance.THIRD_PARTY_REAL,
+                 source="doi:10.1016/j.adolescence.2015.04.005")
+    assert _source_in_registry(e.source) and _external_verified(e)
+    assert e.gate(Grade.E6)[0]
 
 
 def main() -> int:
