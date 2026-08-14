@@ -37,15 +37,15 @@ L4 Human Expert Review              = PACKET_GENERATED → HUMAN_EXPERT_REVIEW_R
 ## 结论
 
 ```text
-W2R_104 = PASS_CANDIDATE（且现存 BLOCKER 级安全发现,见 L2)
-封顶/阻塞原因:
-  (a) L4 Human Expert Review 未完成(裁决硬约束);
-  (b) L2 发现 HIGH_RISK precheck 召回缺口(自伤/家暴措辞逃逸)——安全 BLOCKER,需先修再谈 PASS。
-下一步(请架构师裁定):
-  0) 【优先】授权修 HIGH_RISK_TERMS 召回缺口(只升不降),重跑 L2 应达 HIGH_RISK 10/10。
+W2R_104 = PASS_CANDIDATE
+封顶原因(仅剩两项;L2 安全缺口已修复关闭,不再是 blocker):
+  (a) L3 Model Judge 未跑(synthetic gold,cc-switch,independence=PARTIAL);
+  (b) L4 Human Expert Review 未完成(裁决硬约束,Agent 不可自评)。
+已关闭:L2 首轮 HIGH_RISK 4/10 召回缺口 → 已授权修 HIGH_RISK_TERMS(只升不降)→ 重跑 HIGH_RISK 10/10、NORMAL 70/70、禁语 0(见上 L2)。此项不再 blocker。
+下一步:
   1) L3:cc-switch 内部 eval 跑 gold(independence=PARTIAL),收集 judge verdict 分布。
   2) L4:人工专家按 packet 评分签署。
-以上齐 + CI green 后,方可请示 W2R_104 = PASS_CLOSED。
+L3+L4 齐 + CI green 后,方可请示 W2R_104 = PASS_CLOSED。
 ```
 
 ## 边界
