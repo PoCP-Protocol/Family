@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, Get, Header, Headers, Inject, NotFoundException, Param, Post } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrincipalService } from './principal.service';
+import { assertReviewer } from './reviewer-policy';
 
 function requireActor(actorId?: string): string {
   if (!actorId || actorId.trim().length === 0) throw new BadRequestException('x-actor-id header is required');
@@ -134,7 +135,8 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Headers('x-actor-id') actorId?: string,
   ) {
-    requireActor(actorId);
+    const reviewer = requireActor(actorId);
+    assertReviewer(reviewer);   // IAM-103:reviewer 授权(behind flag,默认关)
     return { handoffs: await this.service.listHandoffs(familyId) };
   }
 
@@ -147,6 +149,7 @@ export class PrincipalController {
     @Headers('x-correlation-id') correlationId?: string,
   ) {
     const actor = requireActor(actorId);
+    assertReviewer(actor);   // IAM-103:reviewer 授权(behind flag,默认关)
     const resolution = body?.resolution ?? 'INFO_ONLY';
     if (!['APPROVED', 'REJECTED', 'ESCALATED', 'INFO_ONLY'].includes(resolution)) {
       throw new BadRequestException('resolution must be APPROVED|REJECTED|ESCALATED|INFO_ONLY');
