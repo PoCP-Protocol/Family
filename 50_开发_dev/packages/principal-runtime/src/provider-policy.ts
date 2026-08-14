@@ -17,13 +17,14 @@ export interface ProviderRegistryEntry {
 export type ProviderRegistrySnapshot = readonly ProviderRegistryEntry[];
 
 /**
- * 运行时快照:同步自 governance/FPAI_PROVIDER_REGISTRY.yaml(SSOT)。
- * 注:改此处须与 YAML 同步(后续硬化:pyyaml 脚本自动生成 + drift-guard 测)。
+ * 运行时快照:由 tools/build_provider_policy_snapshot.py 从 governance/FPAI_PROVIDER_REGISTRY.yaml(唯一 SSOT)生成,
+ * 不再手抄。CI drift-guard(`--check`)保证 YAML 改而产物未重生成即 FAIL。
  */
-export const FPAI_PROVIDER_REGISTRY_SNAPSHOT: ProviderRegistrySnapshot = [
-  { provider_id: 'anthropic-cc-switch', minor_data_allowed: false, private_text_allowed: false, approved_environment: ['internal_livecheck', 'model_first_internal'] },
-  { provider_id: 'zhipu-glm4v', minor_data_allowed: false, private_text_allowed: false, approved_environment: ['internal_livecheck'] },
-];
+import { GENERATED_PROVIDERS, PROVIDER_REGISTRY_SOURCE_SHA256 as GEN_SHA } from './provider-registry.generated';
+
+export const FPAI_PROVIDER_REGISTRY_SNAPSHOT: ProviderRegistrySnapshot = GENERATED_PROVIDERS as unknown as ProviderRegistryEntry[];
+/** 生成产物内记录的 YAML 源哈希(供 drift-guard / 审计)。 */
+export const PROVIDER_REGISTRY_SOURCE_SHA256: string = GEN_SHA;
 
 export interface ProviderPolicyResult {
   providerApproved: boolean;
