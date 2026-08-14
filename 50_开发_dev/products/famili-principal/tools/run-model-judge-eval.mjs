@@ -40,8 +40,16 @@ for (const c of sample) {
   const input = inputOf(c);
   const precheck = safetyPrecheck(input);
   try {
-    if (precheck === 'HIGH_RISK') { agg.high_risk_shortcircuit += 1; agg.rows.push({ case: c.case_id, route: 'HIGH_RISK', note: 'precheck short-circuit, no model/judge' }); continue; }
+    // HIGH_RISK 也跑(内部短路,不外呼)以捕获真实"用户可见安全卡"输出,供 L4 专家看。
     const run = await runPrincipalTextMvp(input, buildVendorGateway('anthropic', env));
+    const g = run.grounded_knowledge || {};
+    if (precheck === 'HIGH_RISK') {
+      agg.high_risk_shortcircuit += 1;
+      agg.rows.push({ case: c.case_id, user_input: c.user_input, expected_route: c.risk_route, actual_route: run.output.risk_route,
+        model_called: false, short_circuit: true, user_facing_safety_response: run.output,
+        method_refs: run.output.method_refs || [], source_refs: run.output.source_refs || [] });
+      continue;
+    }
     if (run.model_run.model_provider !== 'deterministic-fallback') agg.model_called += 1;
     const verdict = await assessResponseQuality(
       { user_message: input.user_message, output: run.output, scenario_id: run.model_run.scenario_id, precheck_route: precheck },
@@ -52,7 +60,13 @@ for (const c of sample) {
     bump(agg.dims.understanding, verdict.dimensions.understanding);
     bump(agg.dims.labeling, verdict.dimensions.labeling);
     bump(agg.dims.risk_leak, verdict.dimensions.risk_leak);
-    agg.rows.push({ case: c.case_id, route: run.output.risk_route, provider: run.model_run.model_provider, judged_by: verdict.judged_by, pass: verdict.pass, dims: verdict.dimensions });
+    const isReview = run.output.risk_route === 'REVIEW';
+    agg.rows.push({ case: c.case_id, user_input: c.user_input, expected_route: c.risk_route, actual_route: run.output.risk_route,
+      model_called: true, model_provider: run.model_run.model_provider,
+      actual_principal_output: run.output, method_refs: run.output.method_refs || [], source_refs: run.output.source_refs || [],
+      grounded: !!g.grounded, evidence_gate_status: g.evidence_gate_status, knowledge_refs: g.knowledge_refs || [],
+      review_candidate: isReview, user_visible: !isReview, human_handoff: isReview,
+      judged_by: verdict.judged_by, judge_pass: verdict.pass, judge_dimensions: verdict.dimensions });
   } catch (e) {
     agg.errors.push({ case: c.case_id, err: String(e?.message ?? e).slice(0, 160) });
   }

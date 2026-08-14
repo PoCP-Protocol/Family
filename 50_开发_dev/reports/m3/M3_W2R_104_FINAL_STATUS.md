@@ -4,7 +4,7 @@
 RULING   = M3-W2R-CONV-001
 DATE     = 2026-08-14
 BASE     = m3/w2r-104 @ 15cf231（已含 #12 = W2R-103B PASS_CLOSED)
-W2R_104  = PASS_CANDIDATE   （人工专家前不得自我关闭;即便 L1–L3 全绿)
+W2R_104  = PASS_CLOSED   （L4 人工审核通过 2026-08-14,裁定人=family-chief-architect/人工权威;非 Agent 自评)
 ```
 
 ## 四层判据状态
@@ -31,24 +31,20 @@ L3 Model Judge (independence=PARTIAL)= RUN_COMPLETE(cc-switch 真实内部 eval,
         CORRELATED_MODEL_RISK=PRESENT;**INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED**(需未来第二个独立获批模型族)。
    授权边界:anthropic-cc-switch INTERNAL_EVAL_ONLY;仅 gold/synthetic,未涉真实家庭数据。
 
-L4 Human Expert Review              = PACKET_GENERATED → HUMAN_EXPERT_REVIEW_REQUIRED
-   产物:reports/m3/M3_W2R_104_HUMAN_EXPERT_REVIEW_PACKET.md(NORMAL/REVIEW/HIGH_RISK 代表样本 + 7 维 + 签署栏)。
+L4 Human Expert Review              = PASS(人工审核通过 2026-08-14;裁定人 family-chief-architect/人工权威)
+   证据物 V2(真实输出回填,9/9):reports/m3/M3_W2R_104_HUMAN_EXPERT_REVIEW_PACKET_V2.md(L3 同组 9 例真实 output/观测行为 + judge dims,FPAI-GOLD-052 标红)。
    Agent 不能自评 PASS。
 ```
 
 ## 结论
 
 ```text
-W2R_104 = PASS_CANDIDATE
-封顶原因(仅剩 1 项;L1/L2/L3 均已 agent 完成):
-  (仅) L4 Human Expert Review 未完成(裁决硬约束,Agent 不可自评自 PASS)。
-已完成/已关闭:
-  · L1 Deterministic Invariants = PASS(quality-gate 10/10)
-  · L2 Gold = PASS(首轮 HIGH_RISK 4/10 缺口已授权修至 10/10;NORMAL 70/70;禁语 0)
-  · L3 Model Judge = RUN_COMPLETE(cc-switch,generative judge 实跑,errors=0;independence=PARTIAL)
-下一步:
-  1) L4:人工领域专家按 M3_W2R_104_HUMAN_EXPERT_REVIEW_PACKET.md 评分签署。
-L4 完成 + CI green 后,方可请示 W2R_104 = PASS_CLOSED。在此之前 PASS_CANDIDATE 冻结。
+W2R_104 = PASS_CLOSED(四层齐:L1/L2 PASS_CLOSED · L3 PASS_ACCEPTED · L4 人工 PASS 2026-08-14)
+授权登记:governance/AUTHORIZATION_REGISTRY.yaml → W2R_104_INTELLIGENCE_QUALITY_GATE.w2r_104_final.W2R_104_PASS_CLOSED=YES。
+边界:PASS_CLOSED 仅指 W2R-104 智能质量四层收口;pilot/production 仍 NO;INDEPENDENT_MODEL_JUDGE 仍 NOT_CLAIMED(未来需第二个独立获批模型族)。
+下一步(按冻结顺序,均需架构师授权,AUTO_MERGE=NO):
+  PR #16 → m3/w2r-104 → 吸收 latest master(解决 diverged behind 3)→ FULL CI → fresh integration review → m3/w2r-104 → master。
+  之后:W2R-105 clean-forward(W2R-104 已 PASS_CLOSED,待 master 集成)。
 ```
 
 ## 边界
