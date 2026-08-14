@@ -74,7 +74,7 @@ days:
     content_ref: PARENT_21D_V1#D5
     theme: 少用"但是"
     skill: 降低防御(打断强制循环)
-    why: "但是"常把前半句的连接抵消;"我看到…"更少触发对抗。
+    why: 以“但是”抵消前半句连接;换成“我看到…”更少触发对抗。
     evidence_refs: [COERCIVE]
     parent_action: 今天刻意不用"但是",改用"我看到…我有点担心…"。
     say_it_tonight: "我看到你很努力了,我也有点担心时间,我们一起看看?"
