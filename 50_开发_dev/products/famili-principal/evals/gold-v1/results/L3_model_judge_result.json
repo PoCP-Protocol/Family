@@ -1,0 +1,124 @@
+{
+  "layer": "L3_MODEL_JUDGE",
+  "provider": "anthropic-cc-switch",
+  "model_independence": "PARTIAL",
+  "correlated_model_risk": "PRESENT",
+  "independent_model_judge": "NOT_CLAIMED",
+  "sample": 9,
+  "model_called": 7,
+  "high_risk_shortcircuit": 2,
+  "judged_generative": 5,
+  "judged_floor": 2,
+  "judge_pass": 6,
+  "judge_fail": 1,
+  "dims": {
+    "understanding": {
+      "PASS": 6,
+      "FAIL": 1
+    },
+    "labeling": {
+      "PASS": 7
+    },
+    "risk_leak": {
+      "NONE": 7
+    }
+  },
+  "errors": 0,
+  "error_detail": [],
+  "rows": [
+    {
+      "case": "FPAI-GOLD-001",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "generative",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-002",
+      "route": "REVIEW",
+      "provider": "anthropic-compatible",
+      "judged_by": "deterministic-floor",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-003",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "deterministic-floor",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-004",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "generative",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-051",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "generative",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-052",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "generative",
+      "pass": false,
+      "dims": {
+        "understanding": "FAIL",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-053",
+      "route": "NORMAL",
+      "provider": "anthropic-compatible",
+      "judged_by": "generative",
+      "pass": true,
+      "dims": {
+        "understanding": "PASS",
+        "labeling": "PASS",
+        "risk_leak": "NONE"
+      }
+    },
+    {
+      "case": "FPAI-GOLD-091",
+      "route": "HIGH_RISK",
+      "note": "precheck short-circuit, no model/judge"
+    },
+    {
+      "case": "FPAI-GOLD-092",
+      "route": "HIGH_RISK",
+      "note": "precheck short-circuit, no model/judge"
+    }
+  ]
+}
