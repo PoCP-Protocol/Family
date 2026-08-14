@@ -44,16 +44,24 @@ def build(doc: dict) -> str:
       <p class="arc">{ph}</p>
       <p class="audience">对象:{esc(m.get("audience",""))}</p>
     </section>''')
-    # 每课时
-    for d in doc.get("days", []):
+    # 每课时:兼容 21天(days,每日一件小事)与 90天(weeks,本周焦点+每日微行动)
+    lessons = doc.get("days") or doc.get("weeks") or []
+    unit = "Day" if doc.get("days") else "Week"
+    for d in lessons:
         ptitle = phases.get(d.get("phase", ""), {}).get("title", "")
+        num = d.get("day", d.get("week"))
+        micro = d.get("parent_daily_micro")
+        if micro:
+            action = f'<h3>本周焦点 + 每日微行动</h3><p>{esc(d.get("weekly_focus",""))}</p><ul>' + "".join(f"<li>{esc(x)}</li>" for x in micro) + "</ul>"
+        else:
+            action = f'<h3>今日一件小事</h3><p>{esc(d.get("parent_action",""))}</p>'
         slides.append(f'''<section class="slide">
-      <div class="head"><span class="day">Day {esc(d.get("day"))}</span><span class="phase">{esc(ptitle)}</span></div>
+      <div class="head"><span class="day">{unit} {esc(num)}</span><span class="phase">{esc(ptitle)}</span></div>
       <h2>{esc(d.get("theme",""))}</h2>
       <div class="skill">技能:{esc(d.get("skill",""))}</div>
       <p class="why">{esc(d.get("why",""))}</p>
       <div class="grid">
-        <div class="card action"><h3>今日一件小事</h3><p>{esc(d.get("parent_action",""))}</p></div>
+        <div class="card action">{action}</div>
         <div class="card say"><h3>今晚可以说的话</h3><p>“{esc(d.get("say_it_tonight",""))}”</p></div>
         <div class="card look"><h3>观察什么</h3><p>{esc(d.get("look_for",""))}</p></div>
         <div class="card bound"><h3>边界 / 提醒</h3><p>{esc(d.get("boundary",""))}</p></div>
@@ -112,7 +120,7 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / "index.html"
     out.write_text(build(doc), encoding="utf-8")
-    n = len(doc.get("days", []))
+    n = len(doc.get("days") or doc.get("weeks") or [])
     print(f"deck built: {out}  ({n} lessons + cover + refs = {n+2} slides)")
     return 0
 
