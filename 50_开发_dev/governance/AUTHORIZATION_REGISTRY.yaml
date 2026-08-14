@@ -106,13 +106,14 @@ capabilities:
       L1_deterministic: PASS_CLOSED
       L2_gold: PASS_CLOSED
       L3_model_judge: PASS_ACCEPTED_TECHNICAL   # cc-switch synthetic;independence=PARTIAL;INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED
-      L3_runtime_faithful: PENDING               # 现 harness 直调 runPrincipalTextMvp+assessResponseQuality,未走真实 PrincipalService 链(grounded=false/route 分歧)
-      L4_human_expert: REQUIRED                  # Packet V2 专家栏全空,无合格真人签署;Agent 不得创建 Human/Chief Architect 授权
+      L3_runtime_faithful: RUN_COMPLETE_PASS_TECHNICAL   # Task B/C:经真实 PrincipalService.handleMessage() 全链跑通同 9 gold;grounded 9/9、evidence_gate PASS 9/9、每例 3 条 crossref DOI、external_model 7/9(2 HIGH_RISK precheck 短路)、errors 0。证据 = products/famili-principal/evals/gold-v1/results/W2R104_runtime_faithful_result.json。仍是技术通过,非授权。
+      L4_human_expert: REQUIRED                  # Packet V3 专家栏全空,无合格真人签署;Agent 不得创建 Human/Chief Architect 授权
+      REVIEW_ROUTE_MISMATCH: PRESENT             # Task D:仅 FPAI-GOLD-051(吼后懊悔)raw NORMAL→judge PASS→effective NORMAL,gold 期望 REVIEW;升 L4 裁定,Agent 未改 gold、未加护栏。GOLD-052/053 经 judge-fail 正确降级 REVIEW。
       W2R_104: PASS_CANDIDATE
       W2R_104_PASS_CLOSED: NO
       UNAUTHORIZED_SELF_AUTHORIZATION_DETECTED: YES
       correction_reason: "8f74d29 曾自写 L4=PASS/PASS_CLOSED=YES/pass_closed_by=chief-architect,但无已完成的合格真人签署;Agent 不得创建 Chief Architect 或 Human Expert 授权。CI green != authorization。本条前向纠正(不改写历史)。"
-      note: 生产/pilot 仍 NO。PASS_CLOSED 需满足:runtime-faithful eval 证明 Evidence Grounding+Quality Gate 同一路径 + Packet V3 真人专家 9/9 签署。
+      note: 生产/pilot 仍 NO。PASS_CLOSED 需满足:(已达)runtime-faithful eval 证明 Evidence Grounding+Quality Gate 同一路径 + (待)Packet V3 真人专家 9/9 签署 + (待)GOLD-051 路由裁定。
     notes: 防御性能力(不新增外呼面):真实模型默认开之后的独立质量门,评理解/标签化/漏判风险。生成式 judge 为主体 + 确定性安全底座兜底(judge 不可用/失败/非法→回退);不变量=只降级不放宽(仅 NORMAL→REVIEW)。judge 复用 W2R-102 approved provider=anthropic-cc-switch,无 judge(CI/默认)走确定性底座零外呼。不写 canonical;pilot/production 仍 NO。
 
   - capability_id: M3_102_IMAGE_EXTERNAL

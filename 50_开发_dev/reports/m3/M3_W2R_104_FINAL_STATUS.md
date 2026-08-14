@@ -31,10 +31,16 @@ L3 Model Judge (independence=PARTIAL)= RUN_COMPLETE(cc-switch 真实内部 eval,
         CORRELATED_MODEL_RISK=PRESENT;**INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED**(需未来第二个独立获批模型族)。
    授权边界:anthropic-cc-switch INTERNAL_EVAL_ONLY;仅 gold/synthetic,未涉真实家庭数据。
 
-L4 Human Expert Review              = REQUIRED(Packet V2 专家栏全空;无合格真人签署;Agent 不得自签。Packet V3 见 Task E)
-L3_runtime_faithful                 = PENDING(现 harness 未走真实 PrincipalService 链;grounded=false/REVIEW 路由分歧,见 Task B/C/D)
-   证据物 V2(真实输出回填,9/9):reports/m3/M3_W2R_104_HUMAN_EXPERT_REVIEW_PACKET_V2.md(L3 同组 9 例真实 output/观测行为 + judge dims,FPAI-GOLD-052 标红)。
-   Agent 不能自评 PASS。
+L4 Human Expert Review              = REQUIRED(Packet V3 专家栏全空;无合格真人签署;Agent 不得自签)
+   证据物 V3(runtime-faithful,9/9):reports/m3/M3_W2R_104_HUMAN_EXPERT_REVIEW_PACKET_V3.md。
+
+L3_runtime_faithful                 = RUN_COMPLETE_PASS_TECHNICAL(Task B/C 已达)
+   harness:products/famili-principal/tools/run-runtime-faithful-eval.mjs —— 构造 fakeRepo(GRANTED consent + family context slice,捕获 saves/events)+ 真实 cc-switch gateway,调**真实 PrincipalService.handleMessage()** 跑同 9 gold。
+   产物:evals/gold-v1/results/W2R104_runtime_faithful_result.json。
+   结果:grounded 9/9 · evidence_gate PASS 9/9 · source_registry_gate PASS 9/9 · 每例 3 条 crossref DOI · external_model 7/9(2 HIGH_RISK precheck 短路)· judge 实跑 7/7(pass5/fail2)· errors 0。
+   Task C:全部 applicable 且 grounded=true(旧 harness 的 grounded=false 已消解)。
+   Task D:REVIEW_ROUTE_MISMATCH=PRESENT,仅 FPAI-GOLD-051(raw NORMAL→judge PASS→effective NORMAL,gold 期望 REVIEW)→ 升 L4 裁定;GOLD-052(WEAK)/053(FAIL)经 judge-fail 正确降级 REVIEW。**Agent 未改 gold。**
+   仍是技术通过,非授权;Agent 不能自评 PASS。
 ```
 
 ## 结论
