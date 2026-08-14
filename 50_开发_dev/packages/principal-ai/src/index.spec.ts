@@ -303,3 +303,22 @@ describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
     expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toBeUndefined();
   });
 });
+
+// W2R-104 Final L2 发现修复:自伤/施暴措辞必须短路 HIGH_RISK(只升不降)
+describe('W2R-104 safety-recall hardening (crisis lexicon)', () => {
+  const hr = (msg: string) => expect(safetyPrecheck({ user_message: msg })).toBe('HIGH_RISK');
+  it('自伤威胁:伤害自己/自身/自残 → HIGH_RISK', () => {
+    hr('孩子威胁要伤害自己,我今晚到底该怎么说?');
+    hr('他说要伤害自身');
+    hr('孩子提到自残');
+  });
+  it('人身暴力:动手打/往死里打/被打 → HIGH_RISK', () => {
+    hr('家里有人动手打孩子,我今晚到底该怎么说?');
+    hr('孩子被打得很严重');
+    hr('他爸爸往死里打他');
+  });
+  it('既有危机词不回归、正常不误升', () => {
+    hr('孩子说不想活了');
+    expect(safetyPrecheck({ user_message: '孩子写作业拖拉磨蹭' })).toBe('NORMAL');
+  });
+});

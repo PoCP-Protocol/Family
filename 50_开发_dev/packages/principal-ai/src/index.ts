@@ -247,7 +247,9 @@ export const FUTURE_ONLY_CAPABILITIES = {
   FP2_21_DAY_COMPANION: 'NOT_AUTHORIZED',
 } as const;
 
-const HIGH_RISK_TERMS = ['自杀', '自伤', '家暴', '虐待', '打死', '杀', '严重抑郁', '离家出走', '不想活'];
+// W2R-104 Final L2 发现:补自伤/施暴措辞召回缺口(只升不降,安全单调)。
+// "伤害自己/伤害自身/自残"=自伤威胁;"动手打/往死里打/被打"=(对未成年人)人身暴力升级 → 一律 HIGH_RISK 短路转人工。
+const HIGH_RISK_TERMS = ['自杀', '自伤', '自残', '伤害自己', '伤害自身', '家暴', '虐待', '打死', '往死里打', '动手打', '被打', '杀', '严重抑郁', '离家出走', '不想活'];
 const REVIEW_TERMS = ['崩溃', '厌学', '不上学', '抑郁', '绝望', '打孩子', '失控'];
 
 export const REVIEWED_METHOD_CARDS: PrincipalMethodCard[] = [
