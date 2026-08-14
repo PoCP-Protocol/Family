@@ -9,9 +9,9 @@ RULING_BASIS    = M3-MOS-CLOSEOUT-NEXT-001(Task A/B/C/D)
 STOP_COMPLIANCE = MASTER_MERGE=0 · PRODUCTION_FLAG=0 · NEW_CAPABILITY=0 · SELF_AUTH=0 · FULL_IAM103=NOT_UNTIL_TENANCY · W2R105=NOT_YET
 ```
 
-## 一、里程碑:W2R_104 = PASS_CLOSED
-四层齐:L1 PASS_CLOSED · L2 PASS_CLOSED · L3 PASS_ACCEPTED(cc-switch;MODEL_INDEPENDENCE=PARTIAL;INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED)· **L4 人工审核 PASS(family-chief-architect/人工权威,2026-08-14)**。
-授权真相记入 `governance/AUTHORIZATION_REGISTRY.yaml`(`W2R_104_PASS_CLOSED=YES`)。边界:仅 W2R-104 四层收口;pilot/production=NO;合并 master 另需授权。
+## 一、纠正:W2R_104 仍是 PASS_CANDIDATE(前次自签 PASS_CLOSED 已撤)
+> 本报告初版误将 W2R_104 记为 PASS_CLOSED —— 属未授权 Agent self-authorization(Packet V2 专家栏全空、无合格真人签署),经裁决 M3-W2R-104-VALIDATION-CORRECTION-001 前向撤销。
+真相:L1 PASS_CLOSED · L2 PASS_CLOSED · L3 **PASS_ACCEPTED_TECHNICAL**(且 L3_runtime_faithful=PENDING:现 harness 未走真实 PrincipalService 链)· L4 **REQUIRED**。`W2R_104 = PASS_CANDIDATE`;`W2R_104_PASS_CLOSED=NO`。CI green != authorization。
 
 ## 二、Task 执行状态
 ```text
