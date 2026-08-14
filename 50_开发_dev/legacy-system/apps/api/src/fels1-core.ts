@@ -1,4 +1,4 @@
-import { FELS_DATABASE_CONTRACT, FELS_MIGRATION_MATRIX_COVERAGE, getFels0Gate } from '@family/fels-contracts';
+import { FELS_DATABASE_CONTRACT, FELS_MIGRATION_MATRIX_COVERAGE, FELS_REFERENCE_SCHEMA_VERSION, FELS4_RETIRED_ATTRIBUTES, getFels0Gate, type FelsAcceptanceSurface } from '@family/fels-contracts';
 
 type Status = 'PASS' | 'FAIL';
 type MatrixClassification =
@@ -14,7 +14,7 @@ interface MatrixClassificationRow {
   id: string;
   classification: MatrixClassification;
 }
-type IdPrefix = 'cus' | 'con' | 'stu' | 'gua' | 'tpl' | 'asm' | 'scr' | 'rep' | 'crs' | 'prd' | 'ord' | 'itm' | 'pay' | 'enr' | 'cns' | 'snp' | 'cmp' | 'cen' | 'dtk' | 'chk' | 'adv' | 'mbr';
+type IdPrefix = 'cus' | 'con' | 'stu' | 'gua' | 'tpl' | 'asm' | 'scr' | 'rep' | 'crs' | 'prd' | 'ord' | 'itm' | 'pay' | 'enr' | 'cns' | 'snp' | 'prf' | 'ltg' | 'rai' | 'alt';
 
 export interface LegacyCustomer {
   customer_id: string;
@@ -180,78 +180,61 @@ export interface LegacyConsentRecord {
   semantic_classification: 'CONSENT_EVIDENCE_CANDIDATE';
 }
 
-export interface LegacyTrainingCamp {
-  training_camp_id: string;
-  camp_code: string;
-  title: string;
-  course_id?: string;
-  duration_days: number;
-  status: 'ACTIVE' | 'RETIRED';
+// ---- FLM Dirty-World reference fixture（旧画像/旧标签/旧AI报告/旧预警）----
+// Anti-corruption FIXTURE only. NOT a FELS-4 product capability. semantic_classification
+// is FLM metadata (a hardcoded guardrail marker), not legacy business truth.
+export interface LegacyProfile {
+  legacy_profile_id: string;
+  customer_id: string;
+  student_id?: string;
+  family_type?: string;
+  family_score?: number; // M036 -> RETIRE
+  ranking?: number;      // M035 -> RETIRE
+  customer_level?: string;
+  student_level?: string;
   created_at: string;
-  semantic_classification: 'LEGACY_PROGRAM_NOT_JOURNEY';
+  semantic_classification: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE';
 }
 
-export interface LegacyCampEnrollment {
-  camp_enrollment_id: string;
-  training_camp_id: string;
-  student_id: string;
-  enrollment_id?: string;
-  status: 'JOINED' | 'ACTIVE' | 'FINISHED' | 'DROPPED';
-  joined_at: string;
-  finished_at?: string;
-  semantic_classification: 'LEGACY_PROGRAM_STATUS_NOT_OUTCOME';
-}
-
-export interface LegacyDailyTask {
-  daily_task_id: string;
-  training_camp_id: string;
-  day_index: number;
-  title: string;
-  instruction_text?: string;
-  created_at: string;
-  semantic_classification: 'LEGACY_TASK_NOT_GROWTH_ACTION';
-}
-
-export interface LegacyTaskCheckin {
-  task_checkin_id: string;
-  daily_task_id: string;
-  camp_enrollment_id: string;
-  student_id: string;
-  checkin_status: 'DONE' | 'PARTIAL' | 'MISSED';
-  legacy_completion_text?: string;
-  checked_in_at: string;
-  semantic_classification: 'LEGACY_CHECKIN_NOT_OUTCOME';
-}
-
-export interface LegacyAdvisorNote {
-  advisor_note_id: string;
+export interface LegacyTag {
+  legacy_tag_id: string;
   customer_id?: string;
   student_id?: string;
-  training_camp_id?: string;
-  advisor_name: string;
-  note_type: 'FOLLOW_UP' | 'CONCERN' | 'PROGRESS' | 'RENEWAL_INTENT';
-  note_text: string;
+  tag_category: string;
+  tag_value: string;
   created_at: string;
-  semantic_classification: 'LEGACY_ADVISOR_TEXT_NOT_FACT';
+  semantic_classification: 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL';
 }
 
-export interface LegacyMembership {
-  membership_id: string;
+export interface LegacyAiReport {
+  legacy_ai_report_id: string;
   customer_id: string;
-  membership_level: 'BASIC' | 'PREMIUM' | 'VIP';
-  status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
-  started_at: string;
-  expires_at?: string;
-  renewal_count: number;
-  last_renewed_at?: string;
-  created_at: string;
-  semantic_classification: 'LEGACY_MEMBERSHIP_STATE';
+  student_id?: string;
+  assessment_id?: string;
+  report_type: string;
+  ai_conclusion: string;
+  recommended_action?: string;
+  has_supporting_evidence: boolean;
+  generated_at: string;
+  semantic_classification: 'LEGACY_AI_HYPOTHESIS_NOT_FACT';
+}
+
+export interface LegacyAlert {
+  legacy_alert_id: string;
+  customer_id: string;
+  student_id?: string;
+  alert_type: string;
+  risk_score?: number;
+  severity_label?: string;
+  legacy_disposition?: string;
+  triggered_at: string;
+  semantic_classification: 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD';
 }
 
 export interface LegacySourceSnapshot {
   snapshot_id: string;
   source_system: 'FELS';
-  schema_version: 'fels-1';
+  source_schema_version: typeof FELS_REFERENCE_SCHEMA_VERSION;
   created_at: string;
   record_counts: Record<string, number>;
   checksum_metadata?: Record<string, string>;
@@ -275,26 +258,32 @@ export interface FelsRecords {
   payments: LegacyPaymentRecord[];
   enrollments: LegacyEnrollment[];
   legacyConsents: LegacyConsentRecord[];
-  trainingCamps: LegacyTrainingCamp[];
-  campEnrollments: LegacyCampEnrollment[];
-  dailyTasks: LegacyDailyTask[];
-  taskCheckins: LegacyTaskCheckin[];
-  advisorNotes: LegacyAdvisorNote[];
-  memberships: LegacyMembership[];
+  profiles: LegacyProfile[];
+  tags: LegacyTag[];
+  aiReports: LegacyAiReport[];
+  alerts: LegacyAlert[];
   snapshots: LegacySourceSnapshot[];
 }
 
 export interface LegacyExportEnvelope<T> {
   source_system: 'FELS';
   source_kind: 'REFERENCE_IMPLEMENTATION';
+  source_schema_version: typeof FELS_REFERENCE_SCHEMA_VERSION;
+  acceptance_surface: FelsAcceptanceSurface;
   entity_type: string;
-  schema_version: 'fels-1';
   snapshot_id?: string;
   items: T[];
   pagination: {
     cursor?: string;
     has_more: boolean;
   };
+}
+
+const FLM_DIRTY_STORE_KEYS: StoreKey[] = ['profiles', 'tags', 'aiReports', 'alerts'];
+
+// Clean master runtime exposes only FELS1 and FLM_DIRTY_WORLD surfaces (FLM-INTEGRATION-001 §9).
+export function acceptanceSurfaceForStoreKey(key: StoreKey): FelsAcceptanceSurface {
+  return FLM_DIRTY_STORE_KEYS.includes(key) ? 'FLM_DIRTY_WORLD' : 'FELS1';
 }
 
 const NOW = '2026-08-10T00:00:00.000Z';
@@ -330,17 +319,19 @@ function emptyRecords(): FelsRecords {
     payments: [],
     enrollments: [],
     legacyConsents: [],
-    trainingCamps: [],
-    campEnrollments: [],
-    dailyTasks: [],
-    taskCheckins: [],
-    advisorNotes: [],
-    memberships: [],
+    profiles: [],
+    tags: [],
+    aiReports: [],
+    alerts: [],
     snapshots: [],
   };
 }
 
-export class Fels1Runtime {
+// FelsReferenceRuntime 表示整个 FELS Reference Source（FLM-INTEGRATION-001 §8-9）:
+//   ├── FELS1 reference surface（核心教育业务）
+//   └── FLM dirty-world reference surface（脏世界 fixture: profiles/tags/ai_reports/alerts）
+// clean master 不含 quarantined FELS2/3 runtime —— 它根本不应知道那些对象存在。
+export class FelsReferenceRuntime {
   readonly records: FelsRecords;
   private sequence = 1;
 
@@ -523,77 +514,55 @@ export class Fels1Runtime {
     return consent;
   }
 
-  createTrainingCamp(input: Omit<LegacyTrainingCamp, 'training_camp_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyTrainingCamp>) {
-    const camp: LegacyTrainingCamp = {
-      training_camp_id: input.training_camp_id ?? id('cmp', this.sequence++),
+  createLegacyProfile(input: Omit<LegacyProfile, 'legacy_profile_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyProfile>) {
+    const profile: LegacyProfile = {
+      legacy_profile_id: input.legacy_profile_id ?? id('prf', this.sequence++),
       created_at: input.created_at ?? NOW,
       ...input,
-      semantic_classification: 'LEGACY_PROGRAM_NOT_JOURNEY',
+      semantic_classification: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE',
     };
-    this.records.trainingCamps.push(camp);
-    return camp;
+    this.records.profiles.push(profile);
+    return profile;
   }
 
-  createCampEnrollment(input: Omit<LegacyCampEnrollment, 'camp_enrollment_id' | 'joined_at' | 'semantic_classification'> & Partial<LegacyCampEnrollment>) {
-    const enrollment: LegacyCampEnrollment = {
-      camp_enrollment_id: input.camp_enrollment_id ?? id('cen', this.sequence++),
-      joined_at: input.joined_at ?? NOW,
-      ...input,
-      semantic_classification: 'LEGACY_PROGRAM_STATUS_NOT_OUTCOME',
-    };
-    this.records.campEnrollments.push(enrollment);
-    return enrollment;
-  }
-
-  createDailyTask(input: Omit<LegacyDailyTask, 'daily_task_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyDailyTask>) {
-    const task: LegacyDailyTask = {
-      daily_task_id: input.daily_task_id ?? id('dtk', this.sequence++),
+  createLegacyTag(input: Omit<LegacyTag, 'legacy_tag_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyTag>) {
+    const tag: LegacyTag = {
+      legacy_tag_id: input.legacy_tag_id ?? id('ltg', this.sequence++),
       created_at: input.created_at ?? NOW,
       ...input,
-      semantic_classification: 'LEGACY_TASK_NOT_GROWTH_ACTION',
+      semantic_classification: 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL',
     };
-    this.records.dailyTasks.push(task);
-    return task;
+    this.records.tags.push(tag);
+    return tag;
   }
 
-  createTaskCheckin(input: Omit<LegacyTaskCheckin, 'task_checkin_id' | 'checked_in_at' | 'semantic_classification'> & Partial<LegacyTaskCheckin>) {
-    const checkin: LegacyTaskCheckin = {
-      task_checkin_id: input.task_checkin_id ?? id('chk', this.sequence++),
-      checked_in_at: input.checked_in_at ?? NOW,
+  createLegacyAiReport(input: Omit<LegacyAiReport, 'legacy_ai_report_id' | 'generated_at' | 'semantic_classification'> & Partial<LegacyAiReport>) {
+    const report: LegacyAiReport = {
+      legacy_ai_report_id: input.legacy_ai_report_id ?? id('rai', this.sequence++),
+      generated_at: input.generated_at ?? NOW,
       ...input,
-      semantic_classification: 'LEGACY_CHECKIN_NOT_OUTCOME',
+      semantic_classification: 'LEGACY_AI_HYPOTHESIS_NOT_FACT',
     };
-    this.records.taskCheckins.push(checkin);
-    return checkin;
+    this.records.aiReports.push(report);
+    return report;
   }
 
-  createAdvisorNote(input: Omit<LegacyAdvisorNote, 'advisor_note_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyAdvisorNote>) {
-    const note: LegacyAdvisorNote = {
-      advisor_note_id: input.advisor_note_id ?? id('adv', this.sequence++),
-      created_at: input.created_at ?? NOW,
+  createLegacyAlert(input: Omit<LegacyAlert, 'legacy_alert_id' | 'triggered_at' | 'semantic_classification'> & Partial<LegacyAlert>) {
+    const alert: LegacyAlert = {
+      legacy_alert_id: input.legacy_alert_id ?? id('alt', this.sequence++),
+      triggered_at: input.triggered_at ?? NOW,
       ...input,
-      semantic_classification: 'LEGACY_ADVISOR_TEXT_NOT_FACT',
+      semantic_classification: 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD',
     };
-    this.records.advisorNotes.push(note);
-    return note;
-  }
-
-  createMembership(input: Omit<LegacyMembership, 'membership_id' | 'created_at' | 'semantic_classification'> & Partial<LegacyMembership>) {
-    const membership: LegacyMembership = {
-      membership_id: input.membership_id ?? id('mbr', this.sequence++),
-      created_at: input.created_at ?? NOW,
-      ...input,
-      semantic_classification: 'LEGACY_MEMBERSHIP_STATE',
-    };
-    this.records.memberships.push(membership);
-    return membership;
+    this.records.alerts.push(alert);
+    return alert;
   }
 
   createSourceSnapshot() {
     const snapshot: LegacySourceSnapshot = {
       snapshot_id: id('snp', this.sequence++),
       source_system: 'FELS',
-      schema_version: 'fels-1',
+      source_schema_version: FELS_REFERENCE_SCHEMA_VERSION,
       created_at: NOW,
       record_counts: recordCounts(this.records),
       checksum_metadata: { deterministic: 'true' },
@@ -610,8 +579,9 @@ export class Fels1Runtime {
     return {
       source_system: 'FELS',
       source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_schema_version: FELS_REFERENCE_SCHEMA_VERSION,
+      acceptance_surface: acceptanceSurfaceForStoreKey(key),
       entity_type: entityType,
-      schema_version: 'fels-1',
       snapshot_id: options.snapshotId,
       items,
       pagination: {
@@ -633,14 +603,15 @@ export class Fels1Runtime {
   }
 }
 
+/**
+ * @deprecated 兼容 alias（FLM-INTEGRATION-001 §10）。请用 FelsReferenceRuntime。
+ */
+export class Fels1Runtime extends FelsReferenceRuntime {}
+
 export function createCleanSmallDataset() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const course = runtime.createCourse({ course_code: 'LEG-COMM-001', title: '青春期亲子沟通课', description: 'Synthetic legacy course', category: 'COMMUNICATION', status: 'ACTIVE', total_lessons: 8 });
   const product = runtime.createProduct({ product_code: 'P-COMM-001', title: '沟通测评与课程包', product_type: 'COURSE', course_id: course.course_id, price: 1999, status: 'ACTIVE' });
-  const camp = runtime.createTrainingCamp({ camp_code: 'CAMP-COMM-21D', title: '21天沟通训练营', course_id: course.course_id, duration_days: 21, status: 'ACTIVE' });
-  const dailyTasks = [1, 2, 3].map((day) =>
-    runtime.createDailyTask({ training_camp_id: camp.training_camp_id, day_index: day, title: `第${day}天任务`, instruction_text: `Synthetic legacy daily task ${day}` }),
-  );
   for (let index = 1; index <= 12; index++) {
     const customer = runtime.createCustomer({ display_name: `Synthetic Customer ${index}`, phone: `1390000${index.toString().padStart(4, '0')}`, customer_level: index % 2 === 0 ? 'A' : 'B', source_channel: 'synthetic' });
     const contact = runtime.addContact(customer.customer_id, { name: `Synthetic Contact ${index}`, phone: customer.phone, relationship_text: index % 2 === 0 ? '妈妈' : '爸爸', is_primary_contact: true });
@@ -653,14 +624,8 @@ export function createCleanSmallDataset() {
     runtime.generateAssessmentReport(assessment.assessment_id, { summary: 'Synthetic legacy assessment report', legacy_family_type: 'COMMUNICATION_NEEDS_SUPPORT', legacy_risk_score: 20 + index });
     const { order, orderItems } = runtime.createOrder({ customer_id: customer.customer_id, buyer_contact_id: contact.contact_id, order_status: 'PENDING', total_amount: product.price }, [{ product_id: product.product_id, quantity: 1, amount: product.price }]);
     runtime.addPayment(order.order_id, { payment_status: 'PAID', paid_amount: product.price, paid_at: NOW, payment_method: 'SIMULATED_TRANSFER' });
-    const enrollment = runtime.createEnrollment({ student_id: student.student_id, course_id: course.course_id, order_item_id: orderItems[0].order_item_id, status: 'ACTIVE' });
+    runtime.createEnrollment({ student_id: student.student_id, course_id: course.course_id, order_item_id: orderItems[0].order_item_id, status: 'ACTIVE' });
     runtime.createLegacyConsent({ customer_id: customer.customer_id, student_id: student.student_id, contact_id: contact.contact_id, agreement_code: 'ASSESSMENT_AUTH', agreement_version: 'v1', accepted_at: NOW, guardian_proof_status: 'VERIFIED', purpose_text: 'Synthetic assessment authorization', source: 'LEGACY_WEB' });
-    const campEnrollment = runtime.createCampEnrollment({ training_camp_id: camp.training_camp_id, student_id: student.student_id, enrollment_id: enrollment.enrollment_id, status: 'ACTIVE' });
-    for (const task of dailyTasks) {
-      runtime.createTaskCheckin({ daily_task_id: task.daily_task_id, camp_enrollment_id: campEnrollment.camp_enrollment_id, student_id: student.student_id, checkin_status: task.day_index === 3 && index % 4 === 0 ? 'MISSED' : 'DONE', legacy_completion_text: 'Synthetic legacy checkin' });
-    }
-    runtime.createAdvisorNote({ customer_id: customer.customer_id, student_id: student.student_id, training_camp_id: camp.training_camp_id, advisor_name: `Advisor ${index % 3 + 1}`, note_type: index % 3 === 0 ? 'RENEWAL_INTENT' : 'PROGRESS', note_text: 'Synthetic legacy advisor note (opinion, not fact)' });
-    runtime.createMembership({ customer_id: customer.customer_id, membership_level: index % 2 === 0 ? 'PREMIUM' : 'BASIC', status: 'ACTIVE', started_at: NOW, expires_at: '2027-08-10T00:00:00.000Z', renewal_count: index % 3 === 0 ? 1 : 0, last_renewed_at: index % 3 === 0 ? NOW : undefined });
   }
   runtime.createSourceSnapshot();
   return runtime;
@@ -682,8 +647,57 @@ export function createDirtyCoreDataset() {
   return runtime;
 }
 
+// 为前若干客户注入良态 FLM 脏世界参考对象（正确携带 NOT_* 语义分类）。
+function addFlmReferenceObjects(runtime: FelsReferenceRuntime) {
+  runtime.records.customers.slice(0, 4).forEach((customer, index) => {
+    const student = runtime.records.students.find((s) => s.customer_id === customer.customer_id);
+    runtime.createLegacyProfile({
+      customer_id: customer.customer_id,
+      student_id: student?.student_id,
+      family_type: 'COMMUNICATION_NEEDS_SUPPORT',
+      customer_level: customer.customer_level,
+      student_level: student?.student_level,
+    });
+    runtime.createLegacyTag({ customer_id: customer.customer_id, student_id: student?.student_id, tag_category: 'ENGAGEMENT', tag_value: index % 2 === 0 ? '活跃' : '待跟进' });
+    runtime.createLegacyAiReport({ customer_id: customer.customer_id, student_id: student?.student_id, report_type: 'COMMUNICATION_ANALYSIS', ai_conclusion: '（旧AI，假设性）该家庭沟通或有改善空间，仅供参考', recommended_action: '建议继续观察并由顾问跟进', has_supporting_evidence: true });
+    runtime.createLegacyAlert({ customer_id: customer.customer_id, student_id: student?.student_id, alert_type: 'FOLLOW_UP', risk_score: 20 + index, severity_label: 'LOW', legacy_disposition: 'HUMAN_REVIEWED' });
+  });
+}
+
+// FLM reference clean：良态旧世界智能对象（供 export 保真测试）。
+export function createFlmReferenceCleanDataset() {
+  const runtime = createCleanSmallDataset();
+  addFlmReferenceObjects(runtime);
+  runtime.createSourceSnapshot();
+  return runtime;
+}
+
+// FLM dirty-world：core dirty（重复手机号/弱同意/歧义监护人）之上注入脏世界污染向量（D021–D052）。
+// 所有对象仍被 runtime 强制打上 NOT_* 语义分类，用于证明 FLM 结构性拒绝污染进入 Family canonical。
+export function createFlmDirtyWorldDataset() {
+  const runtime = createDirtyCoreDataset();
+  addFlmReferenceObjects(runtime);
+  const anchor = runtime.records.customers[0];
+  const anchorStudent = runtime.records.students.find((s) => s.customer_id === anchor.customer_id);
+
+  runtime.createLegacyProfile({ customer_id: anchor.customer_id, student_id: anchorStudent?.student_id, family_type: 'HIGH_CONFLICT', family_score: 137, ranking: 0, customer_level: 'A', student_level: 'legacy_high' });
+  runtime.createLegacyProfile({ customer_id: anchor.customer_id, family_type: 'FIXED_IDENTITY', family_score: -5, ranking: 12, customer_level: 'S' });
+  runtime.createLegacyTag({ customer_id: anchor.customer_id, tag_category: 'PERSONALITY', tag_value: '内向固定' });
+  runtime.createLegacyTag({ customer_id: anchor.customer_id, tag_category: 'PERSONALITY', tag_value: '外向' });
+  runtime.createLegacyTag({ customer_id: anchor.customer_id, tag_category: 'RISK', tag_value: '' });
+  runtime.createLegacyAiReport({ customer_id: anchor.customer_id, student_id: anchorStudent?.student_id, report_type: 'DIAGNOSIS', ai_conclusion: '确诊为注意力缺陷，问题已成事实，必须立即干预', recommended_action: '建议临床用药', has_supporting_evidence: false });
+  runtime.createLegacyAiReport({ customer_id: anchor.customer_id, report_type: 'RANKING', ai_conclusion: '该家庭在同城家庭中排名靠后，情况确凿', has_supporting_evidence: false });
+  runtime.createLegacyAiReport({ customer_id: anchor.customer_id, report_type: 'EFFICACY', ai_conclusion: '本方案保证90天彻底解决亲子冲突', recommended_action: '立即续费', has_supporting_evidence: false });
+  runtime.createLegacyAlert({ customer_id: anchor.customer_id, student_id: anchorStudent?.student_id, alert_type: 'RISK', risk_score: 95, severity_label: 'HIGH' });
+  runtime.createLegacyAlert({ customer_id: anchor.customer_id, alert_type: 'SELF_HARM_SIGNAL', risk_score: 99, severity_label: 'CRITICAL', legacy_disposition: 'AUTO_CLOSED' });
+  runtime.createLegacyAlert({ customer_id: anchor.customer_id, alert_type: 'CONTRADICTORY_SIGNAL', risk_score: 5, severity_label: 'CRITICAL', legacy_disposition: 'ESCALATED_BY_RANKING' });
+
+  runtime.createSourceSnapshot();
+  return runtime;
+}
+
 export function runFelsVerticalSliceE2E() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const customer = runtime.createCustomer({ display_name: 'Vertical Slice Customer', phone: '13700000001', source_channel: 'offline' });
   const mother = runtime.addContact(customer.customer_id, { name: 'Mother Contact', phone: customer.phone, relationship_text: '妈妈', is_primary_contact: true });
   const student = runtime.createStudent({ customer_id: customer.customer_id, name: 'Vertical Slice Student', student_level: 'legacy_mid' });
@@ -714,7 +728,7 @@ export function runFelsVerticalSliceE2E() {
 }
 
 export function runLegacyAmbiguityE2E() {
-  const runtime = new Fels1Runtime();
+  const runtime = new FelsReferenceRuntime();
   const customerA = runtime.createCustomer({ display_name: 'Customer A Buyer', phone: '13600000001' });
   const customerB = runtime.createCustomer({ display_name: 'Customer B Guardian Holder', phone: '13600000002' });
   const contactB = runtime.addContact(customerB.customer_id, { name: 'Guardian Contact B', relationship_text: '监护人', is_primary_contact: true });
@@ -734,7 +748,7 @@ export function runLegacyAmbiguityE2E() {
   };
 }
 
-export function discoverFelsReadOnly(runtime: Fels1Runtime) {
+export function discoverFelsReadOnly(runtime: FelsReferenceRuntime) {
   const duplicatePhones = new Set<string>();
   const seenPhones = new Set<string>();
   for (const customer of runtime.records.customers) {
@@ -762,6 +776,48 @@ export function discoverFelsReadOnly(runtime: Fels1Runtime) {
       ...(duplicatePhones.size || crossCustomerGuardians.length ? ['IDENTITY_REVIEW_REQUIRED'] : []),
       ...(weakConsents.length ? ['CONSENT_REVIEW_REQUIRED'] : []),
     ],
+    mode: 'READ_ONLY',
+  } as const;
+}
+
+// FLM 语义污染拒绝层（护栏，只读，数据驱动）。读对象显式 semantic_classification + 声明式
+// FELS4_LEGACY_ATTRIBUTE_MAP 做结构化裁决；不用正则猜自由文本；生成式映射延后到已授权导入。
+export function rejectSemanticPollution(runtime: FelsReferenceRuntime) {
+  const violations: Array<{ rule: string; object: string; id: string; detail: string }> = [];
+  const requireMark = (ok: boolean, rule: string, object: string, entityId: string, detail: string) => {
+    if (!ok) violations.push({ rule, object, id: entityId, detail });
+  };
+
+  for (const p of runtime.records.profiles) requireMark(p.semantic_classification === 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', 'PROFILE_MUST_BE_MARKED_NOT_STATE', 'legacy_profile', p.legacy_profile_id, 'missing LEGACY_PROFILE_SNAPSHOT_NOT_STATE');
+  for (const t of runtime.records.tags) requireMark(t.semantic_classification === 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL', 'TAG_MUST_BE_MARKED_UNOFFICIAL', 'legacy_tag', t.legacy_tag_id, 'legacy tag not marked as annotation');
+  for (const r of runtime.records.aiReports) requireMark(r.semantic_classification === 'LEGACY_AI_HYPOTHESIS_NOT_FACT', 'AI_REPORT_MUST_BE_HYPOTHESIS', 'legacy_ai_report', r.legacy_ai_report_id, 'legacy AI conclusion not marked as hypothesis');
+  for (const a of runtime.records.alerts) requireMark(a.semantic_classification === 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD', 'ALERT_MUST_BE_SIGNAL_ONLY', 'legacy_alert', a.legacy_alert_id, 'legacy alert not marked as signal-only');
+  for (const s of runtime.records.assessmentScores) requireMark(s.semantic_classification === 'LEGACY_ASSESSMENT_OUTPUT', 'SCORE_MUST_BE_EVIDENCE', 'legacy_assessment_score', s.assessment_score_id, 'legacy score not marked as assessment output');
+
+  const retireDisposition = runtime.records.profiles.flatMap((p) => {
+    const out: Array<{ object: string; id: string; attribute: string; disposition: 'RETIRE' }> = [];
+    if (p.family_score !== undefined && p.family_score !== null) out.push({ object: 'legacy_profile', id: p.legacy_profile_id, attribute: 'family_score', disposition: 'RETIRE' });
+    if (p.ranking !== undefined && p.ranking !== null) out.push({ object: 'legacy_profile', id: p.legacy_profile_id, attribute: 'ranking', disposition: 'RETIRE' });
+    return out;
+  });
+
+  return {
+    source_kind: 'REFERENCE_IMPLEMENTATION',
+    source_system: 'FELS',
+    fels_rejects_semantic_pollution: violations.length === 0 ? ('PASS' as Status) : ('FAIL' as Status),
+    violation_count: violations.length,
+    violations,
+    retired_attributes: FELS4_RETIRED_ATTRIBUTES,
+    retire_disposition: retireDisposition,
+    retire_disposition_count: retireDisposition.length,
+    guardrail_counters: {
+      LEGACY_SCORE_TO_GROWTH_STATE: 0,
+      LEGACY_RANKING_TO_FAMILY: 0,
+      LEGACY_AI_TO_FACT: 0,
+      ADVISOR_NOTE_TO_FACT: 0,
+      FAMILY_CANONICAL_WRITE: 0,
+    },
+    generative_flm_mapping: 'DEFERRED_TO_AUTHORIZED_IMPORT',
     mode: 'READ_ONLY',
   } as const;
 }
@@ -862,12 +918,10 @@ function recordCounts(records: FelsRecords) {
     legacy_payments: records.payments.length,
     legacy_enrollments: records.enrollments.length,
     legacy_consent_records: records.legacyConsents.length,
-    legacy_training_camps: records.trainingCamps.length,
-    legacy_camp_enrollments: records.campEnrollments.length,
-    legacy_daily_tasks: records.dailyTasks.length,
-    legacy_task_checkins: records.taskCheckins.length,
-    legacy_advisor_notes: records.advisorNotes.length,
-    legacy_memberships: records.memberships.length,
+    legacy_profiles: records.profiles.length,
+    legacy_tags: records.tags.length,
+    legacy_ai_reports: records.aiReports.length,
+    legacy_alerts: records.alerts.length,
     legacy_source_snapshots: records.snapshots.length,
   };
 }

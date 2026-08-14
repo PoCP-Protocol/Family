@@ -1,19 +1,20 @@
 import pg from 'pg';
+import { FELS_REFERENCE_SCHEMA_VERSION, type FelsAcceptanceSurface } from '@family/fels-contracts';
 import type {
   FelsRecords,
-  LegacyAdvisorNote,
+  LegacyAiReport,
+  LegacyAlert,
+  LegacyProfile,
+  LegacyTag,
   LegacyAssessmentReport,
   LegacyAssessmentScore,
   LegacyAssessmentSession,
   LegacyAssessmentTemplate,
-  LegacyCampEnrollment,
   LegacyConsentRecord,
   LegacyContact,
   LegacyCourse,
   LegacyCustomer,
-  LegacyDailyTask,
   LegacyEnrollment,
-  LegacyMembership,
   LegacyOrder,
   LegacyOrderItem,
   LegacyPaymentRecord,
@@ -21,8 +22,6 @@ import type {
   LegacySourceSnapshot,
   LegacyStudent,
   LegacyStudentGuardian,
-  LegacyTaskCheckin,
-  LegacyTrainingCamp,
 } from './fels1-core';
 
 const { Client } = pg;
@@ -78,12 +77,10 @@ export class PgFelsRepository implements FelsRepository {
       await this.insertPayments(records.payments);
       await this.insertEnrollments(records.enrollments);
       await this.insertConsentRecords(records.legacyConsents);
-      await this.insertTrainingCamps(records.trainingCamps);
-      await this.insertCampEnrollments(records.campEnrollments);
-      await this.insertDailyTasks(records.dailyTasks);
-      await this.insertTaskCheckins(records.taskCheckins);
-      await this.insertAdvisorNotes(records.advisorNotes);
-      await this.insertMemberships(records.memberships);
+      await this.insertLegacyProfiles(records.profiles);
+      await this.insertLegacyTags(records.tags);
+      await this.insertLegacyAiReports(records.aiReports);
+      await this.insertLegacyAlerts(records.alerts);
       await this.insertSourceSnapshots(records.snapshots);
       await this.client.query('COMMIT');
       return countRecords(records);
@@ -96,12 +93,10 @@ export class PgFelsRepository implements FelsRepository {
   private async clearFels1RuntimeTables() {
     await this.client.query(`TRUNCATE TABLE
       fels.legacy_source_snapshots,
-      fels.legacy_memberships,
-      fels.legacy_advisor_notes,
-      fels.legacy_task_checkins,
-      fels.legacy_daily_tasks,
-      fels.legacy_camp_enrollments,
-      fels.legacy_training_camps,
+      fels.legacy_alerts,
+      fels.legacy_ai_reports,
+      fels.legacy_tags,
+      fels.legacy_profiles,
       fels.legacy_consent_records,
       fels.legacy_enrollments,
       fels.legacy_payments,
@@ -219,52 +214,38 @@ export class PgFelsRepository implements FelsRepository {
     );
   }
 
-  private async insertTrainingCamps(rows: LegacyTrainingCamp[]) {
+  private async insertLegacyProfiles(rows: LegacyProfile[]) {
     for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_training_camps(training_camp_id, camp_code, title, course_id, duration_days, status, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [row.training_camp_id, row.camp_code, row.title, row.course_id ?? null, row.duration_days, row.status, row.semantic_classification, row.created_at],
+      `INSERT INTO fels.legacy_profiles(legacy_profile_id, customer_id, student_id, family_type, family_score, ranking, customer_level, student_level, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [row.legacy_profile_id, row.customer_id, row.student_id ?? null, row.family_type ?? null, row.family_score ?? null, row.ranking ?? null, row.customer_level ?? null, row.student_level ?? null, row.semantic_classification, row.created_at],
     );
   }
 
-  private async insertCampEnrollments(rows: LegacyCampEnrollment[]) {
+  private async insertLegacyTags(rows: LegacyTag[]) {
     for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_camp_enrollments(camp_enrollment_id, training_camp_id, student_id, enrollment_id, status, semantic_classification, joined_at, finished_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [row.camp_enrollment_id, row.training_camp_id, row.student_id, row.enrollment_id ?? null, row.status, row.semantic_classification, row.joined_at, row.finished_at ?? null],
+      `INSERT INTO fels.legacy_tags(legacy_tag_id, customer_id, student_id, tag_category, tag_value, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [row.legacy_tag_id, row.customer_id ?? null, row.student_id ?? null, row.tag_category, row.tag_value, row.semantic_classification, row.created_at],
     );
   }
 
-  private async insertDailyTasks(rows: LegacyDailyTask[]) {
+  private async insertLegacyAiReports(rows: LegacyAiReport[]) {
     for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_daily_tasks(daily_task_id, training_camp_id, day_index, title, instruction_text, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [row.daily_task_id, row.training_camp_id, row.day_index, row.title, row.instruction_text ?? null, row.semantic_classification, row.created_at],
+      `INSERT INTO fels.legacy_ai_reports(legacy_ai_report_id, customer_id, student_id, assessment_id, report_type, ai_conclusion, recommended_action, has_supporting_evidence, semantic_classification, generated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [row.legacy_ai_report_id, row.customer_id, row.student_id ?? null, row.assessment_id ?? null, row.report_type, row.ai_conclusion, row.recommended_action ?? null, row.has_supporting_evidence, row.semantic_classification, row.generated_at],
     );
   }
 
-  private async insertTaskCheckins(rows: LegacyTaskCheckin[]) {
+  private async insertLegacyAlerts(rows: LegacyAlert[]) {
     for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_task_checkins(task_checkin_id, daily_task_id, camp_enrollment_id, student_id, checkin_status, legacy_completion_text, semantic_classification, checked_in_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [row.task_checkin_id, row.daily_task_id, row.camp_enrollment_id, row.student_id, row.checkin_status, row.legacy_completion_text ?? null, row.semantic_classification, row.checked_in_at],
-    );
-  }
-
-  private async insertAdvisorNotes(rows: LegacyAdvisorNote[]) {
-    for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_advisor_notes(advisor_note_id, customer_id, student_id, training_camp_id, advisor_name, note_type, note_text, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [row.advisor_note_id, row.customer_id ?? null, row.student_id ?? null, row.training_camp_id ?? null, row.advisor_name, row.note_type, row.note_text, row.semantic_classification, row.created_at],
-    );
-  }
-
-  private async insertMemberships(rows: LegacyMembership[]) {
-    for (const row of rows) await this.client.query(
-      `INSERT INTO fels.legacy_memberships(membership_id, customer_id, membership_level, status, started_at, expires_at, renewal_count, last_renewed_at, semantic_classification, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [row.membership_id, row.customer_id, row.membership_level, row.status, row.started_at, row.expires_at ?? null, row.renewal_count, row.last_renewed_at ?? null, row.semantic_classification, row.created_at],
+      `INSERT INTO fels.legacy_alerts(legacy_alert_id, customer_id, student_id, alert_type, risk_score, severity_label, legacy_disposition, semantic_classification, triggered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [row.legacy_alert_id, row.customer_id, row.student_id ?? null, row.alert_type, row.risk_score ?? null, row.severity_label ?? null, row.legacy_disposition ?? null, row.semantic_classification, row.triggered_at],
     );
   }
 
   private async insertSourceSnapshots(rows: LegacySourceSnapshot[]) {
     for (const row of rows) await this.client.query(
       `INSERT INTO fels.legacy_source_snapshots(snapshot_id, source_system, schema_version, created_at, record_counts, checksum_metadata) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [row.snapshot_id, row.source_system, row.schema_version, row.created_at, row.record_counts, row.checksum_metadata ?? null],
+      [row.snapshot_id, row.source_system, row.source_schema_version, row.created_at, row.record_counts, row.checksum_metadata ?? null],
     );
   }
 }
@@ -281,29 +262,36 @@ export async function seedDatasetToPostgres(records: FelsRecords) {
 export interface LegacyExportEnvelope<T> {
   source_system: 'FELS';
   source_kind: 'REFERENCE_IMPLEMENTATION';
+  source_schema_version: typeof FELS_REFERENCE_SCHEMA_VERSION;
+  acceptance_surface: FelsAcceptanceSurface;
   entity_type: string;
-  schema_version: 'fels-1';
   snapshot_id?: string;
   items: T[];
   pagination: { cursor?: string; has_more: boolean };
 }
 
+// Clean master export surface: FELS1 core + FLM dirty-world only. No early FELS2/3 routes.
 const EXPORT_QUERIES = {
   customers: 'SELECT customer_id, customer_no, display_name, phone, email, customer_level, source_channel, status, semantic_classification, created_at, updated_at FROM fels.legacy_customers ORDER BY customer_id',
   students: 'SELECT student_id, student_no, customer_id, name, birth_date, gender, student_level, status, semantic_classification, created_at FROM fels.legacy_students ORDER BY student_id',
   assessments: 'SELECT assessment_id, assessment_template_id, student_id, customer_id, status, started_at, completed_at FROM fels.legacy_assessment_sessions ORDER BY assessment_id',
   orders: 'SELECT order_id, customer_id, buyer_contact_id, order_status, total_amount, created_at FROM fels.legacy_orders ORDER BY order_id',
   consents: 'SELECT consent_record_id, customer_id, student_id, contact_id, agreement_code, agreement_version, accepted_at, guardian_proof_status, purpose_text, revoked_at, source, semantic_classification FROM fels.legacy_consent_records ORDER BY consent_record_id',
-  programs: 'SELECT training_camp_id, camp_code, title, course_id, duration_days, status, semantic_classification, created_at FROM fels.legacy_training_camps ORDER BY training_camp_id',
-  tasks: 'SELECT daily_task_id, training_camp_id, day_index, title, instruction_text, semantic_classification, created_at FROM fels.legacy_daily_tasks ORDER BY daily_task_id',
-  checkins: 'SELECT task_checkin_id, daily_task_id, camp_enrollment_id, student_id, checkin_status, legacy_completion_text, semantic_classification, checked_in_at FROM fels.legacy_task_checkins ORDER BY task_checkin_id',
-  'advisor-notes': 'SELECT advisor_note_id, customer_id, student_id, training_camp_id, advisor_name, note_type, note_text, semantic_classification, created_at FROM fels.legacy_advisor_notes ORDER BY advisor_note_id',
-  memberships: 'SELECT membership_id, customer_id, membership_level, status, started_at, expires_at, renewal_count, last_renewed_at, semantic_classification, created_at FROM fels.legacy_memberships ORDER BY membership_id',
+  profiles: 'SELECT legacy_profile_id, customer_id, student_id, family_type, family_score, ranking, customer_level, student_level, semantic_classification, created_at FROM fels.legacy_profiles ORDER BY legacy_profile_id',
+  tags: 'SELECT legacy_tag_id, customer_id, student_id, tag_category, tag_value, semantic_classification, created_at FROM fels.legacy_tags ORDER BY legacy_tag_id',
+  'ai-reports': 'SELECT legacy_ai_report_id, customer_id, student_id, assessment_id, report_type, ai_conclusion, recommended_action, has_supporting_evidence, semantic_classification, generated_at FROM fels.legacy_ai_reports ORDER BY legacy_ai_report_id',
+  alerts: 'SELECT legacy_alert_id, customer_id, student_id, alert_type, risk_score, severity_label, legacy_disposition, semantic_classification, triggered_at FROM fels.legacy_alerts ORDER BY legacy_alert_id',
 } as const;
 
 export type LegacyExportEntity = keyof typeof EXPORT_QUERIES;
 
 export const LEGACY_EXPORT_ENTITIES = Object.keys(EXPORT_QUERIES) as LegacyExportEntity[];
+
+const FLM_DIRTY_EXPORT_ENTITIES: LegacyExportEntity[] = ['profiles', 'tags', 'ai-reports', 'alerts'];
+
+function acceptanceSurfaceForEntity(entity: LegacyExportEntity): FelsAcceptanceSurface {
+  return FLM_DIRTY_EXPORT_ENTITIES.includes(entity) ? 'FLM_DIRTY_WORLD' : 'FELS1';
+}
 
 export class PgFelsReadRepository {
   private readonly client: pg.Client;
@@ -350,41 +338,13 @@ export class PgFelsReadRepository {
     return {
       source_system: 'FELS',
       source_kind: 'REFERENCE_IMPLEMENTATION',
+      source_schema_version: FELS_REFERENCE_SCHEMA_VERSION,
+      acceptance_surface: acceptanceSurfaceForEntity(entity),
       entity_type: entity,
-      schema_version: 'fels-1',
       snapshot_id: snapshotId,
       items: rows.rows,
       pagination: { has_more: false },
     };
-  }
-
-  async schemaInventory(): Promise<Record<string, number>> {
-    const tables = [
-      'legacy_customers',
-      'legacy_contacts',
-      'legacy_students',
-      'legacy_student_guardians',
-      'legacy_assessment_sessions',
-      'legacy_assessment_scores',
-      'legacy_assessment_reports',
-      'legacy_orders',
-      'legacy_consent_records',
-      'legacy_training_camps',
-      'legacy_camp_enrollments',
-      'legacy_daily_tasks',
-      'legacy_task_checkins',
-      'legacy_advisor_notes',
-      'legacy_memberships',
-      'legacy_source_snapshots',
-    ];
-    return this.readOnly(async (client) => {
-      const out: Record<string, number> = {};
-      for (const table of tables) {
-        const result = await client.query<{ count: string }>(`SELECT count(*)::int AS count FROM fels.${table}`);
-        out[table] = Number(result.rows[0]?.count ?? 0);
-      }
-      return out;
-    });
   }
 }
 
@@ -405,12 +365,10 @@ function countRecords(records: FelsRecords) {
     legacy_payments: records.payments.length,
     legacy_enrollments: records.enrollments.length,
     legacy_consent_records: records.legacyConsents.length,
-    legacy_training_camps: records.trainingCamps.length,
-    legacy_camp_enrollments: records.campEnrollments.length,
-    legacy_daily_tasks: records.dailyTasks.length,
-    legacy_task_checkins: records.taskCheckins.length,
-    legacy_advisor_notes: records.advisorNotes.length,
-    legacy_memberships: records.memberships.length,
+    legacy_profiles: records.profiles.length,
+    legacy_tags: records.tags.length,
+    legacy_ai_reports: records.aiReports.length,
+    legacy_alerts: records.alerts.length,
     legacy_source_snapshots: records.snapshots.length,
   };
 }

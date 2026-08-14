@@ -11,6 +11,8 @@
     "test": "vitest run",
     "seed:clean-small": "node dist/apps/api/src/seed-clean-small.js",
     "seed:dirty-core": "node dist/apps/api/src/seed-dirty-core.js",
+    "seed:flm-reference-clean": "node dist/apps/api/src/seed-flm-reference-clean.js",
+    "seed:flm-dirty-world": "node dist/apps/api/src/seed-flm-dirty-world.js",
     "lint": "echo \"(fels-api) lint ok\" && exit 0"
   },
   "dependencies": {

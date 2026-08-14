@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "policy": "Runtime worktrees are ephemeral and one-task-one-agent. This file records policy, not live locks.",
+  "live_lock_location": ".git/family-devos/locks",
+  "forbidden_commands_without_explicit_single-file_ownership": [
+    "git reset --hard",
+    "git restore .",
+    "git checkout -- .",
+    "git clean -fd"
+  ],
+  "lock_fields": ["task_id", "agent_id", "branch", "worktree_path", "base_ref", "claimed_at", "pid"]
+}
