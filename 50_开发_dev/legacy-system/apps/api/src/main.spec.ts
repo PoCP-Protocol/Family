@@ -33,7 +33,7 @@ describe('FELS API executable foundation', () => {
   it('provides a source snapshot contract for future FLM batches', () => {
     const snapshot = createLegacySourceSnapshot();
     expect(snapshot.source_system).toBe('FELS');
-    expect(snapshot.schema_version).toBe('fels-1');
+    expect(snapshot.source_schema_version).toBe('fels-ref-0004');
     expect(snapshot.record_counts.customer).toBe(0);
     expect(snapshot.record_counts.legacy_ai_report).toBe(0);
   });

@@ -12,6 +12,14 @@ export const FELS_DATABASE_CONTRACT = {
   schemaOwnership: 'FELS_ONLY',
 } as const;
 
+// Reference source schema version — decoupled from FELS phase name (FLM-AC-002 §11).
+// Do NOT reuse a phase label (e.g. 'fels-1') as a schema version on export/snapshot.
+export const FELS_REFERENCE_SCHEMA_VERSION = 'fels-ref-0004' as const;
+
+// Acceptance surface of the FELS reference source an exported object belongs to.
+// FLM-INTEGRATION-001 §9: clean master runtime exposes only FELS1 and FLM_DIRTY_WORLD.
+export type FelsAcceptanceSurface = 'FELS1' | 'FLM_DIRTY_WORLD';
+
 export const FELS_DOMAINS = [
   'CRM',
   'CUSTOMER_CONTACT',
@@ -103,6 +111,10 @@ export const FELS_EXPORT_ENDPOINTS = [
   '/legacy-export/advisor-notes',
   '/legacy-export/orders',
   '/legacy-export/consents',
+  '/legacy-export/profiles',
+  '/legacy-export/tags',
+  '/legacy-export/ai-reports',
+  '/legacy-export/alerts',
 ] as const;
 
 export const FELS_DIRTY_SCENARIOS = [
@@ -126,6 +138,39 @@ export const FELS_DIRTY_SCENARIOS = [
   'D018 missing source timestamp',
   'D019 duplicate order',
   'D020 retired course',
+  // FLM dirty-world extension (legacy intelligence / label / score / alert pollution), >=50 total
+  'D021 legacy profile family_score present',
+  'D022 legacy profile ranking present',
+  'D023 legacy profile family_score out of range',
+  'D024 legacy profile ranking non-positive',
+  'D025 legacy ai_report without supporting evidence',
+  'D026 legacy ai_report conclusion phrased as diagnosis',
+  'D027 legacy ai_report conclusion phrased as fact',
+  'D028 legacy ai_report recommended clinical action',
+  'D029 legacy alert risk_score without human disposition',
+  'D030 legacy alert high severity auto-closed',
+  'D031 legacy alert self-harm signal in growth flow',
+  'D032 legacy alert contradictory severity vs risk_score',
+  'D033 legacy tag as permanent personality label',
+  'D034 legacy tag category conflicts across snapshots',
+  'D035 legacy profile customer_level treated as growth state',
+  'D036 legacy profile student_level treated as diagnosis',
+  'D037 legacy family_type treated as fixed identity',
+  'D038 legacy assessment score treated as GrowthState',
+  'D039 legacy advisor_note asserted as fact',
+  'D040 legacy advisor_note contains guarantee of outcome',
+  'D041 legacy ai_report referencing minor without consent purpose',
+  'D042 legacy profile aggregated from checkin rate as growth',
+  'D043 legacy ai_report ranking families against each other',
+  'D044 legacy alert triggered without source timestamp',
+  'D045 legacy tag with empty value',
+  'D046 legacy ai_report orphan customer reference',
+  'D047 legacy profile duplicated per snapshot with drift',
+  'D048 legacy success_case claiming causal effect',
+  'D049 legacy growth_report used as sole outcome truth',
+  'D050 legacy ai_report promising therapeutic efficacy',
+  'D051 legacy profile family_score copied to student_level',
+  'D052 legacy alert severity escalated by ranking position',
 ] as const;
 
 export type FelsMigrationStrategy =
@@ -155,7 +200,7 @@ export const FELS_TO_FAMILY_MAP = [
   ['LegacyAIReport', 'Historical AI Hypothesis', 'LEGACY_AI_HYPOTHESIS_NOT_FACT'],
   ['TrainingProgram', 'GrowthJourney candidate', 'not GrowthJourney in FELS'],
   ['LegacyTask', 'GrowthAction history candidate', 'not active Family action'],
-  ['LegacyCheckIn', 'Action check-in history', 'check-in != Outcome'],
+  ['LegacyCheckIn', 'HistoricalActionCheckInEvidence (TRANSFORM)', 'check-in != ActionCompletion Fact != Outcome'],
   ['AdvisorNote', 'HumanObservation / ServiceInteraction candidate', 'Perspective != Fact'],
   ['Course', 'Knowledge / Intervention source candidate', 'requires content decomposition'],
   ['Order', 'OrderRef', 'commerce reference only'],
@@ -165,6 +210,43 @@ export const FELS_TO_FAMILY_MAP = [
   ['family_score', 'RETIRE', 'forbidden in Family'],
   ['ranking', 'RETIRE', 'forbidden in Family'],
 ] as const;
+
+// FLM declarative attribute-migration registry (Object + Attribute Tree + deterministic guardrail).
+// Platform basis: hardcode only guardrails; generative FLM mapping proposal is deferred to
+// authorized import (needs a real Model Gateway). The rejection layer reads each object's
+// explicit semantic_classification + this registry — it does NOT regex free text.
+export type FelsLegacyMigrationRule =
+  | 'RETIRE'                    // family_score / ranking — never enters Family
+  | 'LEGACY_ANNOTATION'         // legacy label -> Annotation, not Diagnosis
+  | 'HISTORICAL_EVIDENCE'       // legacy score -> Historical Evidence, not GrowthState
+  | 'HISTORICAL_AI_HYPOTHESIS'  // legacy AI conclusion -> Historical AI Hypothesis, not Fact
+  | 'PERSPECTIVE'               // advisor_note -> Perspective, not Fact
+  | 'SAFETY_SIGNAL_SOURCE';     // legacy alert -> Safety Gate source, not threshold/auto-action
+
+export interface FelsLegacyAttributeMapRow {
+  readonly object: string;
+  readonly attribute: string;
+  readonly legacySemantic: string;
+  readonly migrationRule: FelsLegacyMigrationRule;
+  readonly guardrail: string;
+}
+
+export const FELS4_LEGACY_ATTRIBUTE_MAP: readonly FelsLegacyAttributeMapRow[] = [
+  { object: 'legacy_profile', attribute: 'family_score', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'RETIRE', guardrail: 'family_score never becomes Family canonical / GrowthState (M036)' },
+  { object: 'legacy_profile', attribute: 'ranking', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'RETIRE', guardrail: 'ranking never enters Family (M035)' },
+  { object: 'legacy_profile', attribute: 'family_type', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'family_type is annotation, not fixed identity/diagnosis' },
+  { object: 'legacy_profile', attribute: 'customer_level', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'customer_level is not GrowthState' },
+  { object: 'legacy_profile', attribute: 'student_level', legacySemantic: 'LEGACY_PROFILE_SNAPSHOT_NOT_STATE', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'student_level is not a diagnosis' },
+  { object: 'legacy_tag', attribute: 'tag_value', legacySemantic: 'LEGACY_TAG_CATEGORY_NOT_OFFICIAL', migrationRule: 'LEGACY_ANNOTATION', guardrail: 'legacy tag is annotation, not permanent personality label/diagnosis' },
+  { object: 'legacy_ai_report', attribute: 'ai_conclusion', legacySemantic: 'LEGACY_AI_HYPOTHESIS_NOT_FACT', migrationRule: 'HISTORICAL_AI_HYPOTHESIS', guardrail: 'legacy AI conclusion is Historical AI Hypothesis, not Fact/diagnosis/efficacy claim' },
+  { object: 'legacy_alert', attribute: 'risk_score', legacySemantic: 'LEGACY_ALERT_SIGNAL_NOT_THRESHOLD', migrationRule: 'SAFETY_SIGNAL_SOURCE', guardrail: 'legacy alert is a Safety Gate source; high risk needs Human Gate; not auto-action' },
+  { object: 'legacy_assessment_score', attribute: 'score', legacySemantic: 'LEGACY_ASSESSMENT_OUTPUT', migrationRule: 'HISTORICAL_EVIDENCE', guardrail: 'legacy assessment score is Historical Evidence, not GrowthState' },
+  { object: 'legacy_advisor_note', attribute: 'note_text', legacySemantic: 'LEGACY_ADVISOR_TEXT_NOT_FACT', migrationRule: 'PERSPECTIVE', guardrail: 'AdvisorNote is Perspective, not Fact' },
+] as const;
+
+export const FELS4_RETIRED_ATTRIBUTES = FELS4_LEGACY_ATTRIBUTE_MAP
+  .filter((row) => row.migrationRule === 'RETIRE')
+  .map((row) => `${row.object}.${row.attribute}`);
 
 export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[] = [
   { id: 'M001', existingAsset: '客户/线索', felsModule: 'CRM', felsEntity: 'customer, lead', familyDestination: 'Family Account / Family candidate', migrationStrategy: 'TRANSFORM' },
@@ -180,7 +262,7 @@ export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[]
   { id: 'M011', existingAsset: '90天陪跑', felsModule: 'PROGRAM_COACHING', felsEntity: 'training_program, advisor_session, legacy_checkin', familyDestination: '90-Day GrowthJourney candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M012', existingAsset: '年度会员', felsModule: 'COMMERCE_MEMBERSHIP', felsEntity: 'membership', familyDestination: 'Family Growth Membership', migrationStrategy: 'TRANSFORM' },
   { id: 'M013', existingAsset: '任务', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_task', familyDestination: 'GrowthAction history candidate', migrationStrategy: 'TRANSFORM' },
-  { id: 'M014', existingAsset: '打卡', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_checkin', familyDestination: 'ActionCompletion Event candidate', migrationStrategy: 'TRANSFORM' },
+  { id: 'M014', existingAsset: '打卡', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'legacy_checkin', familyDestination: 'HistoricalActionCheckInEvidence (!= ActionCompletion Fact, != Outcome)', migrationStrategy: 'TRANSFORM' },
   { id: 'M015', existingAsset: '作业点评', felsModule: 'TASK_CHECKIN_HOMEWORK', felsEntity: 'homework_review', familyDestination: 'HumanObservation / Feedback candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M016', existingAsset: '助教', felsModule: 'HUMAN_SERVICE', felsEntity: 'staff, homework_review', familyDestination: 'Growth Companion + Human Copilot source', migrationStrategy: 'TRANSFORM' },
   { id: 'M017', existingAsset: '班主任', felsModule: 'HUMAN_SERVICE', felsEntity: 'staff, service_case', familyDestination: 'Growth Advisor / Service Owner candidate', migrationStrategy: 'TRANSFORM' },
@@ -220,8 +302,8 @@ export const FELS_MIGRATION_MATRIX_COVERAGE: readonly FelsMigrationCoverageRow[]
   { id: 'M051', existingAsset: '预警', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_alert', familyDestination: 'Alert + Safety Gate source', migrationStrategy: 'TRANSFORM' },
   { id: 'M052', existingAsset: '用户数据授权', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'legacy_consent, legacy_agreement', familyDestination: 'Consent evidence candidate', migrationStrategy: 'TRANSFORM' },
   { id: 'M053', existingAsset: '历史成长数据', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_profile, legacy_growth_report', familyDestination: 'Family Timeline/Event source', migrationStrategy: 'TRANSFORM' },
-  { id: 'M054', existingAsset: '研究/实验数据', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'audit_log', familyDestination: 'Causal Evidence Registry source', migrationStrategy: 'CREATE_NEW_TARGET' },
-  { id: 'M055', existingAsset: '真实干预结果', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_success_case, legacy_growth_report', familyDestination: 'CausalEpisode source candidate', migrationStrategy: 'CREATE_NEW_TARGET' },
+  { id: 'M054', existingAsset: '研究/实验数据', felsModule: 'LEGACY_GOVERNANCE', felsEntity: 'audit_log', familyDestination: 'HistoricalEventEvidenceSource + ProvenanceSource (NOT direct causal layer)', migrationStrategy: 'TRANSFORM' },
+  { id: 'M055', existingAsset: '真实干预结果', felsModule: 'LEGACY_AI_ANALYTICS', felsEntity: 'legacy_success_case, legacy_growth_report', familyDestination: 'HistoricalOutcomeEvidenceCandidate (CausalEpisodeCreation FORBIDDEN until Causal Gate)', migrationStrategy: 'TRANSFORM' },
 ];
 
 export function getFels0Gate() {
