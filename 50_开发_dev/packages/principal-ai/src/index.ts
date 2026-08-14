@@ -138,6 +138,8 @@ export interface PrincipalAiRunResult {
   output: PrincipalAiOutput;
   retrieval: PrincipalRetrievalResult;
   model_run: PrincipalModelRun;
+  /** W2R-103B:本次响应所依据的循证链(与穿进模型输入的是同一对象);未接入时 grounded=false。 */
+  grounded_knowledge: GroundedKnowledge;
 }
 
 export interface PrincipalSoulProfile {
@@ -398,56 +400,101 @@ export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = saf
   };
 }
 
-// ---------- W2R-103 循证检索(消费 knowledge/compiled bundle;纯函数,不读文件) ----------
+// ---------- W2R-103B 循证检索(消费 Python 编译的 compiled bundle V2;纯函数,不读文件) ----------
+// 证据真值由 build-time Python(Library.validate + Evidence.gate)裁定并写入 evidence_summary;
+// TS 不复制 Grade/Provenance 枚举,只消费并 fail-closed。
 export interface KnowledgeChainNode {
   id: string; title?: string; summary?: string;
-  evidence_level: string; non_decisive: boolean;
-  source_refs?: string[]; grounded_in?: string; targets?: string[]; uses?: string[];
+  evidence_grade: string;                       // 该节点最强外部已核验证据等级(E0-E7)
+  external_evidence_count?: number;
+  family_decision_non_decisive: boolean;        // 研究证据永不直接决定家庭行为(≠ Evidence.decisive)
+  source_refs?: string[];
+}
+export interface KnowledgeEvidenceSummary {
+  external_verified_count: number; highest_grade: string;
+  has_third_party_real: boolean;
+  source_registry_gate?: 'PASS' | 'FAIL';         // CLOSURE-001:来源机器可核验(verified_sources 注册表)
+  python_evidence_gate: 'PASS' | 'FAIL';
+  gate_checks?: Record<string, unknown>;
 }
 export interface KnowledgeChainBundle {
-  schema_version: string; intervention_id: string;
+  schema_version: string; intervention_id: string; bundle_version?: string;
   theories?: KnowledgeChainNode[]; constructs?: KnowledgeChainNode[];
   methods?: KnowledgeChainNode[]; modalities?: KnowledgeChainNode[];
+  evidence_summary?: KnowledgeEvidenceSummary; limitations?: string[];
 }
 export interface GroundedKnowledge {
   intervention_id: string; grounded: boolean;
   theory_ids: string[]; construct_ids: string[]; method_ids: string[]; modality_ids: string[];
-  knowledge_refs: string[]; all_non_decisive: boolean;
+  knowledge_refs: string[];
+  family_decision_non_decisive: boolean;
+  external_evidence_count: number; highest_grade: string;
+  evidence_gate_status: string;                 // PASS / FAIL(来自 Python)
+  source_registry_gate: string;                 // CLOSURE-001:PASS / FAIL(来源机器可核验)
+  bundle_version?: string;
 }
 
 /**
  * 取某 intervention 的循证链(供真校长作 grounded 依据)。
- * 全部 ResearchEvidence 恒 NON_DECISIVE(不对某家庭裁决);不匹配 → grounded=false 空引用(不空谈也不编造)。
+ * FAIL CLOSED:只有 python_evidence_gate=PASS 且 external_verified_count>0 且有真实 knowledge_refs 才 grounded=true;
+ * 否则 grounded=false(不空谈、不编造)。ResearchEvidence 恒 family_decision_non_decisive(不对某家庭裁决)。
  */
 export function retrieveGroundedKnowledge(bundle: KnowledgeChainBundle | null | undefined, interventionId: string): GroundedKnowledge {
-  const empty: GroundedKnowledge = { intervention_id: interventionId, grounded: false, theory_ids: [], construct_ids: [], method_ids: [], modality_ids: [], knowledge_refs: [], all_non_decisive: true };
+  const empty: GroundedKnowledge = { intervention_id: interventionId, grounded: false, theory_ids: [], construct_ids: [], method_ids: [], modality_ids: [], knowledge_refs: [], family_decision_non_decisive: true, external_evidence_count: 0, highest_grade: 'E0', evidence_gate_status: 'FAIL', source_registry_gate: 'FAIL' };
   if (!bundle || bundle.intervention_id !== interventionId) return empty;
   const all = [...(bundle.theories ?? []), ...(bundle.constructs ?? []), ...(bundle.methods ?? []), ...(bundle.modalities ?? [])];
+  const knowledge_refs = [...new Set(all.flatMap((n) => n.source_refs ?? []))];
+  const summary = bundle.evidence_summary;
+  const gate = summary?.python_evidence_gate ?? 'FAIL';
+  const registryGate = summary?.source_registry_gate ?? 'FAIL';
+  const externalCount = summary?.external_verified_count ?? 0;
+  // FAIL CLOSED:来源须机器可核验(registryGate=PASS)且 evidence gate=PASS。
+  const grounded = gate === 'PASS' && registryGate === 'PASS' && externalCount > 0 && knowledge_refs.length > 0;
   return {
     intervention_id: interventionId,
-    grounded: all.length > 0,
+    grounded,
     theory_ids: (bundle.theories ?? []).map((n) => n.id),
     construct_ids: (bundle.constructs ?? []).map((n) => n.id),
     method_ids: (bundle.methods ?? []).map((n) => n.id),
     modality_ids: (bundle.modalities ?? []).map((n) => n.id),
-    knowledge_refs: [...new Set(all.flatMap((n) => n.source_refs ?? []))],
-    all_non_decisive: all.every((n) => n.non_decisive === true),
+    knowledge_refs,
+    family_decision_non_decisive: all.every((n) => n.family_decision_non_decisive === true),
+    external_evidence_count: externalCount,
+    highest_grade: summary?.highest_grade ?? 'E0',
+    evidence_gate_status: gate,
+    source_registry_gate: registryGate,
+    bundle_version: bundle.bundle_version,
   };
 }
 
-export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult }, PrincipalAiOutput> {
+/**
+ * W2R-103B 治理:检出模型响应里【不在 grounded bundle 中】的 knowledge_ref(防编造/防洗白)。
+ * 返回未被 grounding 覆盖的 refs;空数组 = 全部有据。
+ */
+export function ungroundedRefs(citedRefs: readonly string[], grounding: GroundedKnowledge): string[] {
+  const allowed = new Set(grounding.knowledge_refs);
+  return citedRefs.filter((r) => !allowed.has(r));
+}
+
+export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput, grounding?: GroundedKnowledge): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult; grounded_knowledge?: GroundedKnowledge }, PrincipalAiOutput> {
   const soul = new PrincipalSoulCompiler().compile();
   const retrieval = retrievePrincipalAssets(input);
   // 图片走顶层 images 通道(image content block),不塞进文本 input(避免 base64 污染文本 prompt)。
   const { images, ...textInput } = input;
+  // W2R-103B:把循证链穿进【实际模型输入】(input.grounded_knowledge)+ input_refs 携带 knowledge_refs;
+  // 全部 ResearchEvidence 恒 NON_DECISIVE(不对某家庭裁决),模型据此作 grounded 依据而非编造。
   return {
     use_case: 'FAMILI_PRINCIPAL_TEXT_MVP',
     prompt_version: PRINCIPAL_AI_PROMPT_VERSION,
     schema_version: PRINCIPAL_AI_SCHEMA_VERSION,
-    input: { ...textInput, soul_instruction: soul.instruction, retrieval },
+    input: { ...textInput, soul_instruction: soul.instruction, retrieval, ...(grounding?.grounded ? { grounded_knowledge: grounding } : {}) },
     images,
     output_schema: PRINCIPAL_AI_OUTPUT_SCHEMA,
-    input_refs: ['products/famili-principal/contracts/principal-response.schema.json', ...retrieval.method_cards.flatMap((card) => card.source_refs)],
+    input_refs: [
+      'products/famili-principal/contracts/principal-response.schema.json',
+      ...retrieval.method_cards.flatMap((card) => card.source_refs),
+      ...(grounding?.grounded ? grounding.knowledge_refs : []),
+    ],
     policy_context: {
       human_confirmation_required: true,
       may_mutate_business_state: false,
@@ -455,12 +502,14 @@ export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): Structu
   };
 }
 
-export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiGateway): Promise<PrincipalAiRunResult> {
+export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiGateway, grounding?: GroundedKnowledge): Promise<PrincipalAiRunResult> {
   const startedAt = Date.now();
   const precheckRoute = safetyPrecheck(input);
   const retrieval = retrievePrincipalAssets(input, precheckRoute);
   const soul = new PrincipalSoulCompiler().compile();
-  const request = buildPrincipalAiGatewayRequest(input);
+  // 未传 grounding(默认/CI/测试)→ 空 grounded=false(不空谈也不编造);api 侧从编译 bundle 注入真实链。
+  const groundedKnowledge = grounding ?? retrieveGroundedKnowledge(undefined, 'LISTEN_BEFORE_RESPOND');
+  const request = buildPrincipalAiGatewayRequest(input, groundedKnowledge);
   const gatewayResult = gateway && precheckRoute !== 'HIGH_RISK' ? await gateway.generateStructured(request) : undefined;
   const rawOutput = gatewayResult?.output ?? createDeterministicPrincipalResponse(input, retrieval);
   const postcheckRoute = safetyPostcheck(rawOutput, precheckRoute);
@@ -491,6 +540,7 @@ export async function runPrincipalTextMvp(input: PrincipalAiInput, gateway?: AiG
       latency_ms: gatewayResult?.metadata?.latency_ms ?? Date.now() - startedAt,
       token_usage: gatewayResult?.metadata?.token_usage,
     },
+    grounded_knowledge: groundedKnowledge,
   };
 }
 
