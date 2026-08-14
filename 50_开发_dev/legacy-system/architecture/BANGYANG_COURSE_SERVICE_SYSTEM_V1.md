@@ -1,117 +1,157 @@
-# 榜样教育 课程与服务体系 研究总结(FELS 移植依据 V1)
+# 榜样教育 课程与服务体系 研究总结(FELS 移植依据 V1 · 完整版)
 
 ```text
-DOC_KIND        = RESEARCH_SUMMARY_FOR_FELS_PORT
-SCOPE           = 榜样教育(邦阳)成功经验:课程体系 + 服务体系
-SOURCE_TIER     = E1(自家战略/商业材料 S1–S4;上限 E1,仅用于忠实理解"教什么/怎么服务",不用于证明成立)
-SOURCE_REFS     = 30_素材_materials/_extracted/逐页文本_含页码/ · S1 战略白皮书 · S2 新商业模式
-NON_SOURCE      = 不采用 all_materials.txt 第1656行起自家生成物(自证污染)
-TARGET          = FELS(legacy-system 参考系),忠实建模旧世界 → 再迁移 Family
+DOC_KIND    = RESEARCH_SUMMARY_FOR_FELS_PORT
+SCOPE       = 榜样教育(邦阳)成功经验:完整课程体系 + 服务体系 + AI能力体系
+SOURCE_TIER = E1(自家战略/商业材料,上限 E1,仅用于忠实理解"教什么/怎么卖/怎么服务",不用于证明成立)
+SOURCE      = 30_素材_materials/_extracted/逐页文本_含页码/ · S1 战略白皮书(30p) · S2 新商业模式(20p) · S3 合作方案
+NON_SOURCE  = 不用 all_materials.txt 第1656行起自家生成物(自证污染)
+TARGET      = FELS(legacy-system 参考系):忠实建旧世界 → 再 FLM 迁移 Family
 ```
 
-> 目的:把榜样教育**被验证跑通的课程+服务打法**,先在 FELS 里忠实建成"旧世界模型"(含其真实摩擦),为后续 FLM 迁移到 Family 做锚。**FELS=参考实现,非真实邦阳生产库。**
+> 定位(S1p2/p7、S2p1):**不是课程公司,是"家庭成长数据科技公司"**;经营对象从"一次成交课程客户"→"持续成长的家庭";命题=**孩子问题是入口 × 父母二次成长是价值 × 家庭改变是结果**;主线=**从提分转向成长 / 从课堂转向家庭 / 从课程转向陪伴**。
 
 ---
 
-## 一、成长漏斗(榜样教育的经营主线,S2 p7)
-
+## 一、经营主线漏斗(S2p7 / S1p9)
 ```text
 触发 → 觉醒 → 行动 → 改变 → 长期 → 传播
+内容/沙龙/测评 → AI诊断+父母成长报告 → 21天挑战·每日任务 → 90天计划+顾问+社群 → 年度会员 → 成长报告+邀请
 ```
-| 阶段 | 家长心理 | 平台动作 | 核心产品 | 关键指标 |
+用户路径(S1p9):内容→直播→体验课→训练营→AI陪伴→会员生态(触达/信任/转化/改变/留存/复购)。
+
+---
+
+## 二、课程 / 产品体系(核心骨架)
+
+### 2.1 一个入口 · 三类核心产品 · 五类收入(S2p17)★最清晰的产品脊柱
+| 商业层级 | 产品/服务 | 用户价值 | 收入方式 | 战略作用 |
 |---|---|---|---|---|
-| 触发 | 孩子出现现实问题 | 问题场景吸引进入 | 内容 / 沙龙 / 家庭测评 | 访问、测评启动率 |
-| 觉醒 | 想找到原因 | 温和呈现家庭互动影响 | **AI 诊断 + 父母成长报告** | 测评完成率 |
-| 行动 | 愿意尝试改变 | **把学习变成每日小行动** | **21天挑战 · 每日任务** | 挑战参与/完成率 |
-| 改变 | 想看到真实效果 | **系统陪跑 + 反馈** | **90天计划 · 顾问 · 社群** | 结果案例、满意度 |
-| 长期 | 需要持续支持 | 沉淀会员/档案/关系 | 年度会员 · 活动 · AI 管家 | 续费、活跃 |
-| 传播 | 愿展示成长 | 生成可分享身份/结果 | 成长报告 · 社区 · 邀请 | 分享、邀请成功率 |
+| **入口层** | 家庭/父母成长**测评** | 看清问题与优先级 | 免费 | 获客 + 画像 |
+| **体验层** | **21天成长挑战** | 第一次小改变 | 低价体验 | 筛意愿、建信任 |
+| **核心层** | **90天家庭成长计划** | 系统性家庭改善 | 核心课程/服务收入 | 结果交付、案例生产 |
+| **长期层** | **年度家庭成长会员** | 持续陪伴+权益 | 会员订阅 | 稳定收入+留存 |
+| **服务层** | 咨询、沙龙、城市活动 | 个性问题+连接 | 咨询/活动收入 | 提升 ARPU |
+| **生态层** | 专家、城市伙伴、AI服务 | 更多选择+规模陪伴 | 抽佣/合作/订阅 | 平台生态 |
 
-核心命题(S1/S2):**孩子问题是入口,父母成长是价值,家庭改变是结果**;**从提分转向成长、从课堂转向家庭、从课程转向陪伴**;**用户买的不是 AI,是"孩子改变 + 家庭关系改善"的确定性**。
+### 2.2 价格分层课程阶梯(S1p8)
+入口:体验课/训练营 **99–399**(获客筛选)→ 核心:**深度课程 1999–9999**(行为改变与信任)→ 订阅:**AI成长助手 999–2999/年**(长期陪伴续费)→ 数据:成长档案/报告/会员权益(沉淀画像)→ 生态:研学/咨询/规划(高客单,家庭生命周期)。
+
+### 2.3 产品矩阵 5 条线(S1p11)
+| 产品线 | 目标用户 | 核心价值 | 收入逻辑 |
+|---|---|---|---|
+| 家长成长 | 父母 | 教育认知与沟通方法 | 课程+会员 |
+| 孩子成长 | 孩子 | 习惯、动力、表达、自驱 | 训练营+陪练 |
+| 家庭关系 | 家庭 | 亲子沟通与共同任务 | 服务包 |
+| AI陪伴 | 全家 | 每日反馈与成长计划 | 年订阅 |
+| 数据产品 | 家庭/机构 | 成长画像与报告 | 会员+合作 |
+
+### 2.4 爆款组合(S1p12/p28)
+第一阶段资源集中:**家长训练营 + AI陪练 + 成长报告**(高频痛点:亲子沟通/学习习惯/手机管理/自驱力不足)。
 
 ---
 
-## 二、课程体系(Course System)
-
-1. **入口内容/沙龙**:以真实问题场景(手机、写作业拖延、顶嘴、厌学、亲子冲突)切入,低门槛触发。
-2. **家庭测评(诊断)**:父母画像 / 孩子画像 / 家庭画像;维度含"教育方式、沟通风格、焦虑点、参与度"(S1 p19)。→ 产出**父母成长报告** + 成长优先级。
-3. **课程/知识**:课程是"入口 + 能力载体",非终点;真正沉淀的是家庭成长数据与陪伴。→ FELS 里 Course/Lesson/Class/Enrollment/Attendance(完成=学习历史,**非 Outcome**)。
-
-> 注:S1–S4 为战略/商业文档,**未含具体课程大纲**;课程内容细节在本材料层缺失(不臆造),需另取教学材料补。
-
----
-
-## 三、服务体系(Service System)—— 榜样教育留存与价值的主体
+## 三、服务体系(留存与价值主体)
 
 ### 3.1 21天挑战(行动段,首个可见改变)
-- 机制:**每日小任务 → 打卡 → 反馈 → 坚持感**;第一次让家长看到行为改变。
-- FELS 实体:TrainingProgram(21-day)· LegacyTask(每日任务)· LegacyCheckIn(打卡)· HomeworkReview(反馈)。
-- 红线:**Check-in ≠ Outcome**(打卡不是成长结果)。
+每日小任务 → **打卡** → 反馈 → 坚持感。红线:**Check-in ≠ Outcome**。
 
-### 3.2 90天系统陪跑(改变段,四阶段)
-S1/详细方案四阶段:
+### 3.2 90天家庭成长计划(改变段,四阶段;详细方案)
 ```text
-Phase1 SEE(D1–14)         看见孩子/家长/关系真实状态 → 初始 Profile + Priority
-Phase2 PARENT_FIRST(D15–35) 家长先改变自己能改变的(情绪调节/理解倾听/自主支持/期待/边界)★一等价值
-Phase3 CO_CREATE(D36–60)  孩子参与目标与家庭规则(能动性/选择/自我调节/协作)
-Phase4 STABILIZE(D61–90)  新互动方式跨场景稳定 → 综合 Review + Milestone + 下一步
-```
-- FELS 实体:TrainingProgram(90-day)· ProgramEnrollment · 阶段任务/打卡 · ProgramReport(阶段报告)。
-- 内核:**家长先改变("先连接再纠正")**——与平台唯一干预 LISTEN_BEFORE_RESPOND 同源。
-
-### 3.3 人工服务角色(Human Service)
-| 角色 | 职责 | 节奏 | FELS 实体 |
-|---|---|---|---|
-| **助教** | 每日提醒 + 打卡反馈 + 行为观察 | 每日 | Staff · HomeworkReview · LegacyCheckIn |
-| **顾问(Advisor)** | 解读测评、制定/调整计划、阶段沟通 | 阶段/关键点 | AdvisorSession · AdvisorNote |
-| **专家(Specialist)** | 疑难/高风险个案介入 | 按需 | ServiceCase |
-- 红线:AdvisorNote/观察 = **Perspective / HumanObservation 候选,非 Fact**。
-
-### 3.4 会员/社群(长期段)
-- 年度会员(持续陪伴/档案/AI 管家)· 社群(同伴陪伴/话题/活动)。
-- FELS 实体:Membership · Community/CommunityMember · Activity/ActivityEnrollment。
-- 红线:群成员 ≠ FamilyRelationship/Consent;商业 ref 不授权数据使用。
-
-### 3.5 裂变/口碑
-- 原则:**传播结果,不传播焦虑**(S2 p9);推荐靠成长权益/身份荣誉,非现金佣金;传播内容=测评报告/成长案例/挑战邀请。
-
----
-
-## 四、教育红线(与 Family 硬规则呼应,FELS 建模须显式保留为"旧世界摩擦 + Family 边界")
-
-```text
-不做 Family Total Score · 不做家庭 Ranking · Growth Profile 是阶段状态非人格标签
-不把 Child Growth 定义为"服从" · 传播结果不传播焦虑
-Check-in ≠ Outcome · AdvisorNote ≠ Fact · 测评分数/标签 = 历史证据候选(旧世界有总分/排行,迁移时 RETIRE)
+SEE(D1–14) 看见真实状态 → PARENT_FIRST(D15–35) 家长先改变★ → CO_CREATE(D36–60) 孩子共创 → STABILIZE(D61–90) 跨场景稳定 → 综合Review+Milestone
 ```
 
----
-
-## 五、映射到 FELS 12 域(MODULE_CONTRACTS)与移植状态
-
-| 榜样教育环节 | FELS 域/实体 | FELS 现状 | 移植动作 |
+### 3.3 交付 SOP 六件套 + 质量指标(S1p13/p14)
+| 模块 | 关键动作 | 衡量指标 | 负责人 |
 |---|---|---|---|
-| 测评诊断 | 04 Assessment(Template/Session/Score/Report) | FELS-1 已建(0002) | 复用 |
-| 课程/LMS | 05 Course/Lesson/Class/Enrollment/Attendance | FELS-1 已建(0002) | 复用 |
-| 商业/会员 | 10 Order/Payment/Membership | Order/Payment 已(0002);Membership 待 | 补 Membership(FELS-3) |
-| 21天/90天陪跑 | 06 Program/Coaching(TrainingProgram/ProgramEnrollment) | 0003 program lifecycle 部分 | **深化 FELS-2**:阶段化 program + ProgramReport |
-| 每日任务/打卡/作业 | 07 Task/CheckIn/Homework(LegacyTask/CheckIn/HomeworkReview) | 待 | **新增 FELS-2** |
-| 助教/顾问/专家 | 08 Human Service(Staff/Advisor/AdvisorSession/AdvisorNote/ServiceCase) | 待 | **新增 FELS-2** |
-| 社群/活动 | 09 Community/Activity | 待 | 补 FELS-3 |
-| 旧 AI/分数/排行 | 11 Legacy AI/Analytics | 待(脏世界) | FELS-4(诱饵,后置) |
+| 课程SOP | 标准课件与任务 | 完课率 | 教研 |
+| 助教SOP | 每日提醒与反馈 | 打卡率 | 交付 |
+| 评估SOP | 成长测评与报告 | 画像完整度 | 数据 |
+| 运营SOP | 社群陪伴与活动 | 活跃率 | 用户运营 |
+| 复购SOP | 阶段成果展示 | 续费率 | 商业化 |
+| 质检SOP | 交付质量稳定 | — | — |
 
-**结论:榜样教育课程体系已由 FELS-1(测评+课程+订单)覆盖;其"服务体系"主体(21/90天陪跑 + 每日任务打卡 + 助教/顾问 + 会员/社群)= FELS-2 + FELS-3,是本次移植重点。**
+### 3.4 服务角色(海底捞式极致体验 S2p4;S1p17;S2p11/p15)
+**顾问**(解读测评/沟通方案)· **班主任/助教**(每日提醒+批改点评+预警)· **专家/名师**(疑难咨询、线下沙龙)· **售后/客服**(统一服务触点)。红线:顾问/导师点评 = **Perspective/HumanObservation,非 Fact**。
+
+### 3.5 线上线下服务闭环(S2p11)
+名师咨询 · 预约沟通 · 线下沙龙 · 城市活动 · 家长社群 · 服务档案 —— 线上解决效率,线下建立信任。
+
+### 3.6 社区模块(S2p13)
+成长打卡(今天改变了什么)· 成果展示(前后变化)· 求助讨论 · 导师点评 · 同城圈子 · **身份等级**(成长型父母/分享官)。红线:**传播结果,不传播焦虑**。
+
+### 3.7 家庭账户 / 客户后台(S2p15)——"一次购买沉淀为可持续经营的家庭账户"
+会员身份(等级/积分/权益/有效期)· 服务进度(计划阶段、任务、**陪跑角色**)· 订单资产(课程/活动/券/奖励)· **家庭档案**(测评/报告/成长记录)· 咨询活动(预约/报名/历史)· 客服支持(顾问/班主任/售后入口)。
 
 ---
 
-## 六、下一步(移植清单,请架构师确认后落 schema/module)
+## 四、AI 能力体系(交付闭环内,非品牌口号 S1p15)
 
+### 4.1 AI 平台架构(S1p16)
 ```text
-P1 FELS-2 Program & Human Service(榜样教育服务体系主体):
-   TrainingProgram(7/21/90-day 阶段化)· ProgramEnrollment · ProgramReport(阶段报告)
-   LegacyTask(每日任务)· LegacyCheckIn(打卡)· Homework · HomeworkReview(助教反馈)
-   Staff · Advisor · AdvisorSession · AdvisorNote · ServiceCase
-   语义否定内建:Check-in≠Outcome · AdvisorNote≠Fact · Program 阶段≠成长结果
-P2 FELS-3 Ecosystem:Membership · Community/CommunityMember · Activity
-边界:FELS=参考实现;不接真实邦阳源;不写 Family canonical;红线(不总分/排行/贴标签/传播焦虑)显式保留为迁移时 RETIRE/Annotation。
+知识库 → 用户画像 → 成长规划 → 陪练执行 → 督导反馈 → 数据中台
+(内容)  (理解)    (方案)    (任务)    (预警)    (学习)
+```
+### 4.2 5-Agent 体系(S1p17,每个绑定用户任务+可衡量结果)
+| Agent | 服务对象 | 核心任务 | 输出物 |
+|---|---|---|---|
+| 家长顾问 | 父母 | 解释问题与建议话术 | 沟通方案 |
+| 孩子陪练 | 孩子 | 任务提醒与行为鼓励 | 成长任务 |
+| 助教助手 | 交付团队 | 批改、点评、预警 | 服务建议 |
+| 成长规划师 | 家庭 | 阶段目标与路径 | 成长计划 |
+| 经营助手 | 管理层 | 用户/收入/交付分析 | 经营看板 |
+### 4.3 三张画像(护城河 S1p18/p19)
+父母画像(教育方式/沟通风格/焦虑点/参与度)· 孩子画像(习惯/兴趣/动力/行为变化/情绪)· 家庭画像(互动频率/冲突类型/任务完成/改善路径)。
+
+---
+
+## 五、增长 / 裂变
+- 借鉴四能力(S2p4):拼多多=裂变节点 · 字节=数据分发 · 海底捞=极致体验(顾问/班主任/专家/沙龙)· 教育=结果在购买后(21天/90天/年度会员)。
+- 五级增长(S2p16):内容/IP矩阵30% · 老用户裂变30% · 城市社群20% · 机构合作15% · 付费投放5%。
+- 裂变原则(S2p9):价值优先、成长权益非现金佣金、**传播结果不传播焦虑**、单层可追溯。
+
+---
+
+## 六、教育红线(与 Family 硬规则呼应;FELS 须显式保留为"旧世界摩擦 + 迁移处置")
+```text
+不做 Family Total Score · 不做家庭 Ranking · Growth Profile=阶段状态非人格标签
+不把 Child Growth 定义为服从 · 传播结果不传播焦虑
+Check-in ≠ Outcome · AdvisorNote/导师点评 ≠ Fact · 测评分数/标签=历史证据候选(旧世界的总分/排行 → 迁移 RETIRE)
+完课/打卡=学习历史,非 Outcome(结果在购买之后,靠真实行为改变证明)
+```
+
+---
+
+## 七、映射到 FELS 12 域(MODULE_CONTRACTS)+ 移植状态
+| 榜样教育环节(出处) | FELS 域/实体 | 现状 | 移植动作 |
+|---|---|---|---|
+| 家庭/父母测评(入口层) | 04 Assessment | FELS-1(0002) | 复用 |
+| 深度课程/体验课(核心/入口) | 05 Course/Lesson/Class/Enrollment/Attendance | FELS-1(0002) | 复用 |
+| 订单/价格分层/券 | 10 Order/OrderItem/Payment | FELS-1(0002) | 复用 |
+| **21天挑战·每日任务打卡** | 06+07 TrainingProgram/LegacyTask/LegacyCheckIn/Homework/HomeworkReview | 0003 部分 | **FELS-2 深化/新增** |
+| **90天四阶段陪跑+阶段报告** | 06 TrainingProgram/ProgramEnrollment/ProgramReport | 0003 部分 | **FELS-2 阶段化** |
+| **顾问/班主任/助教/专家** | 08 Staff/Advisor/AdvisorSession/AdvisorNote/ServiceCase | 待 | **FELS-2 新增** |
+| **年度会员/权益/积分** | 10 Membership | 待 | FELS-3 |
+| **社区/打卡/成果/导师点评/身份等级/同城** | 09 Community/CommunityMember/Activity | 待 | FELS-3 |
+| 线下沙龙/城市活动/名师咨询预约 | 09 Activity + 08 ServiceCase | 待 | FELS-3 |
+| **家庭账户后台**(会员/进度/订单/档案/咨询/客服) | 跨域聚合视图(账户资产) | 待 | FELS-2/3 聚合 |
+| 三画像/AI诊断/成长报告/预警 | 11 LegacyProfile/LegacyAIReport/LegacyAlert | 待(脏世界) | FELS-4(诱饵,后置) |
+| 裂变/分享官/城市发起人 | 09 + 传播机制 | 待 | FELS-3(external ref) |
+
+**结论**:课程体系(测评+课程+订单+价格分层)已由 **FELS-1** 覆盖,复用;榜样教育**服务体系主体**(21天/90天陪跑 + 每日任务打卡 + 顾问/班主任/助教/专家 + 家庭账户)= **FELS-2**;会员/社群/活动/线下 = **FELS-3**;三画像/AI报告 = **FELS-4 脏世界**。
+
+---
+
+## 八、下一步移植清单(请架构师确认后落 schema/module)
+```text
+P1 FELS-2 Program & Human Service(服务体系主体):
+   TrainingProgram(7/21/90-day 阶段化 SEE/PARENT_FIRST/CO_CREATE/STABILIZE)· ProgramEnrollment · ProgramReport(阶段报告)
+   LegacyTask(每日任务)· LegacyCheckIn(打卡)· Homework · HomeworkReview(助教批改点评)
+   Staff · Advisor · AdvisorSession · AdvisorNote · ServiceCase(顾问/班主任/专家/售后)
+   语义否定内建:Check-in≠Outcome · AdvisorNote≠Fact · Program阶段≠成长结果 · 完课≠改变
+P2 FELS-3 Ecosystem:Membership(等级/积分/权益)· Community/CommunityMember(打卡/成果/点评/身份等级)· Activity(沙龙/城市活动)· 家庭账户聚合视图
+边界:FELS=参考实现;不接真实邦阳源;不写 Family canonical;红线显式保留(迁移时 RETIRE/Annotation)。
+```
+```text
+课程内容细节缺口:S1–S4 为战略/商业文档,未含具体课程大纲/课时表;课程"内容层"细节在现有材料层缺失(不臆造),FELS 先建"课程结构"骨架,内容待另取教学材料补。
 ```
