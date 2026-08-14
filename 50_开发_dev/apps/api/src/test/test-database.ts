@@ -15,6 +15,10 @@ export function createTestPool(): pg.Pool {
 }
 
 export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
+  // Principal 域(M3-101A-B)以 FK 引用 families —— 先清 principal_*/product_events,
+  // 否则末尾 `delete from families` 会被 principal_sessions_family_id_fkey 挡住。
+  // 用 to_regclass 守卫:未迁移 0011 的库(仅 Family core)不会因缺表报错。
+  await cleanPrincipalTablesIfPresent(pool);
   await pool.query('delete from growth_profile_drafts');
   await pool.query('delete from evidence_records');
   await pool.query('delete from perspectives');
@@ -38,4 +42,40 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   await pool.query('delete from family_relationships');
   await pool.query('delete from persons');
   await pool.query('delete from families');
+}
+
+/**
+ * M3-INT-001:seed 一个带 AI_PERSONALIZATION GRANTED consent 的真实 subject(person uuid)。
+ * 供 live/negative 测试用真实 consent 触发/验证外呼门。返回 { familyId, subjectRef=childPersonId, guardianRef }。
+ */
+export async function seedAiConsentSubject(
+  pool: pg.Pool,
+  opts: { purpose?: 'AI_PERSONALIZATION'; status?: 'GRANTED' | 'WITHDRAWN' | 'EXPIRED' } = {},
+): Promise<{ familyId: string; subjectRef: string; guardianRef: string }> {
+  const fam = await pool.query(`insert into families(display_name) values ('AI consent fam') returning family_id`);
+  const familyId = fam.rows[0].family_id;
+  const g = await pool.query(`insert into persons(family_id, person_type, parent_role, display_name) values ($1,'PARENT','GUARDIAN','监护人') returning person_id`, [familyId]);
+  const c = await pool.query(`insert into persons(family_id, person_type, display_name, birth_date) values ($1,'CHILD','孩子','2013-05-01') returning person_id`, [familyId]);
+  const status = opts.status ?? 'GRANTED';
+  await pool.query(
+    `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at${status === 'WITHDRAWN' ? ', withdrawn_at' : ''})
+       values ($1,$2,$3,'AI_PERSONALIZATION',$4,'policy-ai-v1', now()${status === 'WITHDRAWN' ? ', now()' : ''})`,
+    [familyId, c.rows[0].person_id, g.rows[0].person_id, status],
+  );
+  return { familyId, subjectRef: c.rows[0].person_id, guardianRef: g.rows[0].person_id };
+}
+
+/** 清 Principal 域表(FK 安全序);若库未迁移 0011 则逐表跳过,便于 Family-core-only 测试库复用。 */
+export async function cleanPrincipalTablesIfPresent(pool: pg.Pool): Promise<void> {
+  const tables = [
+    'otp_challenges',    // IAM-102:无 FK,清以免跨用例污染限流/验证
+    'identity_sessions', // IAM-101:FK 引用 persons/families,须先于其清理
+    'principal_action_proposals', 'principal_feedback', 'principal_model_attempts', 'principal_model_runs',
+    'principal_human_handoffs', 'principal_messages', 'principal_responses',
+    'principal_sessions', 'product_events',
+  ];
+  for (const t of tables) {
+    const exists = await pool.query('select to_regclass($1) as reg', [t]);
+    if (exists.rows[0].reg) await pool.query(`delete from ${t}`);
+  }
 }

@@ -29,6 +29,8 @@ export interface PrincipalAiInput {
   scene_hint?: string;
   family_context?: Record<string, unknown>;
   consent_context: PrincipalConsentContext;
+  /** 可选多模态图片(base64)。M3-102:仅在 precheck!=HIGH_RISK 时随请求发给网关;不写 canonical、不落原始字节。 */
+  images?: Array<{ media_type: string; data: string }>;
 }
 
 export interface PrincipalAiOutput {
@@ -113,7 +115,7 @@ export interface PrincipalTokenUsage {
 export interface PrincipalModelRun {
   model_run_id: string;
   request_id: string;
-  model_provider: 'fake' | 'openai-compatible' | 'deterministic-fallback';
+  model_provider: 'fake' | 'openai-compatible' | 'deterministic-fallback' | 'anthropic-compatible' | 'zhipu-compatible';
   model_name: string;
   model_version?: string;
   prompt_version: string;
@@ -399,11 +401,14 @@ export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = saf
 export function buildPrincipalAiGatewayRequest(input: PrincipalAiInput): StructuredGenerationRequest<PrincipalAiInput & { soul_instruction: string; retrieval: PrincipalRetrievalResult }, PrincipalAiOutput> {
   const soul = new PrincipalSoulCompiler().compile();
   const retrieval = retrievePrincipalAssets(input);
+  // 图片走顶层 images 通道(image content block),不塞进文本 input(避免 base64 污染文本 prompt)。
+  const { images, ...textInput } = input;
   return {
     use_case: 'FAMILI_PRINCIPAL_TEXT_MVP',
     prompt_version: PRINCIPAL_AI_PROMPT_VERSION,
     schema_version: PRINCIPAL_AI_SCHEMA_VERSION,
-    input: { ...input, soul_instruction: soul.instruction, retrieval },
+    input: { ...textInput, soul_instruction: soul.instruction, retrieval },
+    images,
     output_schema: PRINCIPAL_AI_OUTPUT_SCHEMA,
     input_refs: ['products/famili-principal/contracts/principal-response.schema.json', ...retrieval.method_cards.flatMap((card) => card.source_refs)],
     policy_context: {

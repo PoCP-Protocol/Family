@@ -29,9 +29,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@family/ai-gateway':
+        specifier: workspace:*
+        version: link:../../packages/ai-gateway
       '@family/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@family/principal-ai':
+        specifier: workspace:*
+        version: link:../../packages/principal-ai
+      '@family/principal-runtime':
+        specifier: workspace:*
+        version: link:../../packages/principal-runtime
       '@family/waf-contracts':
         specifier: workspace:*
         version: link:../../packages/waf-contracts
@@ -194,6 +203,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(lightningcss@1.33.0)
 
   packages/avatar-gateway:
     dependencies:
@@ -266,6 +278,15 @@ importers:
       '@family/ai-gateway':
         specifier: workspace:*
         version: link:../ai-gateway
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.5
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(lightningcss@1.33.0)
+
+  packages/principal-runtime:
     devDependencies:
       typescript:
         specifier: ^5.6.3

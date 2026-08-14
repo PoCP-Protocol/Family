@@ -1,64 +1,60 @@
 # FPAI Action Bridge Contract V1
 
-Date: 2026-08-11
-Phase: M3-PRINCIPAL-000
-Status: DESIGN_CONTRACT_ONLY
+purpose: 冻结 **唯一** 允许 AI 建议进入 Growth OS 的通道。
+runtime: **NOT_AUTHORIZED**（仅契约)
 
-## Purpose
+---
 
-The Action Bridge is the only path from a Principal action proposal to a real Family growth action. It exists so the AI can never invent or directly write a `GrowthAction`.
+## 1. 唯一合法路径
+```
+PrincipalActionProposal
+   ↓ (user explicit confirmation)
+Approved Application Command
+   ↓
+既有已批准 Intervention（Proposal-to-Intervention Bridge）
+   ↓
+既有确定性 GrowthAction（既有 Family Named Action)
+   ↓
+Growth OS canonical state
+```
+**禁止**:`PrincipalActionProposal → Growth DB`(直写)。**禁止**:AI 自由生成新的 GrowthAction/Intervention/Priority。
 
-## V1 Capability
+## 2. 第一版范围(克制)
+- 仅围绕已验证确定性干预 **`LISTEN_BEFORE_RESPOND`**。
+- 法咪莉校长可提出"今晚先听完再回应"的 proposal;用户接受后,系统调用**既有** Family Named Action(如 `StartIntervention` → Today `GrowthAction` → `CompleteGrowthAction`),不新增语义。
 
-V1 allows exactly one thing:
-
-```text
-Principal -> recommend an EXISTING approved intervention
+## 3. PrincipalActionProposal 冻结字段
+```
+proposal_id
+principal_response_id            # 来源 L3 PrincipalResponse
+family_id
+subject_id
+proposal_type                    # e.g. RECOMMEND_INTERVENTION
+recommended_intervention_id      # 必须指向既有已批准 Intervention(如 LISTEN_BEFORE_RESPOND)
+display_title
+display_instruction
+rationale
+method_refs                      # REVIEWED_METHOD_CARDS 引用
+risk_route                       # NORMAL | REVIEW | HIGH_RISK
+expires_at
+canonical = false                # 硬编码:proposal 永远不是 canonical
 ```
 
-It forbids:
-
-```text
-LLM -> invent an arbitrary GrowthAction
-LLM -> INSERT growth_actions
+## 4. 接受(accept)操作契约
+必须携带:
 ```
-
-## First Bridge
-
-The first and only bridged action in V1:
-
-```text
-LISTEN_BEFORE_RESPOND
+actor
+idempotency_key
+correlation_id
+explicit_confirmation = true     # 无显式确认不得应用
 ```
+应用时:映射 `recommended_intervention_id` → 既有 Named Action;沿用 M2 写入参考模式(DTO校验→权限/前置→幂等→PG事务→Audit→Outbox)。
 
-## Flow
-
-```text
-Principal Response
-      -> One Small Action Proposal (PrincipalActionProposal)
-      -> User Explicit Confirmation (human)
-      -> Action Bridge (allowlisted mapping)
-      -> Existing LISTEN_BEFORE_RESPOND
-      -> Existing Named Action
-      -> GrowthAction
+## 5. 不变量
 ```
-
-The bridge maps a proposal to a pre-existing Named Action. It carries no free-text into the canonical write; it only triggers an already-defined, already-approved action.
-
-## Hard Rules
-
-```text
-AI_DIRECT_GROWTH_WRITE = FORBIDDEN
-AI_INVENT_ACTION = FORBIDDEN
-BRIDGE_REQUIRES_HUMAN_CONFIRMATION = YES
-BRIDGE_ALLOWLIST_ONLY = YES
-UNCONFIRMED_PROPOSAL_TRIGGERS_ACTION = NO
+HIGH_RISK  → action bridge FORBIDDEN(不产出可接受 proposal,转 human handoff)
+proposal.canonical           = false
+accept 无 explicit_confirmation → REJECT
+recommended_intervention_id ∉ 既有已批准 Intervention → REJECT
+bridge 只能调用既有 Named Action,不得新增/旁路
 ```
-
-- No proposal becomes an action without an explicit human confirmation event.
-- The bridge only fires Named Actions that already exist in the Family growth OS.
-- HIGH_RISK routing disables the bridge entirely (see FPAI_SAFETY_HUMAN_GATE).
-
-## Boundaries
-
-The Action Bridge never calls `INSERT growth_actions` directly. It invokes the existing Named Action path, which owns the canonical write. Principal remains a proposer, the human remains the decider, and the Family growth OS remains the writer.

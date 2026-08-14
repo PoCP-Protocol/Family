@@ -1,6 +1,10 @@
 # Family 异步分支协作规约 V1
 
-**状态**: ADOPTED · Living Document
+> **⚠ SUPERSEDED_BY**: `FAMILY_ASYNC_BRANCH_COLLABORATION_V2.md` (2026-08-14)
+>
+> 本文件保留仅供历史归档参考。V1 将 `wave/m2-wave2-integration` 定义为共享集成基线,已被证明会导致 feature 分支静默漂移(错过 master 上 accepted 提交)。**当前生效规约为 V2**,以 `master` 为唯一 AUTHORITATIVE_SHARED_BASELINE。请所有开发者与 AI Agent 转读 V2。
+
+**状态**: SUPERSEDED · 归档参考,不再作为生效规约
 **首版**: 2026-08-11
 **作用域**: `PoCP-Protocol/Family` 仓库全体开发者与自动化 Agent (Claude / Copilot / 其他)
 **上位**: `d:/Family/CLAUDE.md` § 二/三、`50_开发_dev/CLAUDE.md`(编码宪法)、`50_开发_dev/AI_WORKING_AGREEMENT.md`

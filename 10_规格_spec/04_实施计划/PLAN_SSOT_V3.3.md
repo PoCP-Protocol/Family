@@ -1,0 +1,96 @@
+# Family 执行计划 SSOT V3.3
+
+生效日期：2026-08-11
+状态：SINGLE AUTHORITATIVE CURRENT EXECUTION PLAN ENTRY
+上游裁决：M3-RB-001 = PASS_CLOSED；M3-RB-002 = Family Execution Rebaseline V3.3 & SSOT Convergence
+
+## 上位约束
+
+1. FGAIM
+2. Family总体蓝图
+3. Family整体技术架构（V3.2 BUILD-TO-OPERATE）
+4. Family Growth Ontology
+5. Family总体实施计划 V3.3
+
+## 当前执行 SSOT（V3.3）
+
+- Family_总体实施计划_V3.3.md
+- Family_M0_M6_Roadmap_V3.3.md
+- Family_180天WBS_V3.3.csv
+
+## 旧计划
+
+```
+V3.0（Family_总体实施计划_V3.0 / Family_M0_M6_Roadmap_V3.0 / Family_180天WBS_V3.0 / PLAN_SSOT_V3.0）:
+SUPERSEDED_FOR_EXECUTION
+RETAINED_FOR_HISTORY
+```
+
+保留历史，不删除，不再作为当前排期 SSOT。旧 V2.x 同样为 ARCHIVED / SUPERSEDED FOR EXECUTION。
+
+## 当前状态
+
+```
+M0 = CLOSED
+M1 = CLOSED
+M2 = CLOSED
+
+M3 = NOW
+
+M3_PROGRAM = FAMILY_1_0_MINIMUM_OPERABLE_SYSTEM
+
+M3_000 = PASS_CLOSED
+M3_101A = PASS_ACCEPTED
+M3_101B_108 = INTEGRATION_CANDIDATE   (代码在 m3/fpai-runtime-admission-fix;M3-INT-001 治理约束)
+M3_RB_002 = PASS_CLOSED               (V3.3 SSOT 收敛完成)
+
+CURRENT_EXECUTION_GATE = M3_INT_001_RUNTIME_ADMISSION_PR → M3_W1_FINAL_REVIEW
+
+M3_REAL_EXTERNAL_MODEL = NOT_AUTHORIZED          (默认外呼关闭)
+AUTHORIZATION_SSOT = governance/AUTHORIZATION_REGISTRY.yaml   (随 admission PR 并入;Gate 报告非授权来源)
+```
+
+## Program Baseline & Branch
+
+```
+PROGRAM_BASELINE_SHA = 8cadeb65cca205f3d2fe23b141988d6342444cc7  (m3/fpai-intelligence-contract-gate)
+PROGRAM_INTEGRATION_BRANCH = m3/family-1-0-mos
+FROZEN_BRANCH = m3/fpai-intelligence-contract-gate  (FROZEN_AFTER_M3_000)
+DEFAULT_BRANCH = master
+```
+
+## M3 执行结构
+
+```
+M3-W0 Operability Foundation
+M3-W1 Famili Principal Runtime (原 M2-W4 Intelligence 执行归属)
+M3-W2 Consumer Product Integration
+M3-W3 Operate & Measure
+→ FAMILY_1_0_MOS_GATE → PILOT_READINESS_GATE → 100_FAMILY_PILOT → POST_PILOT_EXPANSION_REVIEW
+```
+
+## M2-W4 Treatment
+
+```
+M2_WAVE4_INTELLIGENCE = SUPERSEDED_FOR_EXECUTION_BY_CCR
+NEW_OWNER = M3-W1 Famili Principal Runtime
+M2_REOPEN = NO
+```
+
+## HOLD / FUTURE / NOT_HELD
+
+```
+DEFER_POST_PILOT: MORE_DIMENSIONS, MORE_LIFESTAGES, MORE_INTERVENTIONS, FULL_90D_JOURNEY
+HOLD: MEMBERSHIP, ADVISOR_PRODUCT, FES_EXPANSION, KNOWLEDGE_FOUNDRY_EXPANSION, DH1, VOICE_RUNTIME, AVATAR_RUNTIME, MODEL_TRAINING, SFT, LORA, MULTI_AGENT
+FUTURE: CAUSAL_ENGINE, WORLD_MODEL
+P1_PARALLEL (非阻塞): FELS / FLM
+NOT_HELD (已交付, 集成/产品化): TIMELINE, LISTEN_BEFORE_RESPOND, GROWTH_LOOP, GROWTH_REVIEW, NEXT_STEP_DECISION
+```
+
+## 下一任务
+
+```
+M3-RB-002 = IN_PROGRESS → PASS 后 → M3-101A_EXECUTION_START = YES (从 m3/family-1-0-mos 最新 CI-green baseline)
+```
+
+M3-101A 已授权但正式编码启动点为 RB-002 收敛完成、`CURRENT_EXECUTION_SSOT_DRIFT = 0`、`M3_CI_TRIGGER = PASS` 之后。

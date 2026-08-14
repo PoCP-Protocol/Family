@@ -1,0 +1,150 @@
+# CAPABILITY TRUTH REGISTRY — M3-RB-003
+# 回答的问题:仓库里每个"能力"到底【是什么】(≠ AUTHORIZATION_REGISTRY 回答的"允不允许运行")。
+# 唯一合法分类(禁止再用"AI能力已完成"这类模糊说法):
+#   REAL_DOMAIN_CAPABILITY     真实业务能力(确定性但真做事,如 Named Action 写 canonical)
+#   REAL_MODEL_INTELLIGENCE    真实生成式模型智能(模型真在推理)
+#   DETERMINISTIC_GUARDRAIL    写死的护栏/红线(约束,不是能力)——允许且应保留
+#   DETERMINISTIC_TEST_BASELINE 确定性测试替身(让 CI 可跑,不是产品能力)
+#   SAFE_FALLBACK              模型不可用时的安全降级(不得伪装成校长)
+#   PROTOTYPE                  原型(内部演示,非产品)
+#   ADAPTER                    厂商/协议适配器(管道,不是能力)
+#   INTEGRATION_CANDIDATE      已技术验证、待并入/授权
+#   NOT_IMPLEMENTED            未实现
+#   FUTURE                     未来,未授权
+schema_version: CAPABILITY_TRUTH_V1
+maintained_by: family-chief-architect
+updated_at: "2026-08-12"
+principle: |
+  MODEL UNDERSTANDS · RULES CONSTRAIN · HUMANS CONFIRM.
+  AI 可判断不可造事实(AI_INFERENCE != FACT);可建议不可直接行动(AI_PROPOSAL != GROWTH_ACTION)。
+  "系统能跑" != "真智能";Runtime PASS != Intelligence PASS。
+
+capabilities:
+  # ---------- FPAI Principal 智能 ----------
+  - id: principal_soul_deterministic
+    what: packages/principal-ai createDeterministicPrincipalResponse + actionForScenario
+    true_class: DETERMINISTIC_TEST_BASELINE + SAFE_FALLBACK
+    user_visible: true          # 曾作为默认输出对消费端可见 —— 这是问题
+    current_default: true       # 默认走它(真实模型 env 关着)—— RB-003 要翻转
+    misclassified_as: "Principal Intelligence / 校长能力"   # 之前的错误认知
+    verdict: DEPRECATE          # 降为"仅无模型时的安全降级",不得作为默认校长
+    notes: 按场景 if/else 返回写死建议文案 = 假校长。不是校长在想。
+
+  - id: detect_scenario_keyword
+    what: packages/principal-ai detectScenario(关键词 includes)
+    true_class: DETERMINISTIC_TEST_BASELINE   # + LEGACY_HEURISTIC
+    user_visible: false
+    current_default: true
+    misclassified_as: "场景理解引擎"
+    verdict: DEPRECATE          # 主场景识别改由模型理解(PrincipalUnderstandingV1)
+    notes: 关键词匹配冒充理解;仅可作测试基线,不作主引擎。
+
+  - id: safety_precheck_keyword
+    what: packages/principal-ai safetyPrecheck(HIGH_RISK/REVIEW 关键词)
+    true_class: DETERMINISTIC_GUARDRAIL   # 显式危机词高召回兜底
+    user_visible: false
+    current_default: true
+    verdict: KEEP               # 作为 Layer-1 硬安全 tripwire 保留(高召回 STOP)
+    notes: 这是护栏不是能力,应保留;但不能等同"安全理解",复杂隐性风险交 Layer-2 模型。
+
+  - id: fake_ai_gateway
+    what: packages/ai-gateway FakeAiGateway
+    true_class: DETERMINISTIC_TEST_BASELINE
+    user_visible: false
+    current_default: false
+    verdict: KEEP               # 测试用
+    notes: CI 确定性替身。
+
+  - id: real_model_gateway
+    what: AnthropicAiGateway / ZhipuAiGateway(经 Gateway 调真实模型)
+    true_class: REAL_MODEL_INTELLIGENCE   # 引擎
+    user_visible: false          # 默认关(env-gated)
+    current_default: false
+    verdict: KEEP + PROMOTE      # 应成为校长默认智能来源(W2R-102 受控内部门后)
+    notes: 生产授权仍由 AUTHORIZATION_REGISTRY 单独管(现 pilot/production=NO)。
+
+  - id: routing_gateway
+    what: packages/ai-gateway RoutingAiGateway(仅基础设施瞬时错误 failover)
+    true_class: DETERMINISTIC_GUARDRAIL   # 路由策略
+    verdict: KEEP
+    notes: 不对安全失败兜底;是韧性策略,非能力。
+
+  - id: attempt_recording_gateway
+    what: packages/ai-gateway AttemptRecordingGateway + principal_model_attempts
+    true_class: REAL_DOMAIN_CAPABILITY   # 真实计量/账本
+    verdict: KEEP
+    notes: 真实 provider attempt 账本(含 failover/timeout)。
+
+  - id: run_principal_text_mvp
+    what: packages/principal-ai runPrincipalTextMvp(precheck→(gateway|fallback)→postcheck→schema)
+    true_class: REAL_DOMAIN_CAPABILITY   # 编排壳(内含真/假两条)
+    verdict: KEEP + REWORK       # W2R:默认走真模型,fallback 仅安全降级
+    notes: 编排正确;问题是默认注入的是假 soul。
+
+  - id: evaluate_processing
+    what: packages/principal-runtime evaluateProcessing(consent→policy→provider,FAIL CLOSED)
+    true_class: DETERMINISTIC_GUARDRAIL
+    verdict: KEEP
+    notes: 处理策略护栏,真做门控。
+
+  - id: resolve_principal_consent
+    what: packages/principal-runtime resolvePrincipalConsent(AI_PERSONALIZATION GRANTED)
+    true_class: REAL_DOMAIN_CAPABILITY   # 读 canonical consent
+    verdict: KEEP
+
+  - id: action_bridge
+    what: apps/api principal acceptProposal → 既有 StartIntervention Named Action
+    true_class: REAL_DOMAIN_CAPABILITY
+    verdict: KEEP
+    notes: 提案→确认→既有 Named Action;不旁路 canonical。
+
+  # ---------- Growth OS(M1/M2)----------
+  - id: growth_named_actions
+    what: StartIntervention / CompleteGrowthAction / ConfirmGrowthPriority 等(apps/api family)
+    true_class: REAL_DOMAIN_CAPABILITY
+    verdict: KEEP
+    notes: 写 canonical growth truth;AI 不得直写(见 STATE_ACTION_MATRIX)。
+
+  # ---------- IAM ----------
+  - id: iam_identity_session
+    what: apps/api auth AuthService(不透明 Bearer 会话令牌 + 解析)
+    true_class: REAL_DOMAIN_CAPABILITY
+    verdict: KEEP
+  - id: iam_otp_flow
+    what: apps/api auth OtpService(6位/哈希/过期/限流/验证→签发)
+    true_class: REAL_DOMAIN_CAPABILITY   # 流程真实
+    verdict: KEEP
+  - id: stub_otp_sender
+    what: StubOtpSender(不真发短信)
+    true_class: DETERMINISTIC_TEST_BASELINE
+    verdict: KEEP
+  - id: aliyun_sms_sender
+    what: AliyunSmsSender(手写阿里云 adapter)—— 已按用户指示撤除(未并入主线)
+    true_class: ADAPTER
+    current_state: RETIRED_NOT_MERGED   # 手搓假能力,已撤(见 [[family-capabilities-generative-not-ifelse]])
+    verdict: REMOVED
+    notes: 真实短信须厂商凭证+合规;不手搓。
+
+  # ---------- 消费产品 ----------
+  - id: waf_consumer_chapters
+    what: apps/web waf.js / principal.js(消费端页面)
+    true_class: PROTOTYPE   # UI 原型(能跑 != 产品价值验证)
+    verdict: KEEP
+    notes: RUNTIME_GATE 过 != PRODUCT_VALUE_GATE 过。
+
+  # ---------- 未来 ----------
+  - id: sft_lora_distillation
+    what: 自研 7B / SFT / LoRA / 蒸馏
+    true_class: FUTURE
+    verdict: HOLD
+    notes: 顺序=强模型→真实使用→专家评审→偏好数据→金标→蒸馏→7B;不是"今天的模板→蒸馏"。
+  - id: world_model_causal
+    what: World Model / Causal Engine
+    true_class: FUTURE
+    verdict: HOLD
+
+# 门:FAKE_AS_REAL_CAPABILITY 必须 = 0(本表把每个假能力显式标注,消除模糊)
+invariants:
+  FAKE_AS_REAL_CAPABILITY: 0
+  TEST_FIXTURE_AS_PRODUCT_CAPABILITY: 0
+  PROTOTYPE_AS_RUNTIME: 0

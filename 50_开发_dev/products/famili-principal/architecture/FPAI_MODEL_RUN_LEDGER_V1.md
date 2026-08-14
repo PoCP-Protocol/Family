@@ -1,64 +1,46 @@
-# FPAI Model Run Ledger V1
+# FPAI ModelRun Ledger V1
 
-Date: 2026-08-11
-Phase: M3-PRINCIPAL-000
-Status: DESIGN_CONTRACT_ONLY
+purpose: 冻结 AI 执行台账。复用 `@family/principal-ai` 的 `PrincipalModelRun`。
+runtime: **NOT_AUTHORIZED**（仅契约)
 
-## Purpose
+---
 
-The ModelRun ledger records the provenance of every Principal model invocation for audit, reproducibility, and safety review, without duplicating raw private family text.
-
-## Ledger Fields
-
-```text
-model_run_id        stable id for this run
-request_id          product request correlation
-session_id          PrincipalSession reference
-family_id_ref       reference only, not raw identifiers
-provider            model provider (via gateway)
-model               model name
-model_version       model version
-prompt_version      prompt template version
-soul_version        Principal soul version
-soul_hash           hash of the soul config used
-scenario_id         scenario taxonomy id
-method_refs         approved method card refs used
-source_refs         approved source refs used
-input_hash          hash of the composed input (not raw text)
-output_hash         hash of the structured output
-risk_route          NORMAL | REVIEW | HIGH_RISK
-schema_validation   PASS | FAIL
-latency_ms          model latency
-token_usage         token counts
-created_at          timestamp
+## 1. 定位
+ModelRun = **AI execution ledger**,与以下四者严格区分:
+```
+PrincipalModelRun != ProductEvent
+PrincipalModelRun != GrowthEvent
+PrincipalModelRun != AuditEvent
 ```
 
-## Privacy Rule
-
-```text
-RAW_CHILD_TEXT_IN_LEDGER = NO (default)
+## 2. 冻结字段(基于既有 PrincipalModelRun)
+```
+model_run_id
+request_id
+session_id
+family_id_ref            # 引用,非拷贝 Family aggregate
+model_provider
+model_name
+model_version
+prompt_version           # 复用 PRINCIPAL_AI_PROMPT_VERSION
+soul_version             # 复用 PRINCIPAL_SOUL_VERSION
+soul_hash
+scenario_id              # detectScenario / PrincipalScenarioId
+method_refs              # REVIEWED_METHOD_CARDS
+source_refs              # REVIEWED_KNOWLEDGE_CARDS
+input_hash               # 默认存 hash,非明文(见 §3)
+output_hash
+risk_route               # PrincipalRiskRoute
+schema_validation        # pass/fail(validatePrincipalOutput)
+latency_ms
+token_usage              # PrincipalTokenUsage
+created_at
 ```
 
-Do not copy full child private text into the ledger by default. Store hashes and bounded references. Raw content, if ever needed, lives in the message store under its own consent and retention rules, not the ledger.
-
-## Store Separation
-
-Keep these as distinct stores with distinct purposes and retention:
-
-```text
-PrincipalMessage    conversation turns (user/principal text)
-PrincipalResponse   structured response objects
-PrincipalModelRun   model provenance ledger (hashes/refs)
-AuditEvent          Family canonical audit
-GrowthEvent         Family canonical growth events
+## 3. 隐私(Contract Level,§12 要求)
 ```
-
-`PrincipalModelRun` and `AuditEvent`/`GrowthEvent` are not the same log. Principal interaction provenance must not be written into Family canonical growth/audit streams.
-
-## Boundaries
-
-```text
-LEDGER_WRITES_GROWTH_STATE = NO
-LEDGER_STORES_RAW_CHILD_TEXT = NO_BY_DEFAULT
-LEDGER_REQUIRED_FOR_EVERY_RUN = YES
+ModelRun 默认不完整复制:child_private_text / parent_private_text / Family aggregate
+默认存 input_hash / output_hash + metadata;明文按 redaction/最小化处理
 ```
+五类数据责任分离:`PrincipalMessage`(用户输入)/ `PrincipalResponse`(AI 输出)/ `ModelRun Metadata`(执行台账)/ `GrowthEvent`(成长域)/ `AuditEvent`(治理)。
+各自明确:`retention / access / redaction / PII / minor_data / export / deletion`(达 Contract Level;runtime 前落实存储)。

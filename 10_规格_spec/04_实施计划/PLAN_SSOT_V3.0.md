@@ -1,5 +1,8 @@
 # Family 执行计划 SSOT V3.0
 
+> **STATUS: SUPERSEDED_FOR_EXECUTION / RETAINED_FOR_HISTORY**（自 2026-08-11，M3-RB-002）
+> 当前执行计划入口为 `PLAN_SSOT_V3.3.md`。本文件的 `M2 = NOW / Next = M2-000` 已过时，仅保留历史。
+
 生效日期：2026-08-10
 
 ## 上位约束

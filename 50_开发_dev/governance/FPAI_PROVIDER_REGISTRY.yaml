@@ -1,0 +1,42 @@
+# FPAI Provider Governance Registry — M3-INT-001 (§18/19)
+# 真实外部模型 provider 的治理审批 SSOT。Adapter「技术验证通过」≠「生产批准」。
+# RoutingAiGateway / 外呼路径必须只在此登记为 approved_environment 含目标环境、
+# 且数据类别(text/image/minor/private_text)被允许时,才可对该 provider 发起调用。
+schema_version: PROVIDER_REGISTRY_V1
+maintained_by: family-chief-architect
+updated_at: "2026-08-11"
+
+providers:
+  - provider_id: anthropic-cc-switch
+    vendor: anthropic
+    model_family: claude-opus
+    text_allowed: true
+    image_allowed: false            # 图片外呼未授权(见 M3_102 隔离)
+    minor_data_allowed: false       # 未成年人数据外发未授权
+    private_text_allowed: false     # 家庭私有文本外发未授权(试点 Consent UX 前)
+    processing_region: unspecified
+    retention_policy_ref: null
+    data_usage_policy_ref: null
+    approved_environment: [internal_livecheck]   # 仅内部受控 livecheck;非 pilot/production
+    status: TECHNICALLY_VALIDATED   # 非 PRODUCTION_APPROVED
+    notes: cc switch 本地代理 → Anthropic /v1/messages;生产批准待治理。
+
+  - provider_id: zhipu-glm4v
+    vendor: zhipu
+    model_family: glm-4v
+    text_allowed: true
+    image_allowed: false            # 同上,图片默认隔离
+    minor_data_allowed: false
+    private_text_allowed: false
+    processing_region: cn
+    retention_policy_ref: null
+    data_usage_policy_ref: null
+    approved_environment: [internal_livecheck]
+    status: TECHNICALLY_VALIDATED
+    notes: OpenAI 兼容 v4;生产批准待治理。
+
+# 环境语义:
+#   internal_livecheck  仅本机受控 .livecheck 手动测试环境
+#   pilot               真实试点用户(需 pilot_authorized + Consent UX)
+#   production          生产默认
+# 任一 provider 未含目标环境 → 该环境下不得对其发起真实调用(FAIL CLOSED)。
