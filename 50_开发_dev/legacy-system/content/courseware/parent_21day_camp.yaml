@@ -1,0 +1,262 @@
+# 21天家长训练营 · 完整课件(FELS 课程内容层)
+# 挂载:legacy_training_camps(camp_code=PARENT_21D_V1) / legacy_daily_tasks.content_ref = day.content_ref
+# 主线:情绪教练(Emotion Coaching)· 先连接再纠正 · 父母先改变(PARENT_FIRST)
+# 依据:architecture/FAMILY_EDUCATION_COURSE_SYSTEM_RESEARCH_V1.md(curl+crossref 核验)
+# 证据标注:可引证处引 crossref 已核验 DOI;无直接来源的标 practitioner(实践方法,证据待验),不硬凑。
+# 红线:父母先改变 · 不贴标签/不诊断 · 不制造焦虑/不比较排名 · 打卡≠结果 · 完课≠改变 · 观察≠事实 · 危机转人工。
+
+meta:
+  camp_code: PARENT_21D_V1
+  title: 21天家长训练营 · 先连接再纠正
+  duration_days: 21
+  audience: 家长(父母先改变;孩子不是被改造对象)
+  philosophy: 先连接/接住情绪,再纠正/解决;家长先练自己能改变的
+  phases:
+    - {code: SEE_CONNECT,  title: 看见与连接, day_from: 1,  day_to: 7}
+    - {code: PARENT_FIRST, title: 家长先改变, day_from: 8,  day_to: 14}
+    - {code: CO_STABILIZE, title: 共创与稳定, day_from: 15, day_to: 21}
+  evidence_grounding:                       # crossref 已核验
+    - {id: EMO_COACH_RCT,  doi: "10.1016/j.adolescence.2015.04.005", grade: E7, note: Tuning in to Teens 情绪教练 RCT}
+    - {id: EMO_REG_META,   doi: "10.32920/26052868",                 grade: E7, note: 儿童情绪调节·家长 meta(61ES/8854童)}
+    - {id: COERCIVE,       doi: "10.1017/S0954579414000169",         grade: E6, note: 强制家庭过程(边界/一致性;早童样本,青少年外推 LIMITED)}
+    - {id: ROGERS,         doi: "10.1037/h0045357",                  grade: E2, note: 共情/主动倾听(理论背景,非效果定论)}
+  lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
+  red_lines: [父母先改变, 不贴标签, 不制造焦虑, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 危机转人工]
+
+days:
+  # ---------------- W1 看见与连接 ----------------
+  - day: 1
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D1
+    theme: 先看见自己的第一反应
+    skill: 家长自我觉察(情绪教练第一步:先觉察情绪)
+    why: 连接的前提是家长先不被自己的第一反应带走;情绪教练从"觉察情绪"开始。
+    evidence_refs: [EMO_COACH_RCT, EMO_REG_META]
+    parent_action: 今天和孩子有摩擦时,先在心里说一句"我现在有点急",不马上开口。
+    say_it_tonight: "我今天注意到自己有点着急,想先听听你怎么想的。"
+    look_for: 你自己的身体信号(皱眉/提高音量),不是给孩子贴标签。
+    boundary: 这是觉察练习,不是评判;若涉及安全风险,转人工/求助。
+  - day: 2
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D2
+    theme: 开口前的三秒暂停
+    skill: 家长情绪调节(暂停/降速)
+    why: 一个短暂停能打断"施压→对抗"的升级链条。
+    evidence_refs: [COERCIVE]
+    parent_action: 想批评前,先深呼吸数三秒再说第一句话。
+    say_it_tonight: "等我一下,我想想怎么说更清楚。"
+    look_for: 暂停后对话是否更容易继续(过程观察,非打分)。
+    boundary: 暂停≠冷战;不是压抑,是给自己空间。
+  - day: 3
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D3
+    theme: 接住情绪,而非先评判
+    skill: 情绪确认(validate)
+    why: 孩子先感到情绪被接住,才更能听进后面的话。
+    evidence_refs: [EMO_COACH_RCT, EMO_REG_META]
+    parent_action: 把"你怎么又这样"换成"你看起来挺不开心的"。
+    say_it_tonight: "看得出来这件事让你挺烦的。"
+    look_for: 说完之后孩子是更愿意说,还是更退缩。
+    boundary: 接住情绪不等于认同所有行为;安全边界仍在。
+  - day: 4
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D4
+    theme: 先复述一句
+    skill: 反映式/主动倾听
+    why: 复述让对方感到"被听见"(felt-listening),降低防御。
+    evidence_refs: [ROGERS]
+    parent_action: 回应前,先用自己的话复述一遍孩子在意的点。
+    say_it_tonight: "你的意思是……我理解得对吗?"
+    look_for: 复述后孩子有没有点头/补充("对,而且……")。
+    boundary: 复述是理解,不是审问;不追加评价。
+  - day: 5
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D5
+    theme: 少用"但是"
+    skill: 降低防御(打断强制循环)
+    why: "但是"常把前半句的连接抵消;"我看到…"更少触发对抗。
+    evidence_refs: [COERCIVE]
+    parent_action: 今天刻意不用"但是",改用"我看到…我有点担心…"。
+    say_it_tonight: "我看到你很努力了,我也有点担心时间,我们一起看看?"
+    look_for: 去掉"但是"后,冲突是否少一点。
+    boundary: 不是不能表达担心,是换个不激化的说法。
+  - day: 6
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D6
+    theme: 用好奇代替追问
+    skill: 开放式提问
+    why: 开放问题邀请孩子表达,封闭追问容易变审讯。
+    evidence_refs: [ROGERS]
+    parent_action: 把"为什么没做完"换成"今天卡在哪一步了?"
+    say_it_tonight: "如果重来一次,你想怎么安排?"
+    look_for: 孩子回答的长度和主动性(过程,非对错)。
+    boundary: 好奇是了解,不是设套;不诱导认错。
+  - day: 7
+    phase: SEE_CONNECT
+    content_ref: PARENT_21D_V1#D7
+    theme: 第一周小复盘
+    skill: 家长自我复盘(过程回看)
+    why: 复盘看的是"哪次先连接让对话能继续",不是打分排名。
+    evidence_refs: []
+    parent_action: 回想这一周,记下一次"我先接住了情绪"的时刻。
+    say_it_tonight: "这周我想谢谢你愿意跟我说话。"
+    look_for: 你自己的一个小改变,而非孩子"进步了多少"。
+    boundary: 复盘≠成绩单;完课不等于改变。
+
+  # ---------------- W2 家长先改变 ----------------
+  - day: 8
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D8
+    theme: 帮情绪起个名字
+    skill: 情绪命名(labeling)
+    why: 命名情绪帮助调节;是情绪教练核心一环。
+    evidence_refs: [EMO_COACH_RCT, EMO_REG_META]
+    parent_action: 猜一猜孩子的情绪并说出来:"你是不是有点失望?"
+    say_it_tonight: "这种感觉是不是有点像……失望/委屈?"
+    look_for: 命名对了时孩子的反应(常会松一口气)。
+    boundary: 是帮命名不是替他定义;猜错就问。
+  - day: 9
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D9
+    theme: 示范如何平复
+    skill: 共同调节(co-regulation)
+    why: 家长先示范平复,孩子从中学会调节。
+    evidence_refs: [EMO_REG_META]
+    parent_action: 情绪上来时,出声示范:"我先喝口水冷静一下。"
+    say_it_tonight: "我刚才也有点冲,我们都缓一下再聊。"
+    look_for: 你平复的方式孩子是否开始模仿。
+    boundary: 示范真实的平复,不是表演完美。
+  - day: 10
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D10
+    theme: 给有限选择
+    skill: 自主支持(autonomy support)
+    why: 有限选择既给自主感又守住边界,减少权力对抗。
+    evidence_refs: [COERCIVE]
+    parent_action: 把命令换成两个都可接受的选择让孩子选。
+    say_it_tonight: "你想先写数学还是先写语文?你来定。"
+    look_for: 给了选择后配合度的变化。
+    boundary: 选择在你能接受的范围内;不是放任。
+  - day: 11
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D11
+    theme: 把"应该"换成"这个阶段可以先"
+    skill: 期待校准
+    why: 过高即时期待易生焦虑与冲突;分阶段更可达成。
+    evidence_refs: []
+    parent_action: 挑一个你常说"应该"的点,改成一个更小的当下目标。
+    say_it_tonight: "这周我们先做到……就很好。"
+    look_for: 目标变小后,完成与情绪是否更好。
+    boundary: 校准期待≠降低关心;不制造"别人家孩子"的比较焦虑。
+  - day: 12
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D12
+    theme: 温和而坚定
+    skill: 边界与温度并存
+    why: 清晰一致的边界 + 温暖关系,比严厉或放任都更有效。
+    evidence_refs: [COERCIVE]
+    parent_action: 选一个小边界,温和地说明并坚定守住一次。
+    say_it_tonight: "我知道你还想玩,约定的时间到了,明天继续。"
+    look_for: 温和坚定 vs 发火,哪个孩子更配合。
+    boundary: 坚定不是强硬;守边界不靠吼。
+  - day: 13
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D13
+    theme: 说到做到
+    skill: 一致性(consistency)
+    why: 一致性让边界可预期,减少试探与拉锯。
+    evidence_refs: [COERCIVE]
+    parent_action: 守住一个昨天说过的小约定,不临时改。
+    say_it_tonight: "昨天我们说好的,今天照做,谢谢你配合。"
+    look_for: 一致之后拉锯是否减少。
+    boundary: 一致≠死板;确需调整时先说明。
+  - day: 14
+    phase: PARENT_FIRST
+    content_ref: PARENT_21D_V1#D14
+    theme: 第二周小复盘
+    skill: 家长自我复盘(父母先改变)
+    why: 看"我这周改变了哪个自己的小习惯",而非孩子变了多少。
+    evidence_refs: []
+    parent_action: 记下一个你自己坚持了的新习惯。
+    say_it_tonight: "我在学着改变自己,也谢谢你陪我一起。"
+    look_for: 你自己的改变,不给孩子打分。
+    boundary: 打卡≠结果;别把复盘变成考核。
+
+  # ---------------- W3 共创与稳定 ----------------
+  - day: 15
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D15
+    theme: 邀请孩子共创一条规则
+    skill: 共创(co-create)
+    why: 孩子参与制定的规则更愿意遵守(自主+归属)。
+    evidence_refs: [COERCIVE]
+    parent_action: 就一件小事,和孩子一起定一条双方同意的规则。
+    say_it_tonight: "这件事我们一起定个都能接受的办法,好吗?"
+    look_for: 共同制定 vs 单方规定,执行度差别。
+    boundary: 共创不是甩锅给孩子;你仍是守护者。
+  - day: 16
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D16
+    theme: 做一次简单修复
+    skill: 修复先于说教(repair)
+    why: 没忍住之后,主动修复关系比继续讲道理更重要。
+    evidence_refs: [ROGERS]
+    parent_action: 为上次没忍住的时刻,向孩子简单道个歉。
+    say_it_tonight: "上次我语气重了,对不起,我在学着改。"
+    look_for: 修复后孩子是否更靠近你。
+    boundary: 修复是真诚,不换取顺从;不反过来要求孩子先认错。
+  - day: 17
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D17
+    theme: 具体地肯定一个小进步
+    skill: 强化小赢(具体、非泛化)
+    why: 具体肯定行为(而非贴"你真聪明"标签)更能巩固行为。
+    evidence_refs: [EMO_REG_META]
+    parent_action: 指出一个具体的小进步:"你今天主动开始写作业了。"
+    say_it_tonight: "我注意到你今天……(具体行为),挺不容易。"
+    look_for: 具体肯定后该行为是否更常出现。
+    boundary: 肯定行为不贴人格标签;不比较、不制造表扬依赖。
+  - day: 18
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D18
+    theme: 迁移到新场景
+    skill: 泛化(generalization)
+    why: 把一个已见效的小动作用到另一个场景,巩固技能。
+    evidence_refs: []
+    parent_action: 把本周一个有效的小做法,用到另一件事上。
+    say_it_tonight: "上次那个办法挺好用,这件事我们也试试?"
+    look_for: 同一方法在新场景是否也管用。
+    boundary: 迁移是尝试,不强求每次都成。
+  - day: 19
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D19
+    theme: 反复时不否定
+    skill: 处理退步(不贴标签)
+    why: 退步是常态;此时回到"先连接"比责备更有用。
+    evidence_refs: [EMO_COACH_RCT]
+    parent_action: 孩子退步时,先接住情绪,不说"你又……"。
+    say_it_tonight: "有起伏很正常,我们从今天重新开始。"
+    look_for: 不否定 vs 责备,恢复速度差别。
+    boundary: 不否定≠没边界;红线仍守。
+  - day: 20
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D20
+    theme: 建立一个每日连接小仪式
+    skill: 可持续的连接仪式
+    why: 稳定的小仪式让"连接"跨天持续,而非一次性。
+    evidence_refs: [ROGERS]
+    parent_action: 和孩子约定一个每天 3 分钟的固定连接时刻(如睡前聊一句)。
+    say_it_tonight: "以后每天睡前,我们聊一件今天的小事,好不好?"
+    look_for: 仪式坚持几天后关系的感觉。
+    boundary: 仪式贵在小而持续,不追求形式。
+  - day: 21
+    phase: CO_STABILIZE
+    content_ref: PARENT_21D_V1#D21
+    theme: 综合复盘与下一步
+    skill: 过程性回看 + 选择继续
+    why: 看见 21 天里"真实发生的过程改变"(非总分),选一件继续做,自然衔接 90 天。
+    evidence_refs: []
+    parent_action: 回看 21 天,选一个你要继续保持的小习惯。
+    say_it_tonight: "这 21 天我最想继续做的是……你觉得呢?"
+    look_for: 一个你确定要延续的改变(过程,非评级)。
+    boundary: 综合复盘不是结营考核;完课≠改变,改变靠继续做证明。
