@@ -98,6 +98,22 @@ capabilities:
     verdict: KEEP
     notes: 提案→确认→既有 Named Action;不旁路 canonical。
 
+  # ---------- FPAI 质量闸 & Human Gate(W2R-104/105 回填)----------
+  - id: assess_response_quality        # W2R-104 回填
+    what: packages/principal-ai assessResponseQuality(生成式 judge 主体 + 确定性安全底座兜底)
+    true_class: REAL_MODEL_INTELLIGENCE   # judge 是真生成式评判(model UNDERSTANDS);底座仅安全兜底
+    user_visible: false
+    current_default: true                # 底座恒运行;judge 仅 model_first_internal
+    verdict: KEEP
+    notes: 评理解/标签化/漏判风险;judge 不可用→回退确定性底座(SAFE_FALLBACK 语义)。只降级不放宽。
+  - id: principal_human_handoff_closure  # W2R-105 新增
+    what: apps/api principal saveHandoff(response_id)/resolveHandoff/markHandoffReleased(REVIEW 响应扣留→人工 APPROVED 释放)
+    true_class: DETERMINISTIC_GUARDRAIL   # Human Gate 控制面:释放是确定性的,生成式 AI 不参与释放决策
+    user_visible: true                    # 影响家长是否看到响应(扣留 vs 释放)
+    current_default: true
+    verdict: KEEP
+    notes: 落地 principle 的 "HUMANS CONFIRM" 支柱;只 APPROVED 释放、幂等、不可放宽。supersedes W2R-104 过渡期"REVIEW 直接展示"。见 reports/m3/M3_W2R_105_HUMAN_CONFIRMATION_GATE.md。
+
   # ---------- Growth OS(M1/M2)----------
   - id: growth_named_actions
     what: StartIntervention / CompleteGrowthAction / ConfirmGrowthPriority 等(apps/api family)
