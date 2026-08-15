@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';   // PLATFORM-IAM-104:FamilyPlatformAuthGuard 依赖 AuthService
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyController } from './family.controller';
@@ -17,6 +18,7 @@ import { InterventionService } from './intervention.service';
  * bootstrap 阶段不实现任何业务写操作。
  */
 @Module({
+	imports: [AuthModule],
 	controllers: [FamilyController],
 	providers: [
 		FamilyRepository,
