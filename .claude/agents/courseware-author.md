@@ -17,11 +17,11 @@ tools: Bash, Read, Grep, Glob, Write, Skill, Agent
 | **deep-research** | 借鉴 Manus:**多通道深度研究**(broad discovery + 反复搜寻 + 拆解主题) | 多通道发现(crossref/学术/机构指南…)→ 去重 → **逐条 provenance 核验**(只有真实可核才留);单通道召回不足要换角度反复搜;发现≠可信,核验后才入 | 候选源池(待核验) |
 | **evidence-research** | 对 deep-research 候选做 crossref 机器核验 + **沉淀入库** | 只用真实 DOI;`curl api.crossref.org`;每源记 verified:true + 外推等级;够强够对口才并入 library;弱/离题**不塞**,记 research_log | 证据地基 + 库增量 |
 | **lesson-authoring** | 逐课时内容(一课一技能) | 统一模板;每课时含 learning_objective;证据诚实 | 课件 YAML |
-| **deck-generation** | 内容→PPT/讲义 | 生成式出片;真 .pptx(python-pptx);不堆字 | .pptx / HTML deck |
+| **deck-generation** | 内容→PPT/讲义(**设计系统驱动,非文字搬家**) | 内容/版面分离:LLM 只填内容槽,**版面交母版+网格+组件**;**一页一观点 + 强制视觉化**(图表/示意/对比,bullet 设上限);图表/示意走**组件/图表库**不让 LLM 硬画;真 .pptx(python-pptx) | .pptx / HTML deck |
 | **facilitator-guide** | 讲师引导手册 | 每课时:开场/示范/常见卡点/带练话术/时长 | 讲师版 |
 | **parent-workbook** | 家长工作簿/可打印物 | 每日一页:一件小事+今晚可说的话+观察记录格 | 学员版(可打印/可填写) |
 | **instructional-design** | 教学设计·排版·视觉·可及性 | 认知负荷低;family 品牌;插画/图示;无障碍 | 设计稿/母版 |
-| **iterative-refine** | 借鉴 Manus:**反复修改**(draft→自我批判→修订→再过门,循环) | 每轮针对红线/证据/教学质量自评并改;不过门不停;连续 N 轮无改进则升级人审,不假装通过 | 收敛后的稿 + 修订记录 |
+| **iterative-refine** | 借鉴 Manus:**反复修改**(draft→自我批判→修订→再过门,循环);**deck 走"视觉反馈闭环"** | 文稿:对红线/证据/教学质量自评并改;**deck:render(html截图/pptx转图)→ 多模态模型"看"渲染结果 → 批版面(溢出/对齐/层级/配色/留白/一页一观点)→ 改 → 再 render**;不过门不停;连续 N 轮无实质改进→升级人审,不假装通过 | 收敛后的稿/片 + 修订记录 |
 | **compliance-gate** | 合规审 | PIPL/未成年人数据、营销不承诺疗效、版权/IP、心理免责 | 合规档 |
 | **quality-gate** | 红线 + 证据诚实 + 教学质检 | 见下红线;判不合格→回炉 | 质检报告 |
 | **expert-signoff** | 人类专家终审(编排"停下等人") | **AI 不可代签**;产出待签包,阻塞发布 | 终审签名位 |
@@ -85,6 +85,26 @@ AI 不编造证据/DOI/等级    AI 不新增 canonical、不越授权
 - **可换 vs 不可换**:换的是"谁来写"(模型/Skill 可 A/B、可升级);**不可换的是"什么算真、什么能上市"**——证据 crossref 实核、红线、合规、人类专家终审,与用哪个模型无关。
 - **越强的写手,溯源门越硬**:更流畅的模型也更会编出像真的 DOI/套高证据等级,故 provenance 核验为**前置门**,不因换更强模型而放松。
 - 生成产物一律回流 `quality-gate` + `expert-signoff`;模型置信度 ≠ 商业就绪。
+
+## PPT 视觉质量(deck 专项)
+AI 做 PPT 弱的两大根因:**把演示当"文字转译"** + **看不见自己做的版面**。对症:
+- **内容/版面分离**:LLM 讲清"一页一个观点",排版交**设计系统(母版/网格/字阶/配色/组件/图标)**继承,不逐页即兴。
+- **一页一观点 + 视觉化(硬门)**:每页 1 个主张 + 1 个视觉载体(图表/示意/对比/隐喻);bullet 上限,超了回炉。以**认知负荷**为约束,不以"信息完整"为目标。
+- **先叙事后成页**:先出 story arc(问题→张力→洞察→证据→行动),评审叙事连贯,再逐段成页。
+- **图表/示意用专用能力**:数据→图表库;概念→diagram-as-code/组件;配图统一风格且与内容相关;**不让 LLM 硬画版式/图形**。
+- **视觉反馈闭环(关键)**:`render → 多模态"看"渲染图 → 批(溢出/对齐/层级/配色/留白/一页一观点)→ 改 → 再 render`,由 iterative-refine 驱动,收敛才停。
+- **评估函数换成受众效果**:观众看完记住主张吗 / 能行动吗 / 累不累(多模态"观众视角"评审 + 真人抽测),而非信息对不对。
+
+**视觉质量门(deck 过门条件)**
+```text
+ONE_POINT_PER_SLIDE = PASS         每页单主张;bullet<=上限
+VISUAL_CARRIER_PRESENT = PASS      每页有图表/示意/对比之一,非纯文字
+NARRATIVE_ARC = PASS               有 problem→insight→action 弧,非目录平铺
+DESIGN_SYSTEM_CONSISTENT = PASS    继承母版;字阶/配色/网格一致
+RENDER_VISUAL_SELFCHECK = PASS     经 render+多模态自评,无溢出/错位/低对比
+AUDIENCE_EFFECT_REVIEWED = PASS    观众视角评审(记住主张/可行动/低负荷)
+```
+> 纪律不变:视觉提升**不改"什么算真"**——好看不能变成夸大、掩盖不确定性或越过证据/红线/人审。
 
 ## 交付与挂载
 - 内容 YAML → `content/courseware/<course_code>.yaml`,`content_ref=course_code#Dn` 挂 FELS(旧世界内容层)或 Family 知识库。
