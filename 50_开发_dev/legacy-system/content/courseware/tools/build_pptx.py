@@ -26,7 +26,9 @@ BG_C   = RGBColor(0xF8, 0xFA, 0xFC)  # 观察
 BG_D   = RGBColor(0xF9, 0xFA, 0xFB)  # 边界
 W, H = Inches(13.333), Inches(7.5)
 # 阶段配色带(与 HTML deck / 设计系统一致)
-PHASE_ACCENT = {"SEE_CONNECT": ORANGE, "PARENT_FIRST": BLUE, "CO_STABILIZE": RGBColor(0x0F, 0x76, 0x6E)}
+TEAL = RGBColor(0x0F, 0x76, 0x6E); VIOLET = RGBColor(0x7C, 0x3A, 0xED)
+PHASE_ACCENT = {"SEE_CONNECT": ORANGE, "SEE": ORANGE, "PARENT_FIRST": BLUE,
+                "CO_CREATE": TEAL, "CO_STABILIZE": TEAL, "STABILIZE": VIOLET}
 
 
 def is_review(d) -> bool:

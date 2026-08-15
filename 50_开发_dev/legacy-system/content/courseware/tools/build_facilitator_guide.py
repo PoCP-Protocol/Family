@@ -10,7 +10,8 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "parent_21day_camp.yaml"
-PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "PARENT_FIRST": "#2563eb", "CO_STABILIZE": "#0f766e"}
+PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "SEE": "#ea7317", "PARENT_FIRST": "#2563eb",
+                "CO_CREATE": "#0f766e", "CO_STABILIZE": "#0f766e", "STABILIZE": "#7c3aed"}
 
 
 def esc(x) -> str:
@@ -45,17 +46,25 @@ def build(doc: dict) -> str:
       标 [待讲师/专家补] 的"具体话术、常见卡点与应对、现场分寸"须由**持证讲师/教研专家**补写并终审。AI 不代签、不判临床有效。</div>
       <p class="rl">红线:{esc(" · ".join(m.get("red_lines", [])))} · 危机(自伤/家暴)→ 停课转人工。</p>
     </section>''']
-    days = doc.get("days") or []
+    days = doc.get("days") or doc.get("weeks") or []
+    unit = "Day" if doc.get("days") else "Week"
     total = len(days)
     for d in days:
         pcode = d.get("phase", ""); accent = PHASE_ACCENT.get(pcode, "#ea7317")
-        num = d.get("day"); ptitle = phases.get(pcode, {}).get("title", "")
+        num = d.get("day", d.get("week")); ptitle = phases.get(pcode, {}).get("title", "")
         review = is_review(d)
         goal = f'让家长练习「{esc(d.get("skill",""))}」;理解:{esc(d.get("why",""))}'
+        micro = d.get("parent_daily_micro")
         if review:
             steps = ('<li>带家长回看:'+esc(d.get("parent_action",""))+'</li>'
                      '<li>只谈"过程里发生了什么",不下结论、不评分。</li>'
                      '<li>各自选"下一步继续做的一件事"。</li>')
+        elif micro:
+            steps = ('<li>1. 引入本周焦点(为何有效):'+esc(d.get("weekly_focus",""))+' — '+esc(d.get("why",""))+'</li>'
+                     '<li>2. 示范(可说的话):"'+esc(d.get("say_it_tonight",""))+'"</li>'
+                     '<li>3. 布置每日微行动:'+ " / ".join(esc(x) for x in micro) +'</li>'
+                     '<li>4. 说明观察什么(过程非评分):'+esc(d.get("look_for",""))+'</li>'
+                     '<li>5. 守边界/提醒:'+esc(d.get("boundary",""))+'</li>')
         else:
             steps = ('<li>1. 引入(为何有效):'+esc(d.get("why",""))+'</li>'
                      '<li>2. 示范(今晚可说的话):"'+esc(d.get("say_it_tonight",""))+'"</li>'
@@ -63,7 +72,7 @@ def build(doc: dict) -> str:
                      '<li>4. 说明观察什么(过程非评分):'+esc(d.get("look_for",""))+'</li>'
                      '<li>5. 守边界/提醒:'+esc(d.get("boundary",""))+'</li>')
         pages.append(f'''<section class="page" style="--accent:{accent}">
-      <div class="head"><span class="day" style="background:{accent}">Day {esc(num)} / {total}</span><span class="phase">{esc(ptitle)}{" · 复盘" if review else ""}</span></div>
+      <div class="head"><span class="day" style="background:{accent}">{unit} {esc(num)} / {total}</span><span class="phase">{esc(ptitle)}{" · 复盘" if review else ""}</span></div>
       <h2>{esc(d.get("theme",""))}</h2>
       <div class="row"><b>本课目标</b><p>{goal}</p></div>
       <div class="row"><b>建议时长</b><p>自学 10–15 分钟 / 团体带练 20–30 分钟(建议,按班型调整)</p></div>
@@ -104,8 +113,9 @@ def main() -> int:
     out_dir = HERE.parent / "guides" / code
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(build(doc), encoding="utf-8")
-    n = len(doc.get("days") or [])
-    print(f"facilitator guide built: {out_dir/'index.html'}  ({n} day-pages + cover) [DRAFT scaffold]")
+    n = len(doc.get("days") or doc.get("weeks") or [])
+    unit = "day" if doc.get("days") else "week"
+    print(f"facilitator guide built: {out_dir/'index.html'}  ({n} {unit}-pages + cover) [DRAFT scaffold]")
     return 0
 
 

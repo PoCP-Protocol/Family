@@ -10,7 +10,8 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "parent_21day_camp.yaml"
-PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "PARENT_FIRST": "#2563eb", "CO_STABILIZE": "#0f766e"}
+PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "SEE": "#ea7317", "PARENT_FIRST": "#2563eb",
+                "CO_CREATE": "#0f766e", "CO_STABILIZE": "#0f766e", "STABILIZE": "#7c3aed"}
 
 
 def esc(x) -> str:
@@ -37,14 +38,15 @@ def build(doc: dict) -> str:
       <p class="tip">用法:每天做"一件小事",当晚记一句观察。这不是打分,不比较;记录是为了看见过程,不是给孩子或自己评级。</p>
       <p class="rl">提醒:{esc(" · ".join(m.get("red_lines", [])))}</p>
     </section>''']
-    days = doc.get("days") or []
+    days = doc.get("days") or doc.get("weeks") or []
+    unit = "Day" if doc.get("days") else "Week"
     total = len(days)
     for d in days:
         pcode = d.get("phase", ""); accent = PHASE_ACCENT.get(pcode, "#ea7317")
-        num = d.get("day"); ptitle = phases.get(pcode, {}).get("title", "")
+        num = d.get("day", d.get("week")); ptitle = phases.get(pcode, {}).get("title", "")
         if is_review(d):
             pages.append(f'''<section class="page" style="--accent:{accent}">
-      <div class="head"><span class="day" style="background:{accent}">Day {esc(num)} / {total}</span><span class="phase">{esc(ptitle)} · 复盘</span></div>
+      <div class="head"><span class="day" style="background:{accent}">{unit} {esc(num)} / {total}</span><span class="phase">{esc(ptitle)} · 复盘</span></div>
       <h2>{esc(d.get("theme",""))}</h2>
       <div class="field"><label>回看一件事:{esc(d.get("parent_action",""))}</label>{lines(3)}</div>
       <div class="field"><label>这段时间我注意到的变化(过程,非结论):</label>{lines(3)}</div>
@@ -52,10 +54,15 @@ def build(doc: dict) -> str:
       <p class="bound">{esc(d.get("boundary",""))}</p>
     </section>''')
             continue
+        micro = d.get("parent_daily_micro")
+        if micro:
+            do_html = f'<div class="do"><div style="width:100%"><b>本周焦点:{esc(d.get("weekly_focus",""))}</b>' + "".join(f'<p><span class="chk">▢</span> {esc(x)}</p>' for x in micro) + '</div></div>'
+        else:
+            do_html = f'<div class="do"><span class="chk">▢</span><div><b>今日一件小事</b><p>{esc(d.get("parent_action",""))}</p></div></div>'
         pages.append(f'''<section class="page" style="--accent:{accent}">
-      <div class="head"><span class="day" style="background:{accent}">Day {esc(num)} / {total}</span><span class="phase">{esc(ptitle)}</span></div>
+      <div class="head"><span class="day" style="background:{accent}">{unit} {esc(num)} / {total}</span><span class="phase">{esc(ptitle)}</span></div>
       <h2>{esc(d.get("theme",""))}</h2>
-      <div class="do"><span class="chk">▢</span><div><b>今日一件小事</b><p>{esc(d.get("parent_action",""))}</p></div></div>
+      {do_html}
       <div class="say"><b>今晚可以说的话</b><p>“{esc(d.get("say_it_tonight",""))}”</p></div>
       <div class="field"><label>我观察到(看:{esc(d.get("look_for",""))}):</label>{lines(3)}</div>
       <div class="field"><label>一句话反思:</label>{lines(1)}</div>
@@ -96,8 +103,9 @@ def main() -> int:
     out_dir = HERE.parent / "workbooks" / code
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "index.html").write_text(build(doc), encoding="utf-8")
-    n = len(doc.get("days") or [])
-    print(f"workbook built: {out_dir/'index.html'}  ({n} day-pages + cover)")
+    n = len(doc.get("days") or doc.get("weeks") or [])
+    unit = "day" if doc.get("days") else "week"
+    print(f"workbook built: {out_dir/'index.html'}  ({n} {unit}-pages + cover)")
     return 0
 
 

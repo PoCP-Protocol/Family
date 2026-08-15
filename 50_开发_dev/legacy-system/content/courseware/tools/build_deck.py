@@ -13,7 +13,8 @@ HERE = Path(__file__).resolve().parent
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "parent_21day_camp.yaml"
 
 # 设计系统 · 阶段配色带(在用色板内:橙/蓝 + 中性;不新增品牌色)
-PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "PARENT_FIRST": "#2563eb", "CO_STABILIZE": "#0f766e"}
+PHASE_ACCENT = {"SEE_CONNECT": "#ea7317", "SEE": "#ea7317", "PARENT_FIRST": "#2563eb",
+                "CO_CREATE": "#0f766e", "CO_STABILIZE": "#0f766e", "STABILIZE": "#7c3aed"}
 
 
 def esc(x) -> str:

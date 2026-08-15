@@ -1,0 +1,51 @@
+# 榜样教育 课程体系目录(FELS 移植 · 机器可读 V1)
+# 忠实取自 architecture/BANGYANG_COURSE_SERVICE_SYSTEM_V1.md(S1 战略白皮书 / S2 新商业模式,证据上限 E1)
+# 定位:FELS 旧世界参考内容层。content_ref 挂 legacy_training_camps/legacy_daily_tasks(FELS)。
+# 红线:忠实复刻旧世界,不洗白进 Family canonical;打卡≠结果 · 完课≠改变 · 顾问点评≠事实 · 不承诺疗效 · 危机转人工。
+# courseware_status: PRODUCED(四产物已出) / DRAFT_SOURCE(有 yaml 待出片) / TODO(仅登记待产) / NA(非课件:测评/服务)
+
+meta:
+  source_tier: E1
+  source: [S1_战略白皮书30p, S2_新商业模式20p, S3_合作方案]
+  positioning: "不是课程公司,是家庭成长数据科技公司;经营对象=持续成长的家庭"
+  funnel: 触发 → 觉醒 → 行动 → 改变 → 长期 → 传播
+  hero_combo: 家长训练营 + AI陪练 + 成长报告   # S1p12/p28 第一阶段资源集中
+
+# 一入口 · 三核心 · 五收入(S2p17 产品脊柱)
+product_spine:
+  - {tier: 入口层, item: 家庭/父母成长测评,   value: 看清问题与优先级, price_band: 免费,        role: 获客+画像, courseware_status: NA,           fels_layer: IMPLEMENTED_FELS1, family_migration: "Assessment + Growth Onboarding(测评≠GrowthState)"}
+  - {tier: 体验层, item: 21天成长挑战,         value: 第一次小改变,     price_band: "99–399",     role: 筛意愿建信任, courseware_status: PRODUCED,     course_code: PARENT_21D_V1, fels_layer: PLANNED_FELS2, family_migration: "21-Day GrowthCycle(打卡≠Outcome)"}
+  - {tier: 核心层, item: 90天家庭成长计划,     value: 系统性家庭改善,   price_band: "1999–9999",  role: 结果交付/案例, courseware_status: PRODUCED,     course_code: FAMILY_90D_V1, fels_layer: PLANNED_FELS2, family_migration: "90-Day GrowthJourney(完课≠改变)"}
+  - {tier: 长期层, item: 年度家庭成长会员,     value: 持续陪伴+权益,   price_band: "999–2999/年", role: 稳定收入/留存, courseware_status: NA,           fels_layer: PLANNED_FELS3, family_migration: "Family Growth Membership(会员≠家庭状态)"}
+  - {tier: 服务层, item: 咨询/沙龙/城市活动,   value: 个性问题+连接,   price_band: 咨询/活动,     role: 提升ARPU,    courseware_status: NA,           fels_layer: PLANNED_FELS3, family_migration: "Expert / FamilyActivity(顾问点评≠Fact)"}
+  - {tier: 生态层, item: 专家/城市伙伴/AI服务, value: 更多选择+规模陪伴, price_band: 抽佣/订阅,     role: 平台生态,    courseware_status: NA,           fels_layer: EXTERNAL_INTEGRATION, family_migration: "Ecosystem(后置)"}
+
+# 产品矩阵 5 条线(S1p11)—— 课件主要落在"家长成长/家庭关系";孩子线需 Consent 后置
+product_lines:
+  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_21D_V1], status: PRODUCED}
+  - {line: 家庭关系, user: 家庭,  value: 亲子沟通与共同任务, courseware: [FAMILY_90D_V1], status: PRODUCED}
+  - {line: 孩子成长, user: 孩子,  value: 习惯/动力/表达/自驱, courseware: [], status: TODO, note: "儿童直接产品 HOLD;需独立 Consent/未成年人边界,先不产孩子课件"}
+  - {line: AI陪伴,   user: 全家,  value: 每日反馈与成长计划, courseware: [], status: NA, note: "属 AI 产品线(Principal),非课件"}
+  - {line: 数据产品, user: 家庭/机构, value: 成长画像与报告, courseware: [], status: NA, note: "成长报告=只读投影,非课件;不做家庭总分/排名"}
+
+# 已产出课件清单(四产物:HTML deck / .pptx / 家长工作簿 / 讲师手册-DRAFT)
+produced_courseware:
+  - {course_code: PARENT_21D_V1, title: 21天家长训练营·先连接再纠正, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT}
+  - {course_code: FAMILY_90D_V1, title: 90天家庭成长计划·从家长先改变到共创稳定, units: 13周, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 5, status: EVIDENCE_READY_CONTENT_DRAFT}
+
+# 待产课件(登记,不臆造;需 spec + 循证 + 专家终审后再产)
+courseware_backlog:
+  - {topic: 手机管理/屏幕时间, line: 家长成长, priority: P1, note: 高频痛点(S1p28);待 needs-analysis + 循证}
+  - {topic: 学习习惯/自驱力,   line: 家长成长, priority: P1, note: 高频痛点;待循证}
+  - {topic: 青春期沟通冲突(进阶), line: 家庭关系, priority: P2, note: 21天之上的进阶专题}
+
+# 商业化统一门(所有课件继承;见 COMMERCIAL_COURSEWARE_METHOD_V1)
+commercial_gate_inherited: [HUMAN_EXPERT_SIGNOFF, FACILITATOR_GUIDE, PARENT_WORKBOOK, VISUAL_MEDIA, ASSESSMENT_REPORT_LOOP, SEGMENTATION, COMPLIANCE, REAL_VALIDATION_PLAN, RUNTIME_BINDING]
+
+# 边界
+boundary:
+  fels_layer_only: true
+  family_canonical_write: 0
+  fels2_capability: HOLD          # 21天/90天作为课件内容存在;其 program/checkin 运行时能力仍 HOLD
+  runtime_binding: HOLD
+  authorization_note: "课件内容可产;接产品消费闭环/激活 FELS-2 runtime 须架构师放行"
