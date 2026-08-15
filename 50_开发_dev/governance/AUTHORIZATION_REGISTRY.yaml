@@ -325,6 +325,21 @@ capabilities:
     supersedes: []
     notes: 仅登录既有绑定手机(注册=未来)。真实短信厂商(阿里云/腾讯云)= 独立 adapter,需凭证 → 见下 NOT_AUTHORIZED。
 
+  - capability_id: IAM_103_CONSUMER_ENFORCEMENT
+    stage: M3-W2R
+    status: INTERNAL_ALLOWED   # 裁决 M3-MOS-CLOSEOUT-WAVE-2 Lane A(TENANCY-001 PASS 后解锁 FULL)
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true          # Bearer→resolveActor→family scope;reviewer=认证身份+授权;ops 分离。FPAI_REQUIRE_BEARER=true 时 x-actor-id-only 消费必拒
+    live_external_call_authorized: false
+    pilot_authorized: false           # 本轮只做代码完整+跑通 Gate
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2R_IAM_103_FULL_GATE.md
+    authorized_at: "2026-08-15"
+    supersedes: []
+    notes: 消费路径 Bearer 强制(flag FPAI_REQUIRE_BEARER;默认关=内部 dogfood 仍 x-actor-id,带 Bearer 仍强制解析+family scope)。硬测试 9/9(valid/no-bearer/x-actor-only/expired/revoked/wrong-family/member/non-reviewer/reviewer)+ CANONICAL_WRITE_BYPASS=0。pilot/production 仍 NO;与 W2R-105 最终须共同 integration 跑 Golden E2E。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2
