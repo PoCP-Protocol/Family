@@ -1,0 +1,50 @@
+# 21天家长训练营 · 手机不靠没收,靠一起定规则(FELS 课程内容层)
+# 挂载:legacy_training_camps(camp_code=SCREEN_21D_V1)/ legacy_daily_tasks.content_ref
+# 主线:先连接不先控制 · 家长先示范 · 协商共管 → 逐步自主(非戒断/没收)
+# 证据:屏幕专项为纵向/评估级(E4,外推 MODERATE),机制主要引已核验的家长管理/自主支持(E6–E7)。全部 crossref 实核。
+# 红线:父母先改变 · 不贴标签(不诊断"手机成瘾")· 不制造焦虑 · 打卡≠结果 · 完课≠改变 · 观察≠事实 · 不承诺"戒手机" · 疑似成瘾/自伤/网络危险→转专业。
+meta:
+  camp_code: SCREEN_21D_V1
+  title: 21天家长训练营 · 手机不靠没收,靠一起定规则
+  duration_days: 21
+  audience: 家长(父母先改变;孩子不是被改造对象)
+  philosophy: 先连接不先控制;家长先示范自己的手机习惯;把"没收"换成"一起定规则、逐步交还自主"
+  phases:
+    - {code: SEE_CONNECT,  title: 看见与连接, day_from: 1,  day_to: 7}
+    - {code: PARENT_FIRST, title: 家长先改变, day_from: 8,  day_to: 14}
+    - {code: CO_STABILIZE, title: 共创与稳定, day_from: 15, day_to: 21}
+  evidence_grounding:            # 全部 crossref 实核(2026-08-15)
+    - {id: SCREEN_MONITOR, doi: "10.1016/j.cdnut.2024.103264",         grade: E4, verified: true, external_validity: MODERATE, note: "家长屏幕监控·纵向关联(2024;非RCT,方向性证据)"}
+    - {id: SCREEN_SMART,   doi: "10.4172/2375-4494.1000124",          grade: E4, verified: true, external_validity: MODERATE, note: "Screen Smart 家庭聚焦干预评估(2014;小样本/低层期刊)"}
+    - {id: TRIPLE_P_META,  doi: "10.1016/j.cpr.2014.04.003",          grade: E7, verified: true, external_validity: MODERATE, note: "Triple P meta(自主支持/有限选择机制)"}
+    - {id: IY_RCT,         doi: "10.5093/pi2022a2",                   grade: E7, verified: true, external_validity: MODERATE, note: "Incredible Years RCT(边界/一致性机制)"}
+    - {id: COERCIVE,       doi: "10.1017/S0954579414000169",         grade: E6, verified: true, external_validity: LIMITED,  note: "强制家庭过程(打断'催→对抗';早童样本)"}
+    - {id: PARENT_TEEN_COMM, doi: "10.1016/j.jadohealth.2017.11.067", grade: E6, verified: true, external_validity: 直接相关, note: "亲子沟通家长干预"}
+    - {id: EMO_COACH_RCT,  doi: "10.1016/j.adolescence.2015.04.005",  grade: E7, verified: true, external_validity: 直接相关, note: "情绪教练 RCT"}
+    - {id: EMO_REG_META,   doi: "10.32920/26052868",                 grade: E7, verified: true, external_validity: MODERATE, note: "情绪调节·家长 meta(具体肯定机制)"}
+  lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
+  red_lines: [父母先改变, 不贴标签, 不诊断手机成瘾, 不制造焦虑, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 不承诺戒手机, 危机转专业]
+  expert_review: {status: REQUIRED, sign_off: PENDING, reviewer: null}
+  runtime_binding: {status: NOT_WIRED, authorization: HOLD}
+days:
+  - {day: 1,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D1", theme: 先看见自己的手机习惯, skill: 家长自我觉察, why: 家长常低估自己的使用;改变从看见自己开始。, evidence_refs: [EMO_COACH_RCT], parent_action: 今天记录自己忍不住看手机的 3 个时刻。, say_it_tonight: "我发现我自己也总忍不住看手机。", look_for: 你自己的使用触发点(无聊/焦虑/习惯),不是给孩子记账。, boundary: 先看见,不评判;不偷看孩子手机。}
+  - {day: 2,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D2", theme: 先了解孩子在手机上做什么, skill: 用好奇代替指责, why: 先理解用途,才谈得上管理;指责会关上门。, evidence_refs: [PARENT_TEEN_COMM], parent_action: 问一句孩子最近爱看/爱玩什么,不评价。, say_it_tonight: "你最近在看的那个,能给我讲讲吗?", look_for: 孩子是否愿意讲、讲多少。, boundary: 了解≠监视;不查记录、不偷看。}
+  - {day: 3,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D3", theme: 先连接再谈规则, skill: 情绪确认, why: 情绪先被接住,规则才谈得下去。, evidence_refs: [EMO_COACH_RCT, EMO_REG_META], parent_action: 谈手机前先聊件别的、接住情绪再开口。, say_it_tonight: "我知道让你放下手机不容易。", look_for: 谈话是否更少对抗。, boundary: 连接不是套近乎的话术。}
+  - {day: 4,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D4", theme: 把屏幕时间分类看, skill: 区分而非一刀切, why: 学习/社交/娱乐不同用途,不该一把尺子。, evidence_refs: [], parent_action: 和孩子一起把手机用途分成几类。, say_it_tonight: "不同的用法,我们可以分开看。", look_for: 孩子怎么给自己的使用分类。, boundary: 不把所有屏幕都当敌人。}
+  - {day: 5,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D5", theme: 看见冲突点在哪, skill: 识别强制循环, why: 找到"催→对抗"的升级链,才能打断它。, evidence_refs: [COERCIVE], parent_action: 记下这周因手机起冲突的 1 个具体场景。, say_it_tonight: "刚才那次,我们俩都有点急。", look_for: 升级是从哪句话开始的。, boundary: 观察非指责。}
+  - {day: 6,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D6", theme: 家长先示范一次放下, skill: 家长示范, why: 要求孩子的,家长先做到,才有说服力。, evidence_refs: [IY_RCT], parent_action: 吃饭时家长先把手机收起来。, say_it_tonight: "吃饭时我们都把手机放一边好吗?", look_for: 家长示范后餐桌氛围的变化。, boundary: 先自己做到,再要求孩子。}
+  - {day: 7,  phase: SEE_CONNECT, content_ref: "SCREEN_21D_V1#D7", theme: 第一周小复盘, skill: 家长自我复盘, why: 看见"我先连接而没先控制"的时刻。, evidence_refs: [], parent_action: 回想这一周,记下一次你先连接、没先没收的时刻。, say_it_tonight: "这一周我在学着先听、先示范。", look_for: 一个你做到"先连接"的过程,不评分。, boundary: 复盘非考核。}
+  - {day: 8,  phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D8", theme: 从"没收"转"一起定", skill: 协商而非命令, why: 共同定的规则执行度远高于单方规定。, evidence_refs: [COERCIVE, TRIPLE_P_META], parent_action: 提议和孩子一起定一个手机小约定。, say_it_tonight: "这个规则我们一起定,你觉得怎样合理?", look_for: 孩子的参与程度。, boundary: 共定不是让孩子说了算;你仍是守护者。}
+  - {day: 9,  phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D9", theme: 给有限选择, skill: 自主支持, why: 有限选择支持自主、减少权力对抗。, evidence_refs: [TRIPLE_P_META, SCREEN_MONITOR], parent_action: 就使用时段给两个都可接受的选项让孩子选。, say_it_tonight: "作业前还是作业后用 30 分钟,你选。", look_for: 有选择后是否更配合。, boundary: 两个选项都要是你能接受的。}
+  - {day: 10, phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D10", theme: 温和而坚定守约定, skill: 边界与温度并存, why: 稳定的边界比一次严厉更有用。, evidence_refs: [IY_RCT, COERCIVE], parent_action: 约定到点,温和提醒并坚定执行一次。, say_it_tonight: "时间到了,我们说好的。", look_for: 坚定但不吼时的效果。, boundary: 坚定≠惩罚。}
+  - {day: 11, phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D11", theme: 家长也守自己的约定, skill: 一致性, why: 家长守约,孩子才信这套规则是公平的。, evidence_refs: [IY_RCT], parent_action: 家长也守一条自己的手机约定一次。, say_it_tonight: "我也在守我们的约定。", look_for: 一致性对信任的影响。, boundary: 双标会瓦解规则。}
+  - {day: 12, phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D12", theme: 关注内容而非只盯时长, skill: 关注质量, why: 陪看一次比只数分钟更能建立连接与判断。, evidence_refs: [SCREEN_SMART], parent_action: 和孩子一起看一次他喜欢的内容。, say_it_tonight: "陪你看看你喜欢的。", look_for: 共处而非监控带来的变化。, boundary: 陪看不是审查。}
+  - {day: 13, phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D13", theme: 做一张全家媒体计划, skill: 家庭媒体计划, why: 写下来、全家(含家长)都遵守,规则才立得住。, evidence_refs: [SCREEN_SMART, SCREEN_MONITOR], parent_action: 把约定写成一张全家媒体计划贴出来。, say_it_tonight: "我们做一张全家都遵守的计划。", look_for: 家长是否也在计划里。, boundary: 计划针对全家,不只针对孩子。}
+  - {day: 14, phase: PARENT_FIRST, content_ref: "SCREEN_21D_V1#D14", theme: 第二周小复盘, skill: 家长自我复盘, why: 家长先改变的证据在自己身上。, evidence_refs: [], parent_action: 记下一个你自己坚持了的新手机习惯。, say_it_tonight: "我先改了自己的一个习惯。", look_for: 一个你坚持住的改变。, boundary: 完课≠改变,改变靠继续做。}
+  - {day: 15, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D15", theme: 共创一条规则, skill: 共创, why: 一起定的规则孩子更愿意守。, evidence_refs: [COERCIVE], parent_action: 就一件事和孩子共定一条双方同意的规则。, say_it_tonight: "这条规则我们一起说了算。", look_for: 共定 vs 单方规定的执行度差别。, boundary: 共创不是甩锅给孩子。}
+  - {day: 16, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D16", theme: 逐步交还自主, skill: 渐进自主, why: 逐步交还小决定权,培养自我管理。, evidence_refs: [TRIPLE_P_META], parent_action: 把一个小决定权交给孩子(如自己定周末时段)。, say_it_tonight: "这个你来决定,我信你。", look_for: 被信任后的表现。, boundary: 交还是渐进的,不是一次放开。}
+  - {day: 17, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D17", theme: 具体肯定自我管理, skill: 具体肯定(非贴标签), why: 肯定具体行为比夸"自觉"更能巩固。, evidence_refs: [EMO_REG_META, TRIPLE_P_META], parent_action: 指出一次他自己管好时间的具体行为。, say_it_tonight: "你今天自己到点就放下了,不容易。", look_for: 具体肯定后该行为是否更常见。, boundary: 肯定行为,不贴人格标签。}
+  - {day: 18, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D18", theme: 反复时不否定, skill: 处理退步, why: 破例是常态,先连接比翻旧账有用。, evidence_refs: [EMO_COACH_RCT], parent_action: 破例时先接住情绪,不说"你又来了"。, say_it_tonight: "有起伏很正常,我们从今天继续。", look_for: 不否定 vs 责备的恢复速度。, boundary: 不否定≠没边界。}
+  - {day: 19, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D19", theme: 睡前不带手机的小仪式, skill: 连接仪式, why: 稳定的小仪式让规则可持续。, evidence_refs: [], parent_action: 约定睡前手机放客厅,并聊一句今天。, say_it_tonight: "睡前我们把手机放客厅,聊一句今天好吗?", look_for: 仪式坚持几天后的感觉。, boundary: 仪式贵在小而持续。}
+  - {day: 20, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D20", theme: 迁移到其他场景, skill: 泛化, why: 把"一起定规则"用到别的事,巩固方法。, evidence_refs: [], parent_action: 把"一起定规则"用到另一件事(如作息)。, say_it_tonight: "上次那个办法挺好,这件事我们也一起定?", look_for: 同一方法在新场景是否也管用。, boundary: 迁移是尝试,不强求每次成。}
+  - {day: 21, phase: CO_STABILIZE, content_ref: "SCREEN_21D_V1#D21", theme: 综合复盘与下一步, skill: 过程回看+选择继续, why: 看见 21 天的过程改变(非戒断结果),选一件继续。, evidence_refs: [], parent_action: 回看 21 天,选一个你要继续保持的做法。, say_it_tonight: "这 21 天我最想继续做的是……你觉得呢?", look_for: 一个你确定延续的改变。, boundary: 综合复盘非结营考核;疑似成瘾/网络危险请转专业。}

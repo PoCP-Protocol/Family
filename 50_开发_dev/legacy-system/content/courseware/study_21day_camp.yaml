@@ -1,0 +1,51 @@
+# 21天家长训练营 · 自驱不是催出来的(FELS 课程内容层)
+# 挂载:legacy_training_camps(camp_code=STUDY_21D_V1)/ legacy_daily_tasks.content_ref
+# 主线:从"监工/催"转"自主支持"(自我决定:自主·胜任·关系)+ 教孩子自我调节 + 具体肯定过程
+# 证据:自我调节学习有 meta/训练级(E6–E7);家长作业过度参与与成绩可能负相关(如实标注)。全部 crossref 实核。
+# 红线:父母先改变 · 不承诺提分 · 不比较排名 · 不贴"懒/笨"标签 · 打卡≠结果 · 完课≠改变 · 观察≠事实 · 危机转人工。
+meta:
+  camp_code: STUDY_21D_V1
+  title: 21天家长训练营 · 自驱不是催出来的
+  duration_days: 21
+  audience: 家长(父母先改变;孩子不是被改造对象)
+  philosophy: 从催与监工,转向自主支持;帮孩子建立自我调节(定目标·拆小步·自评),家长少代劳、多肯定过程
+  phases:
+    - {code: SEE_CONNECT,  title: 看见与连接, day_from: 1,  day_to: 7}
+    - {code: PARENT_FIRST, title: 家长先改变, day_from: 8,  day_to: 14}
+    - {code: CO_STABILIZE, title: 共创与稳定, day_from: 15, day_to: 21}
+  evidence_grounding:            # 全部 crossref 实核(2026-08-15)
+    - {id: SRL_META,      doi: "10.1007/s11409-008-9029-x",          grade: E7, verified: true, external_validity: MODERATE, note: "培养自我调节学习 meta(2008)"}
+    - {id: SRL_TRAIN,     doi: "10.1016/j.cedpsych.2021.101976",     grade: E6, verified: true, external_validity: MODERATE, note: "自我调节学习训练项目提升学业(2021;大学生样本,外推青少年 MODERATE)"}
+    - {id: HOMEWORK_META, doi: "10.7334/psicothema2023.92",          grade: E6, verified: true, external_validity: MODERATE, note: "家长作业参与三层 meta(2023;过度/控制式参与可能负相关——支持'少代劳')"}
+    - {id: TRIPLE_P_META, doi: "10.1016/j.cpr.2014.04.003",          grade: E7, verified: true, external_validity: MODERATE, note: "Triple P meta(自主支持/有限选择)"}
+    - {id: COERCIVE,      doi: "10.1017/S0954579414000169",         grade: E6, verified: true, external_validity: LIMITED,  note: "强制家庭过程(打断'催→拖';早童样本)"}
+    - {id: PARENT_TEEN_COMM, doi: "10.1016/j.jadohealth.2017.11.067", grade: E6, verified: true, external_validity: 直接相关, note: "亲子沟通家长干预"}
+    - {id: EMO_COACH_RCT, doi: "10.1016/j.adolescence.2015.04.005",  grade: E7, verified: true, external_validity: 直接相关, note: "情绪教练 RCT(处理畏难/退步)"}
+    - {id: EMO_REG_META,  doi: "10.32920/26052868",                 grade: E7, verified: true, external_validity: MODERATE, note: "情绪调节·家长 meta(具体肯定)"}
+    - {id: ROGERS,        doi: "10.1037/h0045357",                  grade: E2, verified: true, external_validity: MODERATE, note: "共情/主动倾听(理论背景)"}
+  lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
+  red_lines: [父母先改变, 不承诺提分, 不比较排名, 不贴懒或笨的标签, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 危机转人工]
+  expert_review: {status: REQUIRED, sign_off: PENDING, reviewer: null}
+  runtime_binding: {status: NOT_WIRED, authorization: HOLD}
+days:
+  - {day: 1,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D1", theme: 先看见自己的催促模式, skill: 家长自我觉察, why: 自驱的第一道障碍常是家长的催;先看见自己。, evidence_refs: [EMO_COACH_RCT], parent_action: 记录今天催学习的次数和语气。, say_it_tonight: "我发现我今天一直在催你。", look_for: 你催的触发点与语气,不是给孩子记账。, boundary: 先看见,不评判。}
+  - {day: 2,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D2", theme: 先了解卡在哪, skill: 用好奇代替追问, why: 问“做完没”会关上门,问“卡在哪”能打开门。, evidence_refs: [ROGERS, PARENT_TEEN_COMM], parent_action: 把"作业做完没"换成"今天卡在哪一步"。, say_it_tonight: "今天卡在哪一步了?", look_for: 孩子是否说出具体困难。, boundary: 了解困难≠替他做。}
+  - {day: 3,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D3", theme: 分清"这是谁的事", skill: 区分责任, why: 把学习责任还给孩子,自驱才有空间生长。, evidence_refs: [], parent_action: 列出学习里哪些本该孩子自己负责。, say_it_tonight: "这部分我相信你能自己安排。", look_for: 孩子对"这是我的事"的反应。, boundary: 还责任不是甩手不管。}
+  - {day: 4,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D4", theme: 先接住畏难情绪, skill: 情绪确认, why: 畏难先被接住,才愿意开始。, evidence_refs: [EMO_REG_META], parent_action: 谈学习前先接住一次畏难情绪。, say_it_tonight: "这科确实挺难的,我懂。", look_for: 接住情绪后是否更愿意动。, boundary: 接住情绪不等于降低要求。}
+  - {day: 5,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D5", theme: 看见"催→拖"的循环, skill: 识别强制循环, why: 越催越拖是升级链,先看见才能打断。, evidence_refs: [COERCIVE], parent_action: 记一次"我一催、他更不动"的场景。, say_it_tonight: "刚才我一催,你反而更不想动了对吗?", look_for: 催促与拖延之间的关系。, boundary: 观察非指责。}
+  - {day: 6,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D6", theme: 家长先示范专注, skill: 家长示范, why: 家长自己专注,比一百句"去学习"更有力。, evidence_refs: [], parent_action: 陪读时家长自己也专注做一件事。, say_it_tonight: "这段时间我也专心做我的事。", look_for: 共同专注的氛围。, boundary: 陪伴不是监视。}
+  - {day: 7,  phase: SEE_CONNECT, content_ref: "STUDY_21D_V1#D7", theme: 第一周小复盘, skill: 家长自我复盘, why: 看见"我忍住没催、给了空间"的时刻。, evidence_refs: [], parent_action: 记一次你忍住没催、给了孩子空间。, say_it_tonight: "这周我在学着少催、多信任。", look_for: 一个你给出空间的过程,不评分。, boundary: 复盘非考核。}
+  - {day: 8,  phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D8", theme: 从"监工"转"支持", skill: 自主支持, why: 自主支持比控制更能培养持久动机。, evidence_refs: [TRIPLE_P_META, SRL_TRAIN], parent_action: 把"快去写作业"换成问他的计划。, say_it_tonight: "你打算先做哪科?", look_for: 被问计划 vs 被催,反应差别。, boundary: 支持不是不管。}
+  - {day: 9,  phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D9", theme: 给有限选择, skill: 自主支持, why: 让孩子对顺序/时间有掌控感,减少对抗。, evidence_refs: [TRIPLE_P_META], parent_action: 让孩子自己排今天的学习顺序。, say_it_tonight: "顺序你定,几点开始你也定一个。", look_for: 有掌控感后是否更主动。, boundary: 选项范围仍由你把关。}
+  - {day: 10, phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D10", theme: 支持胜任感:拆小步, skill: 任务拆解, why: 拆成第一小步,降低启动门槛(自我调节)。, evidence_refs: [SRL_META], parent_action: 帮孩子把一个大任务拆出"第一小步"。, say_it_tonight: "我们先只做第一小步,好不好?", look_for: 有了第一小步是否更容易开始。, boundary: 拆步是脚手架,不是替他做。}
+  - {day: 11, phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D11", theme: 少代劳,退一步, skill: 适度参与, why: 控制式/过度作业参与与成绩可能负相关;退一步给自主。, evidence_refs: [HOMEWORK_META], parent_action: 今天不盯着改作业,只在被求助时帮。, say_it_tonight: "需要我的时候叫我。", look_for: 退一步后他自己完成了多少。, boundary: 退一步≠放任;安全/态度问题仍关注。}
+  - {day: 12, phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D12", theme: 目标要具体可达, skill: 目标设定, why: 具体可达的小目标比"好好学"更能驱动行为(自我调节)。, evidence_refs: [SRL_META, SRL_TRAIN], parent_action: 和孩子把"好好学"换成今天一个能完成的小目标。, say_it_tonight: "今天我们定一个能完成的小目标。", look_for: 有具体目标后完成情况。, boundary: 目标由孩子参与定,不是硬派。}
+  - {day: 13, phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D13", theme: 教一个自我调节动作, skill: 自我调节(计划-监控-自评), why: 学完自评"会了/还没",是自我调节的核心动作。, evidence_refs: [SRL_META, SRL_TRAIN], parent_action: 教孩子学完说一句"哪里会了、哪里还没"。, say_it_tonight: "学完我们各自说一句今天哪里有进步。", look_for: 孩子能否说出自己的进步/卡点。, boundary: 自评非自我批判。}
+  - {day: 14, phase: PARENT_FIRST, content_ref: "STUDY_21D_V1#D14", theme: 第二周小复盘, skill: 家长自我复盘, why: 家长先改变的证据在自己身上。, evidence_refs: [], parent_action: 记一个"我退一步、他多走一步"的时刻。, say_it_tonight: "我在学着退一步,把空间还给你。", look_for: 一个你坚持的新支持方式。, boundary: 完课≠改变。}
+  - {day: 15, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D15", theme: 共建学习小计划, skill: 共创, why: 一起定的计划孩子更愿意执行。, evidence_refs: [COERCIVE], parent_action: 和孩子一起做一张本周学习小计划。, say_it_tonight: "这张计划我们一起定。", look_for: 共定 vs 被安排的执行度。, boundary: 共创不是甩锅。}
+  - {day: 16, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D16", theme: 逐步交还计划权, skill: 渐进自主, why: 让孩子自己安排一天并复盘,练自我负责。, evidence_refs: [TRIPLE_P_META], parent_action: 让孩子自己安排一天学习,晚上一起看看。, say_it_tonight: "今天你自己安排,晚上我们复盘一下。", look_for: 自己安排后的投入度。, boundary: 交还是渐进的。}
+  - {day: 17, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D17", theme: 具体肯定努力与方法, skill: 具体肯定(非夸聪明), why: 肯定过程/策略比夸"聪明"更能维持动机。, evidence_refs: [EMO_REG_META, SRL_TRAIN], parent_action: 肯定一个具体的努力或好方法。, say_it_tonight: "你今天先做难的那科,这个方法不错。", look_for: 具体肯定后该行为是否更常见。, boundary: 肯定行为/策略,不贴人格标签,不比较。}
+  - {day: 18, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D18", theme: 退步时谈方法不贴标签, skill: 处理退步, why: 退步谈"哪步可调"比贴"懒/笨"有用。, evidence_refs: [EMO_COACH_RCT], parent_action: 退步时和孩子看看哪一步可以调整。, say_it_tonight: "这次没达到,我们看看哪一步可以调。", look_for: 谈方法 vs 责备的恢复速度。, boundary: 绝不贴"懒/笨";不比较排名。}
+  - {day: 19, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D19", theme: 固定的学习-连接小仪式, skill: 连接仪式, why: 稳定的开始/结束仪式让自我调节可持续。, evidence_refs: [], parent_action: 约定每天一个固定的学习开始/结束仪式。, say_it_tonight: "我们定一个每天开始学习前的小信号。", look_for: 仪式坚持后的稳定性。, boundary: 仪式贵在小而持续。}
+  - {day: 20, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D20", theme: 迁移到别的学习场景, skill: 泛化, why: 把有效方法迁到另一科/另一件事,巩固。, evidence_refs: [], parent_action: 把一个有效方法用到另一科或另一件事。, say_it_tonight: "上次那个办法挺好,这科我们也试试?", look_for: 同法在新场景是否也管用。, boundary: 迁移是尝试,不强求。}
+  - {day: 21, phase: CO_STABILIZE, content_ref: "STUDY_21D_V1#D21", theme: 综合复盘与下一步, skill: 过程回看+选择继续, why: 看见 21 天的过程改变(非分数),选一件继续。, evidence_refs: [], parent_action: 回看 21 天,选一个你要继续的学习支持方式。, say_it_tonight: "这 21 天我最想继续做的是……你觉得呢?", look_for: 一个你确定延续的支持方式。, boundary: 综合复盘非结营考核;不承诺提分。}
