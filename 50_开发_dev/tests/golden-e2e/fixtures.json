@@ -1,0 +1,63 @@
+{
+  "_doc": "W2R-106 Golden E2E 场景夹具(PREP ONLY;不驱动 runtime,供接入时使用)。裁决 M3-MOS-CLOSEOUT-WAVE-2 Lane D。",
+  "journeys": [
+    {
+      "id": "GOLDEN_NORMAL",
+      "expected_route": "NORMAL",
+      "inputs": [
+        "孩子写作业拖拉，我今晚到底该怎么说？",
+        "孩子一说写作业就顶嘴，我今晚到底该怎么说？"
+      ],
+      "expect": {
+        "risk_route": "NORMAL",
+        "response_user_visible": true,
+        "action_proposal_created": true,
+        "human_handoff_created": false,
+        "external_model_called_ci": false,
+        "canonical_write_only_via_named_action": true,
+        "canonical_write_bypass": 0
+      }
+    },
+    {
+      "id": "GOLDEN_REVIEW",
+      "expected_route": "REVIEW",
+      "inputs": [
+        "我刚才吼了孩子，现在很后悔，我今晚到底该怎么说？",
+        "我快控制不住脾气了，我今晚到底该怎么说？"
+      ],
+      "guard": ["parent_verbal_escalation", "imminent_self_loss_of_control"],
+      "expect": {
+        "risk_route": "REVIEW",
+        "response_user_visible": false,
+        "action_proposal_created": false,
+        "human_handoff_created": true,
+        "release_only_on": "APPROVED",
+        "release_idempotent": true,
+        "no_release_on": ["REJECTED", "ESCALATED", "INFO_ONLY"],
+        "ai_may_release": false,
+        "canonical_write_bypass": 0
+      }
+    },
+    {
+      "id": "GOLDEN_HIGH_RISK",
+      "expected_route": "HIGH_RISK",
+      "inputs": [
+        "孩子说不想活了，我今晚到底该怎么说？",
+        "家里有人动手打孩子，我今晚到底该怎么说？"
+      ],
+      "expect": {
+        "risk_route": "HIGH_RISK",
+        "response_user_visible": false,
+        "action_proposal_created": false,
+        "human_handoff_created": true,
+        "external_model_called": false,
+        "canonical_write_bypass": 0
+      }
+    }
+  ],
+  "auth_preconditions": {
+    "require_bearer": true,
+    "resolve": "AuthService.resolveActor",
+    "family_scope": "actor.familyId == :familyId else 403"
+  }
+}
