@@ -93,6 +93,20 @@ export class AuthService {
   }
 
   /**
+   * ACCOUNT_BOOTSTRAP:认证 Account 创建首个家庭(原子)。仅当该 Account 当前零家庭上下文时允许;
+   * 不需要既有 Family 权限,也不授予对既有 Family 的访问。返回新家庭上下文关键字段。
+   */
+  async createFirstFamily(token: string | undefined, displayName: string, guardianName: string): Promise<{ family_id: string; person_id: string; membership_id: string; role: string }> {
+    const account = await this.resolveAccount(token);
+    if (!account) throw new BadRequestException('invalid_or_expired_session');
+    if (!displayName?.trim() || !guardianName?.trim()) throw new BadRequestException('display_name and guardian_name are required');
+    const existing = await this.repo.countActiveContexts(account.accountId);
+    if (existing > 0) throw new BadRequestException('account_already_has_family (use invite/join, not CreateFirstFamily)');
+    const r = await this.repo.createFirstFamilyTx(account.accountId, displayName.trim(), guardianName.trim());
+    return { ...r, role: 'OWNER_GUARDIAN' };
+  }
+
+  /**
    * 服务端解析某 Family 的可信上下文:Account → ACTIVE binding → ACTIVE membership → Family。
    * 越权/伪造/撤销/无成员关系 → null(FAIL CLOSED)。URL familyId/x-actor-id 不构成授权。
    */

@@ -140,6 +140,57 @@ export class AuthRepository {
     return r.rows;
   }
 
+  /** Account 的 external_ref(用于新建 person 的 account_id 连续性)。 */
+  async accountExternalRef(accountId: string): Promise<string | null> {
+    const r = await this.pool.query(`select external_ref from accounts where account_id=$1`, [accountId]);
+    return r.rows[0]?.external_ref ?? null;
+  }
+
+  /** Account 当前拥有的 ACTIVE 家庭上下文数(用于 CreateFirstFamily 前置:必须为 0)。 */
+  async countActiveContexts(accountId: string): Promise<number> {
+    const r = await this.pool.query<{ n: string }>(
+      `select count(*)::int n from account_person_bindings b
+         join family_memberships m on m.person_id=b.person_id
+        where b.account_id=$1 and b.status='ACTIVE' and m.status='ACTIVE'`,
+      [accountId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  }
+
+  /**
+   * ACCOUNT_BOOTSTRAP:零家庭 Account 原子创建首个家庭。
+   * 单事务:Family + Guardian Person + AccountPersonBinding + OWNER_GUARDIAN FamilyMembership;失败全回滚。
+   * 不需要任何既有 Family 权限,也不授予对既有 Family 的访问。
+   */
+  async createFirstFamilyTx(accountId: string, displayName: string, guardianName: string): Promise<{ family_id: string; person_id: string; membership_id: string }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const extRef = (await client.query(`select external_ref from accounts where account_id=$1`, [accountId])).rows[0]?.external_ref ?? null;
+      const fam = (await client.query(`insert into families(display_name) values ($1) returning family_id`, [displayName])).rows[0].family_id;
+      const person = (await client.query(
+        `insert into persons(family_id, person_type, parent_role, display_name, account_id) values ($1,'PARENT','GUARDIAN',$2,$3) returning person_id`,
+        [fam, guardianName, extRef],
+      )).rows[0].person_id;
+      await client.query(`update families set primary_contact_person_id=$1 where family_id=$2`, [person, fam]);
+      await client.query(
+        `insert into account_person_bindings(account_id, person_id) values ($1,$2) on conflict (account_id, person_id) do nothing`,
+        [accountId, person],
+      );
+      const membership = (await client.query(
+        `insert into family_memberships(family_id, person_id, role, status, joined_at) values ($1,$2,'OWNER_GUARDIAN','ACTIVE', now()) returning membership_id`,
+        [fam, person],
+      )).rows[0].membership_id;
+      await client.query('COMMIT');
+      return { family_id: fam, person_id: person, membership_id: membership };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
   /** 解析 Account 在指定 Family 的可信上下文;无 ACTIVE binding+membership → null(FAIL CLOSED)。 */
   async resolveFamilyContext(accountId: string, familyId: string): Promise<{ family_id: string; person_id: string; membership_id: string; role: string } | null> {
     const r = await this.pool.query(

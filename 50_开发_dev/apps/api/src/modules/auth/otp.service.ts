@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomInt } from 'node:crypto';
 import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
@@ -58,7 +58,7 @@ export class OtpService {
     return { requested: true, dev_code: this.sender.peek?.(`phone:${phone}`) };
   }
 
-  async verifyCode(phoneRaw: string, code: string): Promise<{ token: string; expires_at: string; person_id: string; family_id: string }> {
+  async verifyCode(phoneRaw: string, code: string): Promise<{ token: string; expires_at: string; account_id: string }> {
     const phone = normPhone(phoneRaw);
     const destHash = sha256(`phone:${phone}`);
     const ch = await this.repo.findActiveChallenge(destHash);
@@ -69,9 +69,9 @@ export class OtpService {
       throw new UnauthorizedException('otp_code_mismatch');
     }
     await this.repo.consumeChallenge(ch.challenge_id);
-    // 登录:手机号须已绑定某 person(persons.account_id='phone:<n>')。未绑定 → 注册流程(未来)。
-    const person = await this.repo.findPersonByAccountId(`phone:${phone}`);
-    if (!person) throw new NotFoundException('phone_not_registered');
-    return this.auth.issueSession(person.person_id, person.family_id, `phone:${phone}`);
+    // TENANCY-V2 T2:OTP 只验证登录身份 → 签发【Account-scoped 会话】,不自动选家庭。
+    // 家庭上下文经 GET /auth/contexts 解析;零家庭 Account 合法(注册=CreateFirstFamily)。
+    // 废除旧语义(phone → person LIMIT 1 → family session)。
+    return this.auth.issueAccountSession(`phone:${phone}`);
   }
 }

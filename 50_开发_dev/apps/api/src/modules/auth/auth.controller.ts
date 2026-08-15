@@ -59,6 +59,12 @@ export class AuthController {
     return { account_id: account.accountId, contexts: await this.auth.listContexts(account.accountId) };
   }
 
+  // TENANCY-V2 T2:ACCOUNT_BOOTSTRAP —— 零家庭 Account 原子创建首个家庭(单事务)。
+  @Post('families')
+  async createFirstFamily(@Headers('authorization') authorization?: string, @Body() body?: { display_name?: string; guardian_name?: string }) {
+    return this.auth.createFirstFamily(bearerToken(authorization), body?.display_name ?? '', body?.guardian_name ?? '');
+  }
+
   // TENANCY-V2 T2:account-scoped 会话签发(内部;真实验证器 = OTP/IAM-102)。零家庭 Account 也可签发。
   @Post('account-session')
   async issueAccountSession(@Body() body: { external_ref?: string }) {
