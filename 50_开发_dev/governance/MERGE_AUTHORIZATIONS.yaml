@@ -18,6 +18,18 @@ history:
     merged: true
     process: EARLY_MERGE_PROCESS_VIOLATION
     technical_accepted_ex_post: true
+  - pr: 20
+    head_sha: "0c03cdbb6e9647699f226284fbb7e6d5d137eb6f"
+    merged: true
+    process: COMPLIANT   # 总架构师显式点名授权此 head(FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 1);guard 自我安装 bootstrap,head 未改
+    authorized_by: family-chief-architect
 
 # 未来对 master 的合并授权登记于此(每条须 pr + head_sha + authorized_by + ref + date):
-authorizations: []
+# 注:guard 现为 CI 可见 + 审计 SSOT;转「分支保护必需项」须总架构师在 GitHub 设置开启;
+#     另有引导豁免(ledger-only diff)待独立 guard-fix PR。故本轮登记为授权审计,合并为常规合并(非 --admin 绕过)。
+authorizations:
+  - pr: 21
+    head_sha: "74b48827fd4bb6183635f750bbdc6a68f7f21875"   # 同步 master 后的 reviewed head;其后仅本 ledger 登记提交
+    authorized_by: family-chief-architect
+    ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 2 (OPS_001 docs-only, guard PASS+CI green 条件授权)"
+    date: "2026-08-15"
