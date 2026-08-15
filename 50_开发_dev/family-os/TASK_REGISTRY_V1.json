@@ -1,52 +1,131 @@
 {
   "schema_version": 1,
-  "terminal_dependency_states": ["MERGED", "PASS_CLOSED"],
+  "terminal_dependency_states": [
+    "MERGED",
+    "PASS_CLOSED"
+  ],
   "tasks": [
     {
       "task_id": "W2R_103B",
       "title": "Real Evidence Grounding Completion",
-      "status": "READY",
+      "status": "PASS_CLOSED",
       "agent_id": "AGENT_PRINCIPAL_AI",
       "base_ref": "m3/w2r-104",
       "branch_prefix": "agent/w2r-103b-evidence",
       "merge_class": "B",
-      "authorization_state": "AUTHORIZED",
+      "authorization_state": "PASS_CLOSED",
       "authorization_ref": "Chief Architect M3-W2R-CONV-001 ruling",
       "depends_on": [],
-      "allowed_paths": ["20_知识_knowledge/**", "50_开发_dev/packages/principal-ai/**", "50_开发_dev/packages/principal-runtime/**", "50_开发_dev/apps/api/src/principal/**", "50_开发_dev/reports/m3/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml", "50_开发_dev/apps/web/**"],
-      "test_commands": ["cd 50_开发_dev && pnpm --filter @family/principal-ai test", "cd 50_开发_dev && pnpm --filter @family/principal-runtime test", "cd 50_开发_dev && pnpm typecheck"],
+      "allowed_paths": [
+        "20_知识_knowledge/**",
+        "50_开发_dev/packages/principal-ai/**",
+        "50_开发_dev/packages/principal-runtime/**",
+        "50_开发_dev/apps/api/src/modules/principal/**",
+        "50_开发_dev/reports/m3/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml",
+        "50_开发_dev/apps/web/**"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm --filter @family/principal-ai test",
+        "cd 50_开发_dev && pnpm --filter @family/principal-runtime test",
+        "cd 50_开发_dev && pnpm typecheck"
+      ],
       "acceptance": [
-        {"key":"external_evidence_refs","op":"gt","value":0},
-        {"key":"evidence_grade_present","op":"eq","value":true},
-        {"key":"provenance_present","op":"eq","value":true},
-        {"key":"compiled_bundle_pass","op":"eq","value":true},
-        {"key":"actual_model_input_grounded","op":"eq","value":true},
-        {"key":"family_canonical_writes","op":"eq","value":0}
-      ]
+        {
+          "key": "external_evidence_refs",
+          "op": "gt",
+          "value": 0
+        },
+        {
+          "key": "evidence_grade_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "provenance_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "compiled_bundle_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "actual_model_input_grounded",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "family_canonical_writes",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "merged_ref": "PR #12 → m3/w2r-104 → master"
     },
     {
       "task_id": "TENANCY_001",
       "title": "Family-Centric Multi-Tenancy and Data Sovereignty Contract",
-      "status": "READY",
+      "status": "PASS_CLOSED",
       "agent_id": "AGENT_TENANCY_IAM",
       "base_ref": "master",
       "branch_prefix": "agent/tenancy-001",
       "merge_class": "C",
-      "authorization_state": "AUTHORIZED",
+      "authorization_state": "PASS_CLOSED",
       "authorization_ref": "Chief Architect TENANCY-001 architecture-contract ruling",
       "depends_on": [],
-      "allowed_paths": ["50_开发_dev/architecture/tenancy/**", "50_开发_dev/docs/MULTI_TENANCY_DESIGN*", "50_开发_dev/reports/tenancy/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/apps/api/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"],
-      "test_commands": ["cd 50_开发_dev && node tools/family-devos/orchestrate.mjs validate"],
+      "allowed_paths": [
+        "50_开发_dev/architecture/tenancy/**",
+        "50_开发_dev/docs/MULTI_TENANCY_DESIGN*",
+        "50_开发_dev/reports/tenancy/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/apps/api/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && node tools/family-devos/orchestrate.mjs validate"
+      ],
       "acceptance": [
-        {"key":"family_data_owner_is_family","op":"eq","value":true},
-        {"key":"organization_not_family_owner","op":"eq","value":true},
-        {"key":"account_person_separated","op":"eq","value":true},
-        {"key":"engagement_access_grant_defined","op":"eq","value":true},
-        {"key":"publication_boundary_defined","op":"eq","value":true},
-        {"key":"runtime_schema_changes","op":"eq","value":0}
-      ]
+        {
+          "key": "family_data_owner_is_family",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "organization_not_family_owner",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "account_person_separated",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "engagement_access_grant_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "publication_boundary_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "runtime_schema_changes",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "merged_ref": "PR #17 → master"
     },
     {
       "task_id": "FLM_AC_002",
@@ -59,75 +138,182 @@
       "authorization_state": "AUTHORIZED",
       "authorization_ref": "Chief Architect FLM-AC-002 ruling",
       "depends_on": [],
-      "allowed_paths": ["50_开发_dev/legacy-system/**", "50_开发_dev/tools/legacy-migration/**", "50_开发_dev/architecture/**", "50_开发_dev/reports/flm/**", "00_复盘/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/apps/api/src/family/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"],
-      "test_commands": ["cd 50_开发_dev && pnpm legacy:test"],
+      "allowed_paths": [
+        "50_开发_dev/legacy-system/**",
+        "50_开发_dev/tools/legacy-migration/**",
+        "50_开发_dev/architecture/**",
+        "50_开发_dev/reports/flm/**",
+        "00_复盘/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/apps/api/src/family/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm legacy:test"
+      ],
       "acceptance": [
-        {"key":"fresh_reference_db_pass","op":"eq","value":true},
-        {"key":"real_http_pass","op":"eq","value":true},
-        {"key":"readonly_discovery_pass","op":"eq","value":true},
-        {"key":"pollution_attack_matrix_pass","op":"eq","value":true},
-        {"key":"family_canonical_delta","op":"eq","value":0}
+        {
+          "key": "fresh_reference_db_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "real_http_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "readonly_discovery_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "pollution_attack_matrix_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "family_canonical_delta",
+          "op": "eq",
+          "value": 0
+        }
       ]
     },
     {
       "task_id": "OPS_001",
       "title": "Pilot Operability and Analytics Contract",
-      "status": "READY",
+      "status": "PASS_CLOSED",
       "agent_id": "AGENT_OPS_ANALYTICS",
       "base_ref": "master",
       "branch_prefix": "agent/ops-001",
       "merge_class": "B",
-      "authorization_state": "AUTHORIZED",
+      "authorization_state": "PASS_CLOSED",
       "authorization_ref": "Chief Architect Family 1.0 MOS P0 operability ruling",
       "depends_on": [],
-      "allowed_paths": ["50_开发_dev/reports/ops/**", "50_开发_dev/architecture/ops/**", "25_研究_research/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml", "50_开发_dev/apps/api/**"],
-      "test_commands": ["cd 50_开发_dev && node tools/family-devos/orchestrate.mjs validate"],
+      "allowed_paths": [
+        "50_开发_dev/reports/ops/**",
+        "50_开发_dev/architecture/ops/**",
+        "25_研究_research/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml",
+        "50_开发_dev/apps/api/**"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && node tools/family-devos/orchestrate.mjs validate"
+      ],
       "acceptance": [
-        {"key":"activation_metric_defined","op":"eq","value":true},
-        {"key":"principal_metric_defined","op":"eq","value":true},
-        {"key":"action_acceptance_metric_defined","op":"eq","value":true},
-        {"key":"checkin_return_metrics_defined","op":"eq","value":true},
-        {"key":"canonical_semantic_changes","op":"eq","value":0}
-      ]
+        {
+          "key": "activation_metric_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "principal_metric_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "action_acceptance_metric_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "checkin_return_metrics_defined",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "canonical_semantic_changes",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "merged_ref": "PR #21 → master"
     },
     {
       "task_id": "W2R_104_FINAL",
       "title": "Principal Intelligence Quality Final Integration Review",
-      "status": "PLANNED",
+      "status": "PASS_CLOSED",
       "agent_id": "AGENT_PRINCIPAL_AI",
       "base_ref": "m3/w2r-104",
       "branch_prefix": "agent/w2r-104-final",
       "merge_class": "C",
-      "authorization_state": "AUTHORIZED",
+      "authorization_state": "PASS_CLOSED",
       "authorization_ref": "Chief Architect M3-W2R-CONV-001 ruling",
-      "depends_on": ["W2R_103B"],
-      "allowed_paths": ["50_开发_dev/packages/principal-ai/**", "50_开发_dev/apps/api/src/principal/**", "50_开发_dev/reports/m3/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"],
-      "test_commands": ["cd 50_开发_dev && pnpm test:required"],
+      "depends_on": [
+        "W2R_103B"
+      ],
+      "allowed_paths": [
+        "50_开发_dev/packages/principal-ai/**",
+        "50_开发_dev/apps/api/src/modules/principal/**",
+        "50_开发_dev/reports/m3/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
       "acceptance": [
-        {"key":"gold_eval_pass","op":"eq","value":true},
-        {"key":"independent_judge_present","op":"eq","value":true},
-        {"key":"human_review_contract_present","op":"eq","value":true},
-        {"key":"family_canonical_writes","op":"eq","value":0}
-      ]
+        {
+          "key": "gold_eval_pass",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "independent_judge_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "human_review_contract_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "family_canonical_writes",
+          "op": "eq",
+          "value": 0
+        }
+      ],
+      "merged_ref": "PR #16 → m3/w2r-104 → master (M3-W2R-104-FINAL-FIX-001)"
     },
     {
       "task_id": "W2R_106",
       "title": "Check-in Observation Timeline Return Loop",
-      "status": "PLANNED",
+      "status": "DRAFT_REFERENCE",
       "agent_id": "AGENT_CONSUMER_PRODUCT",
       "base_ref": "master",
       "branch_prefix": "agent/w2r-106",
       "merge_class": "B",
-      "authorization_state": "HOLD",
+      "authorization_state": "NOT_RUNTIME",
       "authorization_ref": null,
-      "depends_on": ["W2R_104_FINAL"],
-      "allowed_paths": ["50_开发_dev/apps/web/**", "50_开发_dev/apps/api/**", "50_开发_dev/reports/m3/**"],
-      "forbidden_paths": ["10_规格_spec/**", "30_素材_materials/**", "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"],
-      "test_commands": ["cd 50_开发_dev && pnpm test:required"],
-      "acceptance": []
+      "depends_on": [
+        "W2R_104_FINAL"
+      ],
+      "allowed_paths": [
+        "50_开发_dev/apps/web/**",
+        "50_开发_dev/apps/api/**",
+        "50_开发_dev/reports/m3/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
+      "acceptance": [],
+      "note": "PR #24 = Golden E2E acceptance reference (matrix+fixtures);后续升级为 PLATFORM-E2E-001 子集,现不做 runtime。"
     },
     {
       "task_id": "OBJECT_TREE_P2",
@@ -140,8 +326,12 @@
       "authorization_state": "HOLD",
       "authorization_ref": null,
       "depends_on": [],
-      "allowed_paths": ["50_开发_dev/packages/object-tree/**"],
-      "forbidden_paths": ["**"],
+      "allowed_paths": [
+        "50_开发_dev/packages/object-tree/**"
+      ],
+      "forbidden_paths": [
+        "**"
+      ],
       "test_commands": [],
       "acceptance": []
     },
@@ -157,9 +347,328 @@
       "authorization_ref": null,
       "depends_on": [],
       "allowed_paths": [],
-      "forbidden_paths": ["**"],
+      "forbidden_paths": [
+        "**"
+      ],
       "test_commands": [],
       "acceptance": []
+    },
+    {
+      "task_id": "W2R_105",
+      "title": "Human Confirmation Gate (REVIEW held → APPROVED release)",
+      "status": "PASS_CLOSED",
+      "agent_id": "AGENT_PRINCIPAL_AI",
+      "base_ref": "master",
+      "branch_prefix": "m3/w2r-105-clean",
+      "merge_class": "C",
+      "authorization_state": "PASS_CLOSED",
+      "authorization_ref": "Chief Architect FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 3",
+      "merged_ref": "PR #22 → master",
+      "depends_on": [],
+      "allowed_paths": [
+        "50_开发_dev/apps/api/src/modules/principal/**",
+        "50_开发_dev/packages/principal-ai/**",
+        "50_开发_dev/database/migrations/**",
+        "50_开发_dev/reports/m3/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
+      "acceptance": [
+        {
+          "key": "review_response_held",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "approved_release_once",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "ai_release_decision",
+          "op": "eq",
+          "value": false
+        },
+        {
+          "key": "family_canonical_writes",
+          "op": "eq",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "task_id": "IAM_103",
+      "title": "Principal Consumer/Reviewer Bearer Enforcement",
+      "status": "PASS_CLOSED",
+      "agent_id": "AGENT_TENANCY_IAM",
+      "base_ref": "master",
+      "branch_prefix": "m3/iam-103-full",
+      "merge_class": "C",
+      "authorization_state": "PASS_CLOSED",
+      "authorization_ref": "Chief Architect FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 4",
+      "merged_ref": "PR #23 → master",
+      "depends_on": [],
+      "allowed_paths": [
+        "50_开发_dev/apps/api/src/modules/principal/**",
+        "50_开发_dev/apps/api/src/modules/auth/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
+      "acceptance": [
+        {
+          "key": "bearer_enforced",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "x_actor_only_denied_when_required",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "cross_family_denied",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "canonical_write_bypass",
+          "op": "eq",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "task_id": "PLATFORM_V1_FOUNDATION",
+      "title": "Program rebase + WEB-ARCH-001 platform shell foundation",
+      "status": "PASS_CLOSED",
+      "agent_id": "AGENT_CONSUMER_PRODUCT",
+      "base_ref": "master",
+      "branch_prefix": "m3/platform-v1-foundation",
+      "merge_class": "C",
+      "authorization_state": "PASS_CLOSED",
+      "authorization_ref": "Chief Architect FAMILY-PLATFORM-V1-BUILD-001 (点名授权 PR #26)",
+      "merged_ref": "PR #26 → master",
+      "depends_on": [],
+      "allowed_paths": [
+        "50_开发_dev/apps/web/**",
+        "50_开发_dev/architecture/platform/**",
+        "50_开发_dev/governance/PROGRAM_STATUS_PLATFORM_V1.md",
+        "50_开发_dev/reports/platform/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm --filter @family/web test"
+      ],
+      "acceptance": [
+        {
+          "key": "platform_structure_present",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "canonical_writes",
+          "op": "eq",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "task_id": "TENANCY_V2_T1_T2",
+      "title": "Account domain + FamilyMembership + Account-scoped Session + FamilyScopeGuard",
+      "status": "READY",
+      "agent_id": "AGENT_TENANCY_IAM",
+      "base_ref": "master",
+      "branch_prefix": "platform/tenancy-v2-t1-t2",
+      "merge_class": "C",
+      "authorization_state": "AUTHORIZED",
+      "authorization_ref": "Chief Architect FAMILY-PLATFORM-TENANCY-FOUNDATION-001 (Phase 1/2 T1+T2)",
+      "depends_on": [
+        "TENANCY_001",
+        "IAM_103"
+      ],
+      "allowed_paths": [
+        "50_开发_dev/architecture/tenancy/**",
+        "50_开发_dev/reports/tenancy/**",
+        "50_开发_dev/database/migrations/**",
+        "50_开发_dev/apps/api/src/modules/auth/**",
+        "50_开发_dev/apps/api/src/modules/family/**",
+        "50_开发_dev/packages/contracts/**",
+        "50_开发_dev/apps/api/**/*.spec.ts"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
+      "acceptance": [
+        {
+          "key": "account_domain",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "account_person_binding",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "family_membership",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "multi_family_context",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "zero_family_account",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "account_scoped_session",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "family_scope_guard",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "consumer_x_actor_id_trust",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "key": "cross_family_read",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "key": "cross_family_write",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "key": "idor_cross_family",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "key": "canonical_semantic_delta",
+          "op": "eq",
+          "value": 0
+        },
+        {
+          "key": "canonical_bypass",
+          "op": "eq",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "task_id": "PLATFORM_SHELL_CORRECTION",
+      "title": "Correct PR#26 shell to Account-scoped multi-family AuthContext",
+      "status": "PLANNED",
+      "agent_id": "AGENT_CONSUMER_PRODUCT",
+      "base_ref": "master",
+      "branch_prefix": "platform/shell-correction",
+      "merge_class": "C",
+      "authorization_state": "AUTHORIZED_AFTER_T1T2",
+      "authorization_ref": "Chief Architect FAMILY-PLATFORM-TENANCY-FOUNDATION-001 Phase 2",
+      "depends_on": [
+        "TENANCY_V2_T1_T2"
+      ],
+      "allowed_paths": [
+        "50_开发_dev/apps/web/**",
+        "50_开发_dev/reports/platform/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm --filter @family/web test"
+      ],
+      "acceptance": [
+        {
+          "key": "single_family_session_removed",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "context_from_auth_contexts",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "url_family_not_authority",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    {
+      "task_id": "PLATFORM_AUTH_ONBOARDING",
+      "title": "Login / Registration / First-Family Onboarding",
+      "status": "PLANNED",
+      "agent_id": "AGENT_CONSUMER_PRODUCT",
+      "base_ref": "master",
+      "branch_prefix": "platform/auth-onboarding",
+      "merge_class": "C",
+      "authorization_state": "AUTHORIZED_AFTER_T1T2",
+      "authorization_ref": "Chief Architect FAMILY-PLATFORM-TENANCY-FOUNDATION-001 Phase 3",
+      "depends_on": [
+        "TENANCY_V2_T1_T2",
+        "PLATFORM_SHELL_CORRECTION"
+      ],
+      "allowed_paths": [
+        "50_开发_dev/apps/web/**",
+        "50_开发_dev/apps/api/src/modules/auth/**",
+        "50_开发_dev/apps/api/src/modules/family/**"
+      ],
+      "forbidden_paths": [
+        "10_规格_spec/**",
+        "30_素材_materials/**",
+        "50_开发_dev/governance/AUTHORIZATION_REGISTRY.yaml"
+      ],
+      "test_commands": [
+        "cd 50_开发_dev && pnpm test:required"
+      ],
+      "acceptance": [
+        {
+          "key": "zero_family_onboarding",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "key": "no_uuid_entry",
+          "op": "eq",
+          "value": true
+        }
+      ]
     }
   ]
 }
