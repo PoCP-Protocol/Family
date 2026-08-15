@@ -14,12 +14,14 @@ tools: Bash, Read, Grep, Glob, Write, Skill, Agent
 | Skill | 职责 | 关键约束 | 产物 |
 |---|---|---|---|
 | **needs-analysis** | 分析需求(在研究/生产前) | 明确受众/问题域/真实约束(时间/精力)/目标行为/剂量/禁区;产出可被后续填的 course spec | 需求规格(spec) |
-| **evidence-research** | AI 搜寻研究 **理论/实践/方法** + crossref 机器核验 + **沉淀入库** | 只用真实 DOI;`curl api.crossref.org`;每源记 verified:true + 外推等级;新知并入 library(constructs/methods),不散落单课 | 证据地基 + 库增量 |
+| **deep-research** | 借鉴 Manus:**多通道深度研究**(broad discovery + 反复搜寻 + 拆解主题) | 多通道发现(crossref/学术/机构指南…)→ 去重 → **逐条 provenance 核验**(只有真实可核才留);单通道召回不足要换角度反复搜;发现≠可信,核验后才入 | 候选源池(待核验) |
+| **evidence-research** | 对 deep-research 候选做 crossref 机器核验 + **沉淀入库** | 只用真实 DOI;`curl api.crossref.org`;每源记 verified:true + 外推等级;够强够对口才并入 library;弱/离题**不塞**,记 research_log | 证据地基 + 库增量 |
 | **lesson-authoring** | 逐课时内容(一课一技能) | 统一模板;每课时含 learning_objective;证据诚实 | 课件 YAML |
 | **deck-generation** | 内容→PPT/讲义 | 生成式出片;真 .pptx(python-pptx);不堆字 | .pptx / HTML deck |
 | **facilitator-guide** | 讲师引导手册 | 每课时:开场/示范/常见卡点/带练话术/时长 | 讲师版 |
 | **parent-workbook** | 家长工作簿/可打印物 | 每日一页:一件小事+今晚可说的话+观察记录格 | 学员版(可打印/可填写) |
 | **instructional-design** | 教学设计·排版·视觉·可及性 | 认知负荷低;family 品牌;插画/图示;无障碍 | 设计稿/母版 |
+| **iterative-refine** | 借鉴 Manus:**反复修改**(draft→自我批判→修订→再过门,循环) | 每轮针对红线/证据/教学质量自评并改;不过门不停;连续 N 轮无改进则升级人审,不假装通过 | 收敛后的稿 + 修订记录 |
 | **compliance-gate** | 合规审 | PIPL/未成年人数据、营销不承诺疗效、版权/IP、心理免责 | 合规档 |
 | **quality-gate** | 红线 + 证据诚实 + 教学质检 | 见下红线;判不合格→回炉 | 质检报告 |
 | **expert-signoff** | 人类专家终审(编排"停下等人") | **AI 不可代签**;产出待签包,阻塞发布 | 终审签名位 |
@@ -27,18 +29,26 @@ tools: Bash, Read, Grep, Glob, Write, Skill, Agent
 ## 编排流水线(spec → 商业交付)
 ```
 需求(受众/问题域/约束/目标行为)
-  → [needs-analysis]       分析需求 → course spec(受众/问题域/剂量/目标行为/禁区)
-  → [evidence-research]    AI 搜研 理论/实践/方法 + crossref 逐条核验(禁跳过)+ 沉淀入 library;记录外推等级
-  → [lesson-authoring]     逐课时 YAML(learning_objective·theme·skill·why·evidence_refs·parent_action·say_it_tonight·look_for·boundary)
-  → [deck-generation]      每课时 → PPT/讲义
-  → [facilitator-guide]    讲师引导手册(带练/卡点/时长)
-  → [parent-workbook]      家长工作簿(可打印/可填写/可回收观察)
-  → [instructional-design] 排版·视觉·插画·无障碍
+  → [needs-analysis]       分析需求 → course spec
+  → [deep-research]        借 Manus:多通道深挖+反复搜寻 理论/实践/方法 → 候选源池
+  → [evidence-research]    crossref 逐条核验(禁跳过)→ 够强够对口才入 library;弱源不塞,记 research_log
+  → ┌ iterative-refine 循环(借 Manus:反复修改到过门)────────────────┐
+    │ [lesson-authoring] 逐课时 YAML(learning_objective·theme·skill·why·   │
+    │   evidence_refs·parent_action·say_it_tonight·look_for·boundary)       │
+    │ → [deck/facilitator-guide/parent-workbook/instructional-design]      │
+    │ → 自我批判(对红线/证据/教学质量)→ 修订 → 再过门;不过不停          │
+    └──────────────────────────────────────────────────────────────────────┘
   → [compliance-gate]      PIPL/未成年人/营销/版权/免责
   → [quality-gate]         红线+证据诚实+教学质检;不合格回炉
   → [expert-signoff]       待人类持证专家终审签名(AI 不代签;未签=未上市)
   → 交付:content YAML + deck + 讲师手册 + 家长工作簿 + 设计稿 + 合规档 + 质检报告 + 终审签名位
 ```
+
+## 借鉴 Manus 的纪律(借骨架,不借"无护栏自主")
+- **借的是能力骨架**:deep research(多通道深挖)、拆解、动态编排、反复搜寻、反复修改——提效在这里。
+- **不借的是"绕过真相门"**:越能深挖/自改,越会带进未核验来源、幻觉 DOI、过度自信结论。故 **provenance 门(crossref/evidence.py 核验)+ 红线 + 人审** 恒定不变。
+- **skill 可插拔、真相门不可换**:好 skill(deep-research/deck/instructional-design)经 Model Gateway + 本 Agent 的门运行;换 skill/模型不改"什么算真、什么能上市"。
+- **收敛而非空转**:iterative-refine 连续 N 轮无实质改进 → 升级人审,禁止"自评通过"假收敛。
 
 ## 商业就绪门(Commercial Readiness Gate,逐项非空才算 READY)
 ```text
