@@ -10,8 +10,11 @@ import path from 'node:path';
 import { PrincipalService } from '../../../apps/api/dist/modules/principal/principal.service.js';
 import { buildVendorGateway } from '../../../packages/ai-gateway/dist/index.js';
 
-process.env.FPAI_RUNTIME_PROFILE = 'model_first_internal';
-process.env.FPAI_PRINCIPAL_PROVIDER = 'real';
+// 默认走 live 内部 profile(真实外呼判者);设 W2R104_DETERMINISTIC=1 走 CI 口径确定性底座(零外呼、可复现)。
+if (!process.env.W2R104_DETERMINISTIC) {
+  process.env.FPAI_RUNTIME_PROFILE = 'model_first_internal';
+  process.env.FPAI_PRINCIPAL_PROVIDER = 'real';
+}
 process.env.FPAI_MODEL_VENDOR = 'anthropic';
 process.env.ANTHROPIC_AUTH_TOKEN = process.env.ANTHROPIC_AUTH_TOKEN || process.env.IBM_CLAUDE_CODE_KEY || process.env.ANTHROPIC_API_KEY;
 process.env.FPAI_MODEL_TIMEOUT_MS = process.env.FPAI_MODEL_TIMEOUT_MS || '35000';

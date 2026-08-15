@@ -4,7 +4,7 @@ import type { InterventionCode, StartInterventionResponse } from '@family/contra
 import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
-  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality,
+  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality, parentVerbalEscalationReview,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
 import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, resolveProviderPolicy, FPAI_PROVIDER_REGISTRY_SNAPSHOT, type ProcessingDataCategory } from '@family/principal-runtime';
@@ -232,6 +232,15 @@ export class PrincipalService {
       route = 'REVIEW';
       await this.repo.recordProductEvent('principal_quality_gate_failed', familyId, sessionId, correlationId,
         { dimensions: verdict.dimensions, failed_checks: verdict.failed_checks, judged_by: verdict.judged_by });
+    }
+
+    // W2R-104-FINAL-FIX-001:确定性 REVIEW 升级护栏(落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
+    // 家长本人【已经发生】的激烈言语攻击/情绪失控言语 → 至少 REVIEW。只升不降(仅 NORMAL→REVIEW),
+    // 独立于 HIGH_RISK precheck 与生成式 judge;model 可判 NORMAL,专家接地的确定性策略据此升级。
+    if (route === 'NORMAL' && parentVerbalEscalationReview({ user_message: userMessage })) {
+      route = 'REVIEW';
+      await this.repo.recordProductEvent('principal_review_escalation_guard', familyId, sessionId, correlationId,
+        { guard: 'parent_verbal_escalation', escalated_from: 'NORMAL', escalated_to: 'REVIEW' });
     }
 
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);

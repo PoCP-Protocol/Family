@@ -382,6 +382,70 @@ export function safetyPostcheck(output: PrincipalAiOutput, precheckRoute: Princi
   return output.risk_route === 'HIGH_RISK' ? 'REVIEW' : output.risk_route;
 }
 
+/**
+ * ParentVerbalEscalationReviewGuard(W2R-104-FINAL-FIX-001,落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
+ *
+ * 语义(冻结,狭义):家长【本人】【已经发生】的【明显激烈言语攻击/情绪失控言语行为】→ 至少 REVIEW。
+ *   —— 强调 ALREADY_OCCURRED;不含"担心会发生 / 一般烦躁 / 一般生气 / 后悔普通沟通"。
+ *
+ * 这是【确定性升级护栏】,独立于 HIGH_RISK precheck 与生成式 quality judge(不污染两者)。
+ * 只做 NORMAL → REVIEW(只升不降);由调用方保证绝不 REVIEW→NORMAL、绝不 HIGH_RISK→REVIEW。
+ * 纯函数、无外呼。返回 true = 命中确定性 REVIEW 条件。
+ *
+ * 判定三要素(须同时满足):
+ *   SELF_ACTOR         主语是"我"(以主谓序 + 介词宾语标记区分"孩子冲我发火"这类 actor=孩子);
+ *   ALREADY_OCCURRED   含已发生标记(了/过/刚才/刚刚/方才),排除"快/会/等下/怕"等将来或担心;
+ *   VERBAL_ESCALATION  激烈言语动词/短语(吼/骂/大吼/发火/凶/训/说了…伤人的/重的/难听的话)。
+ */
+const PVE_VERBS = ['吼', '大吼', '骂', '发火', '发脾气', '凶', '训'];
+const PVE_PHRASES = ['伤人的话', '很重的话', '特别重的话', '难听的话', '重话'];
+const PVE_OCCURRED = ['了', '过', '刚才', '刚刚', '方才'];
+const PVE_FUTURE = ['怕', '担心', '会不会', '可能', '快要', '快控制不住', '等下', '待会', '一会', '万一', '要是', '以后', '将来'];
+const PVE_CHILD = ['孩子', '娃', '儿子', '女儿', '闺女', '他', '她'];
+const PVE_OBJECT_PREP = '冲对朝向跟给和骂';
+
+/** 判定某激烈动词出现处的施动者是否为家长本人(而非孩子)。 */
+function pveActorIsParentSelf(text: string, verbIdx: number): boolean {
+  let selfIdx = -1;
+  for (let i = 0; i < verbIdx; i++) {
+    if (text[i] === '我') {
+      const prev = i > 0 ? text[i - 1] : '';
+      if (!PVE_OBJECT_PREP.includes(prev)) selfIdx = i; // "冲我/对我/跟我" 中的我是宾语,不算施动者
+    }
+  }
+  let childIdx = -1;
+  for (const c of PVE_CHILD) {
+    let from = 0;
+    for (;;) {
+      const idx = text.indexOf(c, from);
+      if (idx < 0 || idx >= verbIdx) break;
+      const prev = idx > 0 ? text[idx - 1] : '';
+      if (!PVE_OBJECT_PREP.includes(prev)) childIdx = Math.max(childIdx, idx); // "冲孩子" 中孩子是宾语,不算施动者
+      from = idx + c.length;
+    }
+  }
+  return selfIdx >= 0 && selfIdx >= childIdx; // 我 存在且为最近的(非宾语)主语
+}
+
+export function parentVerbalEscalationReview(
+  input: Pick<PrincipalAiInput, 'user_message' | 'scene_hint'>,
+): boolean {
+  const text = `${input.scene_hint ?? ''} ${input.user_message}`;
+  if (containsAny(text, PVE_FUTURE)) return false;           // 将来/担心 → 不由本护栏升级
+  if (!containsAny(text, PVE_OCCURRED)) return false;         // 必须已发生
+  const verbHits: number[] = [];
+  for (const v of PVE_VERBS) {
+    const idx = text.indexOf(v);
+    if (idx >= 0) verbHits.push(idx);
+  }
+  for (const p of PVE_PHRASES) {
+    const idx = text.indexOf(p);
+    if (idx >= 0) verbHits.push(idx);
+  }
+  if (verbHits.length === 0) return false;
+  return verbHits.some((vIdx) => pveActorIsParentSelf(text, vIdx));
+}
+
 export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = safetyPrecheck(input)): PrincipalRetrievalResult {
   const scenarioId = detectScenario(input);
   const methodCards = REVIEWED_METHOD_CARDS.filter((card) => {

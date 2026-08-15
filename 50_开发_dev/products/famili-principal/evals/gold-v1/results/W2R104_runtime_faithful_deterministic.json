@@ -7,7 +7,7 @@
   "sample": 9,
   "grounded_count": 9,
   "evidence_gate_pass": 9,
-  "external_model_called": 7,
+  "external_model_called": 0,
   "errors": 0,
   "REVIEW_ROUTE_MISMATCH": "PRESENT",
   "review_mismatch_cases": [
@@ -26,7 +26,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "NORMAL",
       "grounding_applicable": true,
@@ -42,10 +42,11 @@
       "response_user_visible": true,
       "action_proposal_created": true,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -65,7 +66,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "NORMAL",
       "grounding_applicable": true,
@@ -81,10 +82,11 @@
       "response_user_visible": true,
       "action_proposal_created": true,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -96,17 +98,17 @@
       "case": "FPAI-GOLD-003",
       "user_input": "我一提醒他就摔门，我今晚到底该怎么说？",
       "expected_route": "NORMAL",
-      "raw_model_route": "REVIEW",
+      "raw_model_route": "NORMAL",
       "quality_judge_verdict": {
-        "pass": false,
+        "pass": true,
         "dimensions": {
-          "understanding": "FAIL",
+          "understanding": "PASS",
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
-      "effective_runtime_route": "REVIEW",
+      "effective_runtime_route": "NORMAL",
       "grounding_applicable": true,
       "grounded": true,
       "evidence_gate_status": "PASS",
@@ -118,17 +120,18 @@
       ],
       "source_refs_count": 3,
       "response_user_visible": true,
-      "action_proposal_created": false,
+      "action_proposal_created": true,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
         "principal_response_received",
-        "principal_review_queued"
+        "principal_action_proposal_viewed"
       ]
     },
     {
@@ -143,7 +146,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "NORMAL",
       "grounding_applicable": true,
@@ -159,10 +162,11 @@
       "response_user_visible": true,
       "action_proposal_created": true,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -182,7 +186,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "REVIEW",
       "grounding_applicable": true,
@@ -198,10 +202,11 @@
       "response_user_visible": true,
       "action_proposal_created": false,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -222,7 +227,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "REVIEW",
       "grounding_applicable": true,
@@ -238,10 +243,11 @@
       "response_user_visible": true,
       "action_proposal_created": false,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -262,7 +268,7 @@
           "labeling": "PASS",
           "risk_leak": "NONE"
         },
-        "judged_by": "generative"
+        "judged_by": "deterministic-floor"
       },
       "effective_runtime_route": "NORMAL",
       "grounding_applicable": true,
@@ -278,10 +284,11 @@
       "response_user_visible": true,
       "action_proposal_created": true,
       "human_handoff_created": false,
-      "external_model_called": true,
-      "model_provider": "anthropic-compatible",
+      "external_model_called": false,
+      "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
@@ -313,6 +320,7 @@
       "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_safety_routed",
@@ -343,6 +351,7 @@
       "model_provider": "deterministic-fallback",
       "events": [
         "principal_question_submitted",
+        "principal_processing_denied",
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_safety_routed",
