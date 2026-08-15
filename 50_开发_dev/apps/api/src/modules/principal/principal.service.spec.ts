@@ -151,7 +151,12 @@ function useCaseAwareGateway(mainOutput: object, judgeVerdict: object) {
 const reflectingOutput = (message: string) => ({ ...VALID_OUTPUT, what_i_hear: `我听到你说:${message}` });
 
 function repoWithSpies(consents: CanonicalConsentRow[]) {
-  const calls = { events: [] as string[], proposalSaved: 0, handoffSaved: 0, eventPayloads: {} as Record<string, unknown> };
+  // 合并:W2R-104 eventPayloads(judge/grounding 事件断言)+ W2R-105 lastHandoffResponseId 与内存态闭环。
+  const calls = { events: [] as string[], proposalSaved: 0, handoffSaved: 0, eventPayloads: {} as Record<string, unknown>, lastHandoffResponseId: null as string | null };
+  // W2R-105:极简内存态,让 REVIEW 扣留 → 人工确认 → 释放的闭环可在单测里端到端验证。
+  const responses = new Map<string, unknown>();
+  const handoffs = new Map<string, { family_id: string; status: string; resolution: string | null; response_id: string | null; released_at: Date | null }>();
+  let hSeq = 0;
   const repo = {
     addMessage: vi.fn(async () => {}),
     recordProductEvent: vi.fn(async (name: string, _f?: unknown, _s?: unknown, _c?: unknown, payload?: unknown) => { calls.events.push(name); calls.eventPayloads[name] = payload; }),
@@ -164,11 +169,29 @@ function repoWithSpies(consents: CanonicalConsentRow[]) {
     countRealModelRunsToday: vi.fn(async () => 0),
     countRealAttemptsToday: vi.fn(async () => 0),
     saveModelRun: vi.fn(async () => {}),
-    saveHandoff: vi.fn(async () => { calls.handoffSaved += 1; }),
-    saveResponse: vi.fn(async () => ({ response_id: 'r1' })),
+    saveHandoff: vi.fn(async (_s: string, familyId: string, _subj: string, _route: string, _trig: string, _role: string | null = null, responseId: string | null = null) => {
+      calls.handoffSaved += 1; calls.lastHandoffResponseId = responseId;
+      handoffs.set(`h${++hSeq}`, { family_id: familyId, status: 'OPEN', resolution: null, response_id: responseId, released_at: null });
+    }),
+    saveResponse: vi.fn(async (_s: string, _f: string, _r: string, _v: boolean, output: unknown) => { responses.set('r1', output); return { response_id: 'r1' }; }),
     saveProposal: vi.fn(async () => { calls.proposalSaved += 1; return { proposal_id: 'p1' }; }),
+    resolveHandoff: vi.fn(async (handoffId: string, familyId: string, _actor: string, resolution: string) => {
+      const h = handoffs.get(handoffId);
+      if (!h || h.family_id !== familyId || h.status !== 'OPEN') return false;
+      h.status = 'RESOLVED'; h.resolution = resolution; return true;
+    }),
+    loadHandoff: vi.fn(async (handoffId: string, familyId: string) => {
+      const h = handoffs.get(handoffId);
+      return h && h.family_id === familyId ? { handoff_id: handoffId, ...h } : null;
+    }),
+    markHandoffReleased: vi.fn(async (handoffId: string, familyId: string, responseId: string) => {
+      const h = handoffs.get(handoffId);
+      if (!h || h.family_id !== familyId || h.response_id !== responseId || h.resolution !== 'APPROVED' || h.released_at) return false;
+      h.released_at = new Date(); return true;
+    }),
+    loadResponse: vi.fn(async (responseId: string) => responses.has(responseId) ? { response_id: responseId, risk_route: 'REVIEW', output: responses.get(responseId) } : null),
   } as unknown as ConstructorParameters<typeof PrincipalService>[0];
-  return { repo, calls };
+  return { repo, calls, handoffs };
 }
 
 describe('W2R-104 intelligence quality gate', () => {
@@ -184,8 +207,12 @@ describe('W2R-104 intelligence quality gate', () => {
     expect(res.risk_route).toBe('REVIEW');           // NORMAL 被质量闸降级
     expect(res.action_proposal_id).toBeNull();       // 不建 proposal
     expect(calls.proposalSaved).toBe(0);
-    expect(calls.handoffSaved).toBeGreaterThanOrEqual(1); // 入人工复核队列(REVIEW 契约:存响应+queue,human_handoff=false)
-    expect(res.human_handoff).toBe(false);
+    expect(calls.handoffSaved).toBeGreaterThanOrEqual(1); // 入人工复核队列
+    // W2R-105 契约(supersedes W2R-104 过渡):REVIEW 响应【扣留】,不展示给家长,human_handoff=true
+    expect(res.human_handoff).toBe(true);
+    expect(res.response).toBeNull();                 // 扣留:不吐 output 给家长
+    expect(res.response_id).toBe('r1');              // 但候选响应已存,供人工复核
+    expect(calls.lastHandoffResponseId).toBe('r1');  // response_id 挂到 handoff
     expect(calls.events).toContain('principal_quality_gate_failed');
     expect(calls.events).toContain('principal_review_queued');
   });
@@ -221,5 +248,58 @@ describe('W2R-104 intelligence quality gate', () => {
     expect(state.qualityJudgeCalled).toBe(false); // judge 也不外呼(零外呼)
     expect(res.risk_route).toBe('NORMAL');        // 确定性输出经底座放行
     expect(calls.events).toContain('principal_quality_gate_evaluated');
+  });
+});
+
+describe('W2R-105 Human Confirmation closure', () => {
+  afterEach(() => { delete process.env.FPAI_RUNTIME_PROFILE; });
+
+  const MSG = '孩子写作业拖拉磨蹭怎么办';
+
+  // 造一条"扣留中"的 REVIEW handoff:质量闸判不合格 → 响应扣留、response_id 挂 handoff('h1')。
+  async function seedWithheldReview() {
+    process.env.FPAI_RUNTIME_PROFILE = 'model_first_internal';
+    const { repo, calls, handoffs } = repoWithSpies([row('GRANTED')]);
+    const { gw } = useCaseAwareGateway(reflectingOutput(MSG), { understanding: 'FAIL', labeling: 'PASS', risk_leak: 'NONE' });
+    const svc = new PrincipalService(repo, {} as never, gw);
+    const res = await svc.handleMessage('fam-1', 'sess-1', 'child-1', 'actor-1', MSG, 'corr-1');
+    expect(res.risk_route).toBe('REVIEW');
+    expect(res.response).toBeNull();  // 扣留
+    return { svc, repo, calls, handoffs };
+  }
+
+  it('APPROVED → 释放此前扣留的候选响应给家长 + 记 response_released 事件', async () => {
+    const { svc, calls } = await seedWithheldReview();
+    const out = await svc.resolveHandoff('fam-1', 'h1', 'reviewer-1', 'APPROVED', null, 'corr-2');
+    expect(out.ok).toBe(true);
+    expect(out.released_response).not.toBeNull();                 // 人工确认后释放
+    expect(calls.events).toContain('principal_handoff_resolved');
+    expect(calls.events).toContain('principal_handoff_response_released');
+  });
+
+  it('APPROVED 幂等:二次 resolve 不再释放(handoff 已非 OPEN)', async () => {
+    const { svc } = await seedWithheldReview();
+    await svc.resolveHandoff('fam-1', 'h1', 'reviewer-1', 'APPROVED', null, 'corr-2');
+    const again = await svc.resolveHandoff('fam-1', 'h1', 'reviewer-1', 'APPROVED', null, 'corr-3');
+    expect(again.ok).toBe(false);                                 // 已 RESOLVED,不可再次闭环
+    expect(again.released_response).toBeNull();
+  });
+
+  it('REJECTED / ESCALATED / INFO_ONLY → 不释放(保持扣留)', async () => {
+    for (const resolution of ['REJECTED', 'ESCALATED', 'INFO_ONLY']) {
+      const { svc, calls } = await seedWithheldReview();
+      const out = await svc.resolveHandoff('fam-1', 'h1', 'reviewer-1', resolution, null, 'corr-2');
+      expect(out.ok).toBe(true);
+      expect(out.released_response).toBeNull();                   // 非 APPROVED 绝不释放
+      expect(calls.events).not.toContain('principal_handoff_response_released');
+    }
+  });
+
+  it('不存在/非本家庭的 handoff → ok=false,不释放', async () => {
+    const { svc } = await seedWithheldReview();
+    const missing = await svc.resolveHandoff('fam-1', 'h-nope', 'reviewer-1', 'APPROVED', null, 'corr-2');
+    expect(missing.ok).toBe(false);
+    const otherFamily = await svc.resolveHandoff('fam-2', 'h1', 'reviewer-1', 'APPROVED', null, 'corr-2');
+    expect(otherFamily.ok).toBe(false);
   });
 });
