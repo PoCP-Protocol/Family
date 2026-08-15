@@ -15,13 +15,38 @@ meta:
     - {code: SEE_CONNECT,  title: 看见与连接, day_from: 1,  day_to: 7}
     - {code: PARENT_FIRST, title: 家长先改变, day_from: 8,  day_to: 14}
     - {code: CO_STABILIZE, title: 共创与稳定, day_from: 15, day_to: 21}
-  evidence_grounding:                       # crossref 已核验
-    - {id: EMO_COACH_RCT,  doi: "10.1016/j.adolescence.2015.04.005", grade: E7, note: Tuning in to Teens 情绪教练 RCT}
-    - {id: EMO_REG_META,   doi: "10.32920/26052868",                 grade: E7, note: 儿童情绪调节·家长 meta(61ES/8854童)}
-    - {id: COERCIVE,       doi: "10.1017/S0954579414000169",         grade: E6, note: 强制家庭过程(边界/一致性;早童样本,青少年外推 LIMITED)}
-    - {id: ROGERS,         doi: "10.1037/h0045357",                  grade: E2, note: 共情/主动倾听(理论背景,非效果定论)}
+  evidence_grounding:                       # 全部经 crossref 实核(2026-08-15 curl api.crossref.org 核验标题存在)
+    - {id: EMO_COACH_RCT,   doi: "10.1016/j.adolescence.2015.04.005", grade: E7, verified: true, note: "Tuning in to Teens 情绪教练 RCT(青少年,直接相关)"}
+    - {id: EMO_REG_META,    doi: "10.32920/26052868",                 grade: E7, verified: true, note: "Parenting Correlates of Children's Emotion Regulation 系统综述+meta(2024)"}
+    - {id: PARENT_TEEN_COMM, doi: "10.1016/j.jadohealth.2017.11.067", grade: E6, verified: true, note: "Parent-Teen Communication 家长干预(J Adolescent Health 2018;青少年沟通,直接相关)"}
+    - {id: TRIPLE_P_META,   doi: "10.1016/j.cpr.2014.04.003",         grade: E7, verified: true, note: "Triple P 积极养育项目 系统综述+meta(Clinical Psychology Review 2014)"}
+    - {id: IY_RCT,          doi: "10.5093/pi2022a2",                  grade: E7, verified: true, note: "Incredible Years 家长/儿童项目 RCT(2021;家长管理训练)"}
+    - {id: TUNING_KIDS,     doi: "10.1007/s10578-012-0322-1",         grade: E6, verified: true, note: "Tuning into Kids 情绪教练干预(2012;幼童样本,青少年外推 MODERATE)"}
+    - {id: COERCIVE,        doi: "10.1017/S0954579414000169",         grade: E6, verified: true, note: "强制家庭过程(边界/一致性;早童样本,青少年外推 LIMITED)"}
+    - {id: ROGERS,          doi: "10.1037/h0045357",                  grade: E2, verified: true, note: "共情/主动倾听(1957 理论背景,非效果定论)"}
+  # 证据政策(商业化诚实口径):
+  #  - grade E6-E7 = RCT/meta;E2 = 理论背景。青少年外推等级已逐条标注(LIMITED/MODERATE/直接相关)。
+  #  - 复用是有意的(同一技能同一循证内核);无直接来源的自我复盘/迁移日诚实留空或标 practitioner,不硬凑 DOI。
   lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
   red_lines: [父母先改变, 不贴标签, 不制造焦虑, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 危机转人工]
+  # ---- 商业化就绪状态(诚实登记,未满足项即上市前 blocker)----
+  expert_review:
+    status: REQUIRED
+    sign_off: PENDING            # 持证教研/心理专家终审签名(涉及未成年人/情绪,必须人背书)
+    reviewer: null
+    reviewed_at: null
+  commercialization_gaps:        # 距"可售卖商业课件"的差距(见 COMMERCIAL_COURSEWARE_METHOD_V1)
+    - HUMAN_EXPERT_SIGNOFF_MISSING
+    - FACILITATOR_GUIDE_MISSING        # 讲师引导手册
+    - PARENT_WORKBOOK_MISSING          # 家长工作簿/可打印物
+    - VISUAL_MEDIA_MVP_ONLY            # 仅文字 deck,缺视觉系统/插画/音视频
+    - NO_ASSESSMENT_REPORT_LOOP        # 未接 baseline→打卡→观察→Growth Report→复购
+    - SINGLE_TRACK_NO_SEGMENTATION     # 单轨,无按年龄/严重度分层 SKU
+    - COMPLIANCE_REVIEW_PENDING        # PIPL/未成年人/营销话术/版权 法务未审
+    - ZERO_REAL_FAMILY_VALIDATION      # 0 真实家庭验证,完成率/留存为假设
+  runtime_binding:
+    status: NOT_WIRED            # content_ref 仅挂旧表引用,未接 Family 产品消费闭环(WAF/Principal/打卡/报告)
+    authorization: HOLD          # 课程平台/FELS-2 当前 HOLD,需架构师放行
 
 days:
   # ---------------- W1 看见与连接 ----------------
@@ -42,7 +67,7 @@ days:
     theme: 开口前的三秒暂停
     skill: 家长情绪调节(暂停/降速)
     why: 一个短暂停能打断"施压→对抗"的升级链条。
-    evidence_refs: [COERCIVE]
+    evidence_refs: [COERCIVE, PARENT_TEEN_COMM]
     parent_action: 想批评前,先深呼吸数三秒再说第一句话。
     say_it_tonight: "等我一下,我想想怎么说更清楚。"
     look_for: 暂停后对话是否更容易继续(过程观察,非打分)。
@@ -132,7 +157,7 @@ days:
     theme: 给有限选择
     skill: 自主支持(autonomy support)
     why: 有限选择既给自主感又守住边界,减少权力对抗。
-    evidence_refs: [COERCIVE]
+    evidence_refs: [COERCIVE, TRIPLE_P_META]
     parent_action: 把命令换成两个都可接受的选择让孩子选。
     say_it_tonight: "你想先写数学还是先写语文?你来定。"
     look_for: 给了选择后配合度的变化。
@@ -154,7 +179,7 @@ days:
     theme: 温和而坚定
     skill: 边界与温度并存
     why: 清晰一致的边界 + 温暖关系,比严厉或放任都更有效。
-    evidence_refs: [COERCIVE]
+    evidence_refs: [COERCIVE, IY_RCT]
     parent_action: 选一个小边界,温和地说明并坚定守住一次。
     say_it_tonight: "我知道你还想玩,约定的时间到了,明天继续。"
     look_for: 温和坚定 vs 发火,哪个孩子更配合。
@@ -165,7 +190,7 @@ days:
     theme: 说到做到
     skill: 一致性(consistency)
     why: 一致性让边界可预期,减少试探与拉锯。
-    evidence_refs: [COERCIVE]
+    evidence_refs: [COERCIVE, IY_RCT]
     parent_action: 守住一个昨天说过的小约定,不临时改。
     say_it_tonight: "昨天我们说好的,今天照做,谢谢你配合。"
     look_for: 一致之后拉锯是否减少。
