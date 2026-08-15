@@ -1,0 +1,55 @@
+# 21天智慧父母训练营(核心旗舰 · FELS 课程内容层)
+# 挂载:legacy_training_camps(camp_code=WISDOM_21D_V1)/ legacy_daily_tasks.content_ref
+# 定位:课程阶梯的核心旗舰鳞(¥4980 档,系统深入);三模块=修复破裂亲子关系 / 面对孩子消极思维家长怎么回应 / 建立顺畅沟通
+# 命名来源:课程名「21天智慧父母训练营」与三模块主题取自 S3 §9 网络检索补充(E2/E3,推广口径)——仅取"结构与命名";
+#   内容一律用已 crossref 实核循证方法承载;波波校长官方逐日教案原文缺失,标 【官方教案待补】,不臆造其内部步骤。
+# 关键安全改写:源模块「修正孩子消极思维」按红线改写为"家长如何回应孩子的消极思维"(父母先改变;不承诺改变孩子的想法/不灌鸡汤/不否定情绪)。
+# 红线:父母先改变 · 不承诺提分或疗效 · 不比较排名 · 不贴标签 · 不诊断 · 打卡≠结果 · 完课≠改变 · 观察≠事实 · 危机转人工。
+meta:
+  camp_code: WISDOM_21D_V1
+  title: 21天智慧父母训练营 · 修复关系·回应消极·顺畅沟通
+  duration_days: 21
+  ladder_rung: 核心旗舰层(¥4980 档;系统深入,行为改变与信任)
+  audience: 家长(父母先改变;孩子不是被改造对象)
+  philosophy: 先修复关系,再学会回应孩子的消极情绪与想法,最后建立日常顺畅沟通;三步同一内核——先连接再纠正
+  provenance:
+    course_name: {source: S3_web_search_promotional, tier: E2_E3, use: 仅取命名/时长/模块名, decisive: false}
+    module_names: [修复破裂亲子关系, 修正孩子消极思维, 建立顺畅沟通]
+    safety_rewrite: "「修正孩子消极思维」→「家长如何回应孩子的消极思维」;不承诺改变孩子想法,不做认知矫正治疗(非临床)。"
+    note: 品牌课程对外宣称效果不入库为事实;每日技能用下方已核验循证方法承载;官方逐日教案标【官方教案待补】。
+  phases:
+    - {code: SEE_CONNECT,  title: 模块一·修复破裂亲子关系, day_from: 1,  day_to: 7}
+    - {code: PARENT_FIRST, title: 模块二·回应孩子的消极情绪与想法, day_from: 8,  day_to: 14}
+    - {code: CO_STABILIZE, title: 模块三·建立顺畅沟通, day_from: 15, day_to: 21}
+  evidence_grounding:            # 全部 crossref 实核(复用课件库已验证 DOI)
+    - {id: EMO_COACH_RCT, doi: "10.1016/j.adolescence.2015.04.005", grade: E7, verified: true, external_validity: 直接相关, note: 情绪教练 RCT(接住情绪/命名情绪)}
+    - {id: EMO_REG_META,  doi: "10.32920/26052868",                grade: E7, verified: true, external_validity: MODERATE, note: 情绪调节·家长 meta(自我调节/具体肯定)}
+    - {id: ROGERS,        doi: "10.1037/h0045357",                 grade: E2, verified: true, external_validity: MODERATE, note: 共情/无条件积极关注(修复关系/倾听理论背景)}
+    - {id: PARENT_TEEN_COMM, doi: "10.1016/j.jadohealth.2017.11.067", grade: E6, verified: true, external_validity: 直接相关, note: 亲子沟通家长干预}
+    - {id: COERCIVE,      doi: "10.1017/S0954579414000169",         grade: E6, verified: true, external_validity: LIMITED,  note: 强制家庭过程(打断冲突升级;早童样本)}
+  lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
+  red_lines: [父母先改变, 不承诺提分或疗效, 不比较排名, 不贴标签, 不诊断, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 危机转人工]
+  expert_review: {status: REQUIRED, sign_off: PENDING, reviewer: null}
+  runtime_binding: {status: NOT_WIRED, authorization: HOLD}
+days:
+  - {day: 1,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D1", theme: 先看见关系里的裂痕, skill: 家长自我觉察, why: 修复从看见开始;先承认关系有裂痕,而不是急着讲道理。, evidence_refs: [ROGERS], parent_action: 写下最近一次和孩子疏远或冲突的具体场景。, say_it_tonight: “最近我们好像有点远,我想我们能近一点。”, look_for: 裂痕最常出现在什么情境,不是给孩子记账。, boundary: 先看见,不评判。}
+  - {day: 2,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D2", theme: 停止翻旧账, skill: 就事论事, why: 翻旧账会不断撕开裂痕;修复要从"此刻"开始。, evidence_refs: [COERCIVE], parent_action: 今天谈事时不带出过去的错处。, say_it_tonight: “过去的先放一放,我们说今天这件事。”, look_for: 不翻旧账后对话温度的变化。, boundary: 不翻旧账不等于不设边界。}
+  - {day: 3,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D3", theme: 先修复情绪账户, skill: 正向连接, why: 关系账户里先有存款(正向互动),提取(纠正)才不透支。, evidence_refs: [EMO_REG_META], parent_action: 今天创造一次纯粹愉快、不带教育目的的相处。, say_it_tonight: “今天不谈学习,就一起做点开心的。”, look_for: 无目的相处后孩子的靠近。, boundary: 连接不是为了换取服从。}
+  - {day: 4,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D4", theme: 真诚道歉的示范, skill: 家长先认错, why: 家长能为自己的过火道歉,是修复关系最有力的一步。, evidence_refs: [ROGERS], parent_action: 就一次你的过火,向孩子真诚道歉一次。, say_it_tonight: “那天我说重了,是我的问题,对不起。”, look_for: 道歉后关系是否松动。, boundary: 道歉是为过火的方式,不是放弃原则。}
+  - {day: 5,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D5", theme: 接住而非说服, skill: 情绪确认, why: 关系破裂时,先接住情绪比讲对错更能修复。, evidence_refs: [EMO_COACH_RCT], parent_action: 孩子有情绪时,先接住一次而不急着说服。, say_it_tonight: “你有这个感受,是有道理的。”, look_for: 被接住后是否更愿意靠近。, boundary: 接住情绪不等于认同所有行为。}
+  - {day: 6,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D6", theme: 重建信任的小承诺, skill: 说到做到, why: 信任靠一个个兑现的小承诺重建。, evidence_refs: [], parent_action: 对孩子做一个小承诺,并当天兑现。, say_it_tonight: “我答应你的,今天做到了。”, look_for: 兑现承诺后信任的回升。, boundary: 不轻许做不到的承诺。}
+  - {day: 7,  phase: SEE_CONNECT, content_ref: "WISDOM_21D_V1#D7", theme: 模块一复盘, skill: 家长自我复盘, why: 看见"我在修复而非纠正"的时刻。, evidence_refs: [], parent_action: 记一次你选择了修复关系而非争对错。, say_it_tonight: “这周我更想和你近一点,而不是赢你。”, look_for: 一个你主动修复的过程,不评分。, boundary: 复盘非考核。}
+  - {day: 8,  phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D8", theme: 先分清:这是情绪还是想法, skill: 区分情绪与念头, why: 孩子说“我不行/没意思”常是情绪,不是结论;先分清才不误伤。, evidence_refs: [EMO_COACH_RCT], parent_action: 孩子说消极话时,先判断这背后是什么情绪。, say_it_tonight: “你这么说,是不是有点累了/失望了？”, look_for: 消极话背后的真实情绪。, boundary: 不把一句消极话当成孩子的定论。}
+  - {day: 9,  phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D9", theme: 不否定也不灌鸡汤, skill: 稳稳地在场, why: “哪有那么糟”否定了他,“你最棒”又太空;稳稳陪着最有用。, evidence_refs: [ROGERS, EMO_REG_META], parent_action: 孩子消极时,既不反驳也不硬打气,先陪着。, say_it_tonight: “我先陪你待会儿,不着急下结论。”, look_for: 不否定不打鸡血后他是否更松。, boundary: 不否定情绪,也不美化困难。}
+  - {day: 10, phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D10", theme: 帮他把感受说清楚, skill: 情绪命名, why: 说得清的情绪,才管理得了;命名本身就减压。, evidence_refs: [EMO_COACH_RCT, EMO_REG_META], parent_action: 帮孩子把模糊的难受说成具体的一句。, say_it_tonight: “听起来你是既紧张又怕让我失望,对吗？”, look_for: 命名后情绪是否缓和。, boundary: 命名是帮他表达,不是替他定性。}
+  - {day: 11, phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D11", theme: 把“我不行”变成“哪一步难”, skill: 从全盘否定到具体困难, why: 聚焦具体一步,消极的全盘感会松动(不是被说服)。, evidence_refs: [EMO_REG_META], parent_action: 引导孩子把“我什么都做不好”缩小到具体一步。, say_it_tonight: “不是你不行,是这一步有点难,我们看看它。”, look_for: 从笼统到具体后他是否更能动。, boundary: 引导具体化,不强行纠正他的想法。}
+  - {day: 12, phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D12", theme: 看见并肯定微小努力, skill: 具体肯定过程, why: 消极常源于长期不被看见;肯定具体努力能松动它。, evidence_refs: [EMO_REG_META], parent_action: 指出孩子一个具体的、常被忽略的努力。, say_it_tonight: “你今天虽然烦,但还是坐下来试了,我看到了。”, look_for: 被看见后消极是否减弱。, boundary: 肯定过程,不比较、不贴“聪明/差”。}
+  - {day: 13, phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D13", theme: 分清谁的课题, skill: 课题分离, why: 家长把孩子的情绪全扛在自己身上,反而更焦虑、更爱纠正。, evidence_refs: [], parent_action: 分清这件事里哪部分是孩子要自己面对的。, say_it_tonight: “这件事我陪你,但它是你可以自己面对的。”, look_for: 你放下过度承担后的轻松。, boundary: 分离不是冷漠不管。}
+  - {day: 14, phase: PARENT_FIRST, content_ref: "WISDOM_21D_V1#D14", theme: 模块二复盘, skill: 家长自我复盘, why: 家长先改变的证据在自己身上。, evidence_refs: [], parent_action: 记一次你回应消极时"陪着而非纠正"。, say_it_tonight: “我在学着陪你面对,而不是急着改你。”, look_for: 一个你稳住的时刻。, boundary: 完课≠改变。}
+  - {day: 15, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D15", theme: 先听懂再回应, skill: 主动倾听, why: 顺畅沟通的第一条:先完整听懂,再开口。, evidence_refs: [PARENT_TEEN_COMM, ROGERS], parent_action: 今天谈事前先复述一遍你听到的。, say_it_tonight: “我先说说我听到的,你看对不对。”, look_for: 复述确认后误解是否减少。, boundary: 倾听不是等着反驳。}
+  - {day: 16, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D16", theme: 用“我信息”表达, skill: 我信息表达, why: “我担心…”比“你怎么又…”更少激起对抗。, evidence_refs: [PARENT_TEEN_COMM], parent_action: 把一句指责换成"我感受+具体事+我希望"。, say_it_tonight: “我有点担心,因为……我希望我们……”, look_for: 换说法后孩子的防御是否降低。, boundary: 表达感受,不夹带翻旧账。}
+  - {day: 17, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D17", theme: 不在情绪高点谈问题, skill: 择时沟通, why: 双方都在气头上时,沟通只会升级。, evidence_refs: [COERCIVE], parent_action: 情绪高时先暂停,约一个平静的时间再谈。, say_it_tonight: “现在我们都急,等会儿平静了再聊好吗？”, look_for: 择时后同一话题的结果差别。, boundary: 暂停不是逃避,要真的回来谈。}
+  - {day: 18, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D18", theme: 一起找办法而非定输赢, skill: 合作解决, why: 把“听我的”换成“一起想”,方案才落地。, evidence_refs: [PARENT_TEEN_COMM], parent_action: 就一个分歧,和孩子一起想两个都能接受的办法。, say_it_tonight: “这件事我们一起想个都行的办法。”, look_for: 合作 vs 命令的执行度。, boundary: 合作不是无原则妥协。}
+  - {day: 19, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D19", theme: 固定的家庭对话时间, skill: 沟通仪式, why: 稳定的对话时间让顺畅沟通可持续。, evidence_refs: [], parent_action: 约定一个每天固定的轻松聊天时段。, say_it_tonight: “以后每天这会儿,我们随便聊聊。”, look_for: 仪式坚持后沟通的稳定。, boundary: 仪式贵在小而持续。}
+  - {day: 20, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D20", theme: 把方法迁到全家, skill: 泛化, why: 把顺畅沟通用到夫妻/长辈,家庭氛围整体变好。, evidence_refs: [], parent_action: 把"先听懂再回应"用到另一个家庭成员身上。, say_it_tonight: “这个说话方式,我们全家都可以试试。”, look_for: 同法在别的关系里是否也管用。, boundary: 迁移是尝试,不强求。}
+  - {day: 21, phase: CO_STABILIZE, content_ref: "WISDOM_21D_V1#D21", theme: 综合复盘与下一步, skill: 过程回看+选择继续, why: 看见 21 天从修复到沟通的过程改变,选一件继续。, evidence_refs: [], parent_action: 回看三模块,选一个你要长期继续的做法。, say_it_tonight: “这 21 天我最想一直做下去的是……你觉得呢？”, look_for: 一个你确定延续的做法。, boundary: 综合复盘非考核;不承诺提分或疗效。}

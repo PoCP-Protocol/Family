@@ -23,7 +23,7 @@ product_spine:
 
 # 产品矩阵 5 条线(S1p11)—— 课件主要落在"家长成长/家庭关系";孩子线需 Consent 后置
 product_lines:
-  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_5D_V1, PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], status: PRODUCED}
+  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_5D_V1, PARENT_21D_V1, WISDOM_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], status: PRODUCED}
   - {line: 家庭关系, user: 家庭,  value: 亲子沟通与共同任务, courseware: [FAMILY_90D_V1, PARENT_21D_V1], status: PRODUCED}
   - {line: 孩子成长, user: 孩子,  value: 习惯/动力/表达/自驱, courseware: [], status: TODO, note: "儿童直接产品 HOLD;需独立 Consent/未成年人边界,先不产孩子课件"}
   - {line: AI陪伴,   user: 全家,  value: 每日反馈与成长计划, courseware: [], status: NA, note: "属 AI 产品线(Principal),非课件"}
@@ -37,11 +37,13 @@ produced_courseware:
   - {course_code: SCREEN_21D_V1, title: 手机不靠没收·靠一起定规则, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT, note: 屏幕专项证据 E4/外推 MODERATE,机制引 E6–E7 家长管理}
   - {course_code: STUDY_21D_V1,  title: 自驱不是催出来的, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 9, status: EVIDENCE_READY_CONTENT_DRAFT, note: 自我调节学习 meta/训练 E6–E7;家长过度参与负相关已标注}
   - {course_code: SELFDRIVE_21D_V1, title: 自驱不能奖励也不能逼, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT, note: 内在动机=自主·胜任·关系(自我决定论);奖励削弱内在动机有 meta(E6),自主支持多为相关性(E4/外推 MODERATE);与 STUDY 分工=动机来源,不重叠}
+  - {course_code: WISDOM_21D_V1, title: 21天智慧父母训练营·修复关系·回应消极·顺畅沟通, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 5, status: EVIDENCE_READY_CONTENT_DRAFT, note: 核心旗舰(¥4980档);命名/三模块名来源 E2/E3 波波校长阶梯,仅取结构;「修正孩子消极思维」按红线改写为「家长如何回应」(不承诺改变孩子想法/非临床);官方逐日教案标【待补】}
 
 # 待产课件(登记,不臆造;需 spec + 循证 + 专家终审后再产)
 courseware_backlog:
+  - {topic: 点亮心灯训练营(高阶), line: 家长成长, priority: P2, source: "S3 §9 波波校长阶梯(E2/E3)", note: "高阶;三维成长框架(自我关系/他人关系/财富关系)涉家长自身财富·生命议题,超出现有 crossref 循证基座,无法诚实 grounding;待官方教案原文或专门循证再产,不臆造"}
   - {topic: 青春期沟通冲突(进阶), line: 家庭关系, priority: P2, note: 21天之上的进阶专题;待需求确认后再产}
-  # 已完成并移入 produced:手机管理/屏幕时间(SCREEN_21D_V1)· 学习习惯/自驱力(STUDY_21D_V1)
+  # 已完成并移入 produced:手机管理/屏幕时间(SCREEN_21D_V1)· 学习习惯/自驱力(STUDY_21D_V1)· 5天入门(PARENT_5D_V1)· 智慧父母旗舰(WISDOM_21D_V1)
 
 # 课程阶梯 / 成长路径体系(忠实取自 S2p7 漏斗 + S1p9 用户路径 + S2p17 脊柱 + S1p8 价格阶梯)
 # 这是"课程体系"的系统视图:一个家庭沿哪条路径逐鳞前进,每鳞用哪门课件承载。红线:每一鳞都不承诺结果,结果在购买之后靠真实行为改变证明。
@@ -51,6 +53,7 @@ course_ladder:
     - {step: 1, funnel: 觉醒, rung: 测评看清优先级, course: null,          entity: 家庭/父母成长测评, price: 免费,      gate: "测评≠诊断≠GrowthState;只做优先级排序"}
     - {step: 2, funnel: 行动, rung: 入口体验小改变, course: PARENT_5D_V1,   entity: 5天好爸妈入门营,   price: "99",       gate: "完课≠改变;只求第一次接住情绪"}
     - {step: 3, funnel: 行动, rung: 按痛点选专项营, course_pool: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], entity: 21天专项训练营(4大痛点), price: "99–399", gate: "打卡≠Outcome;由测评优先级路由,不多买"}
+    - {step: "3.5", funnel: 改变, rung: 核心旗舰深入, course: WISDOM_21D_V1, entity: 21天智慧父母训练营, price: "4980", gate: "系统深入;修复关系→回应消极→顺畅沟通;完课≠改变;命名来源 E2/E3"}
     - {step: 4, funnel: 改变, rung: 系统性家庭改善, course: FAMILY_90D_V1,  entity: 90天家庭成长计划,  price: "1999–9999", gate: "四阶段 SEE→PARENT_FIRST→CO_CREATE→STABILIZE;完课≠改变"}
     - {step: 5, funnel: 长期, rung: 持续陪伴留存,   course: null,          entity: 年度家庭成长会员,  price: "999–2999/年", gate: "会员≠家庭状态;FELS-3,非课件", courseware_status: NA}
     - {step: 6, funnel: 传播, rung: 成果传播裂变,   course: null,          entity: 成长报告+邀请,     price: 成长权益,   gate: "传播结果不传播焦虑;非课件", courseware_status: NA}
