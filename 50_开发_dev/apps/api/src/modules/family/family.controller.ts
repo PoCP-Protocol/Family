@@ -22,6 +22,7 @@ import { GrowthActionService } from './growth-action.service';
 import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
+import { OnboardingService } from './onboarding.service';
 
 @Controller('families')
 @UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
@@ -32,7 +33,20 @@ export class FamilyController {
     @Inject(InterventionService) private readonly interventionService: InterventionService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
+    @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
   ) {}
+
+  // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/onboarding/status')
+  async onboardingStatus(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return this.onboardingService.getStatus(familyId, actorId);
+  }
 
   @RequireFamilyAction('ReadFamily')
   @Get(':familyId')
