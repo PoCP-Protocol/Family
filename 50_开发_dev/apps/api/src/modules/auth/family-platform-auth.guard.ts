@@ -1,5 +1,11 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, UnauthorizedException, createParamDecorator } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, SetMetadata, UnauthorizedException, createParamDecorator } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthService, bearerToken } from './auth.service';
+import { assertFamilyRoleCan, type FamilyNamedAction, type FamilyRole } from './family-authorization.policy';
+
+/** 声明某端点所需的 Family NamedAction;guard 在 required 模式据此按角色矩阵强制。 */
+export const FAMILY_ACTION_KEY = 'family_named_action';
+export const RequireFamilyAction = (action: FamilyNamedAction) => SetMetadata(FAMILY_ACTION_KEY, action);
 
 /** PLATFORM-IAM-104:消费路径是否强制真实 Bearer(默认关=内部 dogfood 仍 x-actor-id)。 */
 function platformAuthRequired(): boolean {
@@ -15,13 +21,17 @@ function platformAuthRequired(): boolean {
  */
 @Injectable()
 export class FamilyPlatformAuthGuard implements CanActivate {
-  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(Reflector) private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
     const familyId: string | undefined = req.params?.familyId;
     const token = bearerToken(req.headers?.['authorization']);
     const xActor = (req.headers?.['x-actor-id'] ?? '').toString().trim();
+    const requiredAction = this.reflector.get<FamilyNamedAction | undefined>(FAMILY_ACTION_KEY, context.getHandler());
 
     if (platformAuthRequired()) {
       if (!token) throw new UnauthorizedException('bearer_token_required'); // x-actor-id-only 拒
@@ -32,6 +42,8 @@ export class FamilyPlatformAuthGuard implements CanActivate {
           if (!acct) throw new UnauthorizedException('invalid_or_expired_session');
           throw new ForbiddenException('account_has_no_active_membership_in_family');
         }
+        // TENANCY-V2:角色→NamedAction 显式矩阵强制(声明了 @RequireFamilyAction 的端点)。
+        if (requiredAction) assertFamilyRoleCan(ctx.familyRole as FamilyRole, requiredAction);
         req.trustedActor = ctx.personId;
         req.familyContext = ctx;
       } else {

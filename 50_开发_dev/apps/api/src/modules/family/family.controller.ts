@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { ActorId, FamilyPlatformAuthGuard } from '../auth/family-platform-auth.guard';
+import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
 import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
@@ -34,6 +34,7 @@ export class FamilyController {
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
   ) {}
 
+  @RequireFamilyAction('ReadFamily')
   @Get(':familyId')
   async getFamilyAggregate(
     @Param('familyId') familyId: string,
@@ -72,6 +73,7 @@ export class FamilyController {
     return this.familyService.createFamily(request, meta);
   }
 
+  @RequireFamilyAction('InviteAdult')
   @Post(':familyId/parents')
   async addParent(
     @Param('familyId') familyId: string,
@@ -95,6 +97,7 @@ export class FamilyController {
     return this.familyService.addParent(request, meta);
   }
 
+  @RequireFamilyAction('AddChild')
   @Post(':familyId/children')
   async addChild(
     @Param('familyId') familyId: string,
@@ -164,6 +167,7 @@ export class FamilyController {
     return this.familyService.assignLifeStage(request, meta);
   }
 
+  @RequireFamilyAction('GrantConsent')
   @Post(':familyId/consents')
   async grantConsent(
     @Param('familyId') familyId: string,
@@ -212,6 +216,7 @@ export class FamilyController {
     return this.familyService.startGrowthOnboarding(request, meta);
   }
 
+  @RequireFamilyAction('RecordPerspective')
   @Post(':familyId/growth/onboardings/:onboardingId/perspectives')
   async recordPerspective(
     @Param('familyId') familyId: string,
@@ -313,6 +318,7 @@ export class FamilyController {
     return this.growthPriorityService.getGrowthPriorityInsight(familyId, onboardingId, actorId);
   }
 
+  @RequireFamilyAction('ConfirmGrowthPriority')
   @Post(':familyId/growth/onboardings/:onboardingId/priority/confirm')
   async confirmGrowthPriority(
     @Param('familyId') familyId: string,
@@ -341,6 +347,7 @@ export class FamilyController {
     return this.interventionService.getInterventionCard(familyId, actorId!);
   }
 
+  @RequireFamilyAction('StartIntervention')
   @Post(':familyId/growth/onboardings/:onboardingId/interventions/start')
   async startIntervention(
     @Param('familyId') familyId: string,
@@ -379,6 +386,7 @@ export class FamilyController {
     return this.growthActionService.getTodayAction(familyId, actorId!);
   }
 
+  @RequireFamilyAction('CompleteAction')
   @Post(':familyId/growth/actions/:actionId/complete')
   async completeGrowthAction(
     @Param('familyId') familyId: string,
