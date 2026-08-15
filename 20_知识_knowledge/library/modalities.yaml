@@ -1,33 +1,24 @@
 # 多模态测量卡｜获取家庭真实信号的通道 —— 回答"怎么知道它真的变了"
 # id 前缀必须为 MM-。measures_constructs 指向 CN- 卡。
-#
-# 两条合规红线,缺失直接 error(不是 warn):
-#   minors_handling  涉未成年人时的额外要求
-#   privacy_risk     隐私风险等级与处理要求
-#
-# 这一层在规格里目前没有对应对象。见 ..\..\10_规格_spec\ISSUES.md B3。
-# 「同意做成长追踪」不等于「同意用视频通道采集」—— 粒度差别是实质的。
+# minors_handling / privacy_risk 缺失直接 error。
 
-modalities: []
-
-# 模板:
-#
-# - id: MM-001
-#   name: 家长自评量表
-#   summary: 一句话说清这个通道采什么
-#   channel: 量表                     # 量表 / 语音 / 视频 / 文本 / 行为日志 / 生理
-#   measures_constructs: [CN-001]
-#   instrument: 具体工具或编码体系及其版本
-#   reliability: 已知信效度,例如 Cronbach α=0.86,中文版已验证
-#   cost: 采集成本,例如 家长 8 分钟填写,零边际成本
-#   home_feasible: 家庭场景可行性与阻碍
-#   privacy_risk: 低 —— 不含原始音视频,仅结构化评分;须脱敏入库   # 必填,否则 error
-#   minors_handling: 由监护人代填,不直接向未成年人采集;受限微数据不出本地  # 必填,否则 error
-#   tags: [自评]
-#   open_questions:
-#     - 家长自评的社会赞许性偏差如何校正
-#   evidence:
-#     - claim: 该量表中文版信效度已发表
-#       grade: 6
-#       provenance: third_party_real
-#       source: "10.xxxx/xxxxx"
+modalities:
+  - id: MM-001
+    name: 亲子互动观察编码 / 家长情绪社会化自评
+    summary: 通过结构化互动观察编码与家长自评,估计被听见感与强制/防御循环的变化。
+    channel: 视频 + 量表
+    measures_constructs: [CN-001, CN-002]
+    instrument: 情绪教练/强制互动编码体系 + 家长情绪社会化自评量表(具体版本待选定并核验信效度)
+    reliability: 观察编码需双编码者信度;自评存在社会赞许性偏差,须交叉校正。
+    cost: 观察编码人工成本高;家长自评低成本但偏差大。
+    home_feasible: 家长自评可家庭内完成;视频编码须显式 consent 且受限微数据不出本地。
+    privacy_risk: >
+      高 —— 视频含未成年人原始影像。默认不采原始音视频;仅结构化编码分数入库,须脱敏;
+      "同意成长追踪" ≠ "同意视频通道采集",粒度必须单独授权。
+    minors_handling: >
+      涉未成年人:监护人显式 consent + 未成年人知情;原始影像不出本地、不入 canonical;
+      仅派生的结构化信号可用,且经 Human Gate。
+    tags: [观察编码, 自评, modality]
+    open_questions:
+      - 家长自评的社会赞许性偏差如何在青少年样本中校正。
+    evidence: []

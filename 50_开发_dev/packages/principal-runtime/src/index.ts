@@ -162,3 +162,5 @@ export function buildPrincipalFamilyContext(
 
 // M3-RB-003 最小真实 Skill 运行时(声明规范见 architecture/rb-003/FAMILY_SKILL_MODEL_V1.md)
 export * from './skill';
+// PROVIDER_POLICY_RUNTIME_001:Provider Registry → runtime policy(behind flag;设计见 reports/m3/PROVIDER_POLICY_RUNTIME_001_DESIGN.md)
+export * from './provider-policy';

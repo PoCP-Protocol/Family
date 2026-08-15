@@ -1,0 +1,34 @@
+# Verified Source Registry — M3-W2R-103B-CLOSURE-001
+# 机器可核验的"来源真实性"单一真相:只有登记且 verification_status=VERIFIED 的来源,
+# 才被编译器 _external_verified() 认作真实外部证据。
+# 目的:防止"格式正确但实际不存在的 DOI"或 Agent 自编 DOI 冒充 external → 自给 E7 洗白。
+# 登记只由人工核验落记(architect ratified);Gottman 1996 尚未核验,不登记。
+sources:
+
+  - source_id: TINT_2015
+    doi: "10.1016/j.adolescence.2015.04.005"
+    pmid: "26005933"
+    verification_status: VERIFIED
+    verified_at: "2026-08-14"
+    evidence_role: METHOD_EFFECT
+
+  - source_id: TINT_2020
+    doi: "10.1037/dev0000875"
+    pmid: "32077729"
+    verification_status: VERIFIED
+    verified_at: "2026-08-14"
+    evidence_role: MECHANISM_SUPPORT
+
+  - source_id: COERCIVE_2014
+    doi: "10.1017/S0954579414000169"
+    pmid: "24690305"
+    verification_status: VERIFIED
+    verified_at: "2026-08-14"
+    evidence_role: CONSTRUCT_SUPPORT
+
+  - source_id: ROGERS_1957
+    doi: "10.1037/h0045357"
+    pmid: "13416422"
+    verification_status: VERIFIED
+    verified_at: "2026-08-14"
+    evidence_role: THEORY_BACKGROUND

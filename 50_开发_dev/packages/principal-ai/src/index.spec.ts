@@ -210,3 +210,115 @@ describe('@family/principal-ai FP1 text intelligence MVP', () => {
     });
   });
 });
+
+// W2R-103 循证检索(内联 bundle 测检索逻辑;真实 YAML→bundle 由 tools/compile-knowledge.mjs 校验)
+import { retrieveGroundedKnowledge, ungroundedRefs, type KnowledgeChainBundle } from './index';
+
+describe('W2R-103B evidence-grounded retrieval (V2 + fail-closed)', () => {
+  // V2 bundle:证据真值由 Python 裁定并写入 evidence_summary;TS 只消费。
+  const bundle: KnowledgeChainBundle = {
+    schema_version: 'KNOWLEDGE_CHAIN_V2', intervention_id: 'LISTEN_BEFORE_RESPOND', bundle_version: 'sha256:test',
+    theories: [{ id: 'TH-001', evidence_grade: 'E2', family_decision_non_decisive: true, source_refs: [] }],
+    constructs: [
+      { id: 'CN-001', evidence_grade: 'E0', family_decision_non_decisive: true, source_refs: [] },
+      { id: 'CN-002', evidence_grade: 'E6', family_decision_non_decisive: true, source_refs: ['doi:10.1017/S0954579414000169'] },
+    ],
+    methods: [{ id: 'MD-001', evidence_grade: 'E7', family_decision_non_decisive: true, source_refs: ['doi:10.1016/j.adolescence.2015.04.005', 'doi:10.1037/dev0000875'] }],
+    modalities: [{ id: 'MM-001', evidence_grade: 'E0', family_decision_non_decisive: true, source_refs: [] }],
+    evidence_summary: { external_verified_count: 4, highest_grade: 'E7', has_third_party_real: true, source_registry_gate: 'PASS', python_evidence_gate: 'PASS' },
+  };
+
+  it('gate=PASS 链检出真实 DOI refs + evidence 真值(Theory→Construct→Method→Modality)', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    expect(g.grounded).toBe(true);
+    expect(g.method_ids).toContain('MD-001');
+    expect(g.knowledge_refs).toContain('doi:10.1016/j.adolescence.2015.04.005');
+    expect(g.highest_grade).toBe('E7');
+    expect(g.evidence_gate_status).toBe('PASS');
+    expect(g.source_registry_gate).toBe('PASS');       // CLOSURE-001:来源机器可核验
+    expect(g.family_decision_non_decisive).toBe(true); // 研究证据不决定家庭行为
+  });
+
+  it('unknown intervention -> not grounded, empty refs (不编造)', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'NOT_A_REAL_INTERVENTION');
+    expect(g.grounded).toBe(false);
+    expect(g.knowledge_refs).toEqual([]);
+  });
+
+  // ---- FAIL CLOSED 负向 ----
+  it('FAIL CLOSED: python_evidence_gate=FAIL → grounded=false(即便有 refs)', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, python_evidence_gate: 'FAIL' as const } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  // CLOSURE-001:来源未通过机器核验(registry FAIL)→ grounded=false(即便 evidence gate 显示 PASS)
+  it('FAIL CLOSED: source_registry_gate=FAIL → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, source_registry_gate: 'FAIL' as const } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  it('FAIL CLOSED: 缺 evidence_summary → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: undefined };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  it('FAIL CLOSED: external_verified_count=0 → grounded=false', () => {
+    const bad = { ...bundle, evidence_summary: { ...bundle.evidence_summary!, external_verified_count: 0 } };
+    expect(retrieveGroundedKnowledge(bad, 'LISTEN_BEFORE_RESPOND').grounded).toBe(false);
+  });
+
+  // ---- 防编造:模型响应引用不在 bundle 的 knowledge_ref ----
+  it('governance: 响应编造 bundle 之外的 knowledge_ref → 被检出', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    expect(ungroundedRefs(['doi:10.1016/j.adolescence.2015.04.005'], g)).toEqual([]);
+    expect(ungroundedRefs(['doi:FABRICATED-9999'], g)).toEqual(['doi:FABRICATED-9999']);
+  });
+
+  // ---- W2R-103B(a) 接线:grounding 穿进模型输入 + 运行结果携带 ----
+  const input = {
+    request_id: 'r1', session_id: 's1', entry_point: 'ASK_FAMILI_PRINCIPAL' as const,
+    user_message: '孩子写作业拖拉怎么办',
+    consent_context: { fpai_lab_consent: true, family_context_read_allowed: true },
+  };
+
+  it('grounded_knowledge 穿进 gateway 请求 input + input_refs 携带 knowledge_refs', () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    const req = buildPrincipalAiGatewayRequest(input, g);
+    expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toEqual(g);
+    for (const ref of g.knowledge_refs) expect(req.input_refs).toContain(ref);
+  });
+
+  it('runPrincipalTextMvp 返回 grounded_knowledge(grounded=true, gate=PASS)', async () => {
+    const g = retrieveGroundedKnowledge(bundle, 'LISTEN_BEFORE_RESPOND');
+    const result = await runPrincipalTextMvp(input, undefined, g);
+    expect(result.grounded_knowledge.grounded).toBe(true);
+    expect(result.grounded_knowledge.evidence_gate_status).toBe('PASS');
+    expect(result.grounded_knowledge.method_ids).toContain('MD-001');
+  });
+
+  it('未传 grounding → grounded=false,不编造、input 不含 grounded_knowledge', async () => {
+    const result = await runPrincipalTextMvp(input, undefined);
+    expect(result.grounded_knowledge.grounded).toBe(false);
+    const req = buildPrincipalAiGatewayRequest(input);
+    expect((req.input as { grounded_knowledge?: unknown }).grounded_knowledge).toBeUndefined();
+  });
+});
+
+// W2R-104 Final L2 发现修复:自伤/施暴措辞必须短路 HIGH_RISK(只升不降)
+describe('W2R-104 safety-recall hardening (crisis lexicon)', () => {
+  const hr = (msg: string) => expect(safetyPrecheck({ user_message: msg })).toBe('HIGH_RISK');
+  it('自伤威胁:伤害自己/自身/自残 → HIGH_RISK', () => {
+    hr('孩子威胁要伤害自己,我今晚到底该怎么说?');
+    hr('他说要伤害自身');
+    hr('孩子提到自残');
+  });
+  it('人身暴力:动手打/往死里打/被打 → HIGH_RISK', () => {
+    hr('家里有人动手打孩子,我今晚到底该怎么说?');
+    hr('孩子被打得很严重');
+    hr('他爸爸往死里打他');
+  });
+  it('既有危机词不回归、正常不误升', () => {
+    hr('孩子说不想活了');
+    expect(safetyPrecheck({ user_message: '孩子写作业拖拉磨蹭' })).toBe('NORMAL');
+  });
+});
