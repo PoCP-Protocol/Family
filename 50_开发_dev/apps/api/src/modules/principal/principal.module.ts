@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AttemptRecordingGateway, RoutingAiGateway, buildVendorGateway, type AiGateway, type AttemptSink } from '@family/ai-gateway';
 import { FamilyModule } from '../family/family.module';
+import { AuthModule } from '../auth/auth.module';   // IAM-103:消费/复核路径复用 AuthService.resolveActor
 import { PrincipalController } from './principal.controller';
 import { PrincipalService, PRINCIPAL_AI_GATEWAY } from './principal.service';
 import { PrincipalRepository } from './principal.repository';
@@ -37,7 +38,7 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
  * 只写 principal_* / product_events;不写 Growth canonical(那属 101A-C Action Bridge → 既有 Named Action)。
  */
 @Module({
-  imports: [FamilyModule], // 复用 InterventionService(既有 StartIntervention Named Action)
+  imports: [FamilyModule, AuthModule], // FamilyModule=InterventionService;AuthModule=IAM-103 Bearer 解析
   controllers: [PrincipalController],
   providers: [
     PrincipalService,
