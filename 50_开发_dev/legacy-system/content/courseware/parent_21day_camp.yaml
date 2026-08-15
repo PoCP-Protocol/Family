@@ -37,8 +37,8 @@ meta:
     reviewed_at: null
   commercialization_gaps:        # 距"可售卖商业课件"的差距(见 COMMERCIAL_COURSEWARE_METHOD_V1)
     - HUMAN_EXPERT_SIGNOFF_MISSING
-    - FACILITATOR_GUIDE_MISSING        # 讲师引导手册
-    - PARENT_WORKBOOK_MISSING          # 家长工作簿/可打印物
+    - FACILITATOR_GUIDE_DRAFT_SCAFFOLD # 讲师手册=DRAFT脚手架已生成(guides/);卡点/话术待持证讲师/专家补
+    - PARENT_WORKBOOK_DRAFT_PRESENT    # 家长工作簿=可打印/可填写草稿已生成(workbooks/);待专家过目
     - VISUAL_MEDIA_MVP_ONLY            # 仅文字 deck,缺视觉系统/插画/音视频
     - NO_ASSESSMENT_REPORT_LOOP        # 未接 baseline→打卡→观察→Growth Report→复购
     - SINGLE_TRACK_NO_SEGMENTATION     # 单轨,无按年龄/严重度分层 SKU
