@@ -1,0 +1,50 @@
+# 21天家长训练营 · 自驱不能奖励也不能逼(FELS 课程内容层)
+# 挂载:legacy_training_camps(camp_code=SELFDRIVE_21D_V1)/ legacy_daily_tasks.content_ref
+# 主线:内在动机=自主·胜任·关系(自我决定理论);过度外部奖励/控制会扼杀内在动机;家长支持三要素而非贿赂或逼迫
+# 证据:奖励削弱内在动机有 meta(E6);自主支持多为相关性(E4);机制引 E6–E7 自主支持/情绪。全部 crossref 实核。
+# 红线:父母先改变 · 不承诺提分 · 不比较排名 · 不贴标签 · 不靠贿赂或威胁 · 打卡≠结果 · 完课≠改变 · 观察≠事实 · 危机转人工。
+meta:
+  camp_code: SELFDRIVE_21D_V1
+  title: 21天家长训练营 · 自驱不能奖励也不能逼
+  duration_days: 21
+  audience: 家长(父母先改变;孩子不是被改造对象)
+  philosophy: 内在动机来自自主、胜任、关系三种体验;家长要支持这三样,而不是用奖励贿赂或用压力逼迫
+  phases:
+    - {code: SEE_CONNECT,  title: 看见与连接, day_from: 1,  day_to: 7}
+    - {code: PARENT_FIRST, title: 家长先改变, day_from: 8,  day_to: 14}
+    - {code: CO_STABILIZE, title: 共创与稳定, day_from: 15, day_to: 21}
+  evidence_grounding:            # 全部 crossref 实核(2026-08-15)
+    - {id: REWARD_META,      doi: "10.2307/1170677",                   grade: E6, verified: true, external_validity: MODERATE, note: 奖励/强化与内在动机 meta(1994;过度外部奖励可削弱内在动机)}
+    - {id: AUTONOMY_PARENTING, doi: "10.1080/15295192.2017.1337461",   grade: E4, verified: true, external_validity: MODERATE, note: 父母自主支持vs控制行为分析(2018;相关性)}
+    - {id: AUTONOMY_PRACTICES, doi: "10.3389/fpsyg.2023.1156807",      grade: E4, verified: true, external_validity: MODERATE, note: 自主支持养育实践(2023;相关性)}
+    - {id: TRIPLE_P_META,    doi: "10.1016/j.cpr.2014.04.003",         grade: E7, verified: true, external_validity: MODERATE, note: Triple P meta(自主支持/有限选择)}
+    - {id: EMO_REG_META,     doi: "10.32920/26052868",                grade: E7, verified: true, external_validity: MODERATE, note: 情绪调节·家长 meta(关系/具体肯定)}
+    - {id: EMO_COACH_RCT,    doi: "10.1016/j.adolescence.2015.04.005", grade: E7, verified: true, external_validity: 直接相关, note: 情绪教练 RCT(挫败/关系)}
+    - {id: COERCIVE,         doi: "10.1017/S0954579414000169",        grade: E6, verified: true, external_validity: LIMITED,  note: 强制家庭过程(控制式反效果;早童样本)}
+    - {id: ROGERS,           doi: "10.1037/h0045357",                 grade: E2, verified: true, external_validity: MODERATE, note: 无条件积极关注(关系;理论背景)}
+  lesson_template: [theme, skill, why, evidence_refs, parent_action, say_it_tonight, look_for, boundary]
+  red_lines: [父母先改变, 不承诺提分, 不比较排名, 不贴标签, 不靠贿赂或威胁, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 危机转人工]
+  expert_review: {status: REQUIRED, sign_off: PENDING, reviewer: null}
+  runtime_binding: {status: NOT_WIRED, authorization: HOLD}
+days:
+  - {day: 1,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D1", theme: 先看见自己在用奖励和条件, skill: 家长自我觉察, why: 家长常用“做到就给”驱动,长期会削弱内在动机;先看见自己。, evidence_refs: [REWARD_META], parent_action: 记录今天你用了几次“你做到X就给你Y”。, say_it_tonight: “我发现我总是用奖励来推你。”, look_for: 你靠外部条件驱动的频率,不是给孩子记账。, boundary: 先看见,不评判。}
+  - {day: 2,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D2", theme: 分清内在动机与外部压力, skill: 区分动机来源, why: 分清哪些是他自己想做的、哪些是被推着做的。, evidence_refs: [REWARD_META], parent_action: 观察并记下一件孩子是“自己想做”的事。, say_it_tonight: “那件你自己主动去做的事,我看到了。”, look_for: 孩子自发投入的时刻。, boundary: 观察非评判。}
+  - {day: 3,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D3", theme: 看见控制式语言, skill: 识别控制式养育, why: “必须/否则”这类控制语言削弱自主与动机。, evidence_refs: [AUTONOMY_PARENTING, COERCIVE], parent_action: 记一句今天你说的控制式的话。, say_it_tonight: “刚才我说得有点硬,我换个说法。”, look_for: 控制式语言后孩子的反应。, boundary: 识别非自责。}
+  - {day: 4,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D4", theme: 先连接关系, skill: 关系优先, why: 关系(relatedness)是内在动机的土壤;先关心人再问事。, evidence_refs: [EMO_REG_META, ROGERS], parent_action: 今天先关心孩子这个人,再谈他要做的事。, say_it_tonight: “今天过得怎么样？我先不问作业。”, look_for: 先连接后他是否更愿意投入。, boundary: 关心不是套近乎。}
+  - {day: 5,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D5", theme: 少一点条件奖励, skill: 减少外部奖励, why: 过度物质奖励会把“我想做”变成“为奖励做”。, evidence_refs: [REWARD_META], parent_action: 今天挑一件事不挂钩任何奖励。, say_it_tonight: “这件事不为奖励,我们试试看。”, look_for: 去掉奖励后他还愿不愿做。, boundary: 减少奖励不是取消鼓励。}
+  - {day: 6,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D6", theme: 家长示范为兴趣做事, skill: 家长示范, why: 孩子从看见家长“因喜欢而投入”里学会内在驱动。, evidence_refs: [], parent_action: 让孩子看到你投入做一件你自己享受的事。, say_it_tonight: “这件事我就是喜欢做,做起来很带劲。”, look_for: 家长示范后的感染。, boundary: 示范不是表演。}
+  - {day: 7,  phase: SEE_CONNECT, content_ref: "SELFDRIVE_21D_V1#D7", theme: 第一周小复盘, skill: 家长自我复盘, why: 看见“我少逼少奖、多支持”的时刻。, evidence_refs: [], parent_action: 记一次你没有用奖励或逼迫、而是支持了自主。, say_it_tonight: “这周我在学着少逼、少用奖励。”, look_for: 一个你支持自主的过程,不评分。, boundary: 复盘非考核。}
+  - {day: 8,  phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D8", theme: 支持自主:给理由而非命令, skill: 自主支持, why: 讲清“为什么”比“必须做”更能激发内在认同。, evidence_refs: [AUTONOMY_PRACTICES, TRIPLE_P_META], parent_action: 今天提一个要求时,给一个真诚的理由。, say_it_tonight: “我希望你这样做,是因为……你怎么看？”, look_for: 给理由后他是否更接受。, boundary: 给理由不是说教。}
+  - {day: 9,  phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D9", theme: 支持自主:给选择, skill: 有限选择, why: 有选择带来掌控感,是自主的核心。, evidence_refs: [TRIPLE_P_META], parent_action: 就一件事给孩子两个都可接受的选择。, say_it_tonight: “这两种方式,你想选哪种？”, look_for: 有选择后投入度的变化。, boundary: 选项都要你能接受。}
+  - {day: 10, phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D10", theme: 支持胜任:体验“我能行”, skill: 胜任支持(跳一跳够得着), why: 胜任感来自“稍努力就能做到”的小成功。, evidence_refs: [REWARD_META], parent_action: 安排一个跳一跳够得着的小挑战。, say_it_tonight: “这个有点难度,但我相信你能试试。”, look_for: 完成小挑战后的表情/劲头。, boundary: 难度要合适,不制造挫败。}
+  - {day: 11, phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D11", theme: 支持胜任:肯定进步而非结果, skill: 具体肯定过程, why: 肯定努力与进步比只看结果更养内在动机。, evidence_refs: [EMO_REG_META], parent_action: 指出一个具体的进步(哪怕很小)。, say_it_tonight: “你今天比昨天多坚持了一会儿,我看到了。”, look_for: 被肯定进步后是否更愿继续。, boundary: 肯定进步,不比较他人。}
+  - {day: 12, phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D12", theme: 支持关系:无条件的关注, skill: 关系支持, why: 让孩子知道“不管做得好不好,我都在”。, evidence_refs: [ROGERS, EMO_REG_META], parent_action: 今天有一次关注与他的表现无关。, say_it_tonight: “不管成绩怎样,我都爱和你在一起。”, look_for: 无条件关注后关系的松动。, boundary: 无条件关注不等于没有边界。}
+  - {day: 13, phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D13", theme: 把“要我学”变“我要学”, skill: 引导内在理由, why: 帮孩子找到事情对他自己的意义,动机才持久。, evidence_refs: [AUTONOMY_PRACTICES], parent_action: 帮孩子说出一件事对他自己的一个意义。, say_it_tonight: “这件事对你自己来说,哪里是有用的？”, look_for: 他能否说出自己的理由。, boundary: 意义由他找,不由你塞。}
+  - {day: 14, phase: PARENT_FIRST, content_ref: "SELFDRIVE_21D_V1#D14", theme: 第二周小复盘, skill: 家长自我复盘, why: 家长先改变的证据在自己身上。, evidence_refs: [], parent_action: 记一个你用支持替代了逼迫或奖励的时刻。, say_it_tonight: “我在学着支持你,而不是推你。”, look_for: 一个你坚持的新做法。, boundary: 完课≠改变。}
+  - {day: 15, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D15", theme: 共定一个他自己想达成的目标, skill: 共创(自主), why: 自己定的目标比被派的目标更有驱动力。, evidence_refs: [TRIPLE_P_META], parent_action: 和孩子一起定一个他自己想达成的小目标。, say_it_tonight: “你自己最想做成的一件小事是什么？”, look_for: 自定目标 vs 被派目标的投入差别。, boundary: 目标由他主导。}
+  - {day: 16, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D16", theme: 逐步交还选择权, skill: 渐进自主, why: 逐步交还,自我负责才长得出来。, evidence_refs: [AUTONOMY_PRACTICES], parent_action: 把一个原本你决定的小事交给他决定。, say_it_tonight: “这个你来决定,我支持你。”, look_for: 被信任后的责任感。, boundary: 渐进交还,不一次放手。}
+  - {day: 17, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D17", theme: 用鼓励代替奖励贿赂, skill: 鼓励(非贿赂), why: 鼓励聚焦努力与意义,贿赂聚焦交换,养出的动机不同。, evidence_refs: [REWARD_META], parent_action: 把一次“做到就给”换成一句真诚鼓励。, say_it_tonight: “我看到你为这件事下的功夫。”, look_for: 鼓励 vs 物质奖励后的持续性。, boundary: 不用奖励交换,也不用取消奖励惩罚。}
+  - {day: 18, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D18", theme: 挫败时保护动机, skill: 处理退步(不否定努力), why: 挫败时先护住“我还愿意试”比责备更重要。, evidence_refs: [EMO_COACH_RCT], parent_action: 孩子受挫时,先肯定他愿意尝试。, say_it_tonight: “没做成没关系,你愿意试这点很重要。”, look_for: 受挫后是否还愿再试。, boundary: 保护动机不等于没有要求。}
+  - {day: 19, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D19", theme: 建立自己决定自己负责的小仪式, skill: 自我负责仪式, why: 稳定的小仪式让自主与责任可持续。, evidence_refs: [], parent_action: 约定一个“他自己安排、自己复盘”的小仪式。, say_it_tonight: “今天你自己安排,睡前我们聊聊怎么样。”, look_for: 仪式坚持后的自我负责。, boundary: 仪式贵在小而持续。}
+  - {day: 20, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D20", theme: 迁移到别的领域, skill: 泛化, why: 把“支持自主”用到另一个领域,巩固。, evidence_refs: [], parent_action: 把支持自主的做法用到另一件事上。, say_it_tonight: “这个办法挺好,别的事我们也这么试？”, look_for: 同法在新领域是否也管用。, boundary: 迁移是尝试,不强求。}
+  - {day: 21, phase: CO_STABILIZE, content_ref: "SELFDRIVE_21D_V1#D21", theme: 综合复盘与下一步, skill: 过程回看+选择继续, why: 看见 21 天里“我从推到支持”的过程改变,选一件继续。, evidence_refs: [], parent_action: 回看 21 天,选一个你要继续的支持自主的做法。, say_it_tonight: “这 21 天我最想继续做的是……你觉得呢？”, look_for: 一个你确定延续的做法。, boundary: 综合复盘非考核;不承诺提分。}

@@ -22,7 +22,7 @@ product_spine:
 
 # 产品矩阵 5 条线(S1p11)—— 课件主要落在"家长成长/家庭关系";孩子线需 Consent 后置
 product_lines:
-  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1], status: PRODUCED}
+  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], status: PRODUCED}
   - {line: 家庭关系, user: 家庭,  value: 亲子沟通与共同任务, courseware: [FAMILY_90D_V1, PARENT_21D_V1], status: PRODUCED}
   - {line: 孩子成长, user: 孩子,  value: 习惯/动力/表达/自驱, courseware: [], status: TODO, note: "儿童直接产品 HOLD;需独立 Consent/未成年人边界,先不产孩子课件"}
   - {line: AI陪伴,   user: 全家,  value: 每日反馈与成长计划, courseware: [], status: NA, note: "属 AI 产品线(Principal),非课件"}
@@ -34,6 +34,7 @@ produced_courseware:
   - {course_code: FAMILY_90D_V1, title: 90天家庭成长计划·从家长先改变到共创稳定, units: 13周, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 5, status: EVIDENCE_READY_CONTENT_DRAFT}
   - {course_code: SCREEN_21D_V1, title: 手机不靠没收·靠一起定规则, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT, note: 屏幕专项证据 E4/外推 MODERATE,机制引 E6–E7 家长管理}
   - {course_code: STUDY_21D_V1,  title: 自驱不是催出来的, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 9, status: EVIDENCE_READY_CONTENT_DRAFT, note: 自我调节学习 meta/训练 E6–E7;家长过度参与负相关已标注}
+  - {course_code: SELFDRIVE_21D_V1, title: 自驱不能奖励也不能逼, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT, note: 内在动机=自主·胜任·关系(自我决定论);奖励削弱内在动机有 meta(E6),自主支持多为相关性(E4/外推 MODERATE);与 STUDY 分工=动机来源,不重叠}
 
 # 待产课件(登记,不臆造;需 spec + 循证 + 专家终审后再产)
 courseware_backlog:
