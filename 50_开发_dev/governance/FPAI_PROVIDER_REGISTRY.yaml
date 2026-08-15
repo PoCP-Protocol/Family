@@ -17,9 +17,9 @@ providers:
     processing_region: unspecified
     retention_policy_ref: null
     data_usage_policy_ref: null
-    approved_environment: [internal_livecheck]   # 仅内部受控 livecheck;非 pilot/production
-    status: TECHNICALLY_VALIDATED   # 非 PRODUCTION_APPROVED
-    notes: cc switch 本地代理 → Anthropic /v1/messages;生产批准待治理。
+    approved_environment: [internal_livecheck, model_first_internal]   # W2R-102:内部 dogfood 默认;非 pilot/production
+    status: INTERNAL_DEFAULT_APPROVED   # W2R-102 架构师授权内部默认;pilot/production 仍待治理
+    notes: cc switch 本地代理 → Anthropic /v1/messages;W2R-102 内部默认已批(provider=anthropic-cc-switch);pilot 待 IAM + 合规。
 
   - provider_id: zhipu-glm4v
     vendor: zhipu
