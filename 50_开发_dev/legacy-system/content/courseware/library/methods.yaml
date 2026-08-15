@@ -1,0 +1,25 @@
+# 课件域方法库(怎么练)。课件技能从这里取;每个 method 可被任意课程实例化成"一件小事+今晚可说的话+观察"。
+# evidence_refs 用 source_id 引用平台 verified_sources(canonical 在 20_知识,W2R-103B 硬化);grade/门 = evidence.py。
+# external_validity: 直接相关 / MODERATE / LIMITED(对"12–15 岁青少年家长"这一目标人群的外推)。
+# 无直接来源者 evidence_refs: [] 且 basis: practitioner(实践方法,证据待验),不硬凑。
+methods:
+  - {id: parent_self_awareness,   construct: parent_self_regulation,   mechanism: "连接前家长先不被第一反应带走(情绪教练第一步:觉察)", evidence_refs: [EMO_COACH_RCT, EMO_REG_META], external_validity: 直接相关}
+  - {id: pause_slow_down,         construct: parent_self_regulation,   mechanism: "短暂停打断'施压→对抗'升级链", evidence_refs: [COERCIVE, PARENT_TEEN_COMM], external_validity: MODERATE}
+  - {id: emotion_validation,      construct: empathic_attunement,      mechanism: "情绪先被接住,才更能听进后面的话", evidence_refs: [EMO_COACH_RCT, EMO_REG_META], external_validity: 直接相关}
+  - {id: emotion_labeling,        construct: empathic_attunement,      mechanism: "命名情绪帮助情绪调节(name it to tame it)", evidence_refs: [EMO_COACH_RCT, TUNING_KIDS], external_validity: MODERATE}
+  - {id: co_regulation,           construct: empathic_attunement,      mechanism: "家长出声示范平复,提供共同调节脚手架", evidence_refs: [EMO_REG_META, TUNING_KIDS], external_validity: MODERATE}
+  - {id: reflective_listening,    construct: communication_quality,    mechanism: "复述让对方感到被听见,降低防御", evidence_refs: [ROGERS, PARENT_TEEN_COMM], external_validity: MODERATE}
+  - {id: open_questioning,        construct: communication_quality,    mechanism: "开放式提问替代追问,邀请表达", evidence_refs: [ROGERS, PARENT_TEEN_COMM], external_validity: MODERATE}
+  - {id: reduce_defensiveness,    construct: communication_quality,    mechanism: "少用'但是',用'我看到…我担心…'降低对抗", evidence_refs: [COERCIVE, PARENT_TEEN_COMM], external_validity: MODERATE}
+  - {id: limited_choice,          construct: autonomy_support,         mechanism: "有限选择支持自主、减少权力对抗", evidence_refs: [TRIPLE_P_META, COERCIVE], external_validity: MODERATE}
+  - {id: expectation_calibration, construct: autonomy_support,         mechanism: "把'应该'降为可达的当下小目标", evidence_refs: [], basis: practitioner, external_validity: LIMITED}
+  - {id: boundary_with_warmth,    construct: boundary_consistency,     mechanism: "温和而坚定:边界与温度并存", evidence_refs: [IY_RCT, COERCIVE], external_validity: MODERATE}
+  - {id: consistency,             construct: boundary_consistency,     mechanism: "说到做到,行为可预期降低冲突", evidence_refs: [IY_RCT, COERCIVE], external_validity: MODERATE}
+  - {id: repair,                  construct: repair_and_connection,    mechanism: "冲突后主动修复优先于继续说教", evidence_refs: [ROGERS], basis: practitioner, external_validity: LIMITED}
+  - {id: connection_ritual,       construct: repair_and_connection,    mechanism: "稳定的小仪式让连接跨天持续", evidence_refs: [ROGERS], basis: practitioner, external_validity: LIMITED}
+  - {id: specific_reinforcement,  construct: reinforcement_and_transfer, mechanism: "具体肯定行为(非贴人格标签)巩固行为", evidence_refs: [EMO_REG_META, TRIPLE_P_META], external_validity: MODERATE}
+  - {id: generalization,          construct: reinforcement_and_transfer, mechanism: "把已见效小做法迁到新场景巩固技能", evidence_refs: [], basis: practitioner, external_validity: LIMITED}
+  - {id: handle_regression,       construct: repair_and_connection,    mechanism: "退步是常态,回到'先连接'比责备有用", evidence_refs: [EMO_COACH_RCT], external_validity: 直接相关}
+
+# 全库红线(所有 method 实例化时必须守):
+red_lines: [父母先改变, 不贴标签, 不诊断, 不制造焦虑, 不比较排名, 打卡不等于结果, 完课不等于改变, 观察不等于事实, 不承诺疗效, 危机转人工]

@@ -1,0 +1,38 @@
+# 课件域构念库(要培养什么)。构念 = 可被 method 训练、可被行为观察的能力,不是人格标签。
+# 红线:构念是"阶段性可练能力/过程",不是给家庭或孩子贴的固定标签或评分。
+constructs:
+  - id: parent_self_regulation
+    name: 家长自我调节
+    definition: 家长觉察并调节自己的第一反应(而非被情绪带走)。
+    observable_signals: [开口前有停顿, 能说出自己的情绪, 冲突升级频率下降]
+    not: [给孩子贴"难搞"标签, 打"情绪管理分"]
+  - id: empathic_attunement
+    name: 共情调谐
+    definition: 先接住/命名情绪,再处理事情(情绪教练)。
+    observable_signals: [先复述/确认再回应, 孩子更愿意继续说]
+    not: [认同一切行为, 取消边界]
+  - id: communication_quality
+    name: 沟通质量
+    definition: 降低防御、提升"被听见"的对话方式。
+    observable_signals: [追问变好奇, 少用"但是", 对话能继续]
+    not: [把"说得多"当质量]
+  - id: autonomy_support
+    name: 自主支持
+    definition: 在边界内给选择,支持孩子的能动性。
+    observable_signals: [命令换成有限选择, 孩子参与决定]
+    not: [放任, 或假选择]
+  - id: boundary_consistency
+    name: 边界与一致性
+    definition: 温和而坚定,说到做到。
+    observable_signals: [边界稳定, 不临时改约定]
+    not: [严厉/惩罚, 或忽冷忽热]
+  - id: repair_and_connection
+    name: 修复与连接
+    definition: 冲突后主动修复,建立可持续的日常连接。
+    observable_signals: [家长先道歉一次, 有每日小仪式]
+    not: [用修复换取顺从, 要求孩子先认错]
+  - id: reinforcement_and_transfer
+    name: 强化与迁移
+    definition: 具体肯定行为(非贴标签),把有效做法迁到新场景。
+    observable_signals: [肯定具体行为, 同法用于新情境]
+    not: [表扬人格("你真聪明"), 制造表扬依赖]

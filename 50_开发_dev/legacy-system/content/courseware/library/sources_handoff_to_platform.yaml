@@ -1,0 +1,18 @@
+# 待入平台循证源库的建议清单(HANDOFF)。
+# 本文件不是 canonical。canonical verified_sources 在 20_知识_knowledge/library/verified_sources.yaml,
+# 由 W2R-103B(Principal AI / Evidence Source Registry Hardening)硬化收编。此处仅提交"我已 crossref 实核"的候选。
+handoff:
+  status: PROPOSED_FOR_PLATFORM_verified_sources
+  owner_target: W2R_103B
+  verified_by: courseware-author (curl api.crossref.org)
+  verified_at: "2026-08-15"
+  note: 全部标题经 crossref /works/<DOI> 核验存在;grade 为建议,最终以 evidence.py + 人审为准。
+sources:
+  - {id: EMO_COACH_RCT,   doi: "10.1016/j.adolescence.2015.04.005", grade: E7, verified: true, external_validity: 直接相关, title: "Tuning in to Teens: improving parental responses to anger (RCT)"}
+  - {id: EMO_REG_META,    doi: "10.32920/26052868",                 grade: E7, verified: true, external_validity: MODERATE, title: "Parenting Correlates of Children's Emotion Regulation: systematic review & meta (2024)"}
+  - {id: PARENT_TEEN_COMM, doi: "10.1016/j.jadohealth.2017.11.067", grade: E6, verified: true, external_validity: 直接相关, title: "Parent-targeted intervention on Parent-Teen Communication (2018)"}
+  - {id: TRIPLE_P_META,   doi: "10.1016/j.cpr.2014.04.003",         grade: E7, verified: true, external_validity: MODERATE, title: "Triple P Positive Parenting Program: systematic review & meta (2014)"}
+  - {id: IY_RCT,          doi: "10.5093/pi2022a2",                  grade: E7, verified: true, external_validity: MODERATE, title: "Incredible Years Parenting & Child Treatment Programs (RCT, 2021)"}
+  - {id: TUNING_KIDS,     doi: "10.1007/s10578-012-0322-1",         grade: E6, verified: true, external_validity: MODERATE, title: "Tuning into Kids: emotion coaching intervention (2012)"}
+  - {id: COERCIVE,        doi: "10.1017/S0954579414000169",         grade: E6, verified: true, external_validity: LIMITED, title: "Coercive family process and early-onset conduct problems (2014)"}
+  - {id: ROGERS,          doi: "10.1037/h0045357",                  grade: E2, verified: true, external_validity: MODERATE, title: "Necessary and sufficient conditions of therapeutic personality change (Rogers, 1957)"}
