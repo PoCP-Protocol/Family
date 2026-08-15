@@ -1,0 +1,23 @@
+# 合并授权账本(MERGE AUTHORIZATION LEDGER)
+# 机器护栏 SSOT:任何以 master 为 base 的 PR,合并前必须在此登记【显式、独立、点名】的 merge 授权,
+# 且 head_sha 必须与被合 PR 的 head 完全一致。缺失 → tools/merge-authorization-guard.mjs 判 MERGE_DENIED(CI 红)。
+# 原则:CI green != merge authorization;技术追认 != 流程合规;Agent 不得自增授权。
+# 授权只能由总架构师(family-chief-architect)通过一条 authorized_by + ref 落记。
+schema_version: MERGE_AUTH_LEDGER_V1
+maintained_by: family-chief-architect
+
+# 已合入 master 的历史(其中 #17/#18 为【提前合规程违规】,内容技术追认,不回滚;见 governance/GOVERNANCE_VIOLATIONS.md):
+history:
+  - pr: 18
+    head_sha: "273952f6a33f93deb5789c5104b764b4dcc33485"
+    merged: true
+    process: EARLY_MERGE_PROCESS_VIOLATION   # 合并早于 fresh review;内容 PASS,流程 FAIL
+    technical_accepted_ex_post: true
+  - pr: 17
+    head_sha: null
+    merged: true
+    process: EARLY_MERGE_PROCESS_VIOLATION
+    technical_accepted_ex_post: true
+
+# 未来对 master 的合并授权登记于此(每条须 pr + head_sha + authorized_by + ref + date):
+authorizations: []

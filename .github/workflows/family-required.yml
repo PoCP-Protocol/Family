@@ -112,3 +112,21 @@ jobs:
         run: node tools/validate-contracts.mjs
       - name: M3 dangerous authorization scan
         run: node tools/m3-dangerous-authorization-scan.mjs
+
+  merge-authorization:
+    name: Merge authorization guard (master only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: 50_开发_dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Enforce explicit merge authorization for master
+        run: node tools/merge-authorization-guard.mjs
