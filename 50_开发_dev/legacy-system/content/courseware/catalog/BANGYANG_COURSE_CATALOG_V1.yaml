@@ -14,6 +14,7 @@ meta:
 # 一入口 · 三核心 · 五收入(S2p17 产品脊柱)
 product_spine:
   - {tier: 入口层, item: 家庭/父母成长测评,   value: 看清问题与优先级, price_band: 免费,        role: 获客+画像, courseware_status: NA,           fels_layer: IMPLEMENTED_FELS1, family_migration: "Assessment + Growth Onboarding(测评≠GrowthState)"}
+  - {tier: 入口体验, item: 5天好爸妈入门营,     value: 第一次接住情绪,   price_band: "99",         role: 低价获客/筛意愿, courseware_status: PRODUCED, course_code: PARENT_5D_V1, fels_layer: PLANNED_FELS2, family_migration: "5-Day Intro GrowthCycle(完课≠改变);命名来源 E2/E3 推广口径"}
   - {tier: 体验层, item: 21天成长挑战,         value: 第一次小改变,     price_band: "99–399",     role: 筛意愿建信任, courseware_status: PRODUCED,     course_code: PARENT_21D_V1, fels_layer: PLANNED_FELS2, family_migration: "21-Day GrowthCycle(打卡≠Outcome)"}
   - {tier: 核心层, item: 90天家庭成长计划,     value: 系统性家庭改善,   price_band: "1999–9999",  role: 结果交付/案例, courseware_status: PRODUCED,     course_code: FAMILY_90D_V1, fels_layer: PLANNED_FELS2, family_migration: "90-Day GrowthJourney(完课≠改变)"}
   - {tier: 长期层, item: 年度家庭成长会员,     value: 持续陪伴+权益,   price_band: "999–2999/年", role: 稳定收入/留存, courseware_status: NA,           fels_layer: PLANNED_FELS3, family_migration: "Family Growth Membership(会员≠家庭状态)"}
@@ -22,7 +23,7 @@ product_spine:
 
 # 产品矩阵 5 条线(S1p11)—— 课件主要落在"家长成长/家庭关系";孩子线需 Consent 后置
 product_lines:
-  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], status: PRODUCED}
+  - {line: 家长成长, user: 父母,  value: 教育认知与沟通方法, courseware: [PARENT_5D_V1, PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], status: PRODUCED}
   - {line: 家庭关系, user: 家庭,  value: 亲子沟通与共同任务, courseware: [FAMILY_90D_V1, PARENT_21D_V1], status: PRODUCED}
   - {line: 孩子成长, user: 孩子,  value: 习惯/动力/表达/自驱, courseware: [], status: TODO, note: "儿童直接产品 HOLD;需独立 Consent/未成年人边界,先不产孩子课件"}
   - {line: AI陪伴,   user: 全家,  value: 每日反馈与成长计划, courseware: [], status: NA, note: "属 AI 产品线(Principal),非课件"}
@@ -30,6 +31,7 @@ product_lines:
 
 # 已产出课件清单(四产物:HTML deck / .pptx / 家长工作簿 / 讲师手册-DRAFT)
 produced_courseware:
+  - {course_code: PARENT_5D_V1,  title: 5天好爸妈入门营·先接住情绪再谈教育, units: 5天,  artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 4, status: EVIDENCE_READY_CONTENT_DRAFT, note: 入口体验鳞;命名/工具名(情绪五维法/移情图)来源 E2/E3 推广口径仅取结构,内容用已核验 E6–E7 情绪/倾听方法,品牌工具官方教案标【待补】不臆造}
   - {course_code: PARENT_21D_V1, title: 21天家长训练营·先连接再纠正, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT}
   - {course_code: FAMILY_90D_V1, title: 90天家庭成长计划·从家长先改变到共创稳定, units: 13周, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 5, status: EVIDENCE_READY_CONTENT_DRAFT}
   - {course_code: SCREEN_21D_V1, title: 手机不靠没收·靠一起定规则, units: 21天, artifacts: [deck.html, pptx, workbook, guide], evidence_sources: 8, status: EVIDENCE_READY_CONTENT_DRAFT, note: 屏幕专项证据 E4/外推 MODERATE,机制引 E6–E7 家长管理}
@@ -40,6 +42,20 @@ produced_courseware:
 courseware_backlog:
   - {topic: 青春期沟通冲突(进阶), line: 家庭关系, priority: P2, note: 21天之上的进阶专题;待需求确认后再产}
   # 已完成并移入 produced:手机管理/屏幕时间(SCREEN_21D_V1)· 学习习惯/自驱力(STUDY_21D_V1)
+
+# 课程阶梯 / 成长路径体系(忠实取自 S2p7 漏斗 + S1p9 用户路径 + S2p17 脊柱 + S1p8 价格阶梯)
+# 这是"课程体系"的系统视图:一个家庭沿哪条路径逐鳞前进,每鳞用哪门课件承载。红线:每一鳞都不承诺结果,结果在购买之后靠真实行为改变证明。
+course_ladder:
+  funnel: [触发, 觉醒, 行动, 改变, 长期, 传播]   # S2p7
+  rungs:
+    - {step: 1, funnel: 觉醒, rung: 测评看清优先级, course: null,          entity: 家庭/父母成长测评, price: 免费,      gate: "测评≠诊断≠GrowthState;只做优先级排序"}
+    - {step: 2, funnel: 行动, rung: 入口体验小改变, course: PARENT_5D_V1,   entity: 5天好爸妈入门营,   price: "99",       gate: "完课≠改变;只求第一次接住情绪"}
+    - {step: 3, funnel: 行动, rung: 按痛点选专项营, course_pool: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], entity: 21天专项训练营(4大痛点), price: "99–399", gate: "打卡≠Outcome;由测评优先级路由,不多买"}
+    - {step: 4, funnel: 改变, rung: 系统性家庭改善, course: FAMILY_90D_V1,  entity: 90天家庭成长计划,  price: "1999–9999", gate: "四阶段 SEE→PARENT_FIRST→CO_CREATE→STABILIZE;完课≠改变"}
+    - {step: 5, funnel: 长期, rung: 持续陪伴留存,   course: null,          entity: 年度家庭成长会员,  price: "999–2999/年", gate: "会员≠家庭状态;FELS-3,非课件", courseware_status: NA}
+    - {step: 6, funnel: 传播, rung: 成果传播裂变,   course: null,          entity: 成长报告+邀请,     price: 成长权益,   gate: "传播结果不传播焦虑;非课件", courseware_status: NA}
+  routing_rule: "测评优先级 → 对应 21天专项营;入门营(5天)为所有路径的可选前置;不做全家打包多买"
+  pathway_note: "5天=筛意愿建信任 · 21天=单点行为改变 · 90天=系统性改善+案例;每鳞独立可交付,亦可顺序推进"
 
 # 商业化统一门(所有课件继承;见 COMMERCIAL_COURSEWARE_METHOD_V1)
 commercial_gate_inherited: [HUMAN_EXPERT_SIGNOFF, FACILITATOR_GUIDE, PARENT_WORKBOOK, VISUAL_MEDIA, ASSESSMENT_REPORT_LOOP, SEGMENTATION, COMPLIANCE, REAL_VALIDATION_PLAN, RUNTIME_BINDING]
