@@ -40,8 +40,14 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   await pool.query('delete from consents');
   await pool.query('delete from life_stage_assignments');
   await pool.query('delete from family_relationships');
+  // TENANCY-V2 T1:新表以 FK 引用 persons/families,须先清(to_regclass 守卫,兼容未迁移 0018 的库)。
+  await pool.query("do $$ begin if to_regclass('public.family_memberships') is not null then delete from family_memberships; end if; end $$;");
+  await pool.query("do $$ begin if to_regclass('public.account_person_bindings') is not null then delete from account_person_bindings; end if; end $$;");
+  // 释放 families→persons 的 primary_contact FK,否则删 persons 被挡(fk_family_primary_contact)。
+  await pool.query('update families set primary_contact_person_id = null where primary_contact_person_id is not null');
   await pool.query('delete from persons');
   await pool.query('delete from families');
+  await pool.query("do $$ begin if to_regclass('public.accounts') is not null then delete from accounts; end if; end $$;");
 }
 
 /**
