@@ -13,7 +13,7 @@
       "role": "principal_ai",
       "writes_product_code": true,
       "may_authorize": false,
-      "default_allowed_paths": ["50_开发_dev/packages/principal-ai/**", "50_开发_dev/packages/principal-runtime/**", "50_开发_dev/apps/api/src/principal/**", "20_知识_knowledge/**", "50_开发_dev/reports/m3/**"],
+      "default_allowed_paths": ["50_开发_dev/packages/principal-ai/**", "50_开发_dev/packages/principal-runtime/**", "50_开发_dev/apps/api/src/modules/principal/**", "20_知识_knowledge/**", "50_开发_dev/reports/m3/**"],
       "purpose": "Principal understanding, evidence grounding, model gateway integration, intelligence evaluation and safety."
     },
     {
@@ -21,7 +21,7 @@
       "role": "consumer_product",
       "writes_product_code": true,
       "may_authorize": false,
-      "default_allowed_paths": ["50_开发_dev/apps/web/**", "50_开发_dev/apps/api/src/principal/**", "50_开发_dev/reports/m3/**"],
+      "default_allowed_paths": ["50_开发_dev/apps/web/**", "50_开发_dev/apps/api/src/modules/principal/**", "50_开发_dev/reports/m3/**"],
       "purpose": "Consumer loop, human confirmation UX, check-in, timeline, return and browser E2E."
     },
     {
@@ -29,7 +29,7 @@
       "role": "object_domain",
       "writes_product_code": true,
       "may_authorize": false,
-      "default_allowed_paths": ["50_开发_dev/packages/object-tree/**", "50_开发_dev/architecture/rb-003/**", "50_开发_dev/apps/api/src/family/**"],
+      "default_allowed_paths": ["50_开发_dev/packages/object-tree/**", "50_开发_dev/architecture/rb-003/**", "50_开发_dev/apps/api/src/modules/family/**"],
       "purpose": "Object semantic runtime, attribute projection and declarative write guards. It never owns generative intelligence."
     },
     {
@@ -37,8 +37,8 @@
       "role": "tenancy_iam",
       "writes_product_code": true,
       "may_authorize": false,
-      "default_allowed_paths": ["50_开发_dev/architecture/tenancy/**", "50_开发_dev/docs/MULTI_TENANCY_DESIGN*", "50_开发_dev/reports/tenancy/**"],
-      "purpose": "C2C/B2C tenancy and data sovereignty contracts; IAM runtime only after tenancy gate."
+      "default_allowed_paths": ["50_开发_dev/architecture/tenancy/**", "50_开发_dev/docs/MULTI_TENANCY_DESIGN*", "50_开发_dev/reports/tenancy/**", "50_开发_dev/database/migrations/**", "50_开发_dev/apps/api/src/modules/auth/**", "50_开发_dev/apps/api/src/modules/family/**", "50_开发_dev/packages/contracts/**", "50_开发_dev/apps/api/**/*.spec.ts"],
+      "purpose": "C2C/B2C tenancy and data sovereignty; TENANCY-001 contract PASS_CLOSED; DEVOS-CONV-003 authorizes T1/T2 runtime (Account/AccountPersonBinding/FamilyMembership, account-scoped session, FamilyScopeGuard). Organization/AccessGrant (T3+) remain HOLD."
     },
     {
       "agent_id": "AGENT_FLM_LEGACY",
