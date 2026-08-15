@@ -104,6 +104,9 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     expect(body.risk_route).toBe('REVIEW');
     expect(body.response_id).toBeTruthy();
     expect(body.action_proposal_id).toBeNull();
+    // W2R-105:REVIEW 响应【扣留】,不展示给家长,human_handoff=true
+    expect(body.response).toBeNull();
+    expect(body.human_handoff).toBe(true);
 
     const list = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: Array<Record<string, unknown>> };
     expect(list.handoffs.length).toBe(1);
@@ -113,11 +116,43 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
 
     const resolve = await post(`/families/${familyId}/principal/handoffs/${handoffId}/resolve`, { resolution: 'APPROVED', note: '已复核' });
     expect(resolve.status).toBe(201);
+    // W2R-105:人工 APPROVED 后释放此前扣留的候选响应
+    const resolveBody = await resolve.json() as Record<string, unknown>;
+    expect(resolveBody.released_response).toBeTruthy();
     const after = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: unknown[] };
     expect(after.handoffs.length).toBe(0);
     // resolving an unknown/closed handoff -> 404
     const again = await post(`/families/${familyId}/principal/handoffs/${handoffId}/resolve`, { resolution: 'APPROVED' });
     expect(again.status).toBe(404);
+  });
+
+  // W2R-104-FINAL-FIX-001 专家护栏贯穿 W2R-105 Human Gate:Expert Rule → Runtime REVIEW → 响应扣留 → handoff。
+  it('GOLD-051 (ParentVerbalEscalationReviewGuard): 家长已发生激烈言语 → REVIEW 扣留,no proposal,handoff', async () => {
+    const sid = await newSession();
+    const res = await post(`/families/${familyId}/principal/sessions/${sid}/messages`, {
+      subject_ref: 'child-1', message: '我刚才吼了孩子，现在很后悔，我今晚到底该怎么说？',
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.risk_route).toBe('REVIEW');
+    expect(body.action_proposal_id).toBeNull();
+    expect(body.response).toBeNull();          // 扣留:不展示给家长
+    expect(body.human_handoff).toBe(true);
+    const list = await (await fetch(`${baseUrl}/families/${familyId}/principal/handoffs`, { headers: { 'x-actor-id': 'advisor-1' } })).json() as { handoffs: Array<Record<string, unknown>> };
+    expect(list.handoffs.some((h) => h.risk_route === 'REVIEW')).toBe(true);
+  });
+
+  it('GOLD-053 (ImminentSelfLossOfControlGuard): 家长临界失控 → REVIEW 扣留,no proposal,handoff', async () => {
+    const sid = await newSession();
+    const res = await post(`/families/${familyId}/principal/sessions/${sid}/messages`, {
+      subject_ref: 'child-1', message: '我快控制不住脾气了，我今晚到底该怎么说？',
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.risk_route).toBe('REVIEW');
+    expect(body.action_proposal_id).toBeNull();
+    expect(body.response).toBeNull();
+    expect(body.human_handoff).toBe(true);
   });
 
   it('M3-102 multimodal: message accepts images[]; image_count recorded; deterministic path stays NORMAL', async () => {

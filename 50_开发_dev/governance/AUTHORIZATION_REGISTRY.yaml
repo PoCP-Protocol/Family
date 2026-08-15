@@ -154,6 +154,24 @@ capabilities:
       note: 生产/pilot 仍 NO;PASS_CLOSED 仅解锁 PR#16→m3/w2r-104 集成与后续 MASTER-INTEGRATION-001(Draft PR→master, AUTO_MERGE=NO)。MODEL_INDEPENDENCE=PARTIAL、INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED 不变。
     notes: 防御性能力(不新增外呼面):真实模型默认开之后的独立质量门,评理解/标签化/漏判风险。生成式 judge 为主体 + 确定性安全底座兜底(judge 不可用/失败/非法→回退);不变量=只降级不放宽(仅 NORMAL→REVIEW)。judge 复用 W2R-102 approved provider=anthropic-cc-switch,无 judge(CI/默认)走确定性底座零外呼。不写 canonical;pilot/production 仍 NO。
 
+  # W2R-105 Human Confirmation 闭环(裁决 M3-MOS-CLOSEOUT-WAVE-2:W2R-104 已入 master → clean-forward 解锁;
+  # 本条按【当前 master governance truth】重写,不 cherry-pick 旧 CONV-001 授权文本。)
+  - capability_id: W2R_105_HUMAN_CONFIRMATION_CLOSURE
+    stage: M3-W2R
+    status: INTERNAL_ALLOWED               # 前置(W2R-104 PASS_CLOSED 且已入 master)已满足
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true               # 确定性控制面(扣留/释放),随 principal runtime;非外呼
+    live_external_call_authorized: false   # 扣留/释放不调用任何外部模型
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: reports/m3/M3_W2R_105_HUMAN_CONFIRMATION_GATE.md
+    authorized_at: "2026-08-15"
+    ratification_ref: Chief Architect M3-MOS-CLOSEOUT-WAVE-2 ruling (2026-08-15;W2R-104 in master → W2R_105_CLEAN_FORWARD=AUTHORIZED)
+    supersedes: []
+    notes: 安全控制面(非生成式):W2R-104 质量闸/护栏判 REVIEW 的候选响应【扣留】(response=null,human_handoff=true,response_id 挂 handoff);人工复核 APPROVED 才释放一次(幂等),REJECTED/ESCALATED/INFO_ONLY 保持扣留;AI 不参与释放决策。E2E 覆盖 GOLD-051/053(护栏升 REVIEW→扣留→无 proposal→handoff)。不写 canonical;pilot/production 仍 NO。
+
   - capability_id: M3_102_IMAGE_EXTERNAL
     stage: M3-102
     status: TECHNICAL_PASS_PRIVACY_GATE_REQUIRED

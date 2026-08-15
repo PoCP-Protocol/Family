@@ -201,9 +201,10 @@ export class PrincipalController {
     if (!['APPROVED', 'REJECTED', 'ESCALATED', 'INFO_ONLY'].includes(resolution)) {
       throw new BadRequestException('resolution must be APPROVED|REJECTED|ESCALATED|INFO_ONLY');
     }
-    const ok = await this.service.resolveHandoff(familyId, handoffId, actor, resolution, body?.note ?? null, corr(correlationId));
-    if (!ok) throw new NotFoundException('open handoff not found for family');
-    return { ok: true, resolution };
+    const result = await this.service.resolveHandoff(familyId, handoffId, actor, resolution, body?.note ?? null, corr(correlationId));
+    if (!result.ok) throw new NotFoundException('open handoff not found for family');
+    // W2R-105:APPROVED 释放此前扣留的候选响应;其余 resolution released_response=null(保持扣留)。
+    return { ok: true, resolution, released_response: result.released_response };
   }
 
   @Post('proposals/:proposalId/accept')
