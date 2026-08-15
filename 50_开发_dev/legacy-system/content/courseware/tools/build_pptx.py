@@ -25,6 +25,13 @@ BG_B   = RGBColor(0xEF, 0xF6, 0xFF)  # 蓝(今晚可说的话)
 BG_C   = RGBColor(0xF8, 0xFA, 0xFC)  # 观察
 BG_D   = RGBColor(0xF9, 0xFA, 0xFB)  # 边界
 W, H = Inches(13.333), Inches(7.5)
+# 阶段配色带(与 HTML deck / 设计系统一致)
+PHASE_ACCENT = {"SEE_CONNECT": ORANGE, "PARENT_FIRST": BLUE, "CO_STABILIZE": RGBColor(0x0F, 0x76, 0x6E)}
+
+
+def is_review(d) -> bool:
+    s = str(d.get("skill", "")) + str(d.get("theme", ""))
+    return "复盘" in s or "回看" in s
 
 
 def box(slide, l, t, w, h, fill=None, line=None):
@@ -85,25 +92,52 @@ def build(doc: dict, prs: Presentation):
 
     lessons = doc.get("days") or doc.get("weeks") or []
     unit = "Day" if doc.get("days") else "Week"
+    total = len(lessons)
+
+    def foot(s, num):
+        txt(s, Inches(0.9), Inches(7.05), Inches(11.5), Inches(0.3), [(f'{m.get("camp_code","")}    {unit} {num} / {total}', 9, RGBColor(0xB8,0xC0,0xCC), False)])
+
+    seen_phase = set()
     for d in lessons:
-        s = prs.slides.add_slide(blank)
-        box(s, 0, 0, W, Inches(0.25), fill=ORANGE)
+        pcode = d.get("phase", ""); accent = PHASE_ACCENT.get(pcode, ORANGE)
         num = d.get("day", d.get("week"))
-        ptitle = phases.get(d.get("phase",""), {}).get("title", "")
+        ptitle = phases.get(pcode, {}).get("title", "")
+        # 阶段分隔页
+        if pcode and pcode not in seen_phase:
+            seen_phase.add(pcode); p = phases.get(pcode, {})
+            s = prs.slides.add_slide(blank)
+            box(s, 0, 0, W, Inches(0.35), fill=accent)
+            txt(s, Inches(0.9), Inches(2.3), Inches(11.5), Inches(0.5), [(f"阶段 {len(seen_phase)} / {len(phases)}", 15, GREY, True)])
+            txt(s, Inches(0.9), Inches(2.9), Inches(11.5), Inches(1.2), [(ptitle, 46, accent, True)])
+            txt(s, Inches(0.9), Inches(4.2), Inches(11.5), Inches(0.5), [(f'D{p.get("day_from","")}–{p.get("day_to","")}', 18, GREY, False)])
+        # 复盘/结营日:单独版式(一页一观点,无 2x2)
+        if is_review(d):
+            is_last = num == total
+            s = prs.slides.add_slide(blank)
+            box(s, 0, 0, W, Inches(0.25), fill=accent)
+            txt(s, Inches(0.9), Inches(0.5), Inches(11.5), Inches(0.5), [(f'{unit} {num}   ·   {ptitle} · {"结营" if is_last else "复盘"}', 14, GREY, True)])
+            txt(s, Inches(0.9), Inches(0.95), Inches(11.5), Inches(0.8), [(d.get("theme",""), 30, INK, True)])
+            txt(s, Inches(0.9), Inches(1.85), Inches(11.5), Inches(0.7), [(d.get("why",""), 14, GREY, False)])
+            card(s, Inches(0.9), Inches(2.9), Inches(11.5), Inches(2.6), "回看一件事", str(d.get("parent_action","")) + "\n\n可以说:“" + str(d.get("say_it_tonight","")) + "”", BG_C, accent)
+            txt(s, Inches(0.9), Inches(5.8), Inches(11.5), Inches(0.5), [(str(d.get("boundary","")), 12, GREY, False)])
+            foot(s, num); continue
+        # 日常课:4 卡 2x2
+        s = prs.slides.add_slide(blank)
+        box(s, 0, 0, W, Inches(0.25), fill=accent)
         txt(s, Inches(0.9), Inches(0.5), Inches(11.5), Inches(0.5), [(f"{unit} {num}   ·   {ptitle}", 14, GREY, True)])
         txt(s, Inches(0.9), Inches(0.95), Inches(11.5), Inches(0.8), [(d.get("theme",""), 30, INK, True)])
-        txt(s, Inches(0.9), Inches(1.75), Inches(11.5), Inches(0.4), [("技能:" + str(d.get("skill","")), 15, BLUE, True)])
+        txt(s, Inches(0.9), Inches(1.75), Inches(11.5), Inches(0.4), [("技能:" + str(d.get("skill","")), 15, accent, True)])
         txt(s, Inches(0.9), Inches(2.15), Inches(11.5), Inches(0.7), [(d.get("why",""), 13, GREY, False)])
-        # 4 卡 2x2
         micro = d.get("parent_daily_micro")
         a_title = "本周焦点 + 每日微行动" if micro else "今日一件小事"
         a_body = (str(d.get("weekly_focus","")) + "\n" + "\n".join("· " + str(x) for x in micro)) if micro else str(d.get("parent_action",""))
         cw, ch = Inches(5.7), Inches(1.7); x1, x2 = Inches(0.9), Inches(6.9); y1, y2 = Inches(3.0), Inches(4.85)
         card(s, x1, y1, cw, ch, a_title, a_body, BG_A, ORANGE)
         card(s, x2, y1, cw, ch, "今晚可以说的话", "“" + str(d.get("say_it_tonight","")) + "”", BG_B, BLUE)
-        card(s, x1, y2, cw, ch, "观察什么", str(d.get("look_for","")), BG_C, RGBColor(0xE5,0xE7,0xEB))
+        card(s, x1, y2, cw, ch, "观察什么(过程,非评分)", str(d.get("look_for","")), BG_C, RGBColor(0xE5,0xE7,0xEB))
         card(s, x2, y2, cw, ch, "边界 / 提醒", str(d.get("boundary","")), BG_D, RGBColor(0xE5,0xE7,0xEB))
-        txt(s, Inches(0.9), Inches(6.7), Inches(11.5), Inches(0.5), [(ev_text(d.get("evidence_refs")), 10, GREY, False)])
+        txt(s, Inches(0.9), Inches(6.7), Inches(11.5), Inches(0.35), [(ev_text(d.get("evidence_refs")), 10, GREY, False)])
+        foot(s, num)
 
     # 依据页
     s = prs.slides.add_slide(blank)
