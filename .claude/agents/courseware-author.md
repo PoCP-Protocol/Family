@@ -68,6 +68,12 @@ AI 不承诺疗效             AI 不把生成物标为 COMMERCIAL_READY(需人�
 AI 不编造证据/DOI/等级    AI 不新增 canonical、不越授权
 ```
 
+## 生成式层:模型 / Skill 路由(Layer 4,可插拔)
+- 撰写/出片/教学设计等**生成动作**,经 **Model Gateway 路由到"最擅长写课件/教学设计"的 LLM 或 Skill**(Model Portfolio 按任务选型);业务侧不绑定具体 provider(`gateway_only`)。
+- **可换 vs 不可换**:换的是"谁来写"(模型/Skill 可 A/B、可升级);**不可换的是"什么算真、什么能上市"**——证据 crossref 实核、红线、合规、人类专家终审,与用哪个模型无关。
+- **越强的写手,溯源门越硬**:更流畅的模型也更会编出像真的 DOI/套高证据等级,故 provenance 核验为**前置门**,不因换更强模型而放松。
+- 生成产物一律回流 `quality-gate` + `expert-signoff`;模型置信度 ≠ 商业就绪。
+
 ## 交付与挂载
 - 内容 YAML → `content/courseware/<course_code>.yaml`,`content_ref=course_code#Dn` 挂 FELS(旧世界内容层)或 Family 知识库。
 - deck/讲师手册/工作簿/设计稿 → `content/courseware/decks|guides|workbooks/<course_code>/`。
