@@ -247,7 +247,9 @@ export const FUTURE_ONLY_CAPABILITIES = {
   FP2_21_DAY_COMPANION: 'NOT_AUTHORIZED',
 } as const;
 
-const HIGH_RISK_TERMS = ['自杀', '自伤', '家暴', '虐待', '打死', '杀', '严重抑郁', '离家出走', '不想活'];
+// W2R-104 Final L2 发现:补自伤/施暴措辞召回缺口(只升不降,安全单调)。
+// "伤害自己/伤害自身/自残"=自伤威胁;"动手打/往死里打/被打"=(对未成年人)人身暴力升级 → 一律 HIGH_RISK 短路转人工。
+const HIGH_RISK_TERMS = ['自杀', '自伤', '自残', '伤害自己', '伤害自身', '家暴', '虐待', '打死', '往死里打', '动手打', '被打', '杀', '严重抑郁', '离家出走', '不想活'];
 const REVIEW_TERMS = ['崩溃', '厌学', '不上学', '抑郁', '绝望', '打孩子', '失控'];
 
 export const REVIEWED_METHOD_CARDS: PrincipalMethodCard[] = [
@@ -378,6 +380,98 @@ export function safetyPostcheck(output: PrincipalAiOutput, precheckRoute: Princi
   if (precheckRoute === 'HIGH_RISK' || containsAny(text, HIGH_RISK_TERMS)) return 'HIGH_RISK';
   if (precheckRoute === 'REVIEW') return 'REVIEW';
   return output.risk_route === 'HIGH_RISK' ? 'REVIEW' : output.risk_route;
+}
+
+/**
+ * ParentVerbalEscalationReviewGuard(W2R-104-FINAL-FIX-001,落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
+ *
+ * 语义(冻结,狭义):家长【本人】【已经发生】的【明显激烈言语攻击/情绪失控言语行为】→ 至少 REVIEW。
+ *   —— 强调 ALREADY_OCCURRED;不含"担心会发生 / 一般烦躁 / 一般生气 / 后悔普通沟通"。
+ *
+ * 这是【确定性升级护栏】,独立于 HIGH_RISK precheck 与生成式 quality judge(不污染两者)。
+ * 只做 NORMAL → REVIEW(只升不降);由调用方保证绝不 REVIEW→NORMAL、绝不 HIGH_RISK→REVIEW。
+ * 纯函数、无外呼。返回 true = 命中确定性 REVIEW 条件。
+ *
+ * 判定三要素(须同时满足):
+ *   SELF_ACTOR         主语是"我"(以主谓序 + 介词宾语标记区分"孩子冲我发火"这类 actor=孩子);
+ *   ALREADY_OCCURRED   含已发生标记(了/过/刚才/刚刚/方才),排除"快/会/等下/怕"等将来或担心;
+ *   VERBAL_ESCALATION  激烈言语动词/短语(吼/骂/大吼/发火/凶/训/说了…伤人的/重的/难听的话)。
+ */
+const PVE_VERBS = ['吼', '大吼', '骂', '发火', '发脾气', '凶', '训'];
+const PVE_PHRASES = ['伤人的话', '很重的话', '特别重的话', '难听的话', '重话'];
+const PVE_OCCURRED = ['了', '过', '刚才', '刚刚', '方才'];
+const PVE_FUTURE = ['怕', '担心', '会不会', '可能', '快要', '快控制不住', '等下', '待会', '一会', '万一', '要是', '以后', '将来'];
+const PVE_CHILD = ['孩子', '娃', '儿子', '女儿', '闺女', '他', '她'];
+const PVE_OBJECT_PREP = '冲对朝向跟给和骂';
+
+/** 判定某激烈动词出现处的施动者是否为家长本人(而非孩子)。 */
+function pveActorIsParentSelf(text: string, verbIdx: number): boolean {
+  let selfIdx = -1;
+  for (let i = 0; i < verbIdx; i++) {
+    if (text[i] === '我') {
+      const prev = i > 0 ? text[i - 1] : '';
+      if (!PVE_OBJECT_PREP.includes(prev)) selfIdx = i; // "冲我/对我/跟我" 中的我是宾语,不算施动者
+    }
+  }
+  let childIdx = -1;
+  for (const c of PVE_CHILD) {
+    let from = 0;
+    for (;;) {
+      const idx = text.indexOf(c, from);
+      if (idx < 0 || idx >= verbIdx) break;
+      const prev = idx > 0 ? text[idx - 1] : '';
+      if (!PVE_OBJECT_PREP.includes(prev)) childIdx = Math.max(childIdx, idx); // "冲孩子" 中孩子是宾语,不算施动者
+      from = idx + c.length;
+    }
+  }
+  return selfIdx >= 0 && selfIdx >= childIdx; // 我 存在且为最近的(非宾语)主语
+}
+
+export function parentVerbalEscalationReview(
+  input: Pick<PrincipalAiInput, 'user_message' | 'scene_hint'>,
+): boolean {
+  const text = `${input.scene_hint ?? ''} ${input.user_message}`;
+  if (containsAny(text, PVE_FUTURE)) return false;           // 将来/担心 → 不由本护栏升级
+  if (!containsAny(text, PVE_OCCURRED)) return false;         // 必须已发生
+  const verbHits: number[] = [];
+  for (const v of PVE_VERBS) {
+    const idx = text.indexOf(v);
+    if (idx >= 0) verbHits.push(idx);
+  }
+  for (const p of PVE_PHRASES) {
+    const idx = text.indexOf(p);
+    if (idx >= 0) verbHits.push(idx);
+  }
+  if (verbHits.length === 0) return false;
+  return verbHits.some((vIdx) => pveActorIsParentSelf(text, vIdx));
+}
+
+/**
+ * ImminentSelfLossOfControlGuard(W2R-104-FINAL-FIX-001,落实专家 Huangxia 对 GOLD-053 裁定 KEEP_REVIEW)。
+ *
+ * 语义(冻结,狭义,Tier 2):家长【本人】自述【即将/临界失控】(尚未发生激烈言语行为)→ 至少 REVIEW。
+ *   与 Tier 1(parentVerbalEscalationReview,已发生)互补;不覆盖 Tier 3(一般情绪/压力)。
+ * 只做 NORMAL→REVIEW(只升不降);纯函数、无外呼。
+ *
+ * 判定:SELF_ACTOR(我,非介词宾语)+ LOSS_OF_CONTROL 短语;排除"怕/担心/以后/将来/会不会/万一/要是"等远期或泛化担忧。
+ * 明确不覆盖:一般负面情绪(心情差/压力大)、归因于孩子(孩子把我气死/逼疯)、actor=孩子(孩子冲我发火)。
+ */
+const ISLC_PHRASES = ['控制不住', '失控', '压不住火', '压不住', '爆发', '忍不住发火', '快忍不住'];
+const ISLC_FUTURE = ['怕', '担心', '以后', '将来', '会不会', '万一', '要是', '可能'];
+
+export function imminentSelfLossOfControlReview(
+  input: Pick<PrincipalAiInput, 'user_message' | 'scene_hint'>,
+): boolean {
+  const text = `${input.scene_hint ?? ''} ${input.user_message}`;
+  if (containsAny(text, ISLC_FUTURE)) return false;        // 远期/泛化担忧 → 不由本护栏升级
+  const hits: number[] = [];
+  for (const p of ISLC_PHRASES) {
+    const idx = text.indexOf(p);
+    if (idx >= 0) hits.push(idx);
+  }
+  if (hits.length === 0) return false;
+  // 施动者须为家长本人(复用主谓序+介词宾语判定,"把我/冲我"中的我是宾语,不算施动者)。
+  return hits.some((idx) => pveActorIsParentSelf(text, idx));
 }
 
 export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = safetyPrecheck(input)): PrincipalRetrievalResult {

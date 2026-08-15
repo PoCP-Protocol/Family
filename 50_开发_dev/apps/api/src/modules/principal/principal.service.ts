@@ -5,9 +5,10 @@ import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
   runPrincipalTextMvp, safetyPrecheck, assessResponseQuality,
+  parentVerbalEscalationReview, imminentSelfLossOfControlReview,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
-import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, type ProcessingDataCategory } from '@family/principal-runtime';
+import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, resolveProviderPolicy, FPAI_PROVIDER_REGISTRY_SNAPSHOT, type ProcessingDataCategory } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
 import { loadGroundedKnowledge } from './principal-knowledge';
 
@@ -93,15 +94,26 @@ export class PrincipalService {
     // M3-INT-001 §9-14 P0:真实外呼前强制 Consent → Processing Policy → Provider 门。
     // userMessage 即家庭私有文本(USER_PROVIDED_TEXT);Family 场景默认按未成年人从严。
     const profile = resolveRuntimeProfile();
+    // PROVIDER_POLICY_RUNTIME_001(behind flag,默认关):flag=on 时 providerApproved/categories 由 Provider Registry 派生
+    // (堵 §15 漂移:registry 明确 minor/private_text 不外发,profile 曾错误全允许);flag 关=现行为不变。
+    const useRegistry = process.env.FPAI_PROVIDER_POLICY_RUNTIME === 'on';
+    const providerId = process.env.FPAI_MODEL_VENDOR === 'zhipu' ? 'zhipu-glm4v' : 'anthropic-cc-switch';
+    const policy = useRegistry
+      ? resolveProviderPolicy(FPAI_PROVIDER_REGISTRY_SNAPSHOT, providerId, profile.name)
+      : { providerApproved: profile.externalText, authorizedExternalCategories: profile.authorizedExternalCategories };
+    if (useRegistry) {
+      await this.repo.recordProductEvent('principal_provider_policy_evaluated', familyId, sessionId, correlationId,
+        { provider: providerId, environment: profile.name, approved: policy.providerApproved, categories: policy.authorizedExternalCategories, source: 'provider_registry' });
+    }
     const processing = evaluateProcessing({
       consent, policyVersion: consent.matched?.policy_version ?? 'unknown',
       policyVersionApproved: profile.externalText, // 受控 env 视为已批;生产以治理为准
       subjectPersonId: subjectRef, guardianPersonId: consent.matched?.guardian_person_id ?? 'unknown',
       dataCategory: 'USER_PROVIDED_TEXT', minorData: true,
       providerClass: this.gateway ? 'EXTERNAL_PROVIDER' : 'FAKE',
-      providerApproved: profile.externalText,          // 受控 env approved;生产以 Provider Registry 为准
+      providerApproved: policy.providerApproved,          // flag=on: Provider Registry;off: 受控 env
       externalProcessingEnabled: profile.externalText, // 默认 internal → false
-      authorizedExternalCategories: profile.authorizedExternalCategories,
+      authorizedExternalCategories: policy.authorizedExternalCategories,
     });
     // 只有 processing 判定 ALLOW 且存在真实网关,才真正对外调用;否则确定性回退(零外呼)。
     const willCallExternal = !!this.gateway && processing.allowed;
@@ -221,6 +233,19 @@ export class PrincipalService {
       route = 'REVIEW';
       await this.repo.recordProductEvent('principal_quality_gate_failed', familyId, sessionId, correlationId,
         { dimensions: verdict.dimensions, failed_checks: verdict.failed_checks, judged_by: verdict.judged_by });
+    }
+
+    // W2R-104-FINAL-FIX-001:确定性 REVIEW 升级护栏(落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
+    // 家长本人【已经发生】的激烈言语攻击/情绪失控言语 → 至少 REVIEW。只升不降(仅 NORMAL→REVIEW),
+    // 独立于 HIGH_RISK precheck 与生成式 judge;model 可判 NORMAL,专家接地的确定性策略据此升级。
+    if (route === 'NORMAL') {
+      const verbalEscalation = parentVerbalEscalationReview({ user_message: userMessage });   // Tier1:已发生激烈言语(GOLD-051)
+      const imminentLossOfControl = imminentSelfLossOfControlReview({ user_message: userMessage }); // Tier2:临界失控(GOLD-053)
+      if (verbalEscalation || imminentLossOfControl) {
+        route = 'REVIEW';
+        await this.repo.recordProductEvent('principal_review_escalation_guard', familyId, sessionId, correlationId,
+          { guard: verbalEscalation ? 'parent_verbal_escalation' : 'imminent_self_loss_of_control', escalated_from: 'NORMAL', escalated_to: 'REVIEW' });
+      }
     }
 
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
