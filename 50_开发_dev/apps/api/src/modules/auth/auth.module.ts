@@ -3,6 +3,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
 import { FamilyScopeGuard } from './family-scope.guard';
+import { FamilyPlatformAuthGuard } from './family-platform-auth.guard';
 import { OtpService, StubOtpSender, OTP_SENDER } from './otp.service';
 
 /**
@@ -15,9 +16,10 @@ import { OtpService, StubOtpSender, OTP_SENDER } from './otp.service';
     AuthService,
     AuthRepository,
     FamilyScopeGuard,
+    FamilyPlatformAuthGuard,
     OtpService,
     { provide: OTP_SENDER, useClass: StubOtpSender }, // 真实厂商 adapter 在此替换(env-gated,需凭证)
   ],
-  exports: [AuthService, FamilyScopeGuard],
+  exports: [AuthService, FamilyScopeGuard, FamilyPlatformAuthGuard],
 })
 export class AuthModule {}
