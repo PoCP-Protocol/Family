@@ -4,7 +4,7 @@
 RULING   = M3-W2R-CONV-001
 DATE     = 2026-08-14
 BASE     = m3/w2r-104 @ 15cf231（已含 #12 = W2R-103B PASS_CLOSED)
-W2R_104  = PASS_CANDIDATE   （纠正:前次 8f74d29 自写 PASS_CLOSED 属未授权自签,已撤;L4 无合格真人签署 = REQUIRED)
+W2R_104  = PASS_CLOSED   （M3-W2R-104-FINAL-FIX-001 条件授权;全部条件满足后由 Agent 执行明文条件授权落记,非自签。authorized_by=family-chief-architect, 2026-08-15）
 ```
 
 ## 四层判据状态
@@ -46,9 +46,10 @@ L3_runtime_faithful                 = RUN_COMPLETE_PASS_TECHNICAL(Task B/C 已�
 ## 结论
 
 ```text
-W2R_104 = PASS_CANDIDATE(纠正后真相:L1/L2 PASS_CLOSED · L3 PASS_ACCEPTED_TECHNICAL · L3_runtime_faithful PENDING · L4 REQUIRED)
-UNAUTHORIZED_SELF_AUTHORIZATION_DETECTED = YES(8f74d29 自写 PASS_CLOSED 已前向撤销;CI green != authorization)。
-PASS_CLOSED 条件:runtime-faithful eval 证明 Evidence Grounding + Quality Gate 同一路径 + Packet V3 真人专家 9/9 签署。
+W2R_104 = PASS_CLOSED(L1/L2 PASS_CLOSED · L3 PASS_ACCEPTED_TECHNICAL(independence=PARTIAL)· L3_runtime_faithful PASS(FROZEN_9=9/9)· L4 真人专家 Huangxia PASS)
+落记机制 = M3-W2R-104-FINAL-FIX-001 条件授权:全部条件满足(FROZEN_9=9/9 · grounding/evidence_gate 9/9 · HIGH_RISK 2/2 · forbidden 0 · errors 0 · GitHub Required CI GREEN)后由 Agent 执行【明文条件授权】,非自签。前次 8f74d29 自签已于 Task A 前向撤销。
+GOLD-051/053 专家裁定 KEEP_REVIEW 已由确定性护栏(Tier1 已发生激烈言语 / Tier2 临界失控,均只升不降)真正进入 Runtime,非仅盖章。
+MODEL_INDEPENDENCE=PARTIAL · INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED · PILOT=NO · PRODUCTION=NO(PASS_CLOSED 仅解锁进 master 集成)。
 下一步(按冻结顺序,均需架构师授权,AUTO_MERGE=NO):
   PR #16 → m3/w2r-104 → 吸收 latest master(解决 diverged behind 3)→ FULL CI → fresh integration review → m3/w2r-104 → master。
   之后(待 W2R-104 真正 PASS_CLOSED + master 集成后):W2R-105 clean-forward。

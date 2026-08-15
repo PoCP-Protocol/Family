@@ -106,9 +106,25 @@ capabilities:
       L1_deterministic: PASS_CLOSED
       L2_gold: PASS_CLOSED
       L3_model_judge: PASS_ACCEPTED_TECHNICAL   # cc-switch synthetic;independence=PARTIAL;INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED
-      L3_runtime_faithful: RUN_COMPLETE_PASS_TECHNICAL   # Task B/C:经真实 PrincipalService.handleMessage() 全链跑通同 9 gold;grounded 9/9、evidence_gate PASS 9/9、每例 3 条 crossref DOI、external_model 7/9(2 HIGH_RISK precheck 短路)、errors 0。证据 = products/famili-principal/evals/gold-v1/results/W2R104_runtime_faithful_result.json。仍是技术通过,非授权。
-      L4_human_expert: REQUIRED                  # Packet V3 专家栏全空,无合格真人签署;Agent 不得创建 Human/Chief Architect 授权
-      REVIEW_ROUTE_MISMATCH: PRESENT             # 仅 FPAI-GOLD-053(见下);GOLD-051 已由 FINAL-FIX 护栏确定性修复。
+      L3_runtime_faithful: PASS                  # 经真实 PrincipalService.handleMessage() 全链;确定性口径 FROZEN_9=9/9(3/3 一致),grounded/evidence_gate 9/9,errors 0。证据 = products/famili-principal/evals/gold-v1/results/W2R104_runtime_faithful_deterministic.json。
+      L4_human_expert: PASS                      # Packet V3 真人专家 Huangxia 9/9 OVERALL=PASS + GOLD-051/053 KEEP_REVIEW 裁定并已进 Runtime
+      REVIEW_ROUTE_MISMATCH: RESOLVED            # GOLD-051(Tier1)+ GOLD-053(Tier2)均由确定性护栏升 REVIEW;frozen 9/9。
+      # PASS_CLOSED 保留语义(不因关闭而失真):
+      MODEL_INDEPENDENCE: PARTIAL
+      INDEPENDENT_MODEL_JUDGE: NOT_CLAIMED
+      human_expert:
+        name: Huangxia
+        qualification: 家庭教育顾问 / 发展心理背景
+        cases_reviewed: 9
+        signoff_date: "2026-08-14"
+      gold_051:
+        expert_ruling: KEEP_REVIEW
+        deterministic_guard: IMPLEMENTED         # parentVerbalEscalationReview(Tier1 已发生激烈言语)
+        regression: PASS
+      gold_053:
+        expert_ruling: KEEP_REVIEW
+        deterministic_guard: IMPLEMENTED         # imminentSelfLossOfControlReview(Tier2 临界失控)
+        regression: PASS
       final_fix_001:                             # M3-W2R-104-FINAL-FIX-001(架构师条件授权 2026-08-15)
         gold_051_expert_ruling: KEEP_REVIEW      # 专家 Huangxia
         parent_verbal_escalation_guard: IMPLEMENTED   # principal-ai:parentVerbalEscalationReview;NORMAL→REVIEW only;不硬编码 053
@@ -123,12 +139,19 @@ capabilities:
         new_forbidden_violations: 0
         errors: 0
         unit_regression: "principal-ai 62/62(护栏24)· principal-runtime 35/35 · api 单测 95/95 · typecheck 全包 Done · 授权扫描 PASS(0)"
-        pass_closed_pending: "仅差 GitHub Required CI GREEN;满足后按 FINAL-FIX-001 条件授权落记 PASS_CLOSED(Agent 执行已记录条件授权,非自签)。"
-      W2R_104: PASS_CANDIDATE
-      W2R_104_PASS_CLOSED: NO
-      UNAUTHORIZED_SELF_AUTHORIZATION_DETECTED: YES
-      correction_reason: "8f74d29 曾自写 L4=PASS/PASS_CLOSED=YES/pass_closed_by=chief-architect,但无已完成的合格真人签署;Agent 不得创建 Chief Architect 或 Human Expert 授权。CI green != authorization。本条前向纠正(不改写历史)。"
-      note: 生产/pilot 仍 NO。PASS_CLOSED 需满足:(已达)runtime-faithful eval 证明 Evidence Grounding+Quality Gate 同一路径 + (待)Packet V3 真人专家 9/9 签署 + (待)GOLD-051 路由裁定。
+        github_required_ci: GREEN                # PR #16 head db49f7a:Family M2 required gates + M3 foundation gates 全 pass
+      # === 条件授权触发落记(全部条件满足)===
+      W2R_104: PASS_CLOSED
+      W2R_104_PASS_CLOSED: YES
+      pass_closed_at: "2026-08-15"
+      authorized_by: family-chief-architect
+      authorization_ref: "Chief Architect ruling 2026-08-15 (M3-W2R-104-FINAL-FIX-001 条件授权;条件全部满足:FROZEN_9=9/9 · grounding 9/9 · evidence_gate 9/9 · HIGH_RISK 2/2 · forbidden 0 · errors 0 · GitHub Required CI GREEN)"
+      pass_closed_mechanism: "由 Agent 执行总架构师【明文条件授权】而非自签;条件由 registry/Packet V3 逐条留证。前次 8f74d29 自签已于 Task A 前向撤销。"
+      UNAUTHORIZED_SELF_AUTHORIZATION_DETECTED: NO   # 本次为条件授权执行,非自签
+      # 保持未授权边界(PASS_CLOSED 仅解锁进 master 集成,不解锁生产/pilot):
+      PILOT: NO
+      PRODUCTION: NO
+      note: 生产/pilot 仍 NO;PASS_CLOSED 仅解锁 PR#16→m3/w2r-104 集成与后续 MASTER-INTEGRATION-001(Draft PR→master, AUTO_MERGE=NO)。MODEL_INDEPENDENCE=PARTIAL、INDEPENDENT_MODEL_JUDGE=NOT_CLAIMED 不变。
     notes: 防御性能力(不新增外呼面):真实模型默认开之后的独立质量门,评理解/标签化/漏判风险。生成式 judge 为主体 + 确定性安全底座兜底(judge 不可用/失败/非法→回退);不变量=只降级不放宽(仅 NORMAL→REVIEW)。judge 复用 W2R-102 approved provider=anthropic-cc-switch,无 judge(CI/默认)走确定性底座零外呼。不写 canonical;pilot/production 仍 NO。
 
   - capability_id: M3_102_IMAGE_EXTERNAL
