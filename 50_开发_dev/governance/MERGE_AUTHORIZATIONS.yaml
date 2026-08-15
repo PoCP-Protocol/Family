@@ -33,3 +33,8 @@ authorizations:
     authorized_by: family-chief-architect
     ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 2 (OPS_001 docs-only, guard PASS+CI green 条件授权)"
     date: "2026-08-15"
+  - pr: 22
+    head_sha: "c146a24d693e5daf6dd4c7a1020c8723d46738b3"   # 同步 master 后的 reviewed head;其后仅本 ledger 登记提交
+    authorized_by: family-chief-architect
+    ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 3 (W2R-105 Human Gate, 全 gate 绿条件授权)"
+    date: "2026-08-15"
