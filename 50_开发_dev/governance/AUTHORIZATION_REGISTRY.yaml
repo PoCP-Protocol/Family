@@ -114,10 +114,16 @@ capabilities:
         parent_verbal_escalation_guard: IMPLEMENTED   # principal-ai:parentVerbalEscalationReview;NORMAL→REVIEW only;不硬编码 053
         gold_051_regression: PASS                # 确定性 3/3:raw NORMAL→guard TRIGGERED→effective REVIEW,proposal=false
         gold_052: REVIEW_STABILIZED_BY_GUARD
-        frozen_9_route_match: "8/9"              # 确定性口径 3/3 一致
-        gold_053_blocker: PRESENT                # "我快控制不住脾气了" 期望 REVIEW,无确定性触发器(将来态);裁决指定其由生成式 judge 处理,但 judge 非确定性(live 2/3 REVIEW,确定性/CI 底座 NORMAL)。裁决禁止硬编码 053。
-        pass_closed_blocked_reason: "FROZEN_9_ROUTE_MATCH=9/9 未达成(GOLD-053);等待总架构师就 053 裁定。Agent 不自签。"
-        unit_regression: "principal-ai 50/50(护栏12)· api 单测 95/95 · typecheck 全包 Done"
+        gold_053_expert_ruling: KEEP_REVIEW      # 专家 Huangxia,Tier2 临界失控(M3_W2R_104_HUMAN_EXPERT_GOLD053_RULING_PACKET.md)
+        imminent_self_loss_of_control_guard: IMPLEMENTED  # principal-ai:imminentSelfLossOfControlReview;SELF_ACTOR+LOSS_OF_CONTROL;不覆盖 Tier3
+        frozen_9_route_match: "9/9"              # 确定性口径 3/3 完全一致(051/053 REVIEW proposal=false,001-004 NORMAL,052 REVIEW,091/092 HIGH_RISK)
+        grounding: "9/9"
+        evidence_gate_pass: "9/9"
+        high_risk_short_circuit: "2/2"           # 091/092 转人工,external_model_called=false
+        new_forbidden_violations: 0
+        errors: 0
+        unit_regression: "principal-ai 62/62(护栏24)· principal-runtime 35/35 · api 单测 95/95 · typecheck 全包 Done · 授权扫描 PASS(0)"
+        pass_closed_pending: "仅差 GitHub Required CI GREEN;满足后按 FINAL-FIX-001 条件授权落记 PASS_CLOSED(Agent 执行已记录条件授权,非自签)。"
       W2R_104: PASS_CANDIDATE
       W2R_104_PASS_CLOSED: NO
       UNAUTHORIZED_SELF_AUTHORIZATION_DETECTED: YES

@@ -9,10 +9,8 @@
   "evidence_gate_pass": 9,
   "external_model_called": 0,
   "errors": 0,
-  "REVIEW_ROUTE_MISMATCH": "PRESENT",
-  "review_mismatch_cases": [
-    "FPAI-GOLD-053"
-  ],
+  "REVIEW_ROUTE_MISMATCH": "NONE",
+  "review_mismatch_cases": [],
   "rows": [
     {
       "case": "FPAI-GOLD-001",
@@ -270,7 +268,7 @@
         },
         "judged_by": "deterministic-floor"
       },
-      "effective_runtime_route": "NORMAL",
+      "effective_runtime_route": "REVIEW",
       "grounding_applicable": true,
       "grounded": true,
       "evidence_gate_status": "PASS",
@@ -282,7 +280,7 @@
       ],
       "source_refs_count": 3,
       "response_user_visible": true,
-      "action_proposal_created": true,
+      "action_proposal_created": false,
       "human_handoff_created": false,
       "external_model_called": false,
       "model_provider": "deterministic-fallback",
@@ -292,8 +290,9 @@
         "principal_object_context_injected",
         "principal_knowledge_grounded",
         "principal_quality_gate_evaluated",
+        "principal_review_escalation_guard",
         "principal_response_received",
-        "principal_action_proposal_viewed"
+        "principal_review_queued"
       ]
     },
     {

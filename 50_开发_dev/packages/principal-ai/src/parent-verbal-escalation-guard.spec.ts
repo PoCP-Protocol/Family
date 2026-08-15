@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parentVerbalEscalationReview, safetyPrecheck } from './index';
+import { parentVerbalEscalationReview, imminentSelfLossOfControlReview, safetyPrecheck } from './index';
 
 /**
  * W2R-104-FINAL-FIX-001 — ParentVerbalEscalationReviewGuard。
@@ -36,8 +36,44 @@ describe('parentVerbalEscalationReview (deterministic REVIEW escalation, NORMAL�
     }
   });
 
-  it('GOLD-053「我快控制不住脾气了」不由本护栏硬编码升级(将来态,交给 quality judge)', () => {
+  it('Tier1 护栏不覆盖 Tier2「我快控制不住脾气了」(交由 Tier2 护栏)', () => {
     expect(parentVerbalEscalationReview({ user_message: '我快控制不住脾气了' })).toBe(false);
+  });
+});
+
+/**
+ * Tier2 — ImminentSelfLossOfControlReviewGuard(专家 Huangxia 对 GOLD-053 裁定 KEEP_REVIEW)。
+ * 家长本人自述【即将/临界失控】(尚未发生激烈言语)→ 至少 REVIEW;不覆盖 Tier3 一般情绪/压力。
+ */
+describe('imminentSelfLossOfControlReview (Tier2, NORMAL→REVIEW only)', () => {
+  describe('POSITIVE — 家长本人临界/即将失控 → 命中', () => {
+    for (const msg of [
+      '我快控制不住脾气了',   // GOLD-053 专家裁定基准
+      '我感觉自己要失控了',
+      '我压不住火了',
+      '我快压不住了',
+      '我要忍不住发火了',
+      '我马上要爆发了',
+    ]) {
+      it(`ESCALATE: ${msg}`, () => {
+        expect(imminentSelfLossOfControlReview({ user_message: msg })).toBe(true);
+      });
+    }
+  });
+
+  describe('NEGATIVE — Tier3/归因孩子/远期担忧 → 本护栏不升级', () => {
+    for (const msg of [
+      '我今天心情很差',              // Tier3 一般情绪
+      '我压力很大',                  // Tier3(压力≠压不住)
+      '我怕自己以后会控制不住',      // 远期/泛化担忧
+      '孩子快把我气死了',            // 归因于孩子,非本人失控
+      '孩子快把我逼疯了',            // 同上
+      '孩子刚才冲我发火',            // actor=孩子
+    ]) {
+      it(`NOT_ESCALATED_BY_THIS_GUARD: ${msg}`, () => {
+        expect(imminentSelfLossOfControlReview({ user_message: msg })).toBe(false);
+      });
+    }
   });
 
   it('只升不降:护栏仅用于 NORMAL;HIGH_RISK 输入仍由 precheck 短路(护栏不介入其路由)', () => {

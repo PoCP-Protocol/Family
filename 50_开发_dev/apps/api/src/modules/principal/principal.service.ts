@@ -4,7 +4,8 @@ import type { InterventionCode, StartInterventionResponse } from '@family/contra
 import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
-  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality, parentVerbalEscalationReview,
+  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality,
+  parentVerbalEscalationReview, imminentSelfLossOfControlReview,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
 import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, resolveProviderPolicy, FPAI_PROVIDER_REGISTRY_SNAPSHOT, type ProcessingDataCategory } from '@family/principal-runtime';
@@ -237,10 +238,14 @@ export class PrincipalService {
     // W2R-104-FINAL-FIX-001:确定性 REVIEW 升级护栏(落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
     // 家长本人【已经发生】的激烈言语攻击/情绪失控言语 → 至少 REVIEW。只升不降(仅 NORMAL→REVIEW),
     // 独立于 HIGH_RISK precheck 与生成式 judge;model 可判 NORMAL,专家接地的确定性策略据此升级。
-    if (route === 'NORMAL' && parentVerbalEscalationReview({ user_message: userMessage })) {
-      route = 'REVIEW';
-      await this.repo.recordProductEvent('principal_review_escalation_guard', familyId, sessionId, correlationId,
-        { guard: 'parent_verbal_escalation', escalated_from: 'NORMAL', escalated_to: 'REVIEW' });
+    if (route === 'NORMAL') {
+      const verbalEscalation = parentVerbalEscalationReview({ user_message: userMessage });   // Tier1:已发生激烈言语(GOLD-051)
+      const imminentLossOfControl = imminentSelfLossOfControlReview({ user_message: userMessage }); // Tier2:临界失控(GOLD-053)
+      if (verbalEscalation || imminentLossOfControl) {
+        route = 'REVIEW';
+        await this.repo.recordProductEvent('principal_review_escalation_guard', familyId, sessionId, correlationId,
+          { guard: verbalEscalation ? 'parent_verbal_escalation' : 'imminent_self_loss_of_control', escalated_from: 'NORMAL', escalated_to: 'REVIEW' });
+      }
     }
 
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);

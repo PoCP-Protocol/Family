@@ -446,6 +446,34 @@ export function parentVerbalEscalationReview(
   return verbHits.some((vIdx) => pveActorIsParentSelf(text, vIdx));
 }
 
+/**
+ * ImminentSelfLossOfControlGuard(W2R-104-FINAL-FIX-001,落实专家 Huangxia 对 GOLD-053 裁定 KEEP_REVIEW)。
+ *
+ * 语义(冻结,狭义,Tier 2):家长【本人】自述【即将/临界失控】(尚未发生激烈言语行为)→ 至少 REVIEW。
+ *   与 Tier 1(parentVerbalEscalationReview,已发生)互补;不覆盖 Tier 3(一般情绪/压力)。
+ * 只做 NORMAL→REVIEW(只升不降);纯函数、无外呼。
+ *
+ * 判定:SELF_ACTOR(我,非介词宾语)+ LOSS_OF_CONTROL 短语;排除"怕/担心/以后/将来/会不会/万一/要是"等远期或泛化担忧。
+ * 明确不覆盖:一般负面情绪(心情差/压力大)、归因于孩子(孩子把我气死/逼疯)、actor=孩子(孩子冲我发火)。
+ */
+const ISLC_PHRASES = ['控制不住', '失控', '压不住火', '压不住', '爆发', '忍不住发火', '快忍不住'];
+const ISLC_FUTURE = ['怕', '担心', '以后', '将来', '会不会', '万一', '要是', '可能'];
+
+export function imminentSelfLossOfControlReview(
+  input: Pick<PrincipalAiInput, 'user_message' | 'scene_hint'>,
+): boolean {
+  const text = `${input.scene_hint ?? ''} ${input.user_message}`;
+  if (containsAny(text, ISLC_FUTURE)) return false;        // 远期/泛化担忧 → 不由本护栏升级
+  const hits: number[] = [];
+  for (const p of ISLC_PHRASES) {
+    const idx = text.indexOf(p);
+    if (idx >= 0) hits.push(idx);
+  }
+  if (hits.length === 0) return false;
+  // 施动者须为家长本人(复用主谓序+介词宾语判定,"把我/冲我"中的我是宾语,不算施动者)。
+  return hits.some((idx) => pveActorIsParentSelf(text, idx));
+}
+
 export function retrievePrincipalAssets(input: PrincipalAiInput, riskRoute = safetyPrecheck(input)): PrincipalRetrievalResult {
   const scenarioId = detectScenario(input);
   const methodCards = REVIEWED_METHOD_CARDS.filter((card) => {
