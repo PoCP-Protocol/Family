@@ -2,8 +2,7 @@ import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nest
 import type { ConsentDto, ConsentPurpose, ConsentStatus, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, LifeStageAssignmentDto, LifeStageCode, PersonDto, RelationshipType } from '@family/contracts';
 import type pg from 'pg';
 import { FamilyRepository } from './family.repository';
-
-const CREATE_FAMILY_ACTION = 'CreateFamily';
+import { assertFamilyManagePermission } from './family-permission'; // 桥接:创建者 或 ACTIVE OWNER/GUARDIAN 成员
 
 @Injectable()
 export class FamilyAggregateRepository {
@@ -56,18 +55,7 @@ async function getFamily(client: pg.PoolClient, familyId: string): Promise<Famil
 	};
 }
 
-async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
-	const result = await client.query(
-		`select audit_id
-		 from audit_logs
-		 where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS'
-		 limit 1`,
-		[familyId, actorId, CREATE_FAMILY_ACTION],
-	);
-	if (result.rowCount !== 1) {
-		throw new ForbiddenException('actor_has_family_manage_permission');
-	}
-}
+// assertFamilyManagePermission 移至共享 ./family-permission(桥接成员权限)。
 
 async function getMembers(client: pg.PoolClient, familyId: string): Promise<PersonDto[]> {
 	const result = await client.query<PersonRow>(

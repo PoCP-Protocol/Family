@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { assertFamilyManagePermission as sharedAssertFamilyManagePermission } from './family-permission';
 import { createHash, randomUUID } from 'node:crypto';
 import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, M2GrowthDimensionId, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
 import type pg from 'pg';
@@ -558,17 +559,9 @@ async function ensureFamilyExists(client: pg.PoolClient, familyId: string): Prom
   }
 }
 
+// 桥接:委托共享 family-permission(创建者 或 ACTIVE OWNER/GUARDIAN 成员)。
 async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
-  const result = await client.query(
-    `select audit_id
-     from audit_logs
-     where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS'
-     limit 1`,
-    [familyId, actorId, CREATE_FAMILY_ACTION],
-  );
-  if (result.rowCount !== 1) {
-    throw new ForbiddenException('actor_has_family_manage_permission');
-  }
+  return sharedAssertFamilyManagePermission(client, familyId, actorId);
 }
 
 async function insertParentPerson(client: pg.PoolClient, request: AddParentRequest): Promise<PersonDto> {

@@ -1,4 +1,5 @@
 import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { assertFamilyManagePermission as sharedAssertFamilyManagePermission } from './family-permission';
 import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
 import type { AuditMeta, CompleteGrowthActionRequest, CompleteGrowthActionResponse, GrowthActionDto } from '@family/contracts';
@@ -132,17 +133,9 @@ async function ensureFamilyExists(client: pg.PoolClient, familyId: string): Prom
   }
 }
 
+// 桥接:委托共享 family-permission(创建者 或 ACTIVE OWNER/GUARDIAN 成员)。
 async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
-  const result = await client.query(
-    `select audit_id
-     from audit_logs
-     where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS'
-     limit 1`,
-    [familyId, actorId, CREATE_FAMILY_ACTION],
-  );
-  if (result.rowCount !== 1) {
-    throw new ForbiddenException('actor_has_family_manage_permission');
-  }
+  return sharedAssertFamilyManagePermission(client, familyId, actorId);
 }
 
 async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: string, childId: string): Promise<void> {

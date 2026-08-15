@@ -46,14 +46,11 @@ describe('PLATFORM-IAM-104 Family controller bearer enforcement (required mode)'
 
   const get = (path: string, headers: Record<string, string>) => fetch(`${baseUrl}${path}`, { headers });
 
-  it('VALID_BEARER member → 通过 IAM 到达领域层(非 401,非 IAM-无成员拒)', async () => {
-    // IAM 层证明:guard 解析出可信 personId 并放行;领域权限(actor_has_family_manage_permission)
-    // 属 FamilyService 既有规则,成员角色→领域权限映射是后续 T2b(不在本 IAM gate 内)。
+  it('VALID_BEARER member(OWNER_GUARDIAN)→ GET family 200(成员↔领域权限桥接后)', async () => {
+    // 成员角色→领域权限已桥接:ACTIVE OWNER_GUARDIAN 成员经 FamilyScopeGuard + assertFamilyManagePermission 均放行。
     const { token } = await auth.issueAccountSession('phone:A');
     const r = await get(`/families/${famA}`, { authorization: `Bearer ${token}` });
-    expect(r.status).not.toBe(401);                       // 未被 IAM 401 拒
-    const body = await r.json().catch(() => ({})) as { message?: string };
-    expect(body?.message).not.toBe('account_has_no_active_membership_in_family'); // 未被 FamilyScopeGuard 拒 → 已到领域层
+    expect(r.status).toBe(200);
   });
   it('x-actor-id ONLY (no bearer) → 401 (CONSUMER_X_ACTOR_ID_TRUST=0)', async () => {
     const r = await get(`/families/${famA}`, { 'x-actor-id': 'anyone' });
