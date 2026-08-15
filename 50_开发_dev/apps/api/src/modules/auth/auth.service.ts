@@ -11,6 +11,28 @@ export interface ResolvedActor {
   accountId: string | null;
 }
 
+/** TENANCY-V2 T2:认证的 Account(尚未选家庭)。 */
+export interface AuthenticatedAccount {
+  accountId: string;
+  sessionId: string;
+}
+/** TENANCY-V2 T2:某 Family 内的可信上下文(服务端解析,非 URL/client 声称)。 */
+export interface FamilyAuthContext {
+  accountId: string;
+  sessionId: string;
+  familyId: string;
+  personId: string;
+  membershipId: string;
+  familyRole: string;
+}
+export interface FamilyContextSummary {
+  type: 'FAMILY';
+  family_id: string;
+  person_id: string;
+  membership_id: string;
+  role: string;
+}
+
 /**
  * IAM-101 身份会话:签发不透明 Bearer 令牌(绑定 person∈family)+ 服务端解析 actor。
  * 真实 OTP/微信验证器 = IAM-102;消费路径强制令牌 + x-actor-id 降级 = IAM-103。
@@ -42,6 +64,47 @@ export class AuthService {
   async revoke(token: string | undefined): Promise<boolean> {
     if (!token) return false;
     return this.repo.revokeByTokenHash(sha256(token));
+  }
+
+  // ---------- TENANCY-V2 T2:account-scoped session + 多家庭上下文 ----------
+
+  /** 由 external_ref(如 'phone:138')签发 account-scoped 会话(未选家庭;零家庭 Account 也可)。 */
+  async issueAccountSession(externalRef: string): Promise<{ token: string; expires_at: string; account_id: string }> {
+    if (!externalRef) throw new BadRequestException('external_ref is required');
+    const accountId = await this.repo.ensureAccountByExternalRef(externalRef);
+    const token = `fam_${randomBytes(24).toString('hex')}`;
+    const expiresAt = new Date(Date.now() + TTL_MS);
+    await this.repo.createAccountSession(sha256(token), accountId, expiresAt);
+    return { token, expires_at: expiresAt.toISOString(), account_id: accountId };
+  }
+
+  /** Bearer → 认证 Account;无效/过期/撤销/非 account 会话 → null。 */
+  async resolveAccount(token: string | undefined): Promise<AuthenticatedAccount | null> {
+    if (!token) return null;
+    const row = await this.repo.findActiveAccountSession(sha256(token));
+    if (!row || !row.account_ref) return null;
+    return { accountId: row.account_ref, sessionId: row.session_id };
+  }
+
+  /** 列出 Account 的全部 Family 上下文;零家庭 → []。 */
+  async listContexts(accountId: string): Promise<FamilyContextSummary[]> {
+    const rows = await this.repo.listContextsForAccount(accountId);
+    return rows.map((r) => ({ type: 'FAMILY', family_id: r.family_id, person_id: r.person_id, membership_id: r.membership_id, role: r.role }));
+  }
+
+  /**
+   * 服务端解析某 Family 的可信上下文:Account → ACTIVE binding → ACTIVE membership → Family。
+   * 越权/伪造/撤销/无成员关系 → null(FAIL CLOSED)。URL familyId/x-actor-id 不构成授权。
+   */
+  async resolveFamilyContext(token: string | undefined, familyId: string): Promise<FamilyAuthContext | null> {
+    const account = await this.resolveAccount(token);
+    if (!account) return null;
+    const ctx = await this.repo.resolveFamilyContext(account.accountId, familyId);
+    if (!ctx) return null;
+    return {
+      accountId: account.accountId, sessionId: account.sessionId,
+      familyId: ctx.family_id, personId: ctx.person_id, membershipId: ctx.membership_id, familyRole: ctx.role,
+    };
   }
 }
 

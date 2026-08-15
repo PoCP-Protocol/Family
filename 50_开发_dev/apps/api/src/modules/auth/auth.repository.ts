@@ -93,4 +93,64 @@ export class AuthRepository {
     const r = await this.pool.query(`select person_id, family_id from persons where account_id=$1 limit 1`, [accountId]);
     return r.rows[0] ?? null;
   }
+
+  // ---------- TENANCY-V2 T2:Account 域 / 上下文 / 成员关系 ----------
+
+  /** 由 external_ref(如 'phone:138')取或建 Account,返回 account_id(UUID)。 */
+  async ensureAccountByExternalRef(externalRef: string): Promise<string> {
+    const ins = await this.pool.query(
+      `insert into accounts(external_ref) values ($1)
+         on conflict (external_ref) do update set updated_at=now()
+       returning account_id`,
+      [externalRef],
+    );
+    return ins.rows[0].account_id;
+  }
+
+  /** 签发 account-scoped 会话(未选家庭:person_id/family_id 为 null)。 */
+  async createAccountSession(tokenHash: string, accountId: string, expiresAt: Date): Promise<{ session_id: string }> {
+    const r = await this.pool.query(
+      `insert into identity_sessions(token_hash, account_ref, expires_at) values ($1,$2,$3) returning session_id`,
+      [tokenHash, accountId, expiresAt.toISOString()],
+    );
+    return r.rows[0];
+  }
+
+  /** 有效 account 会话 → account_ref。 */
+  async findActiveAccountSession(tokenHash: string): Promise<{ session_id: string; account_ref: string | null } | null> {
+    const r = await this.pool.query<{ session_id: string; account_ref: string | null }>(
+      `select session_id, account_ref from identity_sessions
+        where token_hash=$1 and revoked_at is null and expires_at > now()`,
+      [tokenHash],
+    );
+    return r.rows[0] ?? null;
+  }
+
+  /** 列出 Account 的全部 ACTIVE Family 上下文(经 ACTIVE binding + ACTIVE membership)。 */
+  async listContextsForAccount(accountId: string): Promise<Array<{ family_id: string; person_id: string; membership_id: string; role: string }>> {
+    const r = await this.pool.query(
+      `select m.family_id, p.person_id, m.membership_id, m.role
+         from account_person_bindings b
+         join persons p on p.person_id = b.person_id
+         join family_memberships m on m.person_id = p.person_id and m.family_id = p.family_id
+        where b.account_id=$1 and b.status='ACTIVE' and m.status='ACTIVE'
+        order by m.family_id`,
+      [accountId],
+    );
+    return r.rows;
+  }
+
+  /** 解析 Account 在指定 Family 的可信上下文;无 ACTIVE binding+membership → null(FAIL CLOSED)。 */
+  async resolveFamilyContext(accountId: string, familyId: string): Promise<{ family_id: string; person_id: string; membership_id: string; role: string } | null> {
+    const r = await this.pool.query(
+      `select m.family_id, p.person_id, m.membership_id, m.role
+         from account_person_bindings b
+         join persons p on p.person_id = b.person_id
+         join family_memberships m on m.person_id = p.person_id and m.family_id = p.family_id
+        where b.account_id=$1 and m.family_id=$2 and b.status='ACTIVE' and m.status='ACTIVE'
+        limit 1`,
+      [accountId, familyId],
+    );
+    return r.rows[0] ?? null;
+  }
 }

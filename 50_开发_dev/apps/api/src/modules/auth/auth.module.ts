@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthRepository } from './auth.repository';
+import { FamilyScopeGuard } from './family-scope.guard';
 import { OtpService, StubOtpSender, OTP_SENDER } from './otp.service';
 
 /**
@@ -13,9 +14,10 @@ import { OtpService, StubOtpSender, OTP_SENDER } from './otp.service';
   providers: [
     AuthService,
     AuthRepository,
+    FamilyScopeGuard,
     OtpService,
     { provide: OTP_SENDER, useClass: StubOtpSender }, // 真实厂商 adapter 在此替换(env-gated,需凭证)
   ],
-  exports: [AuthService],
+  exports: [AuthService, FamilyScopeGuard],
 })
 export class AuthModule {}

@@ -43,6 +43,32 @@ export class AuthController {
     return { person_id: actor.personId, family_id: actor.familyId, account_id: actor.accountId };
   }
 
+  // TENANCY-V2 T2:Account 身份(不硬绑单一 Family)。
+  @Get('me')
+  async me(@Headers('authorization') authorization?: string) {
+    const account = await this.auth.resolveAccount(bearerToken(authorization));
+    if (!account) throw new UnauthorizedException('invalid_or_expired_session');
+    return { account_id: account.accountId, session_id: account.sessionId };
+  }
+
+  // TENANCY-V2 T2:Account 的全部 Family 上下文;零家庭 → contexts=[](首次 onboarding 用)。
+  @Get('contexts')
+  async contexts(@Headers('authorization') authorization?: string) {
+    const account = await this.auth.resolveAccount(bearerToken(authorization));
+    if (!account) throw new UnauthorizedException('invalid_or_expired_session');
+    return { account_id: account.accountId, contexts: await this.auth.listContexts(account.accountId) };
+  }
+
+  // TENANCY-V2 T2:account-scoped 会话签发(内部;真实验证器 = OTP/IAM-102)。零家庭 Account 也可签发。
+  @Post('account-session')
+  async issueAccountSession(@Body() body: { external_ref?: string }) {
+    if (process.env.FPAI_INTERNAL_OPS !== 'true') {
+      throw new NotFoundException('account-session issuance disabled (real verifier = OTP; internal needs FPAI_INTERNAL_OPS=true)');
+    }
+    if (!body?.external_ref) throw new BadRequestException('external_ref is required');
+    return this.auth.issueAccountSession(body.external_ref);
+  }
+
   @Post('session/revoke')
   async revoke(@Headers('authorization') authorization?: string) {
     const ok = await this.auth.revoke(bearerToken(authorization));
