@@ -11,6 +11,7 @@ import { GrowthReviewService } from './growth-review.service';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { InterventionService } from './intervention.service';
 import { OnboardingService } from './onboarding.service';
+import { TodayService } from './today.service';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -32,6 +33,7 @@ import { OnboardingService } from './onboarding.service';
 		GrowthActionService,
 		GrowthReviewService,
 		OnboardingService,
+		TodayService,
 	],
 	// M3-101A-C:导出 InterventionService,供 Principal Action Bridge 调用既有 StartIntervention Named Action(不复制其 canonical 门)。
 	exports: [InterventionService],
