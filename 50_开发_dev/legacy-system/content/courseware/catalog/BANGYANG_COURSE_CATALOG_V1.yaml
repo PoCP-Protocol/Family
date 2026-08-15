@@ -10,6 +10,20 @@ meta:
   positioning: "不是课程公司,是家庭成长数据科技公司;经营对象=持续成长的家庭"
   funnel: 触发 → 觉醒 → 行动 → 改变 → 长期 → 传播
   hero_combo: 家长训练营 + AI陪练 + 成长报告   # S1p12/p28 第一阶段资源集中
+  legal_entity: 深圳市榜样教育科技有限公司      # web核验 2026-08-15(百度百科一手抓取)
+  founder: 朱波(波波校长)                      # 同上
+
+# 公网深度核验(deep-research 三票对抗核验,2026-08-15;WebSearch工具对中文持续400,靠 WebFetch 百度百科/Sogou微信一手抓取)
+web_verification_2026_08_15:
+  method: "deep-research workflow(59 agents);每条声明3票对抗,2/3反驳即毙"
+  confirmed:   # 3-0 通过,可作结构性事实
+    - {fact: "百度百科列出课程名单:线上《5天好爸妈训练营》《21天智慧父母训练营》《点亮心灯训练营》;线下《父母觉醒营》《幸福家》", source: "baike.baidu.com/item/波波校长/66022854", note: 仅课程名;无价格/天数/模块/工具}
+    - {fact: "线下《波波校长智慧父母工作坊》= 三天两晚 · 深圳(2024-04-19~21档)", source: "weixin.sogou.com 聚合", note: "与线上《21天智慧父母训练营》为不同产品,勿混"}
+  refuted:     # 被核验否决,不得写进复刻结构
+    - {claim: "价格 ¥99(5天)/ ¥4980(21天智慧父母)", verdict: 未核验, note: "仅 §9 营销口径,无独立印证;目录内价格一律标 price_status=unverified_promotional"}
+    - {claim: "情绪五维法 / 移情图 / 三维成长框架 为官方命名工具", verdict: 未核验, note: "0-3 否决;连'是否官方术语'都未坐实;课件内引用须标 tool_name_status=unverified"}
+    - {claim: "朱波2011『父母二次成长』理论 / 配套书《5天成为好爸妈》《点亮心灯》 / 21天营天数·人群", verdict: 否决, note: 不得作旁证}
+  gap: "官方逐日教案=版权内容,公网只有课程名与营销文案;各营的天数/价格/模块/工具需一手报名页或官方教案,当前无法核验复刻。"
 
 # 一入口 · 三核心 · 五收入(S2p17 产品脊柱)
 product_spine:
@@ -41,7 +55,11 @@ produced_courseware:
 
 # 待产课件(登记,不臆造;需 spec + 循证 + 专家终审后再产)
 courseware_backlog:
-  - {topic: 点亮心灯训练营(高阶), line: 家长成长, priority: P2, source: "S3 §9 波波校长阶梯(E2/E3)", note: "高阶;三维成长框架(自我关系/他人关系/财富关系)涉家长自身财富·生命议题,超出现有 crossref 循证基座,无法诚实 grounding;待官方教案原文或专门循证再产,不臆造"}
+  # 公网核验(2026-08-15)新确认存在、但结构未知的课程——课名坐实(百度百科一手),天数/模块/工具公网无一手,均待官方教案,不臆造
+  - {topic: 父母觉醒营(线下), line: 家长成长, priority: P2, source: "百度百科一手(web核验2026-08-15,3-0)", name_confirmed: true, structure_known: false, note: "课名确认;无天数/模块/价格;线下课,待官方课表再产"}
+  - {topic: 幸福家(线下), line: 家庭关系, priority: P2, source: "百度百科一手(web核验2026-08-15,3-0)", name_confirmed: true, structure_known: false, note: "课名确认;结构未知;疑为家庭深度工作坊,待官方课表"}
+  - {topic: 波波校长智慧父母工作坊(线下·三天两晚), line: 家长成长, priority: P2, source: "Sogou微信聚合(web核验2026-08-15,3-0)", name_confirmed: true, structure_known: false, note: "时长=三天两晚·深圳;与线上 WISDOM_21D 为不同产品;线下交付,内部结构待官方教案"}
+  - {topic: 点亮心灯训练营(高阶), line: 家长成长, priority: P2, source: "S3 §9(E2/E3);课名亦见百度百科(web核验2026-08-15)", note: "高阶;三维成长框架(自我关系/他人关系/财富关系)涉家长自身财富·生命议题,超出现有 crossref 循证基座,无法诚实 grounding;待官方教案原文或专门循证再产,不臆造"}
   - {topic: 青春期沟通冲突(进阶), line: 家庭关系, priority: P2, note: 21天之上的进阶专题;待需求确认后再产}
   # 已完成并移入 produced:手机管理/屏幕时间(SCREEN_21D_V1)· 学习习惯/自驱力(STUDY_21D_V1)· 5天入门(PARENT_5D_V1)· 智慧父母旗舰(WISDOM_21D_V1)
 
@@ -51,9 +69,9 @@ course_ladder:
   funnel: [触发, 觉醒, 行动, 改变, 长期, 传播]   # S2p7
   rungs:
     - {step: 1, funnel: 觉醒, rung: 测评看清优先级, course: null,          entity: 家庭/父母成长测评, price: 免费,      gate: "测评≠诊断≠GrowthState;只做优先级排序"}
-    - {step: 2, funnel: 行动, rung: 入口体验小改变, course: PARENT_5D_V1,   entity: 5天好爸妈入门营,   price: "99",       gate: "完课≠改变;只求第一次接住情绪"}
+    - {step: 2, funnel: 行动, rung: 入口体验小改变, course: PARENT_5D_V1,   entity: 5天好爸妈入门营,   price: "99", price_status: unverified_promotional, gate: "完课≠改变;只求第一次接住情绪。价格¥99仅营销口径,web核验未坐实"}
     - {step: 3, funnel: 行动, rung: 按痛点选专项营, course_pool: [PARENT_21D_V1, SCREEN_21D_V1, STUDY_21D_V1, SELFDRIVE_21D_V1], entity: 21天专项训练营(4大痛点), price: "99–399", gate: "打卡≠Outcome;由测评优先级路由,不多买"}
-    - {step: "3.5", funnel: 改变, rung: 核心旗舰深入, course: WISDOM_21D_V1, entity: 21天智慧父母训练营, price: "4980", gate: "系统深入;修复关系→回应消极→顺畅沟通;完课≠改变;命名来源 E2/E3"}
+    - {step: "3.5", funnel: 改变, rung: 核心旗舰深入, course: WISDOM_21D_V1, entity: 21天智慧父母训练营, price: "4980", price_status: unverified_promotional, gate: "系统深入;修复关系→回应消极→顺畅沟通;完课≠改变;命名来源 E2/E3,价格¥4980与三模块拆解 web核验未坐实"}
     - {step: 4, funnel: 改变, rung: 系统性家庭改善, course: FAMILY_90D_V1,  entity: 90天家庭成长计划,  price: "1999–9999", gate: "四阶段 SEE→PARENT_FIRST→CO_CREATE→STABILIZE;完课≠改变"}
     - {step: 5, funnel: 长期, rung: 持续陪伴留存,   course: null,          entity: 年度家庭成长会员,  price: "999–2999/年", gate: "会员≠家庭状态;FELS-3,非课件", courseware_status: NA}
     - {step: 6, funnel: 传播, rung: 成果传播裂变,   course: null,          entity: 成长报告+邀请,     price: 成长权益,   gate: "传播结果不传播焦虑;非课件", courseware_status: NA}
