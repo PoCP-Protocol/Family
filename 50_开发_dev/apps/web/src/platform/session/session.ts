@@ -1,39 +1,35 @@
 /**
- * WEB-ARCH-001 · Session 状态层。
- * 存 Bearer 令牌(不透明,IAM-101 签发),支持恢复 / 过期 / 撤销后清除。
- * 唯一令牌来源:登录/注册流程;URL 永不作为身份信任来源。
+ * PLATFORM-SESSION-001 · 浏览器会话(cookie 模式)。
+ * 会话令牌由服务端 HttpOnly cookie 承载,JS 读不到明文 → WebStorage 【绝不】存 raw token。
+ * 本地只存【非机密 UI 偏好】(如上次选择的 family_id);它绝不是授权凭据。
  */
-export interface StoredSession {
-  token: string;
-  personId: string;
-  familyId: string;
-  expiresAt: string; // ISO
+export interface SessionPrefs {
+  selectedFamilyId?: string;   // 仅 UI 偏好;真正授权由服务端 cookie→AuthContext 决定
+  selectedSubjectRef?: string; // 仅 UI 偏好,须服务端校验属活动家庭
 }
 
-const KEY = 'family.session.v1';
+const KEY = 'family.prefs.v1';
 
-export interface SessionStore {
-  get(): StoredSession | null;
-  set(s: StoredSession): void;
+export interface SessionPrefsStore {
+  get(): SessionPrefs;
+  setSelectedFamily(familyId: string | undefined): void;
+  setSelectedSubject(subjectRef: string | undefined): void;
   clear(): void;
-  isExpired(now?: number): boolean;
 }
 
-/** 基于 Web Storage 的实现;测试可注入内存 Map。 */
-export function createSessionStore(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>): SessionStore {
+/** 基于 Web Storage 的偏好存储。【不变量】:绝不写入任何会话令牌/机密。 */
+export function createSessionPrefsStore(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>): SessionPrefsStore {
+  const read = (): SessionPrefs => {
+    const raw = storage.getItem(KEY);
+    if (!raw) return {};
+    try { return JSON.parse(raw) as SessionPrefs; } catch { return {}; }
+  };
+  const write = (p: SessionPrefs) => storage.setItem(KEY, JSON.stringify(p));
   return {
-    get() {
-      const raw = storage.getItem(KEY);
-      if (!raw) return null;
-      try { return JSON.parse(raw) as StoredSession; } catch { return null; }
-    },
-    set(s) { storage.setItem(KEY, JSON.stringify(s)); },
+    get: read,
+    setSelectedFamily(familyId) { const p = read(); p.selectedFamilyId = familyId; write(p); },
+    setSelectedSubject(subjectRef) { const p = read(); p.selectedSubjectRef = subjectRef; write(p); },
     clear() { storage.removeItem(KEY); },
-    isExpired(now = Date.now()) {
-      const s = this.get();
-      if (!s) return true;
-      return new Date(s.expiresAt).getTime() <= now;
-    },
   };
 }
 

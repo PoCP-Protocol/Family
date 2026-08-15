@@ -128,3 +128,24 @@ export function bearerToken(authorization?: string): string | undefined {
   const m = authorization.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : undefined;
 }
+
+/** PLATFORM-SESSION-001:浏览器会话 cookie 名(HttpOnly/Secure/SameSite)。 */
+export const SESSION_COOKIE = 'fam_session';
+
+/** 从 Cookie 头取会话令牌(浏览器 HttpOnly cookie;JS 读不到明文)。 */
+export function cookieToken(cookieHeader?: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  for (const part of cookieHeader.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === SESSION_COOKIE) return decodeURIComponent(v.join('=')).trim() || undefined;
+  }
+  return undefined;
+}
+
+/**
+ * 会话令牌解析优先级:浏览器 HttpOnly cookie 优先(消费端),否则 Authorization: Bearer(内部/API/测试)。
+ * 这样浏览器不需把 raw token 放进 WebStorage;内部/CLI/测试仍可用 Bearer。
+ */
+export function sessionTokenFromHeaders(headers: Record<string, unknown>): string | undefined {
+  return cookieToken(headers?.['cookie'] as string | undefined) ?? bearerToken(headers?.['authorization'] as string | undefined);
+}

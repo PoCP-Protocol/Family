@@ -1,61 +1,45 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSessionStore, memoryStorage, type StoredSession } from './session/session';
+import { createSessionPrefsStore, memoryStorage } from './session/session';
 import { createApiClient } from './api/client';
 import { deriveFamilyContext } from './family-context/family-context';
 import { ROUTES, PRIMARY_NAV } from './router/routes';
 
-const future = new Date(Date.now() + 3600_000).toISOString();
-const past = new Date(Date.now() - 1000).toISOString();
-const sess = (expiresAt: string): StoredSession => ({ token: 't', personId: 'p1', familyId: 'f1', expiresAt });
-
-describe('platform/session', () => {
-  it('set/get/clear + expiry', () => {
-    const s = createSessionStore(memoryStorage());
-    expect(s.get()).toBeNull();
-    s.set(sess(future));
-    expect(s.get()?.personId).toBe('p1');
-    expect(s.isExpired()).toBe(false);
-    s.set(sess(past));
-    expect(s.isExpired()).toBe(true);
+describe('platform/session prefs (cookie mode — NO raw token in WebStorage)', () => {
+  it('stores only non-secret UI prefs; never a token', () => {
+    const storage = memoryStorage();
+    const s = createSessionPrefsStore(storage);
+    expect(s.get()).toEqual({});
+    s.setSelectedFamily('fam-1');
+    s.setSelectedSubject('child-1');
+    expect(s.get()).toEqual({ selectedFamilyId: 'fam-1', selectedSubjectRef: 'child-1' });
+    // RAW_BROWSER_TOKEN_WEBSTORAGE=0:存储里绝不出现 token 字样/会话密钥
+    const dump = JSON.stringify(s.get());
+    expect(dump.toLowerCase()).not.toContain('token');
+    expect(dump).not.toContain('fam_'); // 会话令牌前缀
     s.clear();
-    expect(s.get()).toBeNull();
+    expect(s.get()).toEqual({});
   });
 });
 
-describe('platform/api client', () => {
-  it('attaches Bearer and returns data on ok', async () => {
-    const store = createSessionStore(memoryStorage());
-    store.set(sess(future));
-    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ hello: 'world' }), { status: 200 })) as unknown as typeof fetch;
-    const api = createApiClient({ baseUrl: 'http://x', session: store, fetchImpl });
-    const r = await api.get<{ hello: string }>('/ping');
-    expect(r.ok && r.data.hello).toBe('world');
-    const call = (fetchImpl as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
-    const init = call[1] as { headers: Record<string, string> };
-    expect(init.headers.authorization).toBe('Bearer t');
+describe('platform/api client (cookie credentials:include, no Authorization from storage)', () => {
+  it('sends credentials:include and NO Authorization header', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ ok: 1 }), { status: 200 })) as unknown as typeof fetch;
+    const api = createApiClient({ baseUrl: 'http://x', fetchImpl });
+    const r = await api.get<{ ok: number }>('/auth/contexts');
+    expect(r.ok && r.data.ok).toBe(1);
+    const init = (fetchImpl as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][1] as { credentials?: string; headers: Record<string, string> };
+    expect(init.credentials).toBe('include');
+    expect(init.headers.authorization).toBeUndefined();
+    expect(init.headers.Authorization).toBeUndefined();
   });
 
-  it('no session → onUnauthorized + 401 (no network)', async () => {
-    const store = createSessionStore(memoryStorage());
-    const onUnauthorized = vi.fn();
-    const fetchImpl = vi.fn() as unknown as typeof fetch;
-    const api = createApiClient({ baseUrl: 'http://x', session: store, fetchImpl, onUnauthorized });
-    const r = await api.get('/ping');
-    expect(r.ok).toBe(false);
-    expect(onUnauthorized).toHaveBeenCalled();
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it('401 response clears session and triggers onUnauthorized', async () => {
-    const store = createSessionStore(memoryStorage());
-    store.set(sess(future));
+  it('401 → onUnauthorized', async () => {
     const onUnauthorized = vi.fn();
     const fetchImpl = vi.fn(async () => new Response('', { status: 401 })) as unknown as typeof fetch;
-    const api = createApiClient({ baseUrl: 'http://x', session: store, fetchImpl, onUnauthorized });
+    const api = createApiClient({ baseUrl: 'http://x', fetchImpl, onUnauthorized });
     const r = await api.get('/secure');
     expect(r.ok).toBe(false);
     expect(onUnauthorized).toHaveBeenCalled();
-    expect(store.get()).toBeNull();
   });
 });
 

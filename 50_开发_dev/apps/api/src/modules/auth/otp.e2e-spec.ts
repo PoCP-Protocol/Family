@@ -59,6 +59,20 @@ describe('IAM-102 OTP login flow', () => {
     expect(contexts.find((c) => c.family_id === familyId)?.role).toBe('OWNER_GUARDIAN');
   });
 
+  it('PLATFORM-SESSION-001: verify 下发 HttpOnly cookie;带 cookie(无 Bearer)可认证 /auth/contexts', async () => {
+    const req = await requestCode();
+    const { dev_code } = await req.json() as { dev_code: string };
+    const ver = await post('/auth/otp/verify', { phone: PHONE, code: dev_code });
+    const setCookie = ver.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('fam_session=');
+    expect(setCookie.toLowerCase()).toContain('httponly');
+    const cookie = setCookie.split(';')[0]; // fam_session=<token>
+    // 仅用 cookie(不带 Authorization)访问:
+    const ctx = await fetch(`${baseUrl}/auth/contexts`, { headers: { cookie } });
+    expect(ctx.status).toBe(200);
+    expect((await ctx.json() as { contexts: Array<{ family_id: string }> }).contexts.map((c) => c.family_id)).toContain(familyId);
+  });
+
   it('wrong code -> 401 (attempt recorded)', async () => {
     await requestCode();
     const ver = await post('/auth/otp/verify', { phone: PHONE, code: '000000' });

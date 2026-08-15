@@ -20,10 +20,10 @@ SCOPE  = PR-A(TENANCY-T1T2-BACKEND);PR-B(PLATFORM-SESSION-001 浏览器安全会
 7  CreateFirstFamily              = PASS(单事务 Family+Guardian+Binding+OWNER_GUARDIAN membership;二次拒;失败回滚)
 8  role permission matrix         = PASS(FamilyAuthorizationPolicy 显式矩阵,无 RBAC 引擎/DSL;8 端点 @RequireFamilyAction 强制;单测 6/6)
 9  x-actor-id remaining(消费)    = 0(Family 24 端点迁 @ActorId;required 模式 x-actor-only→401)
-10 browser token storage          = 待 PR-B(PLATFORM-SESSION-001;本 PR-A 不含 apps/web)
+10 browser token storage          = PASS(PR-B:HttpOnly cookie 承载会话;WebStorage 只存 UI 偏好;RAW_BROWSER_TOKEN_WEBSTORAGE=0;web 单测断言)
 11 cross-family attack matrix     = PASS(安全矩阵 10/10:cross-family 403 · 伪造 · revoked-membership · LEFT · revoked-binding · expired · revoked-session · zero-family · no-bearer)
 12 CI(本地)                      = typecheck 0 · integration 53/53 · e2e 112/112 · api unit 105/105 · 授权扫描 PASS(0)
-13 T1/T2 Gate 建议                = PR-A backend 达标;等 PR-B(浏览器安全会话)绿 + 合并集成绿 → 一起进 master
+13 T1/T2 Gate 建议                = 达标(PR-A + PR-B 同分支联合):全部判据 PASS,CONSUMER_X_ACTOR_ID_TRUST=0 且 RAW_BROWSER_TOKEN_WEBSTORAGE=0;建议按总架构师点名授权合入 master
 14 OTP account login              = PASS(废除 phone→person LIMIT1→family;签发 account session)
 15 backfill counts                = 见 0018 回填(accounts by external_ref · bindings · 每 person 一 membership);integration 回填测试 3/3
 16 CANONICAL_SEMANTIC_DELTA       = 0(persons/families/growth 未改;persons.account_id 保留)
@@ -35,13 +35,20 @@ SCOPE  = PR-A(TENANCY-T1T2-BACKEND);PR-B(PLATFORM-SESSION-001 浏览器安全会
 22 T3 readiness                   = 未启(Organization/AccessGrant/Community/RLS 仍 HOLD)
 ```
 
-## 未达完整 Gate 的项(联合 Gate 前必补)
+## 联合 Gate 达成(PR-A + PR-B 同分支)
 
 ```text
-RAW_BROWSER_TOKEN_WEBSTORAGE=0  → PR-B PLATFORM-SESSION-001(HttpOnly cookie + AccountContextStore/FamilyContextStore),消费端 Agent、独立分支
-JOINT GATE                      → PR-A 绿 + PR-B 绿 + 合并集成绿 = TENANCY_T1_T2_GATE,两者一起进 master
+ACCOUNT_DOMAIN / ACCOUNT_PERSON_BINDING / FAMILY_MEMBERSHIP = PASS
+OTP_ACCOUNT_LOGIN / ZERO_FAMILY_ACCOUNT / MULTI_FAMILY_CONTEXT / CREATE_FIRST_FAMILY = PASS
+ROLE_PERMISSION_MAP / FAMILY_SCOPE_GUARD = PASS
+CONSUMER_X_ACTOR_ID_TRUST = 0
+RAW_BROWSER_TOKEN_WEBSTORAGE = 0(cookie 模式 + web 单测断言)
+CROSS_FAMILY_READ/WRITE = 0 · IDOR_CROSS_FAMILY = 0 · REVOKED/EXPIRED = DENY
+CANONICAL_SEMANTIC_DELTA = 0 · CANONICAL_BYPASS = 0
+FULL_CI(本地) = typecheck 0 · integration 53/53 · e2e 113/113 · web 33/33 · api unit 105/105 · 授权扫描 PASS(0)
 ```
+PR-B 浏览器安全会话:API HttpOnly cookie(set 于 OTP verify/account-session;读 cookie 或 Bearer;revoke 清 cookie;cookie 变更请求 origin/CSRF 校验);Web session 改 prefs-only(不存 raw token)+ client credentials:include。Bearer 保留给内部/API/测试。
 
 ## 边界
 
-不合 master(joint gate 前);不自签 PASS_CLOSED;Organization/AccessGrant/RLS/真实家庭 alpha 全 HOLD。AUTO_MERGE=NO。
+不合 master(待总架构师点名 head 授权);不自签 PASS_CLOSED;Organization/AccessGrant/RLS/真实家庭 alpha 全 HOLD。AUTO_MERGE=NO。

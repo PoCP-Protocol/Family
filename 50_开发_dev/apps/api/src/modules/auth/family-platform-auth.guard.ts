@@ -1,7 +1,19 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, SetMetadata, UnauthorizedException, createParamDecorator } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthService, bearerToken } from './auth.service';
+import { AuthService, bearerToken, cookieToken, sessionTokenFromHeaders } from './auth.service';
 import { assertFamilyRoleCan, type FamilyNamedAction, type FamilyRole } from './family-authorization.policy';
+
+/** cookie 认证的变更请求须同源(CSRF 基本防护);Bearer(内部/API/测试)不走 cookie 故豁免。允许来源经 env 配置。 */
+function assertCookieOriginOk(req: { method?: string; headers?: Record<string, unknown> }): void {
+  const usingCookie = !!cookieToken(req.headers?.['cookie'] as string | undefined) && !bearerToken(req.headers?.['authorization'] as string | undefined);
+  const mutating = !['GET', 'HEAD', 'OPTIONS'].includes((req.method ?? 'GET').toUpperCase());
+  if (!usingCookie || !mutating) return;
+  const origin = (req.headers?.['origin'] ?? '').toString();
+  const allow = (process.env.PLATFORM_ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (origin && allow.length > 0 && !allow.includes(origin)) {
+    throw new ForbiddenException('csrf_origin_not_allowed');
+  }
+}
 
 /** 声明某端点所需的 Family NamedAction;guard 在 required 模式据此按角色矩阵强制。 */
 export const FAMILY_ACTION_KEY = 'family_named_action';
@@ -28,8 +40,9 @@ export class FamilyPlatformAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
+    assertCookieOriginOk(req); // CSRF:cookie 认证的变更请求须同源
     const familyId: string | undefined = req.params?.familyId;
-    const token = bearerToken(req.headers?.['authorization']);
+    const token = sessionTokenFromHeaders(req.headers ?? {}); // cookie 优先,否则 Bearer
     const xActor = (req.headers?.['x-actor-id'] ?? '').toString().trim();
     const requiredAction = this.reflector.get<FamilyNamedAction | undefined>(FAMILY_ACTION_KEY, context.getHandler());
 

@@ -1,36 +1,29 @@
 /**
- * WEB-ARCH-001 · 统一 API data client(唯一出网口)。
- * 自动附 Authorization: Bearer;401 → 触发登出回调(重新登录);错误规范化。
- * 消费端不再手拼 x-actor-id / familyId 查询串作为信任来源。
+ * PLATFORM-SESSION-001 · 统一 API data client(唯一出网口,cookie 模式)。
+ * 浏览器认证走 HttpOnly cookie:每次请求 credentials:'include' 自动带 cookie;
+ * JS 不接触 raw token,不再从 WebStorage 附 Authorization。401 → 触发重新登录回调。
  */
-import type { SessionStore } from '../session/session';
-
 export interface ApiError { status: number; code: string; message: string; }
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
 export interface ApiClientDeps {
   baseUrl: string;
-  session: SessionStore;
   fetchImpl?: typeof fetch;
-  onUnauthorized?: () => void; // 401/过期 → 跳登录
+  onUnauthorized?: () => void; // 401 → 跳登录
 }
 
 export function createApiClient(deps: ApiClientDeps) {
   const f = deps.fetchImpl ?? fetch;
   async function request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>> {
-    const s = deps.session.get();
-    if (!s || deps.session.isExpired()) {
-      deps.session.clear();
-      deps.onUnauthorized?.();
-      return { ok: false, error: { status: 401, code: 'no_session', message: 'not authenticated' } };
-    }
-    const headers: Record<string, string> = { authorization: `Bearer ${s.token}` };
+    const headers: Record<string, string> = {};
     if (body !== undefined) headers['content-type'] = 'application/json';
     const res = await f(`${deps.baseUrl}${path}`, {
-      method, headers, body: body !== undefined ? JSON.stringify(body) : undefined,
+      method,
+      headers,
+      credentials: 'include',                    // 带 HttpOnly 会话 cookie(浏览器)
+      body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (res.status === 401) {
-      deps.session.clear();
       deps.onUnauthorized?.();
       return { ok: false, error: { status: 401, code: 'unauthorized', message: 'session invalid or expired' } };
     }
