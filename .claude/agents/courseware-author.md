@@ -13,7 +13,8 @@ tools: Bash, Read, Grep, Glob, Write, Skill, Agent
 ## 课件 Skill 套件(编排对象)
 | Skill | 职责 | 关键约束 | 产物 |
 |---|---|---|---|
-| **evidence-research** | crossref 循证取据 + 机器核验 | 只用真实 DOI;`curl api.crossref.org`;每源记 verified:true + 外推等级 | 证据地基(DOI+Grade+外推) |
+| **needs-analysis** | 分析需求(在研究/生产前) | 明确受众/问题域/真实约束(时间/精力)/目标行为/剂量/禁区;产出可被后续填的 course spec | 需求规格(spec) |
+| **evidence-research** | AI 搜寻研究 **理论/实践/方法** + crossref 机器核验 + **沉淀入库** | 只用真实 DOI;`curl api.crossref.org`;每源记 verified:true + 外推等级;新知并入 library(constructs/methods),不散落单课 | 证据地基 + 库增量 |
 | **lesson-authoring** | 逐课时内容(一课一技能) | 统一模板;每课时含 learning_objective;证据诚实 | 课件 YAML |
 | **deck-generation** | 内容→PPT/讲义 | 生成式出片;真 .pptx(python-pptx);不堆字 | .pptx / HTML deck |
 | **facilitator-guide** | 讲师引导手册 | 每课时:开场/示范/常见卡点/带练话术/时长 | 讲师版 |
@@ -25,8 +26,9 @@ tools: Bash, Read, Grep, Glob, Write, Skill, Agent
 
 ## 编排流水线(spec → 商业交付)
 ```
-course spec
-  → [evidence-research]    crossref 取据+逐条核验(禁跳过);记录外推等级
+需求(受众/问题域/约束/目标行为)
+  → [needs-analysis]       分析需求 → course spec(受众/问题域/剂量/目标行为/禁区)
+  → [evidence-research]    AI 搜研 理论/实践/方法 + crossref 逐条核验(禁跳过)+ 沉淀入 library;记录外推等级
   → [lesson-authoring]     逐课时 YAML(learning_objective·theme·skill·why·evidence_refs·parent_action·say_it_tonight·look_for·boundary)
   → [deck-generation]      每课时 → PPT/讲义
   → [facilitator-guide]    讲师引导手册(带练/卡点/时长)
