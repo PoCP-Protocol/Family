@@ -13,7 +13,7 @@ export const CREATE_FAMILY_ACTION = 'CreateFamily';
  */
 export async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
   const audit = await client.query(
-    `select 1 from audit_logs where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS' limit 1`,
+    `select audit_id from audit_logs where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS' limit 1`,
     [familyId, actorId, CREATE_FAMILY_ACTION],
   );
   if ((audit.rowCount ?? 0) >= 1) return;
