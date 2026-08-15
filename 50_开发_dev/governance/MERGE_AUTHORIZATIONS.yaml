@@ -38,3 +38,8 @@ authorizations:
     authorized_by: family-chief-architect
     ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 3 (W2R-105 Human Gate, 全 gate 绿条件授权)"
     date: "2026-08-15"
+  - pr: 23
+    head_sha: "7f39bba6f2540aeb80c367a8ca3d463dacd8583a"   # 同步含 W2R-105 的 master 后 reviewed head;其后仅本 ledger 登记提交
+    authorized_by: family-chief-architect
+    ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 4 (IAM-103 FULL, bearer 强制, 全 gate 绿条件授权)"
+    date: "2026-08-15"
