@@ -13,11 +13,19 @@ describe('COMMUNICATION_21DAY 定义', () => {
     expect(cp(21)).toBe('GROWTH_REPORT');
     expect(cp(3)).toBe('NONE');
   });
-  it('内容全部走 ref(不内联教研文本);绑定既有 Growth Named Action', () => {
+  it('Program 身份 = program_id + version(≠商业 product_id)', () => {
+    expect(COMMUNICATION_21DAY.program_id).toBe('communication-21day');
+    expect(COMMUNICATION_21DAY.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect((COMMUNICATION_21DAY as unknown as Record<string, unknown>).product_id).toBeUndefined();
+  });
+  it('内容全部走 ref(含 reflect.prompt_ref,不内联教研文本)', () => {
     const d3 = COMMUNICATION_21DAY.days[2];
     expect(d3.theme_ref).toMatch(/^content\.communication21\.day3\./);
     expect(d3.learn?.asset_ref).toMatch(/^content\./);
-    expect(d3.growth_action_binding).toBe('LISTEN_BEFORE_RESPOND');
+    expect(d3.reflect.prompt_ref).toMatch(/^content\.communication21\.day3\.reflect$/);
+  });
+  it('不臆造每日干预:growth_action_binding 默认 null(无冻结绑定契约)', () => {
+    expect(COMMUNICATION_21DAY.days.every((d) => d.growth_action_binding === null)).toBe(true);
   });
 });
 

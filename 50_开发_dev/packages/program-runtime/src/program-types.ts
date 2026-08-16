@@ -1,14 +1,15 @@
 /**
- * FAMILY-PRODUCT-RUNTIME-001 · Program Runtime 类型(产品/节奏/交付/进度编排)。
- * 铁律:本域只管【内容引用 + 节奏 + 交付检查点 + 进度】,绝不复制 Growth OS 的家庭真实事实。
- * 教研内容(课程/练习/陪练脚本)以 *_ref 指向 Content Engine 的循证课件,不在此内联臆造文本。
+ * @family/program-runtime · Program Runtime 类型(节奏/交付/进度编排)。
+ * Program 是一种【可被平台编排的成长资源(PROGRAM_RESOURCE)】,不是商业 Product,也不是平台中心。
+ * 铁律:本域只管【内容引用 + 节奏 + 交付检查点 + 进度投影】,绝不复制 Growth OS 的家庭真实事实。
+ * 一切教研/用户可见内容(主题/课件/练习/陪练/反思提示)只保存 *_ref,由 Content Engine 持有内容真相,本域不内联文本。
  */
 export type DeliveryCheckpoint = 'NONE' | 'WEEKLY_REVIEW' | 'GROWTH_REPORT' | 'COACH_REVIEW' | 'EXPERT';
 
 export interface LearningActivity { asset_ref: string; est_minutes: number; }   // 短视频/图文课件(Content Engine)
 export interface PracticeActivity { instruction_ref: string; }                  // 具体练习动作
 export interface CoachActivity { scenario_ref: string; }                        // AI 场景陪练脚本(Principal 作能力)
-export interface ReflectPrompt { prompt: string; }                             // 晚间 1 分钟记录提示
+export interface ReflectActivity { prompt_ref: string; }                        // 反思提示(内容走 Content Engine,不内联)
 
 export interface ProgramDay {
   day_index: number;
@@ -16,13 +17,15 @@ export interface ProgramDay {
   learn?: LearningActivity;
   practice?: PracticeActivity;
   coach?: CoachActivity;
-  reflect: ReflectPrompt;
-  growth_action_binding: string | null;    // 绑定到既有 Growth OS Named Action(如 LISTEN_BEFORE_RESPOND);null=纯学习日
+  reflect: ReflectActivity;
+  // 默认 null=本域不臆造干预。仅经产品/证据契约明确设计并通过 Growth contract 的 Day 才显式绑定既有 Named Action。
+  growth_action_binding: string | null;
   delivery_checkpoint: DeliveryCheckpoint;  // 何时真人介入 / 出报告
 }
 
 export interface Program {
-  product_id: string;
+  program_id: string;                      // Program 身份(≠商业 Product;商业产品未来可 reference 本 program_id)
+  version: string;                         // Program 版本(内容/编排演进可追溯)
   title: string;
   problem_domain: string;                  // 冻结:仅一个问题域
   life_stage: string;

@@ -14,7 +14,7 @@ export function resolveProgramDay(program: Program, dayIndex: number): ProgramDa
   if (d.learn) activities.push({ kind: 'LEARN', ref: d.learn.asset_ref, est_minutes: d.learn.est_minutes });
   if (d.practice) activities.push({ kind: 'PRACTICE', ref: d.practice.instruction_ref });
   if (d.coach) activities.push({ kind: 'COACH', ref: d.coach.scenario_ref });
-  activities.push({ kind: 'REFLECT', ref: d.reflect.prompt });
+  activities.push({ kind: 'REFLECT', ref: d.reflect.prompt_ref });
   return {
     day_index: clamped,
     total_days: program.total_days,
@@ -27,12 +27,13 @@ export function resolveProgramDay(program: Program, dayIndex: number): ProgramDa
   };
 }
 
-export interface ProgramProgress { product_id: string; current_day: number; total_days: number; completed: boolean; percent: number; }
+export interface ProgramProgress { program_id: string; version: string; current_day: number; total_days: number; completed: boolean; percent: number; }
 /** 由 enrollment 的当前天算进度(纯计算;不判定成长事实)。 */
 export function computeProgress(program: Program, currentDay: number): ProgramProgress {
   const day = Math.max(1, Math.min(program.total_days, Math.floor(currentDay)));
   return {
-    product_id: program.product_id,
+    program_id: program.program_id,
+    version: program.version,
     current_day: day,
     total_days: program.total_days,
     completed: day >= program.total_days,

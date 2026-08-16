@@ -31,20 +31,25 @@ Growth Fiduciary Principle(成长受托,最高伦理):推荐/编排优先级 =
 消费端一级导航 SUPERSEDE:Today/Growth/Principal/Family → **首页 · 成长 · 服务 · 家庭**(Principal 不再一级)。
 Vision Wide, Entry Narrow:愿景=一切为孩子与家庭成长(边界 Child & Family Growth);入口=V1 仅 12–15 亲子沟通冲突。
 
-新进度 Gate(取代"平台做了几个模块"):
-  G1 PRODUCT_DEFINED → G2 PRODUCT_DELIVERABLE(测试家庭 Day0→21 走完:课程/练习/AI陪练/行动/记录/复盘/报告 + 助教专家可介入)
-  → G3 PRODUCT_USABLE → G4 PRODUCT_OPERABLE → G5 FAMILY_PLATFORM_V1_READY
+平台成熟度模型(唯一全局尺度,取代旧"产品做到第几步 / 平台做了几个模块"。旧 G1–G5 PRODUCT gate 已 SUPERSEDED):
+  M0 NORTH_STAR_ALIGNED → M1 GROWTH_NEED_READY → M2 RESOURCE_NETWORK_READY → M3 ORCHESTRATION_READY
+  → M4 SERVICE_CONTINUITY_READY → M5 CONTEXT_REUSE_READY  ⇒  FAMILY_GROWTH_ORCHESTRATION_V1_READY
+  之后(仅未来):M6 DEMAND_NETWORK_READY → M7 COLLABORATION_NETWORK_READY → M8 PLATFORM_ECONOMICS_READY
+  **Program 01 = FIRST_PROGRAM_RESOURCE**:仅用于验证 M1–M5 这条链,不是全局成熟度 gate。
 
-五条产品线(所有开发挂靠,不再按技术模块扩张):
-  PRODUCT(Program Runtime/21天编排)· CONTENT(多模态课件/案例/练习/role-play/证据映射)
-  · DELIVERY(AI Coach+助教+顾问+专家+提醒反馈+SOP)· EXPERIENCE(注册/Onboarding/我的计划/Today/报告;PR#30 属此)
-  · DATA&BUSINESS(Enrollment/ProductEvent/成长旅程数据/报告/续费;后续接订单会员)
+一级开发 Lane(取代旧 PRODUCT/CONTENT/DELIVERY/EXPERIENCE/DATA&BUSINESS 五产品线;后者降为子能力,不再是顶层平台线):
+  LANE A FAMILY_EXPERIENCE(进入/表达需求/选择/查看服务)· LANE B GROWTH_NEED_INTELLIGENCE(Signal→Intent→Capability)
+  · LANE C GROWTH_RESOURCE_NETWORK(Content/Practice/AI/Program/Human/External)· LANE D ORCHESTRATION_AND_SERVICE(Plan/Case/Steward/Follow-up/Recovery)
+  · LANE E GROWTH_CONTEXT(Family Core/Growth OS/Context Reuse)· LANE F TRUST_AND_GOVERNANCE(Consent/Evidence/Safety/Tenancy/Audit)
+  未来:LANE G DEMAND_NETWORK(拼多多)· LANE H PROVIDER_COLLABORATION(贝壳)· LANE I PLATFORM_ECONOMICS(贡献→分配→结算)。
 
-资源比例倒回:~20% Core · 50% Product+Content+UX · 20% Delivery/Human/Ops · 10% Data。底座除真 blocker 不再主动扩建。
-三问原则:每个任务须答"服务哪个产品/改善哪个交付环节/用户感知什么价值",答不出→不开发。
-Program Runtime 铁律:只管内容/节奏/交付/进度;绝不复制 Growth OS 家庭真实事实。教研内容来自循证课件线,不臆造。
+开发过滤器(每个任务开工前须答;五者皆非 → DO_NOT_BUILD):
+  1 CHILD_GROWTH 如何服务孩子的成长利益? 2 FAMILY_VALUE 减少家庭哪种(搜索/协调/重复/决策)负担?
+  3 ORCHESTRATION 如何改善 Need→Capability→Resource→Service? 4 CONTINUITY 结果能否跨产品/服务者/时间留存?
+  5 COMPOUNDING 是否让下一次服务更好?
+Program Runtime 铁律:只管内容 ref/节奏/交付/进度投影;绝不复制 Growth OS 家庭真实事实,绝不发明 Growth 方法。教研内容来自循证课件线,不臆造。
 
-平台价值真义(2026-08-16 深化,见记忆 family-platform-value-thesis):基本单位=一个持续存在的家庭(Family stays),非一次课程/咨询/专家。
+平台价值真义(权威见 architecture/FAMILY_PLATFORM_V3_BLUEPRINT.md):基本单位=一个持续存在的家庭(Family stays),非一次课程/咨询/专家。
 三核(不可删):① Family Growth Account(家庭是谁+当前状态)② Family Growth Protocol(=Growth OS:Recommendation/Decision/Action/Observation/Review/NextStep)③ Family Service Orchestrator(此刻调 内容/AI/课程/助教/专家)。Principal/课程/课件/专家/模型/社区=plug-ins。
 平台价值 = Continuity × Interoperability × Orchestration × Compounding(乘法)。开发过滤器:每能力是否增此四性?
 已建再定位:Family Core=Account 底层 · Growth OS=共享 Protocol · Principal=第一个 Intelligence Provider(插件)· Human Gate=Machine→Human Orchestration · Tenancy/AccessGrant=多服务者进入 Family Context 的信任+平台中立+Service Portability。
