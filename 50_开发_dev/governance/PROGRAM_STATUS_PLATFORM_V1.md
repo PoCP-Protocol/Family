@@ -29,6 +29,12 @@ BASE     = master @ 9d52358(身份根/onboarding/Today 已入)
 资源比例倒回:~20% Core · 50% Product+Content+UX · 20% Delivery/Human/Ops · 10% Data。底座除真 blocker 不再主动扩建。
 三问原则:每个任务须答"服务哪个产品/改善哪个交付环节/用户感知什么价值",答不出→不开发。
 Program Runtime 铁律:只管内容/节奏/交付/进度;绝不复制 Growth OS 家庭真实事实。教研内容来自循证课件线,不臆造。
+
+平台价值真义(2026-08-16 深化,见记忆 family-platform-value-thesis):基本单位=一个持续存在的家庭(Family stays),非一次课程/咨询/专家。
+三核(不可删):① Family Growth Account(家庭是谁+当前状态)② Family Growth Protocol(=Growth OS:Recommendation/Decision/Action/Observation/Review/NextStep)③ Family Service Orchestrator(此刻调 内容/AI/课程/助教/专家)。Principal/课程/课件/专家/模型/社区=plug-ins。
+平台价值 = Continuity × Interoperability × Orchestration × Compounding(乘法)。开发过滤器:每能力是否增此四性?
+已建再定位:Family Core=Account 底层 · Growth OS=共享 Protocol · Principal=第一个 Intelligence Provider(插件)· Human Gate=Machine→Human Orchestration · Tenancy/AccessGrant=多服务者进入 Family Context 的信任+平台中立+Service Portability。
+诚实:今天还不是平台(Platform Architecture 成形,Platform Business 未成),不提前宣布。四阶段:①自有产品证明 Account+Protocol+Orchestration 产生价值(=当前 Product 01)②多内部产品共享一家庭上下文 ③多内部专家共享 Context ④接入首个第三方(平台成立时刻)。
 暂停(除非直挡 Product 01):更多通用AI/Principal 泛聊天 · 更多 dimension/intervention · 复杂组织多租户 · Marketplace · World Model · Family 7B · RLS 扩张 · 社区复杂化 · 复杂 BI。CHILD_COMPANION=NOT_P0(战略有效,不死冻)。
 ```
 
