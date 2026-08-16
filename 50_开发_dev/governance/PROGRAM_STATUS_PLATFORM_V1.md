@@ -6,16 +6,30 @@ RULING   = 战略纠偏(总架构师,2026-08-16)覆盖 FAMILY-PLATFORM-V1-BUILD-
 BASE     = master @ 9d52358(身份根/onboarding/Today 已入)
 ```
 
-## 〇、北极星纠偏(2026-08-16,最高优先)
+## 〇、北极星(2026-08-16,FAMILY-GROWTH-ORCHESTRATION-REBASE-001,最高优先)
 
 ```text
-北极星:BUILD THE BEST AI-NATIVE FAMILY GROWTH SERVICE(非 Family OS / AI 助手)。
-定位:Family Core/Growth OS/Evidence/Principal/Tenancy = Intelligence Infrastructure(底座发动机,够用即止);
-      前台 = Family Growth Services(标准化产品 + 交付)。Principal 降为无处不在的 AI Coach 能力,非首页/核心商品。
-检验:不是"比 DeepSeek 强在哪";而是"若 DeepSeek 免费给最强模型,榜样还创造什么价值"。模型经 Model Gateway 作供应商。
-第一目标:做出《21天青春期亲子沟通成长计划》——完整可交付、明显优于直接问通用 AI。非"21×AI对话"。
-产品单元:每日 LEARN(学5min)+ PRACTICE(练)+ COACH(AI陪练)+ REFLECT(记录);Day7/14/21 复盘+报告;关键节点真人助教/专家。
-用户买的:不是结果保证,是"比自己摸索更专业/持续/可执行/可观察的成长过程"(与 Truth Guard 一致)。
+北极星:ORCHESTRATE WHAT CHILD AND FAMILY GROWTH NEEDS
+  (取代旧 "BUILD THE BEST AI-NATIVE FAMILY GROWTH SERVICE";旧句 SUPERSEDED)
+三中心:孩子=成长目标中心(Growth Subject)· 家庭=持续服务中心+数据主权+决策上下文 · Family 平台=成长资源编排中心。
+一句话:"成长需要什么,Family 就在家庭授权与可信边界内,识别·判断能力缺口·寻找·组合·调度资源来服务;服务一次,平台和家庭就多知道下一次怎样更好。"
+约束:Family 不自产所有资源(asset-light);AI/PROGRAM/CONTENT/PRACTICE/COACH/EXPERT 都是 Resource Provider,不是平台本身。
+Principal 降为 AI Resource Provider(嵌入能力,非一级入口/非核心商品)。检验:若 DeepSeek 免费给最强模型,平台反而更强。
+
+**Program 01《21天青春期亲子沟通》定位 = FIRST_PROGRAM_RESOURCE(平台可调度的一种 Program 资源),不再是平台北极星/中心。**
+  它仍重要:用来验证 Need→Resource Match→Program→Action→Observation 这条链;但不定义平台边界。
+产品单元(该 Program 内):每日 LEARN/PRACTICE/COACH/REFLECT + Day7/14/21 复盘报告 + 关键节点真人。
+
+顶层主循环(平台架构中心):
+  CHILD → FAMILY → Growth Need Engine(现在真正需要什么)→ Growth Capability(需要什么能力)
+  → Resource Orchestrator(什么资源/谁/何时/怎么组合)→ [CONTENT/AI/PROGRAM · PRACTICE/COACH/SERVICE] → HUMAN/EXPERT
+  → Delivery → Observation/Review → Family Growth Context → 下一次编排更好
+
+Growth Fiduciary Principle(成长受托,最高伦理):推荐/编排优先级 =
+  Child Interest > Family Goal/Consent > Safety > Evidence/Resource Fit > Family Preference > Burden/Cost > Platform Revenue。
+  PLATFORM_MARGIN_RANKING_SIGNAL=0;必须支持 NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL(即使 0 收入)。
+消费端一级导航 SUPERSEDE:Today/Growth/Principal/Family → **首页 · 成长 · 服务 · 家庭**(Principal 不再一级)。
+Vision Wide, Entry Narrow:愿景=一切为孩子与家庭成长(边界 Child & Family Growth);入口=V1 仅 12–15 亲子沟通冲突。
 
 新进度 Gate(取代"平台做了几个模块"):
   G1 PRODUCT_DEFINED → G2 PRODUCT_DELIVERABLE(测试家庭 Day0→21 走完:课程/练习/AI陪练/行动/记录/复盘/报告 + 助教专家可介入)
