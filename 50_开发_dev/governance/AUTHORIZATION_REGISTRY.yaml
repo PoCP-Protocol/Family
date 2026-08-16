@@ -580,6 +580,24 @@ capabilities:
       仅允许设计独立 Consent、二次确认、字段脱敏、加密交付、有效期、撤销和审计 Gate，以及相关威胁模型；不得读取、生成、保存、下载、传输或外发真实家庭数据，不得实现加密/导出/删除运行时。
       不可逆删除、真实导出/下载/传输、保留清理、生产数据、组织/跨家庭访问、外部模型、训练、支付、试点、生产和 master 合入继续 HOLD。
 
+  # Phase 10I：真实导出实施前安全评审包；仅治理设计，不实现运行时。
+  - capability_id: FAMILY_PHASE10_EXPORT_PREIMPLEMENTATION_SECURITY_REVIEW_001
+    stage: FAMILY-V3-PHASE10I
+    status: DESIGN_ONLY_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 允许；Phase 10I pre-implementation security review package design (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅允许字段级 data inventory、数据保护影响评审模板、密钥管理决策表、儿童/第三方利益审查清单和事件响应演练脚本。
+      不得实现加密、文件交付、真实数据导出、删除、外发、生产处理、组织/跨家庭访问、外部模型、训练、支付、试点或 master 合入。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2
