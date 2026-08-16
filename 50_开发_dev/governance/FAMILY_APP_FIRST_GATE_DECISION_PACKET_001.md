@@ -157,3 +157,20 @@ C1 不得携带任何 Web HOME、大型发现页、原生移动端发布、公�
 
 **作者：Manus AI**  
 **日期：2026-08-16（GMT+8）
+
+
+## 10. 补充设计输入：贝壳式受治理分配机制
+
+用户提出在商业内核图中增加“贝壳式分配机制”。Family 只借鉴其将复杂服务拆解为明确阶段、以规则约束协作、保留责任追溯和对异常进行治理的方法；不迁移经纪网络、收益分配、服务者评分、跨组织协作、线索竞争或交易撮合。[6]
+
+| Family 设计问题 | App Gate 约束 |
+|---|---|
+| 家庭如何获得“下一步” | `Need → Intent → Capability → admitted Resource → Family Decision → T2 → Plan/Case → FollowUp/Handoff`；每一跳都必须可解释、可拒绝、可暂停。 |
+| 候选如何出现 | 只基于当前家庭范围、有效 consent、资源 admission、T1/T2 与 executor readiness；不得用跨家庭画像、付费能力、转化率、服务者排名或商业价值。 |
+| 没有合格下一步怎么办 | 显示无可用候选或安全等待；不以未准入资源、自动替代、暗中派单或真人服务承诺填补空白。 |
+| 异常如何处理 | REVIEW/HIGH_RISK 只记录 handoff trace 与非承诺等待；组织访问、真人服务、预约、转介和 AccessGrant 均需独立 Gate。 |
+| 如何保障家庭主权 | 家庭明确 Decision 是 Plan/Case 的唯一前提；`NO_ACTION` 始终可用且无服务执行；路线不是销售线索分配。 |
+
+完整八项拆解、状态/责任表和 Human Gate 问题见 `architecture/FAMILY_BEIKE_GOVERNED_ALLOCATION_DESIGN_INPUT_001.md`。此补充不改变本包的零 API/DTO/数据库变更声明，不构成 C1 实现授权。
+
+[6] 尹西明等，《贝壳找房：自我颠覆的整合式创新引领产业数字化》，清华管理评论案例分析，2021-12-02，https://www.sem.tsinghua.edu.cn/info/1173/32544.htm 。
