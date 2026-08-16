@@ -11,7 +11,7 @@ PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / VERIFIED_AND_PUSHED(bran
 PHASE9   = FAMILY_PHASE9_INTEGRATION_E2E_REGRESSION_001 / INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(branch=family-growth-vertical-slice-001@8b9c68e;验证既有实现,不授权新能力)
 PHASE10A = FAMILY_PHASE10_DATA_LIFECYCLE_001 / INTERNAL_DETERMINISTIC_VALIDATED(branch=family-growth-vertical-slice-001;WithdrawConsent;真实 PostgreSQL;待 Gate 报告)
 RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
-NEXT_AUTHORIZED_STEP = PHASE10G_COMMIT_AND_GATE(合成白名单导出格式验证已通过；提交后等待裁决；真实数据导出、文件 I/O 和不可逆删除继续 HOLD；每次合 master 仍须 explicit per-merge authorization)
+NEXT_AUTHORIZED_STEP = PHASE10H_DESIGN_COMMIT_AND_GATE(真实导出未来安全架构/威胁模型设计已完成；无导出、加密或数据处理运行时；真实数据导出、文件 I/O 和不可逆删除继续 HOLD；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -32,7 +32,8 @@ Phase10B Context Reuse               = INTERNAL_DETERMINISTIC_VALIDATED(SERVICE 
 Phase10C 多模态/商业化架构输入       = DESIGN_ONLY(无运行时、无新表/DTO/API/Named Action；外部模型/训练/支付/交易继续 HOLD)
 Phase10E 数据生命周期请求/预览        = INTERNAL_DETERMINISTIC_VALIDATED(0025；三类请求+只读计数预览；43 API 文件/202 测试；未执行导出/保留/删除；已同步开发分支@eb5ba83)
 Phase10F 数据治理审批设计              = INTERNAL_DETERMINISTIC_VALIDATED(0026；policy/字段白名单/双监护人审批状态机；44 API 文件/204 测试；无真实导出/删除/清理；已同步开发分支@1217de4)
-Phase10G 合成白名单导出格式验证        = INTERNAL_DETERMINISTIC_VALIDATED(固定内存 fixture/schema；45 API 文件/207 测试；静态审计无 DB/文件/网络/真实数据路径；待同步 Gate)
+Phase10G 合成白名单导出格式验证        = INTERNAL_DETERMINISTIC_VALIDATED(固定内存 fixture/schema；45 API 文件/207 测试；静态审计无 DB/文件/网络/真实数据路径；已同步开发分支@093d0d1)
+Phase10H 真实导出安全架构/威胁模型        = DESIGN_ONLY(独立 Consent/二次确认/最小字段/脱敏/加密交付/有效期/审计 Gate；无运行时；待同步 Gate)
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 

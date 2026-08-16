@@ -562,6 +562,24 @@ capabilities:
       仅允许基于固定合成 fixture 的字段白名单导出包结构、schema、审计和审批门验证；不得查询或生成真实家庭内容，不得写入文件、产生下载、网络传输或外发。
       不可逆删除、真实导出/下载/传输、保留清理、生产数据、组织/跨家庭访问、外部模型、训练、支付、试点、生产和 master 合入继续 HOLD。
 
+  # Phase 10H：真实导出未来架构与威胁模型；仅设计，无数据处理运行时。
+  - capability_id: FAMILY_PHASE10_REAL_EXPORT_SECURITY_ARCHITECTURE_001
+    stage: FAMILY-V3-PHASE10H
+    status: DESIGN_ONLY_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 继续按照主计划推进开发，并同步到GitHub；Phase 10H real export future security architecture (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅允许设计独立 Consent、二次确认、字段脱敏、加密交付、有效期、撤销和审计 Gate，以及相关威胁模型；不得读取、生成、保存、下载、传输或外发真实家庭数据，不得实现加密/导出/删除运行时。
+      不可逆删除、真实导出/下载/传输、保留清理、生产数据、组织/跨家庭访问、外部模型、训练、支付、试点、生产和 master 合入继续 HOLD。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2
