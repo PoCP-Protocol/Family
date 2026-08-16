@@ -598,6 +598,24 @@ capabilities:
       仅允许字段级 data inventory、数据保护影响评审模板、密钥管理决策表、儿童/第三方利益审查清单和事件响应演练脚本。
       不得实现加密、文件交付、真实数据导出、删除、外发、生产处理、组织/跨家庭访问、外部模型、训练、支付、试点或 master 合入。
 
+  # Phase 10J：合成导出安全演练审计断言与 Gate 检查；仅 synthetic fixture。
+  - capability_id: FAMILY_PHASE10_SYNTHETIC_EXPORT_SECURITY_EXERCISE_001
+    stage: FAMILY-V3-PHASE10J
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 继续按照主计划推进开发，并同步到GitHub；Phase 10J synthetic export security exercise (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅允许固定 synthetic fixture 的范围漂移、撤回、第三方混入、重放、过期、身份撤销和审计异常控制断言与 Gate 检查。
+      不得读取或处理真实家庭数据，不得实现真实导出、加密、文件交付、删除、外发、生产处理、组织/跨家庭访问、外部模型、训练、支付、试点或 master 合入。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2
