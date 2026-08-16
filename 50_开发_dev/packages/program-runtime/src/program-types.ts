@@ -41,6 +41,6 @@ export interface ProgramDayView {
   activities: Array<{ kind: 'LEARN' | 'PRACTICE' | 'COACH' | 'REFLECT'; ref: string; est_minutes?: number }>;
   growth_action_binding: string | null;
   delivery_checkpoint: DeliveryCheckpoint;
-  is_report_day: boolean;
-  is_final_day: boolean;
+  is_report_day: boolean;      // 报告节奏(结构),非完成
+  reached_final_day: boolean;  // 日程走到最后一天,非完成
 }

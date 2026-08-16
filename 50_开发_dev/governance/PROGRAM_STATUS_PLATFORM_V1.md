@@ -1,10 +1,13 @@
 # 程序状态 —— FAMILY(SSOT)
 
 ```text
-DOC_KIND = PROGRAM_STATUS(SSOT)
-RULING   = 战略纠偏(总架构师,2026-08-16)覆盖 FAMILY-PLATFORM-V1-BUILD-001
-BASE     = master @ 9d52358(身份根/onboarding/Today 已入)
+DOC_KIND = PROGRAM_STATUS(执行/状态 SSOT)
+RULING   = 战略纠偏(总架构师,2026-08-16)覆盖 FAMILY-PLATFORM-V1-BUILD-001;经 PHASE0-FINAL-CLOSEOUT rebase 到含蓝图的 master
+BASE     = master @ 136045f(含 architecture/FAMILY_PLATFORM_V3_BLUEPRINT.md;身份根/onboarding/Today 已入)
 ```
+
+> **最高战略 SSOT = `architecture/FAMILY_PLATFORM_V3_BLUEPRINT.md`(架构 SSOT)。本文件 = 执行/状态 SSOT。**
+> 本文件只**摘要/引用**蓝图,**不得**另立与蓝图竞争的 北极星 / 成熟度模型 / 对象链 / Growth Fiduciary 规则 / 平台命名。冲突时以蓝图为准。
 
 ## 〇、北极星(2026-08-16,FAMILY-GROWTH-ORCHESTRATION-REBASE-001,最高优先)
 
@@ -20,14 +23,15 @@ Principal 降为 AI Resource Provider(嵌入能力,非一级入口/非核心商�
   它仍重要:用来验证 Need→Resource Match→Program→Action→Observation 这条链;但不定义平台边界。
 产品单元(该 Program 内):每日 LEARN/PRACTICE/COACH/REFLECT + Day7/14/21 复盘报告 + 关键节点真人。
 
-顶层主循环(平台架构中心):
-  CHILD → FAMILY → Growth Need Engine(现在真正需要什么)→ Growth Capability(需要什么能力)
-  → Resource Orchestrator(什么资源/谁/何时/怎么组合)→ [CONTENT/AI/PROGRAM · PRACTICE/COACH/SERVICE] → HUMAN/EXPERT
-  → Delivery → Observation/Review → Family Growth Context → 下一次编排更好
+顶层主循环(权威见蓝图 §2b 八对象链):
+  GrowthNeedSignal → GrowthIntent → GrowthCapability → (Eligibility Gate) → ResourceOffer → ResourceRecommendation
+  → OrchestrationPlan → ServiceCase → ServiceContribution → Growth OS(Observation/Review)→ Family Growth Context → 下一次更好。
+  **GrowthPriority 可选**(蓝图 §2d):`GrowthIntent ≠ GrowthPriority`;GrowthPriority = OPTIONAL / Growth-OS-owned / family-confirmed,**不是编排前置条件**;临时求助不被强制"成长规划化"。
 
-Growth Fiduciary Principle(成长受托,最高伦理):推荐/编排优先级 =
-  Child Interest > Family Goal/Consent > Safety > Evidence/Resource Fit > Family Preference > Burden/Cost > Platform Revenue。
-  PLATFORM_MARGIN_RANKING_SIGNAL=0;必须支持 NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL(即使 0 收入)。
+Growth Fiduciary(成长受托,最高伦理;**两阶段,非单一排序表**,权威见蓝图 §4):
+  ① Eligibility Gate(FAIL CLOSED,不参与排序):consent / privacy / safety / professional_scope / provider_qualification / risk_boundary / age_scope / availability;任一不过 = INELIGIBLE,根本不进候选。
+  ② 仅对 eligible 资源排序:child_growth_interest > confirmed_family_intent > resource_fit > evidence > past_context > family_preference > user_burden > cost。
+  **Platform Revenue(V1)= NOT_A_RANKING_SIGNAL(根本不参与,非"排最后");PLATFORM_MARGIN_RANKING_SIGNAL=0。** 必须支持 NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL(即使 0 收入)。
 消费端一级导航 SUPERSEDE:Today/Growth/Principal/Family → **首页 · 成长 · 服务 · 家庭**(Principal 不再一级)。
 Vision Wide, Entry Narrow:愿景=一切为孩子与家庭成长(边界 Child & Family Growth);入口=V1 仅 12–15 亲子沟通冲突。
 
@@ -54,7 +58,7 @@ Program Runtime 铁律:只管内容 ref/节奏/交付/进度投影;绝不复制 
 平台价值 = Continuity × Interoperability × Orchestration × Compounding(乘法)。开发过滤器:每能力是否增此四性?
 已建再定位:Family Core=Account 底层 · Growth OS=共享 Protocol · Principal=第一个 Intelligence Provider(插件)· Human Gate=Machine→Human Orchestration · Tenancy/AccessGrant=多服务者进入 Family Context 的信任+平台中立+Service Portability。
 诚实:今天还不是平台(Platform Architecture 成形,Platform Business 未成),不提前宣布。四阶段:①自有产品证明 Account+Protocol+Orchestration 产生价值(=当前 Product 01)②多内部产品共享一家庭上下文 ③多内部专家共享 Context ④接入首个第三方(平台成立时刻)。
-暂停(除非直挡 Product 01):更多通用AI/Principal 泛聊天 · 更多 dimension/intervention · 复杂组织多租户 · Marketplace · World Model · Family 7B · RLS 扩张 · 社区复杂化 · 复杂 BI。CHILD_COMPANION=NOT_P0(战略有效,不死冻)。
+暂停(除非直挡当前 V1 纵切 / M1–M5 readiness):更多通用AI/Principal 泛聊天 · 更多 dimension/intervention · 复杂组织多租户 · Marketplace · World Model · Family 7B · RLS 扩张 · 社区复杂化 · 复杂 BI。CHILD_COMPANION=NOT_P0(战略有效,不死冻)。
 ```
 
 ## 一、阶段重定义(取代旧 M3→MOS→Alpha)

@@ -23,6 +23,12 @@ history:
     merged: true
     process: COMPLIANT   # 总架构师显式点名授权此 head(FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 1);guard 自我安装 bootstrap,head 未改
     authorized_by: family-chief-architect
+  - pr: 33
+    head_sha: "d2f5874b851d92502243b0e4826c2054bb67112f"
+    merge_commit: "136045fc0006987359fb11d2304e2e332442708f"
+    merged: true
+    process: COMPLIANT   # 点名授权 exact head,--match-head-commit 锁定;常规合并(非 --admin);guard 非分支保护必需项,其 CI 红为已知 ledger-only bootstrap
+    authorized_by: family-chief-architect
 
 # 未来对 master 的合并授权登记于此(每条须 pr + head_sha + authorized_by + ref + date):
 # 注:guard 现为 CI 可见 + 审计 SSOT;转「分支保护必需项」须总架构师在 GitHub 设置开启;
@@ -43,3 +49,8 @@ authorizations:
     authorized_by: family-chief-architect
     ref: "FAMILY-M3-PRODUCTIZATION-WAVE-001 Task 4 (IAM-103 FULL, bearer 强制, 全 gate 绿条件授权)"
     date: "2026-08-15"
+  - pr: 33
+    head_sha: "d2f5874b851d92502243b0e4826c2054bb67112f"   # 总架构师点名授权的 exact head;已用 --match-head-commit 锁定合并,head 未漂移(此登记为合并后审计,不在 #33 分支)
+    authorized_by: family-chief-architect
+    ref: "FAMILY-PLATFORM-V3-BLUEPRINT-FINAL-SEMANTIC-CLOSEOUT — PASS_CLOSED; MASTER_BLUEPRINT AUTHORIZED"
+    date: "2026-08-16"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveProgramDay, computeProgress } from './program-runtime';
+import { resolveProgramDay, projectProgramSchedule } from './program-runtime';
 import { COMMUNICATION_21DAY } from './communication-21day';
 
 describe('COMMUNICATION_21DAY 定义', () => {
@@ -36,10 +36,13 @@ describe('resolveProgramDay', () => {
     expect(v.activities.map((a) => a.kind)).toEqual(['LEARN', 'PRACTICE', 'COACH', 'REFLECT']);
     expect(v.is_report_day).toBe(false);
   });
-  it('Day21 = 报告日 + 结营', () => {
+  it('Day21 = 报告日 + 走到最后一天(reached_final_day,非"完成")', () => {
     const v = resolveProgramDay(COMMUNICATION_21DAY, 21);
     expect(v.is_report_day).toBe(true);
-    expect(v.is_final_day).toBe(true);
+    expect(v.reached_final_day).toBe(true);
+    // 语义护栏:视图里没有、也不应有任何 completion 字段。
+    expect('is_final_day' in v).toBe(false);
+    expect('completed' in v).toBe(false);
   });
   it('越界 clamp 到 [1,total]', () => {
     expect(resolveProgramDay(COMMUNICATION_21DAY, 0).day_index).toBe(1);
@@ -47,10 +50,17 @@ describe('resolveProgramDay', () => {
   });
 });
 
-describe('computeProgress', () => {
-  it('Day8/21 → 38%,未完成;Day21 → 完成', () => {
-    expect(computeProgress(COMMUNICATION_21DAY, 8).percent).toBe(38);
-    expect(computeProgress(COMMUNICATION_21DAY, 8).completed).toBe(false);
-    expect(computeProgress(COMMUNICATION_21DAY, 21).completed).toBe(true);
+describe('projectProgramSchedule(仅日程位置,不判定完成)', () => {
+  it('Day8/21 → schedule_percent≈38;Day21 → reached_final_day=true', () => {
+    expect(projectProgramSchedule(COMMUNICATION_21DAY, 8).schedule_percent).toBe(38);
+    expect(projectProgramSchedule(COMMUNICATION_21DAY, 8).reached_final_day).toBe(false);
+    expect(projectProgramSchedule(COMMUNICATION_21DAY, 21).reached_final_day).toBe(true);
+  });
+  it('Program Runtime 不判定 Enrollment/Delivery 完成:投影中没有 completed 字段', () => {
+    const p = projectProgramSchedule(COMMUNICATION_21DAY, 21);
+    expect('completed' in p).toBe(false);
+    // 到最后一天 ≠ 完成:completed/started/paused/cancelled/delivery 归未来 Enrollment/Delivery Domain。
+    expect(p.program_id).toBe('communication-21day');
+    expect(p.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

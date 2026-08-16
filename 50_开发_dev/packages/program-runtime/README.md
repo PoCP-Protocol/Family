@@ -9,7 +9,21 @@
 - program structure(每日活动槽:learn / practice / coach / reflect)
 - content refs(`theme_ref` / `asset_ref` / `instruction_ref` / `scenario_ref` / `prompt_ref`)
 - delivery checkpoints(周复盘 / 报告 / 真人介入节奏)
-- progress projection(给定 enrollment 当前天的纯计算进度)
+- **schedule projection**(给定 enrollment 当前天的**日程位置**:`schedule_percent` / `reached_final_day`)
+
+## Completion 归属(平台级不变量)
+
+Program Runtime **只投影日程位置,不派生任何"完成"真相**。
+
+```text
+Program Runtime 拥有:  structure · rhythm · content refs · delivery checkpoints · schedule projection
+未来 Enrollment / Delivery Domain 拥有:  started · paused · completed · cancelled · delivery completion
+```
+
+不变量:
+- `reached_final_day(Day21 到达) ≠ Program completed`
+- `Program completed ≠ Growth outcome`
+- 本包内**禁**出现 `completed / ProgramCompleted / delivery_completed / growth_completed` 作为派生真相。
 
 ## 它不拥有(NOT its truth)
 
