@@ -24,6 +24,8 @@ export type ConsentPurpose =
   | 'MODEL_IMPROVEMENT'
   | 'CONTENT_PUBLICATION';
 export type ConsentStatus = 'GRANTED' | 'WITHDRAWN' | 'EXPIRED';
+export type FamilyDataLifecycleRequestType = 'EXPORT_REQUEST' | 'RETENTION_REVIEW' | 'DELETE_REQUEST';
+export type FamilyDataLifecycleRequestStatus = 'REQUESTED';
 export type GrowthDomain = 'CHILD' | 'PARENT' | 'RELATIONSHIP';
 export type SafetyScreeningResult = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type GrowthOnboardingStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
@@ -172,6 +174,43 @@ export interface WithdrawConsentRequest {
 
 export interface WithdrawConsentResponse {
   consent: ConsentDto;
+}
+
+export interface FamilyDataLifecycleRequestDto {
+  family_data_lifecycle_request_id: string;
+  family_id: string;
+  request_type: FamilyDataLifecycleRequestType;
+  request_scope: 'FAMILY_PRIVATE_DATA';
+  status: FamilyDataLifecycleRequestStatus;
+  requested_by_person_id: string;
+  reason_text: string | null;
+  requested_at: string;
+  created_at: string;
+}
+
+export interface CreateFamilyDataLifecycleRequest {
+  family_id: string;
+  request_type: FamilyDataLifecycleRequestType;
+  reason_text?: string;
+  idempotency_key: string;
+}
+
+export interface CreateFamilyDataLifecycleRequestResponse {
+  request: FamilyDataLifecycleRequestDto;
+}
+
+export interface FamilyDataLifecyclePreviewDto {
+  family_id: string;
+  request_scope: 'FAMILY_PRIVATE_DATA';
+  counts: {
+    persons: number;
+    consents: number;
+    growth_intents: number;
+    service_cases: number;
+    follow_up_responses: number;
+    lifecycle_requests: number;
+  };
+  execution_boundary: 'PREVIEW_ONLY_NO_EXPORT_NO_RETENTION_EXECUTION_NO_DELETE';
 }
 
 export interface FamilyAggregateResponse {

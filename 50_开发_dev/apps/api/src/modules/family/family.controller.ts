@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, WithdrawConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, WithdrawConsentResponse, CreateFamilyDataLifecycleRequestResponse, FamilyDataLifecyclePreviewDto, FamilyDataLifecycleRequestDto, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
@@ -13,6 +13,8 @@ import { validateCreateFamilyRelationshipRequest } from './create-family-relatio
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
 import { validateWithdrawConsentRequest } from './withdraw-consent.dto';
+import { validateCreateFamilyDataLifecycleRequest } from './family-data-lifecycle.dto';
+import { FamilyDataLifecycleService } from './family-data-lifecycle.service';
 import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
 import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
@@ -31,6 +33,7 @@ import { TodayService } from './today.service';
 export class FamilyController {
   constructor(
     @Inject(FamilyService) private readonly familyService: FamilyService,
+    @Inject(FamilyDataLifecycleService) private readonly familyDataLifecycleService: FamilyDataLifecycleService,
     @Inject(GrowthPriorityService) private readonly growthPriorityService: GrowthPriorityService,
     @Inject(InterventionService) private readonly interventionService: InterventionService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
@@ -219,6 +222,41 @@ export class FamilyController {
     };
 
     return this.familyService.grantConsent(request, meta);
+  }
+
+  @RequireFamilyAction('CreateFamilyDataLifecycleRequest')
+  @Post(':familyId/data-lifecycle/requests')
+  async createDataLifecycleRequest(
+    @Param('familyId') familyId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<CreateFamilyDataLifecycleRequestResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateCreateFamilyDataLifecycleRequest(familyId, idempotencyKey, body);
+    const meta: AuditMeta = {
+      actor: actorId,
+      correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
+      source: source && source.trim().length > 0 ? source : 'api',
+      occurredAt: new Date().toISOString(),
+    };
+    return this.familyDataLifecycleService.createRequest(request, meta);
+  }
+
+  @RequireFamilyAction('ReadFamilyDataLifecyclePreview')
+  @Get(':familyId/data-lifecycle/preview')
+  async dataLifecyclePreview(@Param('familyId') familyId: string, @ActorId() actorId: string): Promise<FamilyDataLifecyclePreviewDto> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    return this.familyDataLifecycleService.preview(familyId, actorId);
+  }
+
+  @RequireFamilyAction('ReadFamilyDataLifecycleRequest')
+  @Get(':familyId/data-lifecycle/requests')
+  async dataLifecycleRequests(@Param('familyId') familyId: string, @ActorId() actorId: string): Promise<FamilyDataLifecycleRequestDto[]> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    return this.familyDataLifecycleService.listRequests(familyId, actorId);
   }
 
   @RequireFamilyAction('WithdrawConsent')

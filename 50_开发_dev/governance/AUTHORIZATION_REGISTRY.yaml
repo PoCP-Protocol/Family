@@ -508,6 +508,24 @@ capabilities:
     notes: >-
       仅可形成客户/提供者/交易/收入/成本/治理设计；不得实现 Payment、Entitlement、Marketplace、Commission/Settlement、Provider 自动派单、商业化、试点或生产运行时。
 
+  # Phase 10E：数据导出、保留与删除请求，仅限内部确定性请求/预览，不执行不可逆删除。
+  - capability_id: FAMILY_PHASE10_DATA_RETENTION_EXPORT_DELETE_REQUEST_001
+    stage: FAMILY-V3-PHASE10E
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 继续按照主计划进行开发；Phase 10E data lifecycle request/preview (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅允许家庭范围的数据导出请求、保留/删除请求和只读影响预览；请求必须经 trusted family context、监护人权限、幂等、审计与 fail-closed 验证。
+      不执行不可逆删除、不删除生产或真实家庭数据、不实施跨家庭/组织操作、不解锁外部模型、训练、支付、试点、生产或 master 合入。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2

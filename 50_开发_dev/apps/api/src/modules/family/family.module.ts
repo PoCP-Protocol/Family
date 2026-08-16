@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';   // PLATFORM-IAM-104:FamilyPlatformAuthGuard 依赖 AuthService
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
+import { FamilyDataLifecycleService } from './family-data-lifecycle.service';
 import { FamilyController } from './family.controller';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
@@ -26,6 +27,7 @@ import { TodayService } from './today.service';
 		FamilyRepository,
 		FamilyAggregateRepository,
 		EvidenceSynthesisService,
+		FamilyDataLifecycleService,
 		FamilyService,
 		GrowthSubjectResolver,
 		GrowthPriorityService,
