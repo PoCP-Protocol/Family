@@ -1,43 +1,54 @@
 /**
  * FAMILY-GROWTH-VERTICAL-SLICE-001 · Resource Eligibility(FAIL CLOSED)。
  * 同一纯函数用于 T1(推荐前)与 T2(执行前)。最高安全不变量:T1 eligible ≠ T2 eligible。
- * 按 qualification_mode 处理 provider 资格:REQUIRED→必须 ACTIVE;NOT_APPLICABLE→不判;EXTERNAL_REFERRAL_POLICY→过 safety/scope,不要求入网。
+ * 两 consent 分离:SERVICE=可运行/存储此服务交互;AI_PERSONALIZATION=AI_COACH 个性化的额外要求。
+ * 安全参与:HIGH_RISK 时 AI_COACH 普通服务 INELIGIBLE(Principal 内部 Human Gate 仍在)。年龄严格 12–15,不可证则 false。
  */
 import type { EligibilityEvaluationDto, EligibilityStage, ResourceOfferDto } from '@family/contracts';
 
-/** 评估某个 Offer 对某家庭此刻的时变资格所需的上下文(由服务层在 T1/T2 各查一次)。 */
 export interface EligibilityContext {
-  requiredConsentGranted: boolean;      // 该 offer.requires_consent 时,对应 consent 是否 GRANTED
-  providerQualificationActive: boolean; // REQUIRED offer 的 provider 资格是否 ACTIVE
-  ageInScope: boolean;
-  safetyRouteNormal: boolean;           // HIGH_RISK 时不得走普通资源执行
+  serviceConsentGranted: boolean;              // SERVICE consent(所有会落库/执行的服务交互前提)
+  aiPersonalizationConsentGranted: boolean;    // AI_COACH 额外要求
+  ageInScope: boolean;                         // 严格 12–15;不可证=false
+  safetyRouteNormal: boolean;                  // 非 NORMAL(HIGH_RISK)→ AI_COACH 普通服务不 eligible
+  providerQualificationActive: boolean;
   available: boolean;
-  externalReferralTargetConfigured: boolean; // EXTERNAL_REFERRAL 才需要
+  externalReferralTargetConfigured: boolean;
   policyVersion: string;
-  evaluatedAt: string;                  // 由调用方注入(避免此处用不可用的 Date.now)
-  evaluationRef: string;                // 由调用方注入
+  evaluatedAt: string;
+  evaluationRef: string;
 }
 
-/** 纯评估:返回带 reason_codes 的 EligibilityEvaluationDto。任一必需门不过 → eligible=false(fail closed)。 */
+/** 纯评估:任一必需门不过 → eligible=false(fail closed)。按 offer.resource_type/qualification_mode 应用差异化 consent。 */
 export function evaluateOfferEligibility(offer: ResourceOfferDto, stage: EligibilityStage, ctx: EligibilityContext): EligibilityEvaluationDto {
   const reasons: string[] = [];
 
-  if (!ctx.safetyRouteNormal) reasons.push('SAFETY_ROUTE_NOT_NORMAL');
-  if (!ctx.ageInScope) reasons.push('AGE_OUT_OF_SCOPE');
-  if (offer.requires_consent && !ctx.requiredConsentGranted) reasons.push('CONSENT_NOT_GRANTED');
+  // 所有需要落库/执行的服务交互都要 SERVICE consent(NO_ACTION 也在服务上下文内,但不执行资源——仍要求 SERVICE 以记录服务决定)。
+  if (!ctx.serviceConsentGranted) reasons.push('SERVICE_CONSENT_NOT_GRANTED');
+  if (!ctx.ageInScope) reasons.push('AGE_OUT_OF_SCOPE_12_15');
 
-  switch (offer.qualification_mode) {
-    case 'REQUIRED':
+  switch (offer.resource_type) {
+    case 'NO_ACTION':
+      // 安全兜底:不需要 provider/AI consent;SERVICE + age 已判。
+      break;
+    case 'AI_COACH':
+      if (!ctx.safetyRouteNormal) reasons.push('SAFETY_ROUTE_NOT_NORMAL');
+      if (!ctx.aiPersonalizationConsentGranted) reasons.push('AI_PERSONALIZATION_CONSENT_NOT_GRANTED');
       if (!ctx.providerQualificationActive) reasons.push('PROVIDER_QUALIFICATION_NOT_ACTIVE');
       if (!ctx.available) reasons.push('RESOURCE_UNAVAILABLE');
       break;
-    case 'NOT_APPLICABLE':
-      // NO_ACTION 无 provider;无需资格/可用性判定。
+    case 'PRACTICE':
+      if (!ctx.safetyRouteNormal) reasons.push('SAFETY_ROUTE_NOT_NORMAL');
+      if (!ctx.providerQualificationActive) reasons.push('PROVIDER_QUALIFICATION_NOT_ACTIVE');
+      if (!ctx.available) reasons.push('RESOURCE_UNAVAILABLE');
       break;
-    case 'EXTERNAL_REFERRAL_POLICY':
-      // 外部转介:过 safety/age/scope(上面已判),但不要求入网;需真实转介目标。
+    case 'EXTERNAL_REFERRAL':
+      // 外部转介:过 SERVICE/age/safety(上面已判 SERVICE/age;safety 见下),但不要求入网。
+      if (!ctx.safetyRouteNormal) reasons.push('SAFETY_ROUTE_NOT_NORMAL');
       if (!ctx.externalReferralTargetConfigured || !offer.external_referral_target_ref) reasons.push('NO_EXTERNAL_REFERRAL_TARGET');
       break;
+    default:
+      reasons.push('UNSUPPORTED_RESOURCE_TYPE_V1');
   }
 
   return {

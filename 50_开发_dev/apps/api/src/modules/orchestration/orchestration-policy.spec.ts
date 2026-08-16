@@ -7,7 +7,8 @@ import { checkDecisionIntegrity } from './decision-integrity.policy';
 import type { ResourceOfferDto } from '@family/contracts';
 
 const baseCtx = (over: Partial<EligibilityContext> = {}): EligibilityContext => ({
-  requiredConsentGranted: true,
+  serviceConsentGranted: true,
+  aiPersonalizationConsentGranted: true,
   providerQualificationActive: true,
   ageInScope: true,
   safetyRouteNormal: true,
@@ -65,25 +66,33 @@ describe('eligibility (FAIL CLOSED;T1/T2 同函数;qualification_mode)', () => {
   it('AI_COACH 全门通过 → eligible', () => {
     expect(evaluateOfferEligibility(aiCoach(), 'T1', baseCtx()).eligible).toBe(true);
   });
-  it('consent 撤销 → AI_COACH INELIGIBLE(fail closed)', () => {
-    const e = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ requiredConsentGranted: false }));
+  it('SERVICE consent 撤销 → AI_COACH INELIGIBLE(fail closed)', () => {
+    const e = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ serviceConsentGranted: false }));
     expect(e.eligible).toBe(false);
-    expect(e.reason_codes).toContain('CONSENT_NOT_GRANTED');
+    expect(e.reason_codes).toContain('SERVICE_CONSENT_NOT_GRANTED');
+  });
+  it('AI_PERSONALIZATION 撤销 → AI_COACH INELIGIBLE(SERVICE 仍在)', () => {
+    const e = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ aiPersonalizationConsentGranted: false }));
+    expect(e.eligible).toBe(false);
+    expect(e.reason_codes).toContain('AI_PERSONALIZATION_CONSENT_NOT_GRANTED');
   });
   it('provider 资格 SUSPENDED → REQUIRED offer INELIGIBLE', () => {
     const e = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ providerQualificationActive: false }));
     expect(e.eligible).toBe(false);
     expect(e.reason_codes).toContain('PROVIDER_QUALIFICATION_NOT_ACTIVE');
   });
-  it('HIGH_RISK 安全路由 → 任何执行 offer INELIGIBLE', () => {
+  it('HIGH_RISK 安全路由 → AI_COACH INELIGIBLE', () => {
     expect(evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ safetyRouteNormal: false })).eligible).toBe(false);
   });
-  it('NO_ACTION 不因缺 provider 而失败(NOT_APPLICABLE)', () => {
-    expect(evaluateOfferEligibility(noAction(), 'T1', baseCtx({ providerQualificationActive: false, available: false })).eligible).toBe(true);
+  it('年龄越界 → 任何 offer INELIGIBLE', () => {
+    expect(evaluateOfferEligibility(noAction(), 'T1', baseCtx({ ageInScope: false })).eligible).toBe(false);
   });
-  it('T1 eligible 但 T2 consent 撤销 → T2 fail(T1≠T2)', () => {
+  it('NO_ACTION 不需 AI consent/provider(仅 SERVICE+age)', () => {
+    expect(evaluateOfferEligibility(noAction(), 'T1', baseCtx({ aiPersonalizationConsentGranted: false, providerQualificationActive: false, available: false })).eligible).toBe(true);
+  });
+  it('T1 eligible 但 T2 AI consent 撤销 → T2 fail(T1≠T2)', () => {
     const t1 = evaluateOfferEligibility(aiCoach(), 'T1', baseCtx());
-    const t2 = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ requiredConsentGranted: false }));
+    const t2 = evaluateOfferEligibility(aiCoach(), 'T2', baseCtx({ aiPersonalizationConsentGranted: false }));
     expect(t1.eligible).toBe(true);
     expect(t2.eligible).toBe(false);
   });

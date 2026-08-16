@@ -1,17 +1,19 @@
 /**
- * FAMILY-GROWTH-VERTICAL-SLICE-001 · 编排 runtime 服务(单家庭价值闭环)。
- * 建议≠决定≠计划≠执行≠回访≠观察≠复用;RANKING≠ORCHESTRATION;T1 推荐 eligible ≠ T2 执行 eligible(FAIL CLOSED)。
- * 不写 GrowthPriority/GrowthAction/OutcomeObservation;不调 Principal.acceptProposal;安全由 Principal 内部保障。
+ * FAMILY-GROWTH-VERTICAL-SLICE-001 · 编排 runtime 服务(单家庭价值闭环;3A 运行时真相修正)。
+ * 七真相分离;RANKING≠ORCHESTRATION;T1 推荐 eligible ≠ T2 执行 eligible(exact-offer snapshot 复验,FAIL CLOSED)。
+ * 执行按【所选 Offer 类型】分派(绝不都跑 AI_COACH);subject 链服务端派生;不写 canonical;不臆造家庭文本。
+ * SERVICE consent 是落库/执行前提;AI_PERSONALIZATION 是 AI_COACH 额外要求;年龄严格 12–15。
  */
-import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { safetyPrecheck } from '@family/principal-ai';
 import type {
   ContextReuseProjectionDto, FamilyDecisionType, GrowthCapabilityKey,
   ResourceOfferDto, ResourceRecommendationDto, SafeOrchestrationOutcome,
 } from '@family/contracts';
 import { PrincipalAiCoachResource } from '../principal/principal-ai-coach.resource';
 import { classifyNeed } from './need-classification.policy';
-import { candidateOffersForCommunicationConflict } from './resource.registry';
+import { candidateOffersForCommunicationConflict, resolveResourceRuntimeState } from './resource.registry';
 import { evaluateOfferEligibility, type EligibilityContext } from './eligibility.policy';
 import { buildRecommendation } from './recommendation.policy';
 import { checkDecisionIntegrity } from './decision-integrity.policy';
@@ -21,17 +23,12 @@ const POLICY_VERSION = 'orch-v1';
 const SELF_STEWARD = 'family-steward:v1';
 
 export interface RequestHelpResult {
-  signal_id: string;
-  proposed_need_type: string | null;
-  proposed_capability_keys: GrowthCapabilityKey[];
-  confirm_prompt: string;         // 家长可读的显式确认提示
-  supported: boolean;             // false=当前纵切不支持,不臆造
+  signal_id: string; proposed_need_type: string | null; proposed_capability_keys: GrowthCapabilityKey[];
+  confirm_prompt: string; supported: boolean;
 }
-
 export interface DecideResult {
-  decision_id: string;
-  outcome: 'SERVICE_STARTED' | SafeOrchestrationOutcome;
-  case_id: string | null;
+  decision_id: string; outcome: 'SERVICE_STARTED' | SafeOrchestrationOutcome;
+  case_id: string | null; executed_resource_type: string | null;
   ai_coach: { delivered: boolean; risk_route: string; human_handoff: boolean } | null;
   t2_ineligible_offers?: string[];
 }
@@ -43,116 +40,138 @@ export class OrchestrationService {
     @Inject(PrincipalAiCoachResource) private readonly aiCoach: PrincipalAiCoachResource,
   ) {}
 
-  private eligibilityContext(_offerRequiresConsent: boolean, facts: EligibilityFacts, evaluationRef: string): EligibilityContext {
+  private ctxFor(offer: ResourceOfferDto, facts: EligibilityFacts, safetyNormal: boolean, evaluationRef: string): EligibilityContext {
+    const rt = resolveResourceRuntimeState(offer.resource_type);
     return {
-      requiredConsentGranted: facts.aiPersonalizationConsentGranted,
-      providerQualificationActive: true,   // V1:自营 AI_COACH provider 资格 ACTIVE(source of truth = Provider Qualification Gate)
+      serviceConsentGranted: facts.serviceConsentGranted,
+      aiPersonalizationConsentGranted: facts.aiPersonalizationConsentGranted,
       ageInScope: facts.ageInScope,
-      safetyRouteNormal: true,              // AI_COACH 交付时由 Principal 内部安全路由强制;此处不预判放宽
-      available: true,
-      externalReferralTargetConfigured: !!process.env.FAMILY_EXTERNAL_REFERRAL_TARGET,
+      safetyRouteNormal: safetyNormal,
+      providerQualificationActive: rt.providerQualificationActive,
+      available: rt.available,
+      externalReferralTargetConfigured: rt.externalReferralTargetConfigured,
       policyVersion: POLICY_VERSION,
       evaluatedAt: new Date().toISOString(),
       evaluationRef,
-      // offerRequiresConsent 已由 offer.requires_consent 驱动(见 evaluateOfferEligibility)
     };
   }
 
-  /** ① 家长表达问题 → 记录服务层原始输入 + NON_CANONICAL NeedSignal;返回需家长显式确认的 Intent 提案。 */
-  async requestHelp(familyId: string, subjectPersonId: string, rawText: string, source: 'MANUAL' | 'PRINCIPAL' | 'SERVICE_FOLLOWUP', correlationId: string): Promise<RequestHelpResult> {
+  private registryEnv() {
+    return {
+      approvedPracticeContentRef: process.env.FAMILY_APPROVED_PRACTICE_CONTENT_REF ?? null,
+      externalReferralTargetRef: process.env.FAMILY_EXTERNAL_REFERRAL_TARGET ?? null,
+    };
+  }
+
+  /** ① 表达需求:先校验 subject(家庭/CHILD/12–15)+ SERVICE consent,再写服务层输入 + NON_CANONICAL NeedSignal。 */
+  async requestHelp(familyId: string, subjectPersonId: string, actorPersonId: string, rawText: string, source: 'MANUAL' | 'PRINCIPAL' | 'SERVICE_FOLLOWUP', _correlationId: string): Promise<RequestHelpResult> {
     if (!rawText?.trim()) throw new BadRequestException('raw_text_required');
+    const subj = await this.repo.checkSubject(familyId, subjectPersonId);
+    if (!subj.exists || !subj.inFamily) throw new ForbiddenException('subject_not_in_family');
+    if (!subj.isChild) throw new BadRequestException('subject_not_child');
+    if (!subj.ageInScope) throw new ForbiddenException('subject_out_of_age_scope_12_15');
+    const facts = await this.repo.loadEligibilityFacts(familyId, subjectPersonId);
+    if (!facts.serviceConsentGranted) throw new ForbiddenException('service_consent_required'); // 无 SERVICE consent → 0 input / 0 signal
+
     const cls = classifyNeed(rawText);
     return this.repo.withTransaction(async (c) => {
       const input = await c.query<{ input_id: string }>(
-        `insert into growth_need_inputs(family_id, subject_person_id, raw_text) values ($1,$2,$3) returning input_id`,
-        [familyId, subjectPersonId, rawText.trim()],
+        `insert into growth_need_inputs(family_id, subject_person_id, actor_person_id, data_class, raw_text)
+         values ($1,$2,$3,'FAMILY_PRIVATE_TEXT',$4) returning input_id`,
+        [familyId, subjectPersonId, actorPersonId, rawText.trim()],
       );
-      const inputId = input.rows[0].input_id;
       const signal = await c.query<{ signal_id: string }>(
         `insert into growth_need_signals(family_id, subject_person_id, source, raw_ref, inferred_need_type, confidence, canonical_family_fact)
          values ($1,$2,$3,$4,$5,$6,false) returning signal_id`,
-        [familyId, subjectPersonId, source, inputId, cls.need_type, cls.confidence],
+        [familyId, subjectPersonId, source, input.rows[0].input_id, cls.need_type, cls.confidence],
       );
       const supported = cls.need_type != null;
       return {
-        signal_id: signal.rows[0].signal_id,
-        proposed_need_type: cls.need_type,
-        proposed_capability_keys: cls.required_capability_keys,
-        confirm_prompt: supported
-          ? '你现在最想解决的是:先让冲突降下来,并找到今晚重新开口的方式?'
-          : '我暂时没完全理解这个情况。要不要换句话描述你现在最想解决的问题?',
+        signal_id: signal.rows[0].signal_id, proposed_need_type: cls.need_type, proposed_capability_keys: cls.required_capability_keys,
+        confirm_prompt: supported ? '你现在最想解决的是:先让冲突降下来,并找到今晚重新开口的方式?' : '我暂时没完全理解。要不要换句话描述你现在最想解决的问题?',
         supported,
       };
     });
   }
 
-  /** ② 家长显式确认 → 创建 GrowthIntent(OPEN)。不创建 GrowthPriority。 */
-  async confirmIntent(familyId: string, subjectPersonId: string, actorPersonId: string, signalId: string, goalText: string): Promise<{ intent_id: string; required_capability_keys: GrowthCapabilityKey[] }> {
+  /** ② 显式确认:subject 从 signal 派生(不信客户端);创建 GrowthIntent(OPEN)。不建 GrowthPriority。 */
+  async confirmIntent(familyId: string, actorPersonId: string, signalId: string, goalText: string): Promise<{ intent_id: string; subject_person_id: string; required_capability_keys: GrowthCapabilityKey[] }> {
+    const sig = await this.repo.query<{ subject_person_id: string; inferred_need_type: string | null }>(
+      `select subject_person_id, inferred_need_type from growth_need_signals where signal_id=$1 and family_id=$2`, [signalId, familyId],
+    );
+    if ((sig.rowCount ?? 0) === 0) throw new BadRequestException('signal_not_found');
+    const subjectPersonId = sig.rows[0].subject_person_id; // 服务端派生 subject
     const cls = classifyNeed(goalText);
-    // 若确认文本无法分类,回退到已存 signal 的推断类型(仍要求支持的纵切类型)。
-    return this.repo.withTransaction(async (c) => {
-      const sig = await c.query<{ inferred_need_type: string | null }>(
-        `select inferred_need_type from growth_need_signals where signal_id=$1 and family_id=$2`, [signalId, familyId],
-      );
-      const needType = cls.need_type ?? sig.rows[0]?.inferred_need_type ?? null;
-      if (needType !== 'PARENT_CHILD_COMMUNICATION_CONFLICT') throw new BadRequestException('unsupported_need_for_v1_slice');
-      const caps = cls.required_capability_keys.length ? cls.required_capability_keys : (['DE_ESCALATION', 'COMMUNICATION_REOPENING'] as GrowthCapabilityKey[]);
-      const intent = await c.query<{ intent_id: string }>(
-        `insert into growth_intents(family_id, subject_person_id, signal_ref, need_type, goal_text, required_capability_keys, status, confirmed_by)
-         values ($1,$2,$3,$4,$5,$6,'OPEN',$7) returning intent_id`,
-        [familyId, subjectPersonId, signalId, needType, goalText.trim(), caps, actorPersonId],
-      );
-      return { intent_id: intent.rows[0].intent_id, required_capability_keys: caps };
-    });
+    const needType = cls.need_type ?? sig.rows[0].inferred_need_type ?? null;
+    if (needType !== 'PARENT_CHILD_COMMUNICATION_CONFLICT') throw new BadRequestException('unsupported_need_for_v1_slice');
+    const caps = (cls.required_capability_keys.length ? cls.required_capability_keys : (['DE_ESCALATION', 'COMMUNICATION_REOPENING'] as GrowthCapabilityKey[]));
+    const intent = await this.repo.query<{ intent_id: string }>(
+      `insert into growth_intents(family_id, subject_person_id, signal_ref, need_type, goal_text, required_capability_keys, status, confirmed_by)
+       values ($1,$2,$3,$4,$5,$6,'OPEN',$7) returning intent_id`,
+      [familyId, subjectPersonId, signalId, needType, goalText.trim(), caps, actorPersonId],
+    );
+    return { intent_id: intent.rows[0].intent_id, subject_person_id: subjectPersonId, required_capability_keys: caps };
   }
 
-  /** ③ 生成推荐:候选原子 Offer → T1 Eligibility(FAIL CLOSED)→ 确定性排序 → 持久化 Recommendation。 */
-  async recommend(familyId: string, subjectPersonId: string, intentId: string): Promise<ResourceRecommendationDto> {
-    const facts = await this.repo.loadEligibilityFacts(familyId, subjectPersonId);
-    const intentRow = await this.repo.query<{ required_capability_keys: string[] }>(
-      `select required_capability_keys from growth_intents where intent_id=$1 and family_id=$2 and status='OPEN'`, [intentId, familyId],
+  private async loadOpenIntent(familyId: string, intentId: string): Promise<{ subjectPersonId: string; requiredCaps: GrowthCapabilityKey[]; goalText: string; status: string }> {
+    const r = await this.repo.query<{ subject_person_id: string; required_capability_keys: string[]; goal_text: string; status: string }>(
+      `select subject_person_id, required_capability_keys, goal_text, status from growth_intents where intent_id=$1 and family_id=$2`, [intentId, familyId],
     );
-    if ((intentRow.rowCount ?? 0) === 0) throw new BadRequestException('intent_not_open');
-    const requiredCaps = (intentRow.rows[0].required_capability_keys as GrowthCapabilityKey[]);
+    if ((r.rowCount ?? 0) === 0) throw new BadRequestException('intent_not_found');
+    return { subjectPersonId: r.rows[0].subject_person_id, requiredCaps: r.rows[0].required_capability_keys as GrowthCapabilityKey[], goalText: r.rows[0].goal_text, status: r.rows[0].status };
+  }
 
-    const candidates = candidateOffersForCommunicationConflict({
-      approvedPracticeContentRef: process.env.FAMILY_APPROVED_PRACTICE_CONTENT_REF ?? null,
-      externalReferralTargetRef: process.env.FAMILY_EXTERNAL_REFERRAL_TARGET ?? null,
-    });
+  /** ③ 推荐:候选原子 Offer → T1 Eligibility(FAIL CLOSED,持久化 offer_snapshot)→ 确定性排序。subject 从 intent 派生。 */
+  async recommend(familyId: string, intentId: string): Promise<ResourceRecommendationDto> {
+    const intent = await this.loadOpenIntent(familyId, intentId);
+    if (intent.status !== 'OPEN') throw new BadRequestException('intent_not_open');
+    const subjectPersonId = intent.subjectPersonId;
+    const facts = await this.repo.loadEligibilityFacts(familyId, subjectPersonId);
+    const safetyNormal = safetyPrecheck({ user_message: intent.goalText }) === 'NORMAL';
+    const candidates = candidateOffersForCommunicationConflict(this.registryEnv());
     const eligible: ResourceOfferDto[] = [];
     return this.repo.withTransaction(async (c) => {
       for (const offer of candidates) {
         const ref = randomUUID();
-        const evalDto = evaluateOfferEligibility(offer, 'T1', this.eligibilityContext(offer.requires_consent, facts, ref));
+        const evalDto = evaluateOfferEligibility(offer, 'T1', this.ctxFor(offer, facts, safetyNormal, ref));
         await c.query(
-          `insert into eligibility_evaluations(eligibility_evaluation_ref, family_id, intent_ref, stage, offer_ref, eligible, reason_codes, policy_version)
-           values ($1,$2,$3,'T1',$4,$5,$6,$7)`,
-          [ref, familyId, intentId, offer.offer_id, evalDto.eligible, evalDto.reason_codes, POLICY_VERSION],
+          `insert into eligibility_evaluations(eligibility_evaluation_ref, family_id, intent_ref, stage, offer_ref, eligible, reason_codes, offer_snapshot, policy_version)
+           values ($1,$2,$3,'T1',$4,$5,$6,$7::jsonb,$8)`,
+          [ref, familyId, intentId, offer.offer_id, evalDto.eligible, evalDto.reason_codes, JSON.stringify(offer), POLICY_VERSION],
         );
         if (evalDto.eligible) eligible.push(offer);
       }
-      const rec = buildRecommendation({ recommendationId: randomUUID(), intentId, version: 1, requiredCapabilityKeys: requiredCaps, eligibleOffers: eligible });
-      const saved = await c.query<{ recommendation_id: string }>(
+      const rec = buildRecommendation({ recommendationId: randomUUID(), intentId, version: 1, requiredCapabilityKeys: intent.requiredCaps, eligibleOffers: eligible });
+      await c.query(
         `insert into resource_recommendations(recommendation_id, family_id, intent_ref, version, candidates, recommended_offer_refs, required_capability_keys, covered_capability_keys, uncovered_capability_keys, why_now, status)
-         values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,'SHOWN') returning recommendation_id`,
+         values ($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,'SHOWN')`,
         [rec.recommendation_id, familyId, intentId, rec.version, JSON.stringify(rec.candidates), rec.recommended_offer_refs, rec.required_capability_keys, rec.covered_capability_keys, rec.uncovered_capability_keys, rec.why_now],
       );
-      return { ...rec, recommendation_id: saved.rows[0].recommendation_id, candidates: rec.candidates };
+      return rec;
     });
   }
 
-  /** ④ 家庭决定 → 完整性校验 → Plan(声明) → T2 复验(FAIL CLOSED)→ ServiceCase + AI_COACH 交付。 */
+  /** 载入某 selected offer 的 exact T1 快照(禁 T2 重新生成猜类型)。 */
+  private async loadT1Snapshot(familyId: string, intentId: string, offerRef: string): Promise<ResourceOfferDto | null> {
+    const r = await this.repo.query<{ offer_snapshot: ResourceOfferDto }>(
+      `select offer_snapshot from eligibility_evaluations where family_id=$1 and intent_ref=$2 and stage='T1' and offer_ref=$3 order by evaluated_at desc limit 1`,
+      [familyId, intentId, offerRef],
+    );
+    return r.rows[0]?.offer_snapshot ?? null;
+  }
+
+  /** ④ 决定 → 完整性 → Plan(声明) → T2 exact-offer 复验(FAIL CLOSED) → 按类型分派执行。 */
   async decide(params: {
-    familyId: string; subjectPersonId: string; actorPersonId: string; intentId: string;
-    recommendationId: string; recommendationVersion: number; decisionType: FamilyDecisionType; selectedOfferRefs: string[];
-    goalMessage: string; correlationId: string;
+    familyId: string; actorPersonId: string; intentId: string; recommendationId: string; recommendationVersion: number;
+    decisionType: FamilyDecisionType; selectedOfferRefs: string[]; correlationId: string;
   }): Promise<DecideResult> {
-    const { familyId, subjectPersonId, actorPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, goalMessage, correlationId } = params;
+    const { familyId, actorPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, correlationId } = params;
+    const intent = await this.loadOpenIntent(familyId, intentId);
+    const subjectPersonId = intent.subjectPersonId; // 服务端派生
 
     const recRow = await this.repo.query<{ candidates: unknown; recommended_offer_refs: string[]; version: number; required_capability_keys: string[]; covered_capability_keys: string[]; uncovered_capability_keys: string[]; why_now: string }>(
       `select candidates, recommended_offer_refs, version, required_capability_keys, covered_capability_keys, uncovered_capability_keys, why_now
-         from resource_recommendations where recommendation_id=$1 and family_id=$2 and intent_ref=$3`,
-      [recommendationId, familyId, intentId],
+         from resource_recommendations where recommendation_id=$1 and family_id=$2 and intent_ref=$3`, [recommendationId, familyId, intentId],
     );
     if ((recRow.rowCount ?? 0) === 0) throw new BadRequestException('recommendation_not_found');
     const rec: ResourceRecommendationDto = {
@@ -164,98 +183,96 @@ export class OrchestrationService {
       uncovered_capability_keys: recRow.rows[0].uncovered_capability_keys as GrowthCapabilityKey[],
       why_now: recRow.rows[0].why_now, status: 'SHOWN',
     };
-
     const integrity = checkDecisionIntegrity(rec, decisionType, selectedOfferRefs, recommendationVersion);
     if (!integrity.ok) throw new BadRequestException(`decision_integrity:${integrity.code}`);
 
-    // 记录 Decision(独立可审计边界)。
-    const decisionId = await this.repo.withTransaction(async (c) => {
-      const d = await c.query<{ decision_id: string }>(
-        `insert into family_service_decisions(family_id, subject_person_id, intent_ref, recommendation_ref, recommendation_version, decision_type, selected_offer_refs, actor_person_id)
-         values ($1,$2,$3,$4,$5,$6,$7,$8) returning decision_id`,
-        [familyId, subjectPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, actorPersonId],
-      );
-      return d.rows[0].decision_id;
-    });
+    const decisionId = (await this.repo.query<{ decision_id: string }>(
+      `insert into family_service_decisions(family_id, subject_person_id, intent_ref, recommendation_ref, recommendation_version, decision_type, selected_offer_refs, actor_person_id)
+       values ($1,$2,$3,$4,$5,$6,$7,$8) returning decision_id`,
+      [familyId, subjectPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, actorPersonId],
+    )).rows[0].decision_id;
 
     if (decisionType === 'DISMISS' || selectedOfferRefs.length === 0) {
       await this.repo.query(`update growth_intents set status='CLOSED', close_reason='NO_ACTION_SELECTED' where intent_id=$1 and family_id=$2`, [intentId, familyId]);
-      return { decision_id: decisionId, outcome: 'NO_ACTION', case_id: null, ai_coach: null };
+      return { decision_id: decisionId, outcome: 'NO_ACTION', case_id: null, executed_resource_type: 'NO_ACTION', ai_coach: null };
     }
 
-    // 声明式 Plan(不拥有执行真相)。selected 是原子 offer_id;从 candidates 恢复其能力覆盖用于 step。
+    // 载入每个 selected offer 的 exact T1 快照(不重新生成)。
+    const snapshots = new Map<string, ResourceOfferDto>();
+    for (const ref of selectedOfferRefs) {
+      const snap = await this.loadT1Snapshot(familyId, intentId, ref);
+      if (!snap) throw new BadRequestException(`selected_offer_not_in_t1:${ref}`);
+      snapshots.set(ref, snap);
+    }
+
+    // 声明式 Plan(step 覆盖能力从 candidates 恢复)。
     const candMap = new Map(rec.candidates.map((c) => [c.offer_ref, c.covered_capability_keys]));
     const steps = selectedOfferRefs.map((offerRef, i) => ({
-      step_no: i + 1,
-      capability_keys: candMap.get(offerRef) ?? rec.required_capability_keys,
-      offer_ref: offerRef,
-      covered_capability_keys: candMap.get(offerRef) ?? [],
-      trigger: i === 0 ? 'NOW' : 'AFTER_PREV',
-      condition: null,
+      step_no: i + 1, capability_keys: candMap.get(offerRef) ?? intent.requiredCaps, offer_ref: offerRef,
+      covered_capability_keys: candMap.get(offerRef) ?? [], trigger: i === 0 ? 'NOW' : 'AFTER_PREV', condition: null,
     }));
+    const planId = (await this.repo.query<{ plan_id: string }>(
+      `insert into orchestration_plans(family_id, subject_person_id, intent_ref, version, accepted_by_decision_ref, steps, status)
+       values ($1,$2,$3,1,$4,$5::jsonb,'ACCEPTED') returning plan_id`,
+      [familyId, subjectPersonId, intentId, decisionId, JSON.stringify(steps)],
+    )).rows[0].plan_id;
 
-    // T2 执行前复验(FAIL CLOSED)——推荐时 eligible ≠ 执行时 eligible。
+    // T2 exact-offer 复验(FAIL CLOSED),用各自快照的真实类型/模式,新鲜 facts + runtime state。
     const facts = await this.repo.loadEligibilityFacts(familyId, subjectPersonId);
-    const allCandidateOffers = candidateOffersForCommunicationConflict({
-      approvedPracticeContentRef: process.env.FAMILY_APPROVED_PRACTICE_CONTENT_REF ?? null,
-      externalReferralTargetRef: process.env.FAMILY_EXTERNAL_REFERRAL_TARGET ?? null,
-    });
-    // 用 resource_type 对齐(offer_id 是每次生成的;T2 按 selected 的 type 语义复验第一顺位 AI_COACH/PRACTICE)。
+    const safetyNormal = safetyPrecheck({ user_message: intent.goalText }) === 'NORMAL';
     const t2Ineligible: string[] = [];
-    const planId = await this.repo.withTransaction(async (c) => {
-      const p = await c.query<{ plan_id: string }>(
-        `insert into orchestration_plans(family_id, subject_person_id, intent_ref, version, accepted_by_decision_ref, steps, status)
-         values ($1,$2,$3,1,$4,$5::jsonb,'ACCEPTED') returning plan_id`,
-        [familyId, subjectPersonId, intentId, decisionId, JSON.stringify(steps)],
+    for (const ref of selectedOfferRefs) {
+      const snap = snapshots.get(ref)!;
+      const evalRef = randomUUID();
+      const t2 = evaluateOfferEligibility(snap, 'T2', this.ctxFor(snap, facts, safetyNormal, evalRef));
+      await this.repo.query(
+        `insert into eligibility_evaluations(eligibility_evaluation_ref, family_id, intent_ref, stage, offer_ref, eligible, reason_codes, offer_snapshot, policy_version)
+         values ($1,$2,$3,'T2',$4,$5,$6,$7::jsonb,$8)`,
+        [evalRef, familyId, intentId, ref, t2.eligible, t2.reason_codes, JSON.stringify(snap), POLICY_VERSION],
       );
-      for (const offerRef of selectedOfferRefs) {
-        // 以 AI_COACH 语义复验(V1 selected 主要是 AI_COACH);其它 type 用对应 requires_consent。
-        const proto = allCandidateOffers.find((o) => o.resource_type === 'AI_COACH') ?? allCandidateOffers[0];
-        const ref = randomUUID();
-        const t2 = evaluateOfferEligibility({ ...proto, offer_id: offerRef }, 'T2', this.eligibilityContext(proto.requires_consent, facts, ref));
-        await c.query(
-          `insert into eligibility_evaluations(eligibility_evaluation_ref, family_id, intent_ref, stage, offer_ref, eligible, reason_codes, policy_version)
-           values ($1,$2,$3,'T2',$4,$5,$6,$7)`,
-          [ref, familyId, intentId, offerRef, t2.eligible, t2.reason_codes, POLICY_VERSION],
-        );
-        if (!t2.eligible) t2Ineligible.push(offerRef);
-      }
-      return p.rows[0].plan_id;
-    });
-
-    // T2 不通过 → 不执行、不静默替换 → 显式安全出口。
+      if (!t2.eligible) t2Ineligible.push(ref);
+    }
     if (t2Ineligible.length > 0) {
-      return { decision_id: decisionId, outcome: 'RE_RECOMMEND_REQUIRED', case_id: null, ai_coach: null, t2_ineligible_offers: t2Ineligible };
+      return { decision_id: decisionId, outcome: 'RE_RECOMMEND_REQUIRED', case_id: null, executed_resource_type: null, ai_coach: null, t2_ineligible_offers: t2Ineligible };
     }
 
-    // T2 通过 → 创建 ServiceCase(执行真相)+ AI_COACH 交付(Principal 内部安全)。
-    const caseId = await this.repo.withTransaction(async (c) => {
-      const sc = await c.query<{ case_id: string }>(
-        `insert into service_cases(family_id, subject_person_id, intent_ref, plan_ref, status, owner)
-         values ($1,$2,$3,$4,'IN_PROGRESS',$5) returning case_id`,
-        [familyId, subjectPersonId, intentId, planId, SELF_STEWARD],
+    // 按【所选 Offer 类型】分派执行(绝不都跑 AI_COACH)。V1:主步取第一顺位。
+    const primary = snapshots.get(selectedOfferRefs[0])!;
+    const caseId = (await this.repo.query<{ case_id: string }>(
+      `insert into service_cases(family_id, subject_person_id, intent_ref, plan_ref, status, owner)
+       values ($1,$2,$3,$4,'IN_PROGRESS',$5) returning case_id`,
+      [familyId, subjectPersonId, intentId, planId, SELF_STEWARD],
+    )).rows[0].case_id;
+
+    let aiCoachResult: DecideResult['ai_coach'] = null;
+    let executedType = primary.resource_type;
+
+    if (primary.resource_type === 'AI_COACH') {
+      const coach = await this.aiCoach.deliver({ familyId, subjectPersonId, actorPersonId, message: intent.goalText, correlationId });
+      aiCoachResult = { delivered: coach.delivered, risk_route: coach.risk_route, human_handoff: coach.human_handoff };
+      await this.repo.query(
+        `insert into service_contributions(case_ref, provider_ref, role, task_ref, completed_at, quality_state)
+         values ($1,$2,'AI_COACH',$3, ${coach.human_handoff ? 'null' : 'now()'}, $4)`,
+        [caseId, 'family-self:ai-coach', `principal-session:${coach.session_id}`, coach.human_handoff ? 'HELD' : 'DELIVERED'],
       );
-      return sc.rows[0].case_id;
-    });
-
-    const coach = await this.aiCoach.deliver({ familyId, subjectPersonId, actorPersonId, message: goalMessage, correlationId });
-    await this.repo.query(
-      `insert into service_contributions(case_ref, provider_ref, role, task_ref, completed_at, quality_state)
-       values ($1,$2,'AI_COACH',$3, now(), $4)`,
-      [caseId, 'family-self:ai-coach', `principal-session:${coach.session_id}`, coach.delivered ? 'DELIVERED' : 'HELD'],
-    );
-    // AI 转人工/扣留 → Case 反映 WAITING_FAMILY / ESCALATED(不自动继续)。
-    if (coach.human_handoff) {
-      await this.repo.query(`update service_cases set status='ESCALATED' where case_id=$1`, [caseId]);
+      // 生命周期:交付→WAITING_FAMILY(等回访);扣留/升级→ESCALATED。Intent 保持 OPEN(未 SERVICE_DELIVERED)。
+      await this.repo.query(`update service_cases set status=$2, next_action_at = now() + interval '1 day' where case_id=$1`,
+        [caseId, coach.human_handoff ? 'ESCALATED' : 'WAITING_FAMILY']);
+    } else if (primary.resource_type === 'EXTERNAL_REFERRAL') {
+      executedType = 'EXTERNAL_REFERRAL';
+      await this.repo.query(
+        `insert into service_contributions(case_ref, provider_ref, role, task_ref, quality_state)
+         values ($1,null,'EXTERNAL_REFERRAL',$2,'RECORDED')`,
+        [caseId, `referral:${primary.external_referral_target_ref}`],
+      );
+      await this.repo.query(`update service_cases set status='WAITING_FAMILY', next_action_at = now() + interval '1 day' where case_id=$1`, [caseId]);
+    } else {
+      // PRACTICE 等尚无真实 executor → 不静默替换;标记等待家庭执行。
+      await this.repo.query(`update service_cases set status='WAITING_FAMILY', next_action_at = now() + interval '1 day' where case_id=$1`, [caseId]);
     }
-    await this.repo.query(`update growth_intents set status='CLOSED', close_reason='SERVICE_DELIVERED' where intent_id=$1 and family_id=$2`, [intentId, familyId]);
+    // Intent 保持 OPEN;SERVICE_DELIVERED 只在 follow-up 完成时写(见 submitFollowUp)。
 
-    return {
-      decision_id: decisionId,
-      outcome: 'SERVICE_STARTED',
-      case_id: caseId,
-      ai_coach: { delivered: coach.delivered, risk_route: coach.risk_route, human_handoff: coach.human_handoff },
-    };
+    return { decision_id: decisionId, outcome: 'SERVICE_STARTED', case_id: caseId, executed_resource_type: executedType, ai_coach: aiCoachResult };
   }
 
   async getCase(familyId: string, caseId: string): Promise<Record<string, unknown> | null> {
@@ -266,25 +283,32 @@ export class OrchestrationService {
     return r.rows[0] ?? null;
   }
 
-  /** ⑤ 回访 + helpfulness(服务层;非 Observation;不写 canonical)。 */
-  async submitFollowUp(familyId: string, caseId: string, helpfulness: string, text: string | null): Promise<{ followup_id: string }> {
+  /** ⑤ 回访 + helpfulness(actor provenance;非 Observation)。有效反馈→完成服务环:Case COMPLETED + Intent CLOSED/SERVICE_DELIVERED。 */
+  async submitFollowUp(familyId: string, actorPersonId: string, caseId: string, helpfulness: string, text: string | null): Promise<{ followup_id: string }> {
     const allowed = ['HELPFUL', 'SOMEWHAT_HELPFUL', 'NOT_HELPFUL_YET', 'UNANSWERED'];
     if (!allowed.includes(helpfulness)) throw new BadRequestException('invalid_helpfulness');
-    const own = await this.repo.query(`select 1 from service_cases where case_id=$1 and family_id=$2`, [caseId, familyId]);
-    if ((own.rowCount ?? 0) === 0) throw new ConflictException('case_not_in_family');
+    const own = await this.repo.query<{ intent_ref: string; status: string }>(`select intent_ref, status from service_cases where case_id=$1 and family_id=$2`, [caseId, familyId]);
+    if ((own.rowCount ?? 0) === 0) throw new ForbiddenException('case_not_in_family');
     const r = await this.repo.query<{ followup_id: string }>(
-      `insert into service_followup_responses(case_ref, response_ref, helpfulness, truth_class)
-       values ($1,$2,$3,'SERVICE_NOTE') returning followup_id`,
-      [caseId, text, helpfulness],
+      `insert into service_followup_responses(case_ref, actor_person_id, response_ref, helpfulness, truth_class)
+       values ($1,$2,$3,$4,'SERVICE_NOTE') returning followup_id`,
+      [caseId, actorPersonId, text, helpfulness],
     );
+    // 家庭给出实质反馈(非 UNANSWERED)且 case 未升级 → 本次服务环完成。
+    if (helpfulness !== 'UNANSWERED' && own.rows[0].status === 'WAITING_FAMILY') {
+      await this.repo.query(`update service_cases set status='COMPLETED', closed_at=now() where case_id=$1`, [caseId]);
+      await this.repo.query(`update growth_intents set status='CLOSED', close_reason='SERVICE_DELIVERED' where intent_id=$1 and family_id=$2`, [own.rows[0].intent_ref, familyId]);
+    }
     return { followup_id: r.rows[0].followup_id };
   }
 
-  /** ⑥ M5 Context Reuse(只读投影;禁因果断言)。 */
+  /** ⑥ Context Reuse(只读;按 need_type 过滤,同类才复用;禁因果)。 */
   async contextReuse(familyId: string, subjectPersonId: string): Promise<ContextReuseProjectionDto> {
     const prior = await this.repo.query<{ case_id: string; plan_ref: string }>(
       `select sc.case_id, sc.plan_ref from service_cases sc
-        where sc.family_id=$1 and sc.subject_person_id=$2 order by sc.opened_at desc limit 1`,
+        join growth_intents gi on gi.intent_id = sc.intent_ref
+        where sc.family_id=$1 and sc.subject_person_id=$2 and gi.need_type='PARENT_CHILD_COMMUNICATION_CONFLICT'
+        order by sc.opened_at desc limit 1`,
       [familyId, subjectPersonId],
     );
     const priorCase = prior.rows[0] ?? null;
@@ -292,9 +316,7 @@ export class OrchestrationService {
     const priorOffers: string[] = [];
     const statements: string[] = [];
     if (priorCase) {
-      const fu = await this.repo.query<{ helpfulness: string }>(
-        `select helpfulness from service_followup_responses where case_ref=$1 order by captured_at desc limit 1`, [priorCase.case_id],
-      );
+      const fu = await this.repo.query<{ helpfulness: string }>(`select helpfulness from service_followup_responses where case_ref=$1 order by captured_at desc limit 1`, [priorCase.case_id]);
       helpfulness = (fu.rows[0]?.helpfulness as ContextReuseProjectionDto['prior_helpfulness']) ?? null;
       const plan = await this.repo.query<{ steps: Array<{ offer_ref: string }> }>(`select steps from orchestration_plans where plan_id=$1`, [priorCase.plan_ref]);
       for (const s of (plan.rows[0]?.steps ?? [])) priorOffers.push(s.offer_ref);
@@ -302,13 +324,9 @@ export class OrchestrationService {
       if (helpfulness) statements.push(helpfulness === 'HELPFUL' ? '你上次反馈:有帮助。' : helpfulness === 'SOMEWHAT_HELPFUL' ? '你上次反馈:有一点帮助。' : '你上次反馈:暂时没有帮助。');
     }
     return {
-      family_id: familyId,
-      subject_person_id: subjectPersonId,
-      need_type: 'PARENT_CHILD_COMMUNICATION_CONFLICT',
-      prior_case_ref: priorCase?.case_id ?? null,
-      prior_selected_offer_refs: priorOffers,
-      prior_helpfulness: helpfulness,
-      reuse_statements: statements, // 仅主观回顾;绝无"方法已证明有效"
+      family_id: familyId, subject_person_id: subjectPersonId, need_type: 'PARENT_CHILD_COMMUNICATION_CONFLICT',
+      prior_case_ref: priorCase?.case_id ?? null, prior_selected_offer_refs: priorOffers, prior_helpfulness: helpfulness,
+      reuse_statements: statements,
     };
   }
 }

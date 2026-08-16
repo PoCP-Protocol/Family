@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS growth_need_inputs (
   input_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   family_id uuid NOT NULL REFERENCES families(family_id),
   subject_person_id uuid NOT NULL REFERENCES persons(person_id),
+  actor_person_id uuid NOT NULL REFERENCES persons(person_id),   -- 谁说的(家长关于孩子的陈述,需 provenance)
+  data_class varchar(48) NOT NULL DEFAULT 'FAMILY_PRIVATE_TEXT',
   raw_text text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -63,10 +65,12 @@ CREATE TABLE IF NOT EXISTS eligibility_evaluations (
   offer_ref varchar(96) NOT NULL,
   eligible boolean NOT NULL,
   reason_codes text[] NOT NULL DEFAULT '{}',
+  offer_snapshot jsonb NOT NULL,   -- T1/T2 复验用的 exact Offer 不可变快照(禁 T2 重新生成猜类型)
   policy_version varchar(48) NOT NULL,
   evaluated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_elig_intent ON eligibility_evaluations(intent_ref);
+CREATE INDEX IF NOT EXISTS idx_elig_offer ON eligibility_evaluations(intent_ref, stage, offer_ref);
 
 -- ---------- ⑤ ResourceRecommendation(candidates/coverage 存 jsonb)----------
 CREATE TABLE IF NOT EXISTS resource_recommendations (
@@ -146,6 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_contrib_case ON service_contributions(case_ref);
 CREATE TABLE IF NOT EXISTS service_followup_responses (
   followup_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   case_ref uuid NOT NULL REFERENCES service_cases(case_id),
+  actor_person_id uuid NOT NULL REFERENCES persons(person_id),  -- helpfulness 是某人的服务价值陈述,需 provenance
   response_ref text NULL,
   helpfulness followup_helpfulness NOT NULL DEFAULT 'UNANSWERED',
   truth_class followup_truth_class NOT NULL DEFAULT 'SERVICE_NOTE',
