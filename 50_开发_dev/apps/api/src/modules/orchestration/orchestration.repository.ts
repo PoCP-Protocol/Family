@@ -49,21 +49,21 @@ export class OrchestrationRepository implements OnModuleDestroy {
         where family_id=$1 and subject_person_id=$2 and purpose='AI_PERSONALIZATION' and status='GRANTED' limit 1`,
       [familyId, subjectPersonId],
     );
-    const person = await this.pool.query<{ birth_date: string | null }>(
+    const person = await this.pool.query<{ birth_date: Date | string | null }>(
       `select birth_date from persons where person_id=$1 and family_id=$2 and person_type='CHILD' limit 1`,
       [subjectPersonId, familyId],
     );
     const subjectExists = (person.rowCount ?? 0) >= 1;
     // V1 纵切:12–15。若有 birth_date 则粗判年龄区间;缺失时按当前纵切默认 in-scope(life-stage 已在 onboarding 捕获)。
+    // 注意:pg 把 date 列返回为 JS Date,故需兼容 Date 与 string。
     let ageInScope = true;
-    const bd = person.rows[0]?.birth_date;
-    if (bd) {
-      const birthYear = Number(bd.slice(0, 4));
-      if (Number.isFinite(birthYear)) {
-        // 不使用不可用的 Date.now();仅当明显越界(<8 或 >18 岁,按纵切年份 2026 粗算)时判 out-of-scope。
-        const approxAge = 2026 - birthYear;
-        ageInScope = approxAge >= 8 && approxAge <= 18;
-      }
+    const bd = person.rows[0]?.birth_date ?? null;
+    let birthYear = NaN;
+    if (bd instanceof Date) birthYear = bd.getFullYear();
+    else if (typeof bd === 'string') birthYear = Number(bd.slice(0, 4));
+    if (Number.isFinite(birthYear)) {
+      const approxAge = 2026 - birthYear; // 纵切参考年份粗算;仅用于明显越界拦截
+      ageInScope = approxAge >= 8 && approxAge <= 18;
     }
     return {
       aiPersonalizationConsentGranted: (consent.rowCount ?? 0) >= 1,

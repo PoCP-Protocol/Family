@@ -19,6 +19,7 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   // 否则末尾 `delete from families` 会被 principal_sessions_family_id_fkey 挡住。
   // 用 to_regclass 守卫:未迁移 0011 的库(仅 Family core)不会因缺表报错。
   await cleanPrincipalTablesIfPresent(pool);
+  await cleanOrchestrationTablesIfPresent(pool); // VERTICAL-SLICE-001:编排表 FK 引用 families/persons,须先清
   await pool.query('delete from growth_profile_drafts');
   await pool.query('delete from evidence_records');
   await pool.query('delete from perspectives');
@@ -69,6 +70,19 @@ export async function seedAiConsentSubject(
     [familyId, c.rows[0].person_id, g.rows[0].person_id, status],
   );
   return { familyId, subjectRef: c.rows[0].person_id, guardianRef: g.rows[0].person_id };
+}
+
+/** 清编排域表(FAMILY-GROWTH-VERTICAL-SLICE-001;children-first FK 序);to_regclass 守卫兼容未迁移 0020 的库。 */
+export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<void> {
+  const tables = [
+    'service_followup_responses', 'service_contributions', 'service_cases',
+    'orchestration_plans', 'family_service_decisions', 'resource_recommendations',
+    'eligibility_evaluations', 'growth_intents', 'growth_need_signals', 'growth_need_inputs',
+  ];
+  for (const t of tables) {
+    const exists = await pool.query('select to_regclass($1) as reg', [t]);
+    if (exists.rows[0].reg) await pool.query(`delete from ${t}`);
+  }
 }
 
 /** 清 Principal 域表(FK 安全序);若库未迁移 0011 则逐表跳过,便于 Family-core-only 测试库复用。 */

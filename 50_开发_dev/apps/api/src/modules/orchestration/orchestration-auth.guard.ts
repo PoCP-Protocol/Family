@@ -3,7 +3,7 @@
  * CONSUMER_X_ACTOR_ID_TRUST = 0(by construction):只认 cookie/Bearer → account session → ACTIVE membership → family context;
  * 绝无 x-actor-id 降级(独立于全局 PLATFORM_AUTH_MODE flag)。角色→NamedAction 走既有显式矩阵。
  */
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, SetMetadata, UnauthorizedException, createParamDecorator } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, SetMetadata, UnauthorizedException, createParamDecorator } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthService, sessionTokenFromHeaders } from '../auth/auth.service';
 import { assertFamilyRoleCan, type FamilyNamedAction, type FamilyRole } from '../auth/family-authorization.policy';
@@ -19,7 +19,10 @@ export const OrchestrationActor = createParamDecorator((_data: unknown, ctx: Exe
 
 @Injectable()
 export class OrchestrationAuthGuard implements CanActivate {
-  constructor(private readonly auth: AuthService, private readonly reflector: Reflector) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(Reflector) private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
