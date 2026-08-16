@@ -9,7 +9,9 @@ export type FamilyRole = 'OWNER_GUARDIAN' | 'GUARDIAN' | 'ADULT_MEMBER' | 'CHILD
 export type FamilyNamedAction =
   | 'ReadFamily' | 'AddChild' | 'InviteAdult' | 'RevokeMembership'
   | 'GrantConsent' | 'WithdrawConsent' | 'RecordPerspective'
-  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess';
+  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
+  // FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 编排 NamedActions(家长面向 12–15 纵切)。
+  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -25,6 +27,11 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   StartIntervention:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
   CompleteAction:        { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'ALLOW',   CHILD_SUBJECT: 'DENY' },
   GrantExternalAccess:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'LIMITED', ADULT_MEMBER: 'DENY',  CHILD_SUBJECT: 'DENY' },
+  // V3 编排:表达需求可较宽;确认需求/决定服务=监护人决策权(ADULT_MEMBER 不静默获得);孩子(本纵切家长面向)一律 DENY。
+  RequestGrowthHelp:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
+  ConfirmGrowthIntent:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'ALLOW',   CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */
