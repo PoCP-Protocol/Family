@@ -11,7 +11,7 @@ PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / VERIFIED_AND_PUSHED(bran
 PHASE9   = FAMILY_PHASE9_INTEGRATION_E2E_REGRESSION_001 / INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(branch=family-growth-vertical-slice-001@8b9c68e;验证既有实现,不授权新能力)
 PHASE10A = FAMILY_PHASE10_DATA_LIFECYCLE_001 / INTERNAL_DETERMINISTIC_VALIDATED(branch=family-growth-vertical-slice-001;WithdrawConsent;真实 PostgreSQL;待 Gate 报告)
 RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
-NEXT_AUTHORIZED_STEP = PHASE10B_GATE_REPORT(Context Reuse consent 门禁已验证；提交后等待裁决；多模态/商业化架构按独立边界推进；每次合 master 仍须 explicit per-merge authorization)
+NEXT_AUTHORIZED_STEP = PHASE10_GATE_REPORT(Phase10A/10B 已验证并同步；Phase10C 仅设计输入；等待总架构师裁决后再决定下一运行时工作包；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -28,7 +28,8 @@ Phase2 首条纵切 runtime           = APP_GATE_VERIFIED_AND_PUSHED(branch=fami
 Phase8 单家庭连续服务基础          = VERIFIED_AND_PUSHED(家庭私有进度/上下文投影、内部 Steward 队列与服务过程度量；不含组织/跨家庭/真人交付/外部模型)
 Phase9 集成/安全/E2E/回归验证       = PASS_INTERNAL_ONLY(39 API 文件/190 测试；8 Web 文件/51 测试；浏览器黄金路径；未合 master/未试点/未生产)
 Phase10A 数据生命周期              = INTERNAL_DETERMINISTIC_VALIDATED(WithdrawConsent；4 个真实 PostgreSQL 集成测试 + 3 个 DTO 测试；未实现物理删除；已同步开发分支@897b08c)
-Phase10B Context Reuse               = INTERNAL_DETERMINISTIC_VALIDATED(SERVICE consent 门禁；撤回后空投影；真实 PostgreSQL 全量 41 文件/197 测试；待 Gate)
+Phase10B Context Reuse               = INTERNAL_DETERMINISTIC_VALIDATED(SERVICE consent 门禁；撤回后空投影；真实 PostgreSQL 全量 41 文件/197 测试；已同步开发分支@e844eaf)
+Phase10C 多模态/商业化架构输入       = DESIGN_ONLY(无运行时、无新表/DTO/API/Named Action；外部模型/训练/支付/交易继续 HOLD)
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 
