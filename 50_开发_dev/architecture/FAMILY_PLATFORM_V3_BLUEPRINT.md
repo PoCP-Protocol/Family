@@ -36,7 +36,7 @@ PHASE1   = 架构契约草案存在(PR#32),NOT AUTHORIZED_RUNTIME、NOT FINAL_SS
 ## 2. 五个核心 Engine
 
 ```text
-① Growth Need Engine        现在真正需要什么?  三层:GrowthNeedSignal(NON_CANONICAL,≠Fact≠诊断≠Priority)→ GrowthIntent(家庭确认的服务需求)→ GrowthPriority(经成长决策才入 Growth OS)
+① Growth Need Engine        现在真正需要什么?  GrowthNeedSignal(NON_CANONICAL,≠Fact≠诊断≠Priority)→ GrowthIntent(家庭确认的服务需求)。**GrowthIntent 直接进 Capability/编排(见 §2b);不强制经过 GrowthPriority**(见 §2d)
 ② Growth Capability Engine   需要什么能力?     如 DE_ESCALATION / COMMUNICATION_REOPENING;同一 Capability 可由多资源满足(平台抽象,见 §2b)
 ③ Growth Resource Network    有哪些资源?       8 型:NO_ACTION·CONTENT·PRACTICE·AI_COACH·PROGRAM·HUMAN_COACH·QUALIFIED_EXPERT·EXTERNAL_REFERRAL;每 ResourceOffer 带"能力身份证"(capabilities/ageScope/problemScope/evidenceLevel/riskBoundary/privacy/effort/duration/availability/costClass/requiresHuman/requiresConsent)
 ④ Growth Orchestration Engine 平台心脏:产出 Next Best Growth **Path**(条件路径,非单条推荐,见 §2c)
@@ -85,6 +85,19 @@ OrchestrationPlan 拥有:有序/条件化的服务路径。例:
 ```
 没有 OrchestrationPlan,所谓"编排平台"终局仍只是 Recommendation Platform。**V1 不做通用 workflow DSL**(只做上述有限条件路径)。
 
+## 2d. GrowthPriority 是可选的(平台级不变量)
+
+**GrowthPriority ≠ 服务编排的必经节点。** 临时求助不应被强制"成长规划化"。
+```text
+GrowthNeedSignal
+      ↓
+GrowthIntent
+      ├──────────────→ GrowthCapability → ResourceOffer → Orchestration → ServiceCase(主路径,无需 GrowthPriority)
+      └── MAY INFORM ─→ GrowthPriority(可选;家庭确认;Growth OS 拥有;经既有 human-confirmed 边界)
+```
+不变量:`GrowthIntent ≠ GrowthPriority`;`GrowthPriority = OPTIONAL, Growth-OS-owned, family-confirmed`;`GrowthPriority ≠ prerequisite for Orchestration`。
+例:"孩子刚摔门,我今晚不知道怎么重新开口" → NeedSignal → Intent → Capability(DE_ESCALATION/COMMUNICATION_REOPENING)→ AI Coach/Practice,**全程不需先建 GrowthPriority**;一个 Intent 可在事后**可选地** inform 一条 GrowthPriority。
+
 ## 3. 四家公司机制的融入(非四模块)
 
 ```text
@@ -117,9 +130,22 @@ Truth Guard 保持:NeedSignal≠Fact/诊断;AI 不直写 GrowthPriority/Action;�
 
 ## 5. North Star Metric
 
-**Helpful Growth Resolution Rate** = 家庭表达真实成长需求后,被匹配到合适帮助并完成一次有效服务闭环的比例。
-拆:Need Confirmed → Resource Matched → Family Accepted → Service Started → Service Completed → Follow-up Captured。
-辅助:TIME_TO_USEFUL_HELP · RESOURCE_MATCH_ACCEPTANCE · SERVICE_COMPLETION · FOLLOWUP_COMPLETION · CONTEXT_REUSE · REPEAT_EXPLANATION_REDUCTION · HUMAN_HANDOFF_SUCCESS · SERVICE_RECOVERY_SUCCESS · NO_ACTION_ACCEPTANCE · EXTERNAL_REFERRAL_SUCCESS。**不以 DAU/PV/时长/AI消息数为优化目标。**
+**Helpful Growth Service Loop Rate(HGSLR)· 家庭成长有效帮助闭环率**
+(取代旧 "Helpful Growth Resolution Rate" —— 旧名暗示"成长被解决/孩子改善",超出实际测量,SUPERSEDED)。
+定义:一个家庭表达真实成长需求后,有多少比例真正获得并完成了一次**被家庭感知为有帮助**的服务闭环。
+```text
+confirmed GrowthIntent → eligible help found → family accepted → service delivered → follow-up captured → family helpfulness signal captured
+```
+末端加一个极低摩擦信号(仅 **user-perceived helpfulness**):"这次帮助对你有用吗? ○有帮助 ○有一点帮助 ○暂时没有帮助"。
+**该信号 ≠ 孩子改善证明 / 成长结果证明 / 干预有效证明 / 因果证据。**
+
+三层指标(永久分开,防以后把"服务完成率"包装成"孩子成长效果"):
+```text
+LEVEL 1 Platform Delivery(资源有没有被组织起来):TIME_TO_USEFUL_HELP · RESOURCE_MATCH_ACCEPTANCE · SERVICE_COMPLETION · HUMAN_HANDOFF_SUCCESS · SERVICE_RECOVERY_SUCCESS
+LEVEL 2 Family Perceived Value(家庭觉不觉得有用):HELPFULNESS_SIGNAL · FOLLOWUP_COMPLETION · CONTEXT_REUSE · REPEAT_EXPLANATION_REDUCTION
+LEVEL 3 Growth Signals(现实后来发生了什么):Observation · Review · NextStepDecision
+```
+不变量:`ServiceCompletion ≠ GrowthOutcome`;`Helpfulness ≠ GrowthOutcome`;`Observation ≠ Causality`。**不以 DAU/PV/时长/AI消息数为优化目标。**
 注:服务"完成"由 Enrollment / Delivery Domain 判定;Program Runtime 只知 schedule 到第几天,不拥有 completion 真相。
 
 ## 6. 总架构图(正式)
