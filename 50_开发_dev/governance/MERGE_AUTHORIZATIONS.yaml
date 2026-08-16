@@ -29,6 +29,12 @@ history:
     merged: true
     process: COMPLIANT   # 点名授权 exact head,--match-head-commit 锁定;常规合并(非 --admin);guard 非分支保护必需项,其 CI 红为已知 ledger-only bootstrap
     authorized_by: family-chief-architect
+  - pr: 31
+    head_sha: "834685b14267e24c6bdc1fdb16fbff13d40ab3a7"
+    merge_commit: "2aa6da66050df087fd21b58df5718c1d274510e9"
+    merged: true
+    process: COMPLIANT   # PHASE0-FINAL-CLOSEOUT PASS_CLOSED;点名授权 exact head,--match-head-commit 锁定常规合并(非 --admin)
+    authorized_by: family-chief-architect
 
 # 未来对 master 的合并授权登记于此(每条须 pr + head_sha + authorized_by + ref + date):
 # 注:guard 现为 CI 可见 + 审计 SSOT;转「分支保护必需项」须总架构师在 GitHub 设置开启;
@@ -53,4 +59,9 @@ authorizations:
     head_sha: "d2f5874b851d92502243b0e4826c2054bb67112f"   # 总架构师点名授权的 exact head;已用 --match-head-commit 锁定合并,head 未漂移(此登记为合并后审计,不在 #33 分支)
     authorized_by: family-chief-architect
     ref: "FAMILY-PLATFORM-V3-BLUEPRINT-FINAL-SEMANTIC-CLOSEOUT — PASS_CLOSED; MASTER_BLUEPRINT AUTHORIZED"
+    date: "2026-08-16"
+  - pr: 31
+    head_sha: "834685b14267e24c6bdc1fdb16fbff13d40ab3a7"   # 总架构师点名授权的 exact head;--match-head-commit 锁定合并,head 未漂移(合并后审计,不在 #31 分支)
+    authorized_by: family-chief-architect
+    ref: "FAMILY-GROWTH-ORCHESTRATION-REBASE-001 PHASE0-FINAL-CLOSEOUT — PASS_CLOSED"
     date: "2026-08-16"
