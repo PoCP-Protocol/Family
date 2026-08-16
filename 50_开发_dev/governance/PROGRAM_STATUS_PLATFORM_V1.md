@@ -1,9 +1,35 @@
-# 程序状态 —— FAMILY PLATFORM V1(程序重定基)
+# 程序状态 —— FAMILY(SSOT)
 
 ```text
 DOC_KIND = PROGRAM_STATUS(SSOT)
-RULING   = FAMILY-PLATFORM-V1-BUILD-001(总架构师,2026-08-15)
-BASE     = master @ d03931de8f8b300f3ee53b9eda9f497956677448
+RULING   = 战略纠偏(总架构师,2026-08-16)覆盖 FAMILY-PLATFORM-V1-BUILD-001
+BASE     = master @ 9d52358(身份根/onboarding/Today 已入)
+```
+
+## 〇、北极星纠偏(2026-08-16,最高优先)
+
+```text
+北极星:BUILD THE BEST AI-NATIVE FAMILY GROWTH SERVICE(非 Family OS / AI 助手)。
+定位:Family Core/Growth OS/Evidence/Principal/Tenancy = Intelligence Infrastructure(底座发动机,够用即止);
+      前台 = Family Growth Services(标准化产品 + 交付)。Principal 降为无处不在的 AI Coach 能力,非首页/核心商品。
+检验:不是"比 DeepSeek 强在哪";而是"若 DeepSeek 免费给最强模型,榜样还创造什么价值"。模型经 Model Gateway 作供应商。
+第一目标:做出《21天青春期亲子沟通成长计划》——完整可交付、明显优于直接问通用 AI。非"21×AI对话"。
+产品单元:每日 LEARN(学5min)+ PRACTICE(练)+ COACH(AI陪练)+ REFLECT(记录);Day7/14/21 复盘+报告;关键节点真人助教/专家。
+用户买的:不是结果保证,是"比自己摸索更专业/持续/可执行/可观察的成长过程"(与 Truth Guard 一致)。
+
+新进度 Gate(取代"平台做了几个模块"):
+  G1 PRODUCT_DEFINED → G2 PRODUCT_DELIVERABLE(测试家庭 Day0→21 走完:课程/练习/AI陪练/行动/记录/复盘/报告 + 助教专家可介入)
+  → G3 PRODUCT_USABLE → G4 PRODUCT_OPERABLE → G5 FAMILY_PLATFORM_V1_READY
+
+五条产品线(所有开发挂靠,不再按技术模块扩张):
+  PRODUCT(Program Runtime/21天编排)· CONTENT(多模态课件/案例/练习/role-play/证据映射)
+  · DELIVERY(AI Coach+助教+顾问+专家+提醒反馈+SOP)· EXPERIENCE(注册/Onboarding/我的计划/Today/报告;PR#30 属此)
+  · DATA&BUSINESS(Enrollment/ProductEvent/成长旅程数据/报告/续费;后续接订单会员)
+
+资源比例倒回:~20% Core · 50% Product+Content+UX · 20% Delivery/Human/Ops · 10% Data。底座除真 blocker 不再主动扩建。
+三问原则:每个任务须答"服务哪个产品/改善哪个交付环节/用户感知什么价值",答不出→不开发。
+Program Runtime 铁律:只管内容/节奏/交付/进度;绝不复制 Growth OS 家庭真实事实。教研内容来自循证课件线,不臆造。
+暂停(除非直挡 Product 01):更多通用AI/Principal 泛聊天 · 更多 dimension/intervention · 复杂组织多租户 · Marketplace · World Model · Family 7B · RLS 扩张 · 社区复杂化 · 复杂 BI。CHILD_COMPANION=NOT_P0(战略有效,不死冻)。
 ```
 
 ## 一、阶段重定义(取代旧 M3→MOS→Alpha)
