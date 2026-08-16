@@ -37,23 +37,51 @@ function renderLogin(api: PlatformApi, root: HTMLElement, onRetry: () => void): 
   root.appendChild(box);
 }
 
-/** create_family:采集家庭名+监护人名(非 UUID),POST /auth/families。其余未建表单步骤诚实提示。 */
-async function submitStep(api: PlatformApi, root: HTMLElement, screen: OnboardingScreen): Promise<boolean> {
-  if (screen.step === 'create_family') {
-    return await new Promise<boolean>((resolve) => {
-      const form = el('div', { class: 'create-family-form' });
-      const fam = el('input', { class: 'cf-family', placeholder: '家庭名称' }) as HTMLInputElement;
-      const guardian = el('input', { class: 'cf-guardian', placeholder: '你的称呼(如 妈妈/爸爸)' }) as HTMLInputElement;
-      const ok = el('button', { type: 'button', class: 'cf-submit' }, '创建') as HTMLButtonElement;
-      ok.addEventListener('click', async () => {
-        const r = await api.post('/auth/families', { display_name: fam.value.trim(), guardian_name: guardian.value.trim() });
-        resolve(r.ok);
-      });
-      form.append(fam, guardian, ok);
-      root.appendChild(form);
+const uuid = (): string => (globalThis.crypto?.randomUUID?.() ?? `k-${Date.now()}-${Math.round(Math.random() * 1e9)}`);
+/** 从 apiHint.path 提取 familyId(/families/{fid}/...)。 */
+function familyIdFromPath(path: string): string | null {
+  const m = path.match(/\/families\/([^/]+)/);
+  return m ? m[1] : null;
+}
+/** 渲染一个简单表单(字段 + 提交),点击提交时用采集值调 onSubmit;resolve 提交结果。 */
+function renderForm(root: HTMLElement, cls: string, fields: Array<{ key: string; placeholder: string; optional?: boolean }>, submitLabel: string, onSubmit: (values: Record<string, string>) => Promise<boolean>): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const form = el('div', { class: cls });
+    const inputs: Record<string, HTMLInputElement> = {};
+    for (const f of fields) {
+      const i = el('input', { class: `f-${f.key}`, placeholder: f.placeholder }) as HTMLInputElement;
+      inputs[f.key] = i; form.appendChild(i);
+    }
+    const btn = el('button', { type: 'button', class: 'form-submit' }, submitLabel) as HTMLButtonElement;
+    btn.addEventListener('click', async () => {
+      const values: Record<string, string> = {};
+      for (const f of fields) values[f.key] = inputs[f.key].value.trim();
+      resolve(await onSubmit(values));
     });
+    form.appendChild(btn);
+    root.appendChild(form);
+  });
+}
+
+/** onboarding 各步表单 → 调既有端点(系统填 id;用户不输 UUID)。未建表单步骤诚实提示。导出供测试。 */
+export async function submitStep(api: PlatformApi, root: HTMLElement, screen: OnboardingScreen): Promise<boolean> {
+  if (screen.step === 'create_family') {
+    return renderForm(root, 'create-family-form',
+      [{ key: 'display_name', placeholder: '家庭名称' }, { key: 'guardian_name', placeholder: '你的称呼(如 妈妈/爸爸)' }],
+      '创建', (v) => api.post('/auth/families', v).then((r) => r.ok));
   }
-  // 其余步骤的表单为渐进后续:不假前进,提示开发中。
+  if (screen.step === 'add_child') {
+    const fid = familyIdFromPath(screen.apiHint.path);
+    if (!fid) return false;
+    return renderForm(root, 'add-child-form',
+      [{ key: 'display_name', placeholder: '孩子的称呼' }, { key: 'birth_date', placeholder: '出生日期 YYYY-MM-DD(可留空)', optional: true }],
+      '添加孩子', (v) => {
+        const body: Record<string, string> = { display_name: v.display_name, idempotency_key: uuid() };
+        if (v.birth_date) body.birth_date = v.birth_date;
+        return api.post(`/families/${fid}/children`, body).then((r) => r.ok);
+      });
+  }
+  // 其余步骤(lifestage/consent/growth/priority)的表单为渐进后续:不假前进,诚实提示。
   const note = el('p', { class: 'step-todo muted' }, '该步骤的填写界面正在建设中。');
   root.appendChild(note);
   return false;
