@@ -25,7 +25,8 @@ export type ConsentPurpose =
   | 'CONTENT_PUBLICATION';
 export type ConsentStatus = 'GRANTED' | 'WITHDRAWN' | 'EXPIRED';
 export type FamilyDataLifecycleRequestType = 'EXPORT_REQUEST' | 'RETENTION_REVIEW' | 'DELETE_REQUEST';
-export type FamilyDataLifecycleRequestStatus = 'REQUESTED';
+export type FamilyDataLifecycleRequestStatus = 'REQUESTED' | 'PENDING_HUMAN_REVIEW' | 'APPROVED_FOR_SYNTHETIC_VALIDATION' | 'REJECTED';
+export type FamilyDataLifecycleReviewDecision = 'APPROVED_FOR_SYNTHETIC_VALIDATION' | 'REJECTED';
 export type GrowthDomain = 'CHILD' | 'PARENT' | 'RELATIONSHIP';
 export type SafetyScreeningResult = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type GrowthOnboardingStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
@@ -211,6 +212,49 @@ export interface FamilyDataLifecyclePreviewDto {
     lifecycle_requests: number;
   };
   execution_boundary: 'PREVIEW_ONLY_NO_EXPORT_NO_RETENTION_EXECUTION_NO_DELETE';
+}
+
+export interface FamilyDataGovernancePolicyDto {
+  policy_version: 'FAMILY_DATA_GOVERNANCE_V1';
+  classifications: Array<{
+    category: 'IDENTITY_AND_MEMBERSHIP' | 'CONSENT_AND_LIFECYCLE' | 'FAMILY_SERVICE_PROCESS' | 'FAMILY_SUBJECTIVE_FEEDBACK' | 'AUDIT_AND_GOVERNANCE';
+    retention_rule: string;
+    export_eligible: boolean;
+  }>;
+  export_field_whitelist: Array<{
+    category: string;
+    object_name: string;
+    field_names: string[];
+    sensitivity: 'LOW' | 'MODERATE' | 'HIGH';
+    rationale: string;
+  }>;
+  execution_boundary: 'POLICY_AND_WHITELIST_PREVIEW_ONLY_NO_REAL_EXPORT_NO_RETENTION_EXECUTION_NO_DELETE';
+}
+
+export interface SubmitFamilyDataLifecycleReviewRequest {
+  family_id: string;
+  request_id: string;
+  idempotency_key: string;
+}
+
+export interface RecordFamilyDataLifecycleHumanDecisionRequest {
+  family_id: string;
+  request_id: string;
+  decision: FamilyDataLifecycleReviewDecision;
+  reason_code: 'SYNTHETIC_ONLY_POLICY_PASS' | 'INSUFFICIENT_SCOPE_OR_CONSENT' | 'FAMILY_REQUEST_WITHDRAWN' | 'POLICY_NOT_SATISFIED';
+  idempotency_key: string;
+}
+
+export interface FamilyDataLifecycleReviewDto {
+  family_data_lifecycle_request_review_id: string;
+  family_id: string;
+  family_data_lifecycle_request_id: string;
+  reviewer_person_id: string;
+  decision: FamilyDataLifecycleReviewDecision;
+  reason_code: string;
+  policy_version: 'FAMILY_DATA_GOVERNANCE_V1';
+  reviewed_at: string;
+  created_at: string;
 }
 
 export interface FamilyAggregateResponse {

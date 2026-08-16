@@ -38,6 +38,7 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   await pool.query('delete from outbox_events');
   await pool.query('delete from audit_logs');
   await pool.query('delete from idempotency_keys');
+  await pool.query("do $$ begin if to_regclass('public.family_data_lifecycle_request_reviews') is not null then delete from family_data_lifecycle_request_reviews; end if; end $$;");
   await pool.query("do $$ begin if to_regclass('public.family_data_lifecycle_requests') is not null then delete from family_data_lifecycle_requests; end if; end $$;");
   await pool.query('delete from consents');
   await pool.query('delete from life_stage_assignments');

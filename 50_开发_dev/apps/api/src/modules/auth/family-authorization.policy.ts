@@ -14,7 +14,8 @@ export type FamilyNamedAction =
   | 'CreateOrchestrationPlan' | 'OpenServiceCase' | 'RecordServiceFollowUp'
   | 'ReadFamilyProgressProjection' | 'ReadFamilyStewardQueue' | 'ReadFamilyServiceMetrics'
   | 'CreateStewardHandoffDraft' | 'UpdateStewardHandoffDraft'
-  | 'CreateFamilyDataLifecycleRequest' | 'ReadFamilyDataLifecyclePreview' | 'ReadFamilyDataLifecycleRequest';
+  | 'CreateFamilyDataLifecycleRequest' | 'ReadFamilyDataLifecyclePreview' | 'ReadFamilyDataLifecycleRequest'
+  | 'ReadFamilyDataGovernancePolicy' | 'SubmitFamilyDataLifecycleReview' | 'RecordFamilyDataLifecycleHumanDecision';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -45,6 +46,9 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   CreateFamilyDataLifecycleRequest: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
   ReadFamilyDataLifecyclePreview:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
   ReadFamilyDataLifecycleRequest:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  ReadFamilyDataGovernancePolicy:    { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  SubmitFamilyDataLifecycleReview:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  RecordFamilyDataLifecycleHumanDecision: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'DENY', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */

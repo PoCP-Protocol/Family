@@ -526,6 +526,24 @@ capabilities:
       仅允许家庭范围的数据导出请求、保留/删除请求和只读影响预览；请求必须经 trusted family context、监护人权限、幂等、审计与 fail-closed 验证。
       不执行不可逆删除、不删除生产或真实家庭数据、不实施跨家庭/组织操作、不解锁外部模型、训练、支付、试点、生产或 master 合入。
 
+  # Phase 10F：数据分类、保留、导出字段白名单和人工审批状态机；仅内部确定性设计/验证。
+  - capability_id: FAMILY_PHASE10_DATA_GOVERNANCE_APPROVAL_DESIGN_001
+    stage: FAMILY-V3-PHASE10F
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User ruling: 接受、允许，往前推进；Phase 10F data governance approval design (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅允许家庭私有数据分类、保留规则、导出字段白名单和人工审批状态机的内部确定性设计/验证，可记录审批请求与状态但不得生成真实家庭导出包或执行删除。
+      不可逆删除、真实导出/下载/传输、保留清理、生产数据、组织/跨家庭访问、外部模型、训练、支付、试点、生产和 master 合入继续 HOLD。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2

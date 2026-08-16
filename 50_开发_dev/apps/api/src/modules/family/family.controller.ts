@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, WithdrawConsentResponse, CreateFamilyDataLifecycleRequestResponse, FamilyDataLifecyclePreviewDto, FamilyDataLifecycleRequestDto, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, WithdrawConsentResponse, CreateFamilyDataLifecycleRequestResponse, FamilyDataGovernancePolicyDto, FamilyDataLifecyclePreviewDto, FamilyDataLifecycleRequestDto, FamilyDataLifecycleReviewDto, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
@@ -15,6 +15,7 @@ import { validateGrantConsentRequest } from './grant-consent.dto';
 import { validateWithdrawConsentRequest } from './withdraw-consent.dto';
 import { validateCreateFamilyDataLifecycleRequest } from './family-data-lifecycle.dto';
 import { FamilyDataLifecycleService } from './family-data-lifecycle.service';
+import { validateRecordFamilyDataLifecycleHumanDecision, validateSubmitFamilyDataLifecycleReview } from './family-data-governance.dto';
 import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
 import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
@@ -222,6 +223,45 @@ export class FamilyController {
     };
 
     return this.familyService.grantConsent(request, meta);
+  }
+
+  @RequireFamilyAction('ReadFamilyDataGovernancePolicy')
+  @Get(':familyId/data-lifecycle/governance-policy')
+  async dataGovernancePolicy(@Param('familyId') familyId: string, @ActorId() actorId: string): Promise<FamilyDataGovernancePolicyDto> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    return this.familyDataLifecycleService.policy(familyId, actorId);
+  }
+
+  @RequireFamilyAction('SubmitFamilyDataLifecycleReview')
+  @Post(':familyId/data-lifecycle/requests/:requestId/submit-review')
+  async submitDataLifecycleReview(
+    @Param('familyId') familyId: string,
+    @Param('requestId') requestId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<FamilyDataLifecycleRequestDto> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateSubmitFamilyDataLifecycleReview(familyId, requestId, idempotencyKey, body);
+    return this.familyDataLifecycleService.submitForReview(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('RecordFamilyDataLifecycleHumanDecision')
+  @Post(':familyId/data-lifecycle/requests/:requestId/human-decision')
+  async recordDataLifecycleHumanDecision(
+    @Param('familyId') familyId: string,
+    @Param('requestId') requestId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<FamilyDataLifecycleReviewDto> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateRecordFamilyDataLifecycleHumanDecision(familyId, requestId, idempotencyKey, body);
+    return this.familyDataLifecycleService.recordHumanDecision(request, buildAuditMeta(actorId, correlationId, source));
   }
 
   @RequireFamilyAction('CreateFamilyDataLifecycleRequest')
