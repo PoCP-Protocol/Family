@@ -1,15 +1,17 @@
-# FAMILY GROWTH PLATFORM 3.0 —— 正式总蓝图(SSOT)
+# FAMILY GROWTH PLATFORM —— 正式总蓝图(SSOT)
 
 ```text
 DOC_KIND = MASTER_BLUEPRINT(最高架构 SSOT;统合前几轮所有反向论证)
-RULING   = 总架构师正式定版/冻结(2026-08-16)
+RULING   = 总架构师正式定版/冻结(2026-08-16),经 FAMILY-PLATFORM-V3-BLUEPRINT-CLOSEOUT-001 修订
 BASE     = master @ 9d52358
-状态      = FROZEN(顶层蓝图);Phase 0 已完成(PR#31);Phase 1 架构契约进行中(PR#32 Allocation A-H)
+PHASE0   = PASS_CANDIDATE / NOT_CLOSED(PR#31 尚未 merge,仍受 exact-head 架构复审约束;不得声称"已完成")
+PHASE1   = 架构契约草案存在(PR#32),NOT AUTHORIZED_RUNTIME、NOT FINAL_SSOT
 ```
 
 ## 0. 定义与使命
 
-**Family = Child & Family Growth Resource Orchestration Platform(孩子与家庭成长资源智能编排平台)。**
+**官方平台名 = Family Growth Platform;中文 = 孩子与家庭成长资源编排平台。**
+架构描述语(仅解释用)可称 *Growth Resource Orchestration Platform*。**不再引入第三个平台品牌名**("Operating Platform"/"Market OS"等旧称一律 SUPERSEDED)。
 不是家庭教育平台,不是 AI 家庭助手,不是"21天产品"。
 
 三中心(同时成立):
@@ -35,28 +37,81 @@ BASE     = master @ 9d52358
 
 ```text
 ① Growth Need Engine        现在真正需要什么?  三层:GrowthNeedSignal(NON_CANONICAL,≠Fact≠诊断≠Priority)→ GrowthIntent(家庭确认的服务需求)→ GrowthPriority(经成长决策才入 Growth OS)
-② Growth Capability Engine   需要什么能力?     如 DE_ESCALATION / COMMUNICATION_REOPENING;同一 Capability 可由多资源满足(平台抽象)
+② Growth Capability Engine   需要什么能力?     如 DE_ESCALATION / COMMUNICATION_REOPENING;同一 Capability 可由多资源满足(平台抽象,见 §2b)
 ③ Growth Resource Network    有哪些资源?       8 型:NO_ACTION·CONTENT·PRACTICE·AI_COACH·PROGRAM·HUMAN_COACH·QUALIFIED_EXPERT·EXTERNAL_REFERRAL;每 ResourceOffer 带"能力身份证"(capabilities/ageScope/problemScope/evidenceLevel/riskBoundary/privacy/effort/duration/availability/costClass/requiresHuman/requiresConsent)
-④ Growth Orchestration Engine 平台心脏:产出 Next Best Growth **Path**(条件路径,非单条推荐)——如 AI 现在→今晚 Practice→明天 Follow-up→[反复]Micro Program→[复杂]Coach→[风险]Safety→[越界]External Referral
+④ Growth Orchestration Engine 平台心脏:产出 Next Best Growth **Path**(条件路径,非单条推荐,见 §2c)
 ⑤ Family Steward            全局服务状态层:ServiceCase / SLA / 主动 Follow-up / Service Recovery(用户只认识 Family,后台自解决谁服务)
 ```
+
+## 2b. 核心平台对象链(Canonical Service Chain,正式冻结命名)
+
+统一命名到 V3(取代旧 Allocation 的 NeedSignal/ServiceIntent/ServiceCandidate/ServiceRecommendation 双命名):
+```text
+GrowthNeedSignal        AI 推断,NON_CANONICAL(≠Fact≠诊断≠Priority)
+      │ family confirms
+      ▼
+GrowthIntent            家庭确认的服务需求
+      ▼
+GrowthCapability        需要什么"能力"(需求↔供给的解耦层)
+      ▼
+Eligible ResourceOffers 通过 Eligibility Gate 的资源(见 §4)
+      ▼
+ResourceRecommendation  在合格集合内的排序建议
+      │ family decides
+      ▼
+OrchestrationPlan       有序/条件化的服务路径(≠单条推荐,见 §2c)
+      ▼
+ServiceCase             平台组织的一次服务(Family Steward 拥有状态)
+      ▼
+ServiceContribution     谁贡献了什么(未来 FGCN Allocation 输入)
+      ▼
+Growth OS: Observation / Review → Family Growth Context → 下一轮更好
+```
+`DemandCluster` = **未来只读聚合投影(read-only aggregate)**,不是核心 transaction object。
+主链是 **Need → Capability → Resource → Orchestration → Service**,**绝不是 Need → Product**。
+
+## 2c. Capability 抽象 与 Orchestration ≠ Recommendation(两条平台级不变量)
+
+**(a) GrowthCapability 必须独立存在** —— 它把**需求与供给解耦**。同一 Capability 可由多类资源满足:
+`CONTENT / PRACTICE / AI_COACH / PROGRAM / HUMAN_COACH / QUALIFIED_EXPERT / EXTERNAL_REFERRAL`。
+这是**资源可替换性**与**未来第三方互操作**的前提。禁止 `Need → 直接推荐一个 Product`。
+
+**(b) Recommendation ≠ Orchestration**:
+```text
+ResourceRecommendation 说:哪个资源/路径合适。
+OrchestrationPlan 拥有:有序/条件化的服务路径。例:
+  AI_COACH now → PRACTICE tonight → FOLLOWUP tomorrow
+  IF repeated → PROGRAM   IF complex → HUMAN   IF out-of-scope → EXTERNAL_REFERRAL
+```
+没有 OrchestrationPlan,所谓"编排平台"终局仍只是 Recommendation Platform。**V1 不做通用 workflow DSL**(只做上述有限条件路径)。
 
 ## 3. 四家公司机制的融入(非四模块)
 
 ```text
 拼多多 → Growth Demand Network:需求聚合(匿名 DemandCluster,阈值)· C2S 需求反向驱动供给 · Share Value not Family Problems(禁砍价/强制拉人)
-字节   → Growth Distribution:Next Best Resource(反馈驱动),目标函数 = Growth Fiduciary Ranking,【禁】最大化停留/无限 Feed
+字节   → Growth Distribution:Next Best Resource(反馈驱动),目标函数 = Growth Fiduciary(见 §4),【禁】最大化停留/无限 Feed
 海底捞 → Family Steward:主动照顾整个服务过程 + Service Recovery,【非】堆人工/过度服务(AI-first + Human escalation)
 贝壳   → FGCN(Family Growth Collaboration Network):一次服务拆成角色(Discoverer/Router/Content/Program/AI Coach/Delivery/Growth Coach/Expert/Reviewer/Steward),跨组织协作,Contribution→未来 Allocation;家庭永远是主权主体,不归任一服务者
 三网络效应:Demand / Supply / Learning。
 ```
 
-## 4. Growth Fiduciary Ranking(最高伦理,排序优先级)
+## 4. Growth Fiduciary(最高伦理)—— 两阶段,非单一排序表
+
+**第一阶段:Resource Eligibility Gate(FAIL CLOSED,不参与排序)。** 任一关键 Gate 不通过 → `INELIGIBLE`,**根本不进入候选**:
+```text
+consent · privacy · safety · professional_scope · provider_qualification · risk_boundary · age_scope · required_availability
+```
+Safety / Consent / Qualification **不是** ranking factor —— 适配度 95 但未授权的资源,不能因排名高而给出。
+
+**第二阶段:Growth Fiduciary Ranking(仅对 eligible 资源排序):**
+```text
+child_growth_interest > confirmed_family_intent > resource_fit > evidence > past_context > family_preference > user_burden > cost
+```
+**Platform Revenue / Margin(V1):`PLATFORM_MARGIN_RANKING_SIGNAL = 0`,`PLATFORM_REVENUE = NOT_A_RANKING_SIGNAL` —— 不是"排最后",而是根本不参与排序。**
+必须始终支持(即使 0 收入):`NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL`。
 
 ```text
-1 Child Interest  2 Family Confirmed Need  3 Safety  4 Resource Fit  5 Evidence
-6 Past Context    7 Family Preference      8 User Burden  9 Cost  10 Platform Revenue(最后)
-PLATFORM_MARGIN_RANKING_SIGNAL = 0(V1 利润不参与排序);必须支持 NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL(即使 0 收入)。
+Eligibility Gate → Eligible Resource Set → Growth Fiduciary Ranking → Next Best Growth Path
 ```
 Truth Guard 保持:NeedSignal≠Fact/诊断;AI 不直写 GrowthPriority/Action;禁 Child/Family Score;禁大一统画像(Fact/Perspective/Observation/Intent/Inference 分开)。
 
@@ -65,13 +120,14 @@ Truth Guard 保持:NeedSignal≠Fact/诊断;AI 不直写 GrowthPriority/Action;�
 **Helpful Growth Resolution Rate** = 家庭表达真实成长需求后,被匹配到合适帮助并完成一次有效服务闭环的比例。
 拆:Need Confirmed → Resource Matched → Family Accepted → Service Started → Service Completed → Follow-up Captured。
 辅助:TIME_TO_USEFUL_HELP · RESOURCE_MATCH_ACCEPTANCE · SERVICE_COMPLETION · FOLLOWUP_COMPLETION · CONTEXT_REUSE · REPEAT_EXPLANATION_REDUCTION · HUMAN_HANDOFF_SUCCESS · SERVICE_RECOVERY_SUCCESS · NO_ACTION_ACCEPTANCE · EXTERNAL_REFERRAL_SUCCESS。**不以 DAU/PV/时长/AI消息数为优化目标。**
+注:服务"完成"由 Enrollment / Delivery Domain 判定;Program Runtime 只知 schedule 到第几天,不拥有 completion 真相。
 
 ## 6. 总架构图(正式)
 
 ```text
 ┌─ FAMILY EXPERIENCE ───────────── 首页 · 成长 · 服务 · 家庭 ─┐
 ├─ FAMILY STEWARD LAYER ────────── Case·SLA·Follow-up·Recovery(海底捞)
-├─ GROWTH ORCHESTRATION ENGINE ── Need→Capability→Resource→Plan(字节)
+├─ GROWTH ORCHESTRATION ENGINE ── Need→Capability→Resource→Plan(字节)· Eligibility Gate 前置
 │      ├─ GROWTH DEMAND(拼多多:Demand Cluster / Sharing)
 │      └─ RESOURCE NETWORK(AI/Program/Content/Human)
 │              └─ FGCN COLLABORATION(贝壳:Role/Task/Access/Contribution)
@@ -83,29 +139,50 @@ Truth Guard 保持:NeedSignal≠Fact/诊断;AI 不直写 GrowthPriority/Action;�
 
 ```text
 Family Core→Family Growth Account/连续上下文 · Growth OS→成长真实行动与观察协议 · Principal→AI Resource Provider
-Evidence→Resource Quality/Evidence Gate · Human Gate→AI→真人编排基础设施 · @family/program-runtime→Program Resource Provider
+Evidence→Resource Quality/Evidence Gate · Human Gate→AI→真人编排基础设施 · @family/program-runtime→Program Resource Provider(仅 schedule/进度投影,无 completion 真相)
 Content Engine→Content/Practice Resource Provider · Tenancy/AccessGrant→多服务者安全进入 · Audit→Contribution/服务追溯 · WAF→Discovery/Community Resource(非中心)
 ```
 
-## 8. 阶段路线(先冻结语义,再写运行时)
+## 8. 成熟度模型(唯一,取代"产品做了几步/平台几个模块")
 
 ```text
-Phase0 战略+代码重定基            = 已完成(PR#31:北极星→编排 · Program01→FIRST_PROGRAM_RESOURCE · Program Runtime→@family/program-runtime)
-Phase1 Growth Resource 架构契约   = 进行中(PR#32 Allocation A–H 覆盖大半;V3 补:ResourceProvider 对象 · Growth Capability Engine 显式 · Family Steward 层 · North Star Metric)
-Phase2 首条纵切 runtime(13岁冲突:Need→Intent→AI→Practice→Follow-up→Observation)
+M0 NORTH_STAR_ALIGNED
+  ↓
+M1 GROWTH_NEED_READY
+  ↓
+M2 RESOURCE_NETWORK_READY
+  ↓
+M3 ORCHESTRATION_READY
+  ↓
+M4 SERVICE_CONTINUITY_READY
+  ↓
+M5 CONTEXT_REUSE_READY
+  ⇒ FAMILY_GROWTH_ORCHESTRATION_V1_READY
+之后(仅未来):M6 DEMAND_NETWORK_READY → M7 COLLABORATION_NETWORK_READY → M8 PLATFORM_ECONOMICS_READY
+```
+**关键战略分界(固定):`M1–M5 = Single-family Platform Value`(先证明一个家庭的服务能连续、能复用);`M6–M8 = Network / Platform Economic Value`(拼多多需求网络 / 贝壳协作网络 / 经济)。在 M1–M5 未成之前,不进入 M6–M8。**
+(旧"M1 求助→M2 组织→M3 跟进→M4 复用→M5 需求网络→M6 协作→M7 学习→M8 经济"映射 SUPERSEDED,已删除,避免双状态机。)
+
+阶段路线(先冻结语义,再写运行时):
+```text
+Phase0 战略+代码重定基            = PASS_CANDIDATE / NOT_CLOSED(PR#31:北极星→编排 · Program01→FIRST_PROGRAM_RESOURCE · Program Runtime→@family/program-runtime;待 exact-head 复审)
+Phase1 Growth Resource 架构契约   = 草案(PR#32,见 §9);正式 Phase1 = FAMILY-GROWTH-ORCHESTRATION-ARCH-001(八对象 + 一条 Golden Journey),过 Architecture Gate 才写 runtime
+Phase2 首条纵切 runtime(13岁冲突:Need→Intent→Capability→Resource→AI→Practice→Follow-up→Observation)
 Phase3 Context Reuse   Phase4 Micro Program(验证 Program=资源)  Phase5 Human Service  Phase6 Family Steward(SLA/Recovery)
 Phase7 Demand Aggregation(匿名)  Phase8 FGCN Provider Collaboration  Phase9 Learning-to-rank(现禁 ML)  Phase10 Economics(最后)
-成熟度:M1 求助 → M2 组织 → M3 跟进 → M4 复用 → M5 需求网络 → M6 协作 → M7 学习 → M8 经济。
 ```
 
 ## 9. 与现有工件的对账
 
 ```text
-PR#31(product-runtime-001,head e0533858):Phase 0 完成——北极星/Program 降级/包移出 web。待 review + 点名合并。
-PR#32(allocation-v1-001):Phase 1 架构工件 A–H(NeedSignal/Intent/Candidate/Recommendation/ServiceCase/Contribution + DemandCluster + 受托原则)。
-  V3 相对 A–H 的增补(下一步并入 Phase 1):ResourceProvider 对象 · Growth Capability Engine(能力抽象层)· Family Steward 层(Service Recovery/SLA)· North Star Metric=Helpful Growth Resolution Rate · 7 服务场景 S1–S7 · 主架构图。
+PR#31(product-runtime-001):Phase 0 —— 北极星/Program 降级/包移出 web。状态 = Phase0 Closeout Candidate(尚未合并);
+  exact merge SHA 归 governance/review ledger,不在本最高蓝图硬写(避免 SHA 漂移)。第二轮须:移除 Program completion 真相 · rebase 到含本蓝图的 master · 修剩余状态漂移。
+PR#32(allocation-v1-001):= EARLY PHASE1 ARCHITECTURE REFERENCE;NOT AUTHORIZED_RUNTIME;NOT FINAL_SSOT。
+  流程记录:PROCESS_DEVIATION = PHASE1_ARCH_ARTIFACT_CREATED_BEFORE_PHASE0_REVIEW;影响 = NO_RUNTIME / NO_CANONICAL / NO_ROLLBACK。
+  须在 Phase0 closeout 后,以 #32 为输入 rebase/forward 成 FAMILY-GROWTH-ORCHESTRATION-ARCH-001(命名统一到 §2b 八对象:补齐 GrowthCapability 与 OrchestrationPlan)。
 PR#30(web-entry-mount):Entry Foundation,独立冻结,不混入。
 ```
+推进顺序(冻结):**PR#33 V3 蓝图 → 合入 master → PR#31 rebase+第二轮 → 合入 → PR#32 forward 成 ARCH-001 → Architecture Gate → 首条纵切 runtime。不再并行开新架构 PR。**
 
 ## 10. DO_NOT_BUILD 过滤器(每个任务开工前必答)
 
