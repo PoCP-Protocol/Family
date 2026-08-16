@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
+import { seedTrustedFamilyGuardian } from '../../test/family-auth-fixtures';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { FamilyRepository } from './family.repository';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
@@ -535,35 +536,25 @@ describe('FamilyService CreateFamily integration', () => {
   });
 
   async function seedM2ReadyFamily(options: { grantGrowthTracking?: boolean } = {}) {
-    const meta = {
-      actor: 'architect-1',
-      correlationId: `corr-m2-101-${crypto.randomUUID()}`,
-      source: 'vitest',
-      occurredAt: new Date().toISOString(),
-    };
-    const family = await service.createFamily({ display_name: '青春期沟通家庭', idempotency_key: `idem-family-${crypto.randomUUID()}` }, meta);
-    const parent = await service.addParent({
-      family_id: family.family.family_id,
-      role: 'GUARDIAN',
-      display_name: '监护人',
-      account_id: meta.actor,
-      idempotency_key: `idem-parent-${crypto.randomUUID()}`,
-    }, meta);
+    const trusted = await seedTrustedFamilyGuardian(pool, `m2-${crypto.randomUUID()}`, { displayName: '青春期沟通家庭', guardianName: '监护人', parentRole: 'GUARDIAN' });
+    const meta = trusted.meta;
+    const family = { family: { family_id: trusted.familyId } };
+    const parent = { parent: { person_id: trusted.guardianId } };
     const child = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: trusted.familyId,
       display_name: '孩子',
       birth_date: '2012-06-01',
       idempotency_key: `idem-child-${crypto.randomUUID()}`,
     }, meta);
     await service.createRelationship({
-      family_id: family.family.family_id,
-      person_a_id: parent.parent.person_id,
+      family_id: trusted.familyId,
+      person_a_id: trusted.guardianId,
       person_b_id: child.child.person_id,
       relationship_type: 'GUARDIAN_CHILD',
       idempotency_key: `idem-relationship-${crypto.randomUUID()}`,
     }, meta);
     await service.assignLifeStage({
-      family_id: family.family.family_id,
+      family_id: trusted.familyId,
       child_id: child.child.person_id,
       life_stage_code: 'EARLY_ADOLESCENCE_12_15',
       effective_from: '2026-08-10T00:00:00.000Z',
@@ -572,9 +563,9 @@ describe('FamilyService CreateFamily integration', () => {
 
     for (const purpose of ['SERVICE', 'ASSESSMENT', ...(options.grantGrowthTracking === false ? [] : ['GROWTH_TRACKING'])] as const) {
       await service.grantConsent({
-        family_id: family.family.family_id,
+        family_id: trusted.familyId,
         subject_person_id: child.child.person_id,
-        guardian_person_id: parent.parent.person_id,
+        guardian_person_id: trusted.guardianId,
         purpose,
         policy_version: 'm2-101-test',
         idempotency_key: `idem-consent-${purpose}-${crypto.randomUUID()}`,

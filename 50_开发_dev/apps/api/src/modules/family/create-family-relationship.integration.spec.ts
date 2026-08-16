@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
+import { seedTrustedFamilyGuardian } from '../../test/family-auth-fixtures';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
 
@@ -47,8 +48,8 @@ describe('FamilyService CreateFamilyRelationship integration', () => {
     expect(first.relationship.person_a_id).toBe(seed.parentId);
     expect(first.relationship.person_b_id).toBe(seed.childId);
     await expectCount('family_relationships', 1);
-    await expectCount('audit_logs', 4);
-    await expectCount('outbox_events', 4);
+    await expectCount('audit_logs', 2);
+    await expectCount('outbox_events', 2);
 
     const event = await pool.query('select payload from outbox_events where event_name = $1', ['FamilyRelationshipCreated']);
     expect(event.rowCount).toBe(1);
@@ -142,7 +143,7 @@ describe('FamilyService CreateFamilyRelationship integration', () => {
       person_b_id: seed.childId,
       relationship_type: 'OTHER',
       idempotency_key: 'idem-rel-forbidden',
-    }, testMeta('other-actor', 'corr-rel-forbidden'))).rejects.toThrow('actor_has_family_manage_permission');
+    }, testMeta('other-actor', 'corr-rel-forbidden'))).rejects.toThrow('trusted_family_manage_context_required');
 
     await service.createRelationship({
       family_id: seed.familyId,
@@ -210,22 +211,15 @@ describe('FamilyService CreateFamilyRelationship integration', () => {
     expect(response.relationship.relationship_type).toBe('OTHER');
   });
 
-  async function seedFamilyWithParentAndChild(actor: string, suffix: string) {
-    const meta = testMeta(actor, `corr-${suffix}`);
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: `idem-family-${suffix}` }, meta);
-    const parent = await service.addParent({
-      family_id: family.family.family_id,
-      role: 'MOTHER',
-      display_name: '妈妈',
-      idempotency_key: `idem-parent-${suffix}`,
-    }, meta);
+  async function seedFamilyWithParentAndChild(_actor: string, suffix: string) {
+    const seed = await seedTrustedFamilyGuardian(pool, `relationship-${suffix}`, { displayName: '王家', guardianName: '妈妈', parentRole: 'MOTHER' });
     const child = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       idempotency_key: `idem-child-${suffix}`,
-    }, meta);
+    }, seed.meta);
 
-    return { familyId: family.family.family_id, parentId: parent.parent.person_id, childId: child.child.person_id, meta };
+    return { familyId: seed.familyId, parentId: seed.guardianId, childId: child.child.person_id, meta: seed.meta };
   }
 
   async function seedFamilyWithTwoParentsAndTwoChildren(actor: string, suffix: string) {

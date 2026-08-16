@@ -12,10 +12,13 @@ export interface ApiClientDeps {
   onUnauthorized?: () => void; // 401 → 跳登录
 }
 
+/** 仅允许调用方补充幂等与关联追踪头；认证始终由 HttpOnly cookie 承担。 */
+export interface ApiRequestOptions { headers?: Record<string, string>; }
+
 export function createApiClient(deps: ApiClientDeps) {
   const f = deps.fetchImpl ?? fetch;
-  async function request<T>(method: string, path: string, body?: unknown): Promise<ApiResult<T>> {
-    const headers: Record<string, string> = {};
+  async function request<T>(method: string, path: string, body?: unknown, options?: ApiRequestOptions): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = { ...(options?.headers ?? {}) };
     if (body !== undefined) headers['content-type'] = 'application/json';
     const res = await f(`${deps.baseUrl}${path}`, {
       method,
@@ -37,6 +40,6 @@ export function createApiClient(deps: ApiClientDeps) {
   }
   return {
     get: <T>(path: string) => request<T>('GET', path),
-    post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
+    post: <T>(path: string, body?: unknown, options?: ApiRequestOptions) => request<T>('POST', path, body, options),
   };
 }

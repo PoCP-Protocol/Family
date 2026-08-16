@@ -84,7 +84,29 @@ export class OrchestrationRepository implements OnModuleDestroy {
          JOIN resource_offer_capabilities roc ON roc.resource_offer_id=o.resource_offer_id
          JOIN growth_capabilities gc ON gc.growth_capability_id=roc.growth_capability_id
          JOIN growth_intent_capabilities gic ON gic.growth_capability_id=roc.growth_capability_id
-        WHERE gic.growth_intent_id=$1 AND o.availability_status='ACTIVE'
+        WHERE gic.growth_intent_id=$1
+          AND o.availability_status='ACTIVE'
+          -- 内部 NO_ACTION / AI_COACH 仍由首条纵切 policy 单独控制；
+          -- 所有可供阅读或练习的内容资产必须经资源目录 ADMITTED 准入，不能仅凭 content_ref 字符串进入家庭服务。
+          AND (
+            o.resource_type NOT IN ('PRACTICE','CONTENT')
+            OR EXISTS (
+              SELECT 1
+              FROM resource_asset_admissions aa
+              JOIN resource_asset_versions av ON av.resource_asset_version_id=aa.resource_asset_version_id
+              JOIN resource_assets a ON a.resource_asset_id=av.resource_asset_id
+              WHERE aa.resource_asset_version_id=o.resource_asset_version_id
+                AND aa.status='ADMITTED'
+                AND a.copyright_status IN ('OWNED','LICENSED')
+                AND av.primary_evidence_source_class <> 'UNVERIFIED_OR_INFERRED'
+                AND EXISTS (
+                  SELECT 1 FROM resource_asset_evidence ae
+                  WHERE ae.resource_asset_version_id=av.resource_asset_version_id
+                    AND ae.evidence_source_class <> 'UNVERIFIED_OR_INFERRED'
+                    AND ae.claim_scope IN ('PROVENANCE_ONLY','SAFETY_CONTEXT')
+                )
+            )
+          )
         GROUP BY o.resource_offer_id
         ORDER BY o.resource_code`, [growthIntentId]);
     return r.rows;
@@ -134,10 +156,11 @@ export class OrchestrationRepository implements OnModuleDestroy {
       const allowed = await client.query<{ resource_offer_id: string }>(
         `SELECT c.resource_offer_id FROM resource_recommendation_candidates c WHERE c.resource_recommendation_id=$1 AND c.eligibility_result='ELIGIBLE'`, [input.recommendationId]);
       const allowedIds = new Set(allowed.rows.map((r) => r.resource_offer_id));
-      if (input.decisionType === 'DECLINE' && input.selectedOfferIds.length) throw new Error('decline_cannot_select_offer');
-      if (input.decisionType !== 'DECLINE' && !input.selectedOfferIds.length) throw new Error('decision_requires_selected_offer');
+      // DECLINE 与 NO_ACTION 均是家庭的有效自主选择：不可夹带资源，也不生成可执行服务计划。
+      if (['DECLINE', 'NO_ACTION'].includes(input.decisionType) && input.selectedOfferIds.length) throw new Error('non_action_decision_cannot_select_offer');
+      if (!['DECLINE', 'NO_ACTION'].includes(input.decisionType) && !input.selectedOfferIds.length) throw new Error('decision_requires_selected_offer');
       if (input.selectedOfferIds.some((id) => !allowedIds.has(id))) throw new Error('decision_selected_offer_not_eligible_candidate');
-      const status = input.decisionType === 'DECLINE' ? 'DECLINED' : 'ACCEPTED';
+      const status = ['DECLINE', 'NO_ACTION'].includes(input.decisionType) ? 'DECLINED' : 'ACCEPTED';
       const inserted = await client.query<{ family_service_decision_id: string; status: string }>(
         `INSERT INTO family_service_decisions(family_id,resource_recommendation_id,decision_type,status,decided_by_person_id,rationale,idempotency_key,policy_version)
          VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING family_service_decision_id,status`,

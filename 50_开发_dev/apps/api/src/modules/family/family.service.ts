@@ -1885,8 +1885,11 @@ async function getConsentPersons(client: pg.PoolClient, request: GrantConsentReq
 }
 
 function assertActorIsGuardian(guardian: PersonDto, actorId: string): void {
-  if (!guardian.account_id || guardian.account_id !== actorId) {
-    throw new ForbiddenException('actor_must_match_guardian_account');
+  // 当前 Family 服务层的 actor 是经 FamilyScopeGuard/AuthService 解析出的可信 Person ID。
+  // ACTIVE account_person_binding 与 ACTIVE membership 已由 assertFamilyManagePermission 复检；
+  // 此处只保证作出同意的 actor 正是该 child 的指定监护人，不再用遗留 persons.account_id 字符串冒充身份。
+  if (guardian.person_id !== actorId) {
+    throw new ForbiddenException('actor_must_match_guardian_person');
   }
 }
 

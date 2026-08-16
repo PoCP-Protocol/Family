@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
+import { seedTrustedFamilyGuardian } from '../../test/family-auth-fixtures';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
 
@@ -25,36 +26,34 @@ describe('FamilyService AddParent integration', () => {
     await pool?.end();
   });
 
-  it('adds a parent, writes audit/event, and replays identical idempotency key', async () => {
-    const meta = testMeta('creator-1', 'corr-add-parent');
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: 'idem-family-parent' }, meta);
-
+  it('adds a parent through a trusted guardian context, writes audit/event, and replays idempotency', async () => {
+    const seed = await seedTrustedFamilyGuardian(pool, 'add-parent');
     const first = await service.addParent({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       role: 'MOTHER',
       display_name: '妈妈',
       account_id: 'acct-mom',
       idempotency_key: 'idem-add-parent-1',
-    }, meta);
+    }, seed.meta);
     const second = await service.addParent({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       role: 'MOTHER',
       display_name: '妈妈',
       account_id: 'acct-mom',
       idempotency_key: 'idem-add-parent-1',
-    }, meta);
+    }, seed.meta);
 
     expect(second).toEqual(first);
     expect(first.parent.person_type).toBe('PARENT');
     expect(first.parent.parent_role).toBe('MOTHER');
-    expect(first.parent.family_id).toBe(family.family.family_id);
+    expect(first.parent.family_id).toBe(seed.familyId);
 
-    const persons = await pool.query('select * from persons where family_id = $1', [family.family.family_id]);
+    const persons = await pool.query('select * from persons where family_id = $1', [seed.familyId]);
     const audits = await pool.query('select * from audit_logs where action_name = $1', ['AddParent']);
     const events = await pool.query('select * from outbox_events where event_name = $1', ['FamilyMemberAdded']);
     const profiles = await pool.query('select * from growth_profiles');
 
-    expect(persons.rowCount).toBe(1);
+    expect(persons.rowCount).toBe(2);
     expect(audits.rowCount).toBe(1);
     expect(events.rowCount).toBe(1);
     expect(events.rows[0].payload.person_role).toBe('PARENT');
@@ -74,40 +73,34 @@ describe('FamilyService AddParent integration', () => {
     await expectCount('outbox_events', 0);
   });
 
-  it('rejects an actor who did not create the family', async () => {
-    const family = await service.createFamily({
-      display_name: '王家',
-      idempotency_key: 'idem-family-permission',
-    }, testMeta('creator-1', 'corr-family-permission'));
-
+  it('rejects an actor without an ACTIVE binding and family membership', async () => {
+    const seed = await seedTrustedFamilyGuardian(pool, 'parent-permission');
     await expect(service.addParent({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       role: 'GUARDIAN',
       display_name: '监护人',
       idempotency_key: 'idem-parent-forbidden',
-    }, testMeta('other-actor', 'corr-parent-forbidden'))).rejects.toThrow('actor_has_family_manage_permission');
+    }, testMeta('other-actor', 'corr-parent-forbidden'))).rejects.toThrow('trusted_family_manage_context_required');
 
     const persons = await pool.query('select * from persons');
-    expect(persons.rowCount).toBe(0);
+    expect(persons.rowCount).toBe(1);
   });
 
   it('rejects idempotency key reuse with a different request hash', async () => {
-    const meta = testMeta('creator-1', 'corr-parent-conflict');
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: 'idem-family-parent-conflict' }, meta);
-
+    const seed = await seedTrustedFamilyGuardian(pool, 'parent-conflict');
     await service.addParent({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       role: 'MOTHER',
       display_name: '妈妈',
       idempotency_key: 'idem-parent-conflict',
-    }, meta);
+    }, seed.meta);
 
     await expect(service.addParent({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       role: 'FATHER',
       display_name: '爸爸',
       idempotency_key: 'idem-parent-conflict',
-    }, meta)).rejects.toThrow('Idempotency conflict');
+    }, seed.meta)).rejects.toThrow('Idempotency conflict');
   });
 
   async function expectCount(tableName: string, expected: number): Promise<void> {
@@ -117,10 +110,5 @@ describe('FamilyService AddParent integration', () => {
 });
 
 function testMeta(actor: string, correlationId: string) {
-  return {
-    actor,
-    correlationId,
-    source: 'vitest',
-    occurredAt: new Date().toISOString(),
-  };
+  return { actor, correlationId, source: 'vitest', occurredAt: new Date().toISOString() };
 }

@@ -1,6 +1,7 @@
 import { createGrowthApp, defaultConfig } from './app.js';
 import { createWafCommunityApp } from './waf.js';
 import { createPrincipalApp, defaultPrincipalConfig } from './principal.js';
+import { mountFamilyPlatform } from './platform/app/family-platform-host';
 
 const root = /** @type {HTMLElement | null} */ (document.querySelector('#app'));
 
@@ -23,7 +24,8 @@ if (searchParams.get('product') === 'principal' || window.location.hash === '#pr
   });
 } else if (searchParams.get('product') === 'waf' || window.location.hash === '#waf') {
   createWafCommunityApp(root);
-} else {
+} else if (searchParams.get('product') === 'legacy-growth' || window.location.hash === '#legacy-growth') {
+  // 仅作为既有 M2/Wave 演示兼容入口；默认 Family 体验不再从 URL 获取 actor/family/child 标识。
   const config = {
     ...defaultConfig,
     apiBaseUrl: searchParams.get('apiBaseUrl') ?? defaultConfig.apiBaseUrl,
@@ -33,6 +35,8 @@ if (searchParams.get('product') === 'principal' || window.location.hash === '#pr
     guardianPersonId: searchParams.get('guardianPersonId') ?? defaultConfig.guardianPersonId,
     wave2ApiMode: searchParams.get('wave2ApiMode') === 'real-api' ? 'real-api' : defaultConfig.wave2ApiMode,
   };
-
   createGrowthApp(root, config);
+} else {
+  // 默认消费者入口：HttpOnly cookie → 服务端家庭上下文 → Family Platform。
+  mountFamilyPlatform(root, { apiBaseUrl: searchParams.get('apiBaseUrl') ?? defaultConfig.apiBaseUrl });
 }

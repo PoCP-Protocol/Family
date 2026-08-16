@@ -2,12 +2,13 @@
 
 ```text
 DOC_KIND = PROGRAM_STATUS(执行/状态 SSOT —— 仅承载可变执行真相 + 指针,不承载战略)
-RULING   = 总架构师(2026-08-16)
-BASE     = master @ 2aa6da66050df087fd21b58df5718c1d274510e9
+RULING   = 总架构师/用户主计划执行指令(2026-08-16;仅校准可变执行状态)
+BASE     = master @ 2ce16a377d27898e48be10e11f75b15a4b12b26d
 PHASE0   = PASS_CLOSED(product-runtime-001 已合入 master)
-PHASE1   = ARCH-001 / PR#35 / PASS_CANDIDATE(架构契约,exact-head 复审中)
-RUNTIME  = HOLD
-NEXT_AUTHORIZED_STEP = NONE(合 master / 启动 runtime 均须总架构师点名授权)
+PHASE1   = ARCH-001 / master@2ce16a3 / ARCHITECTURE_MERGED(运行时代码仍须独立 Gate)
+PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / INTERNAL_DEVELOPMENT_AND_DB_VERIFICATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@210a5fe)
+RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
+NEXT_AUTHORIZED_STEP = G1_REAL_DATABASE_AND_SECURITY_VERIFICATION(按主计划；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -19,15 +20,15 @@ PR34     = PARK(商业蓝图 companion,未授权 runtime)
 
 ```text
 Phase0 战略+代码重定基            = PASS_CLOSED(北极星→编排;Program01→FIRST_PROGRAM_RESOURCE;Program Runtime→@family/program-runtime;Program-派生 completed 已移除)
-Phase1 Growth Resource 架构契约   = PASS_CANDIDATE(ARCH-001 / PR#35;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程 + 自有 Architecture Gate;RUNTIME=HOLD)
-Phase2 首条纵切 runtime           = 未授权(待 ARCH-001 §11 Gate 全 PASS + per-phase runtime 授权);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
+Phase1 Growth Resource 架构契约   = ARCHITECTURE_MERGED(master@2ce16a3;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程；运行时代码另行验证)
+Phase2 首条纵切 runtime           = INTERNAL_DEVELOPMENT_AND_DB_VERIFICATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@210a5fe;仅确定性内部验证；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 
 ## 二、开放 PR 处置
 
 ```text
-PR#35 orchestration-arch-001 = Phase1 架构契约,exact-head 复审中,AUTO_MERGE=NO
+PR#35 orchestration-arch-001 = Phase1 架构契约,已入 master@2ce16a3;后续 runtime 分支仍须独立审查与 per-merge authorization
 PR#34 v3-commerce-blueprint   = PARK(商业蓝图 companion;六点待修;RUNTIME=HOLD)
 PR#24 / PR#25(历史 W2R-106/PRODUCT-001 设计)= 见各自 PR;非当前纵切,不做 Runtime
 合 master 一律须显式 per-merge 授权(pr + exact head_sha + authorized_by: family-chief-architect)。

@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
+import { seedTrustedFamilyGuardian } from '../../test/family-auth-fixtures';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
 
@@ -26,17 +27,17 @@ describe('FamilyService AddChild integration', () => {
   });
 
   it('adds a child, writes audit/event, and stores birth_date as a fact only', async () => {
-    const meta = testMeta('creator-1', 'corr-add-child');
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: 'idem-family-child' }, meta);
+    const seed = await seedTrustedFamilyGuardian(pool, 'add-child');
+    const meta = seed.meta;
 
     const first = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       birth_date: '2012-05-06',
       idempotency_key: 'idem-add-child-1',
     }, meta);
     const second = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       birth_date: '2012-05-06',
       idempotency_key: 'idem-add-child-1',
@@ -50,18 +51,18 @@ describe('FamilyService AddChild integration', () => {
     const events = await pool.query('select * from outbox_events where event_name = $1', ['FamilyMemberAdded']);
     expect(events.rowCount).toBe(1);
     expect(events.rows[0].payload.person_role).toBe('CHILD');
-    await expectCount('persons', 1);
-    await expectCount('audit_logs', 2);
-    await expectCount('idempotency_keys', 2);
+    await expectCount('persons', 2);
+    await expectCount('audit_logs', 1);
+    await expectCount('idempotency_keys', 1);
     await expectMinorDataNoSideEffects();
   });
 
   it('accepts missing birth_date without inferring life stage or growth state', async () => {
-    const meta = testMeta('creator-1', 'corr-child-no-birth-date');
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: 'idem-family-child-no-date' }, meta);
+    const seed = await seedTrustedFamilyGuardian(pool, 'child-no-birth-date');
+    const meta = seed.meta;
 
     const response = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       idempotency_key: 'idem-child-no-date',
     }, meta);
@@ -71,32 +72,29 @@ describe('FamilyService AddChild integration', () => {
   });
 
   it('rejects unauthorized actor and creates no child row', async () => {
-    const family = await service.createFamily({
-      display_name: '王家',
-      idempotency_key: 'idem-family-child-permission',
-    }, testMeta('creator-1', 'corr-child-permission'));
+    const seed = await seedTrustedFamilyGuardian(pool, 'child-permission');
 
     await expect(service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       idempotency_key: 'idem-child-forbidden',
-    }, testMeta('other-actor', 'corr-child-forbidden'))).rejects.toThrow('actor_has_family_manage_permission');
+    }, testMeta('other-actor', 'corr-child-forbidden'))).rejects.toThrow('trusted_family_manage_context_required');
 
-    await expectCount('persons', 0);
+    await expectCount('persons', 1);
   });
 
   it('rejects idempotency key reuse with a different request hash', async () => {
-    const meta = testMeta('creator-1', 'corr-child-conflict');
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: 'idem-family-child-conflict' }, meta);
+    const seed = await seedTrustedFamilyGuardian(pool, 'child-conflict');
+    const meta = seed.meta;
 
     await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       idempotency_key: 'idem-child-conflict',
     }, meta);
 
     await expect(service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '另一个孩子',
       idempotency_key: 'idem-child-conflict',
     }, meta)).rejects.toThrow('Idempotency conflict');

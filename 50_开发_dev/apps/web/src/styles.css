@@ -2786,3 +2786,43 @@ h3 {
     padding: 20px;
   }
 }
+
+/* FAMILY_APP_EXPERIENCE_VERTICAL_001 · 复用现有杏色家庭成长视觉语言 */
+.family-growth-shell {
+  width: min(920px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 56px;
+  color: var(--ink);
+}
+.family-growth-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.growth-brand { color: var(--forest-dark); font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; }
+.growth-brand-note { margin-left: 8px; color: var(--muted); font-family: var(--font-body); font-size: .76rem; font-weight: 700; letter-spacing: .06em; }
+.growth-hero { max-width: 650px; margin: 44px 0 22px; }
+.growth-eyebrow { margin: 0 0 8px; color: var(--amber); font-size: .76rem; font-weight: 700; letter-spacing: .12em; }
+.growth-title { margin: 0; color: var(--forest-dark); font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.18; }
+.growth-lead { margin: 14px 0 0; color: var(--ink-soft); line-height: 1.8; }
+.growth-step-card { border: 1px solid rgba(159, 101, 45, .18); border-radius: var(--radius-xl); padding: clamp(22px, 5vw, 42px); background: linear-gradient(145deg, #fffdf8, #fff7ed); box-shadow: var(--shadow-card); }
+.step-title { margin: 0; color: var(--forest-dark); }
+.step-copy { margin: 10px 0 24px; color: var(--ink-soft); line-height: 1.75; }
+.growth-form { display: grid; gap: 18px; }
+.form-field { display: grid; gap: 8px; color: var(--ink-soft); font-size: .94rem; font-weight: 700; }
+.form-field textarea, .form-field select { width: 100%; min-height: 46px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); padding: 12px; background: rgba(255,253,248,.9); color: var(--ink); font: inherit; font-weight: 400; line-height: 1.55; }
+.form-field textarea:focus, .form-field select:focus { outline: 3px solid rgba(233, 170, 112, .26); border-color: var(--apricot); }
+.journey-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.primary-action, .quiet-action { min-height: 44px; border-radius: 999px; padding: 0 18px; font: inherit; font-weight: 700; cursor: pointer; }
+.primary-action { border: 1px solid var(--forest); background: var(--forest); color: #fffdf8; box-shadow: 0 8px 18px rgba(31,90,69,.16); }
+.primary-action:disabled { cursor: wait; opacity: .62; }
+.quiet-action { border: 1px solid rgba(31,90,69,.18); background: rgba(255,253,248,.7); color: var(--forest-dark); }
+.resource-choices { display: grid; gap: 12px; }
+.resource-choice { display: flex; align-items: flex-start; gap: 12px; border: 1px solid rgba(31,90,69,.15); border-radius: var(--radius-md); padding: 15px; background: rgba(255,253,248,.84); cursor: pointer; }
+.resource-choice:has(input:checked) { border-color: var(--forest); box-shadow: inset 0 0 0 1px var(--forest); background: var(--sage-soft); }
+.resource-choice input { margin-top: 5px; accent-color: var(--forest); }
+.resource-copy { display: grid; gap: 5px; }
+.resource-copy small { color: var(--ink-soft); line-height: 1.55; }
+.resource-copy em { color: var(--amber); font-size: .78rem; font-style: normal; font-weight: 700; }
+.growth-notice { min-height: 1.5em; margin: 18px 2px 0; color: var(--ink-soft); line-height: 1.7; }
+.growth-privacy { margin: 13px 2px 0; color: var(--muted); font-size: .8rem; line-height: 1.65; }
+.family-boundary-screen { width: min(620px, calc(100% - 32px)); margin: 12vh auto; border: 1px solid rgba(31,90,69,.14); border-radius: var(--radius-lg); padding: 34px; background: rgba(255,253,248,.92); box-shadow: var(--shadow-soft); }
+.family-boundary-screen h1 { color: var(--forest-dark); font-family: var(--font-display); font-size: 2rem; }
+.family-boundary-screen p { color: var(--ink-soft); line-height: 1.75; }
+@media (max-width: 600px) { .family-growth-shell { width: min(100% - 24px, 920px); padding-top: 18px; } .growth-hero { margin-top: 30px; } .growth-step-card { border-radius: var(--radius-lg); } }

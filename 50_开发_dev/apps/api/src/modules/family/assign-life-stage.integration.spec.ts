@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanFamilyCoreTables, createTestPool, getTestDatabaseUrl } from '../../test/test-database';
+import { seedTrustedFamilyGuardian } from '../../test/family-auth-fixtures';
 import { FamilyRepository } from './family.repository';
 import { FamilyService } from './family.service';
 
@@ -49,8 +50,8 @@ describe('FamilyService AssignLifeStage integration', () => {
     expect(first.assignment.effective_to).toBeNull();
     expect(first.assignment.source).toBe('vitest');
     await expectCount('life_stage_assignments', 1);
-    await expectCount('audit_logs', 3);
-    await expectCount('outbox_events', 3);
+    await expectCount('audit_logs', 2);
+    await expectCount('outbox_events', 2);
 
     const event = await pool.query('select payload from outbox_events where event_name = $1', ['LifeStageAssigned']);
     expect(event.rowCount).toBe(1);
@@ -115,7 +116,7 @@ describe('FamilyService AssignLifeStage integration', () => {
       life_stage_code: 'EARLY_ADOLESCENCE_12_15',
       effective_from: '2026-01-01T00:00:00.000Z',
       idempotency_key: 'idem-life-stage-forbidden',
-    }, testMeta('other-actor', 'corr-life-stage-forbidden'))).rejects.toThrow('actor_has_family_manage_permission');
+    }, testMeta('other-actor', 'corr-life-stage-forbidden'))).rejects.toThrow('trusted_family_manage_context_required');
 
     await service.assignLifeStage({
       family_id: seed.familyId,
@@ -142,29 +143,20 @@ describe('FamilyService AssignLifeStage integration', () => {
     await expectCount('growth_events', 0);
   });
 
-  async function seedFamilyWithChild(actor: string, suffix: string, birthDate?: string) {
-    const meta = testMeta(actor, `corr-${suffix}`);
-    const family = await service.createFamily({ display_name: '王家', idempotency_key: `idem-family-${suffix}` }, meta);
+  async function seedFamilyWithChild(_actor: string, suffix: string, birthDate?: string) {
+    const seed = await seedTrustedFamilyGuardian(pool, `life-stage-${suffix}`, { displayName: '王家', guardianName: '妈妈', parentRole: 'MOTHER' });
     const child = await service.addChild({
-      family_id: family.family.family_id,
+      family_id: seed.familyId,
       display_name: '孩子',
       birth_date: birthDate,
       idempotency_key: `idem-child-${suffix}`,
-    }, meta);
+    }, seed.meta);
 
-    return { familyId: family.family.family_id, childId: child.child.person_id, meta };
+    return { familyId: seed.familyId, childId: child.child.person_id, meta: seed.meta, parentId: seed.guardianId };
   }
 
   async function seedFamilyWithParentAndChild(actor: string, suffix: string) {
-    const seed = await seedFamilyWithChild(actor, suffix);
-    const parent = await service.addParent({
-      family_id: seed.familyId,
-      role: 'MOTHER',
-      display_name: '妈妈',
-      idempotency_key: `idem-parent-${suffix}`,
-    }, seed.meta);
-
-    return { familyId: seed.familyId, parentId: parent.parent.person_id, childId: seed.childId, meta: seed.meta };
+    return seedFamilyWithChild(actor, suffix);
   }
 
   async function expectNoImplicitSideEffects(): Promise<void> {
