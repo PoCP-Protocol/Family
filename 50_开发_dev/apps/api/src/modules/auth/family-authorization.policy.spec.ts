@@ -50,6 +50,24 @@ describe('FamilyAuthorizationPolicy explicit matrix', () => {
     expect(() => assertFamilyRoleCan('CHILD_SUBJECT', 'ReadFamily')).not.toThrow(); // LIMITED 放行
   });
 
+  it('Phase 8 读取投影允许家庭范围读取，handoff 草案写入仅家庭责任成人', () => {
+    for (const action of ['ReadFamilyProgressProjection','ReadFamilyServiceMetrics'] as const) {
+      expect(roleCan('OWNER_GUARDIAN', action)).toBe(true);
+      expect(roleCan('GUARDIAN', action)).toBe(true);
+      expect(roleCan('ADULT_MEMBER', action)).toBe(true); // LIMITED：领域层仍绑定 trusted family context
+      expect(roleCan('CHILD_SUBJECT', action)).toBe(true); // LIMITED：仅服务过程投影，不暴露 Steward 队列
+    }
+    expect(roleCan('OWNER_GUARDIAN', 'ReadFamilyStewardQueue')).toBe(true);
+    expect(roleCan('ADULT_MEMBER', 'ReadFamilyStewardQueue')).toBe(true); // LIMITED
+    expect(roleCan('CHILD_SUBJECT', 'ReadFamilyStewardQueue')).toBe(false);
+    for (const action of ['CreateStewardHandoffDraft','UpdateStewardHandoffDraft'] as const) {
+      expect(roleCan('OWNER_GUARDIAN', action)).toBe(true);
+      expect(roleCan('GUARDIAN', action)).toBe(true);
+      expect(roleCan('ADULT_MEMBER', action)).toBe(false);
+      expect(roleCan('CHILD_SUBJECT', action)).toBe(false);
+    }
+  });
+
   it('未知角色 → fail closed(DENY)', () => {
     expect(roleCan('STRANGER' as FamilyRole, 'ReadFamily')).toBe(false);
   });

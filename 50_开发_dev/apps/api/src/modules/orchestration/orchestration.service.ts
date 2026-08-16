@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { buildCandidates, evaluateExecutionEligibility, evaluateRecommendationEligibility } from './orchestration.policy';
 import { OrchestrationRepository } from './orchestration.repository';
-import type { AuditInput, CreateIntentInput, CreatePlanInput, DecideServiceInput, OpenCaseInput, RecordFollowUpInput, RequestRecommendationInput } from './orchestration.types';
+import type { AuditInput, CreateIntentInput, CreatePlanInput, DecideServiceInput, CreateStewardHandoffDraftInput, FamilyProgressProjection, FamilyServiceMetrics, OpenCaseInput, RecordFollowUpInput, RequestRecommendationInput, StewardHandoffDraft, StewardQueueItem, UpdateStewardHandoffDraftInput } from './orchestration.types';
 
 @Injectable()
 export class OrchestrationService {
@@ -83,6 +83,26 @@ export class OrchestrationService {
         helpfulness_boundary: 'USER_PERCEIVED_HELPFULNESS_NOT_GROWTH_OUTCOME_OR_CAUSAL_PROOF',
       };
     } catch (error) { throw domainError(error); }
+  }
+
+  async getProgressProjection(familyId: string, subjectPersonId: string): Promise<FamilyProgressProjection> {
+    try { return await this.repo.progressProjection(familyId, subjectPersonId); } catch (error) { throw domainError(error); }
+  }
+
+  async getStewardQueue(familyId: string): Promise<StewardQueueItem[]> {
+    try { return await this.repo.stewardQueue(familyId); } catch (error) { throw domainError(error); }
+  }
+
+  async getServiceMetrics(familyId: string, subjectPersonId: string): Promise<FamilyServiceMetrics> {
+    try { return await this.repo.serviceMetrics(familyId, subjectPersonId); } catch (error) { throw domainError(error); }
+  }
+
+  async createStewardHandoffDraft(input: CreateStewardHandoffDraftInput, audit: AuditInput): Promise<StewardHandoffDraft> {
+    try { return await this.repo.createStewardHandoffDraft(input, audit); } catch (error) { throw domainError(error); }
+  }
+
+  async updateStewardHandoffDraft(input: UpdateStewardHandoffDraftInput, audit: AuditInput): Promise<StewardHandoffDraft> {
+    try { return await this.repo.updateStewardHandoffDraft(input, audit); } catch (error) { throw domainError(error); }
   }
 
   async getContextReuse(familyId: string, subjectPersonId: string) {

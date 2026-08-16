@@ -98,6 +98,76 @@ export interface RecommendationCandidate {
   limitations: string;
 }
 
+export type ProgressStage = 'NEED_CONFIRMED' | 'RESOURCE_OPTIONS' | 'FAMILY_DECIDED' | 'PLAN_READY' | 'SERVICE_OPEN' | 'FOLLOW_UP_DUE' | 'FOLLOW_UP_CAPTURED' | 'NO_ACTION' | 'PAUSED';
+export type StewardDraftStatus = 'DRAFT' | 'CANCELLED';
+
+export interface FamilyProgressProjection {
+  family_id: string;
+  subject_person_id: string;
+  current_stage: ProgressStage;
+  next_step: 'CONFIRM_SERVICE' | 'REVIEW_OPTIONS' | 'MAKE_FAMILY_DECISION' | 'REVIEW_PLAN' | 'OPEN_SERVICE_CASE' | 'RECORD_FOLLOW_UP' | 'NONE';
+  can_pause: boolean;
+  can_cancel: boolean;
+  last_family_signal: Helpfulness | null;
+  source_refs: { growth_intent_id: string | null; recommendation_id: string | null; decision_id: string | null; plan_id: string | null; service_case_id: string | null; follow_up_response_id: string | null };
+  truth_boundary: 'SERVICE_PROGRESS_NOT_GROWTH_OUTCOME';
+}
+
+export interface StewardQueueItem {
+  family_id: string;
+  service_case_id: string;
+  subject_person_id: string;
+  status: string;
+  needs_follow_up: boolean;
+  needs_recovery: boolean;
+  sla_class: string;
+  next_action_at: string | null;
+  reason_code: 'FOLLOW_UP_DUE' | 'ESCALATION_REVIEW' | 'OPEN_CASE' | 'NO_ACTION';
+  truth_boundary: 'INTERNAL_SERVICE_QUEUE_NOT_CHILD_OR_FAMILY_RISK_SCORE';
+}
+
+export interface FamilyServiceMetrics {
+  family_id: string;
+  subject_person_id: string;
+  time_to_first_recommendation_ms: number | null;
+  family_decision_rate: number;
+  service_case_open_rate: number;
+  follow_up_capture_rate: number;
+  helpfulness_signal: Helpfulness | null;
+  context_reuse_available: boolean;
+  truth_boundary: 'SERVICE_DELIVERY_AND_FAMILY_PERCEPTION_NOT_GROWTH_OUTCOME';
+}
+
+export interface CreateStewardHandoffDraftInput {
+  familyId: string;
+  serviceCaseId: string;
+  subjectPersonId: string;
+  sourceFollowUpResponseId?: string;
+  summaryText: string;
+  idempotencyKey: string;
+}
+
+export interface UpdateStewardHandoffDraftInput {
+  familyId: string;
+  draftId: string;
+  summaryText: string;
+  status?: StewardDraftStatus;
+  idempotencyKey: string;
+}
+
+export interface StewardHandoffDraft {
+  steward_handoff_draft_id: string;
+  family_id: string;
+  service_case_id: string;
+  subject_person_id: string;
+  source_follow_up_response_id: string | null;
+  status: StewardDraftStatus;
+  summary_text: string;
+  limitation_text: 'INTERNAL_DRAFT_NOT_ADVISOR_ASSIGNMENT_NOT_GROWTH_OUTCOME';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ContextReuseItem {
   serviceCaseId: string;
   needType: string;

@@ -1,8 +1,18 @@
 import type { ApiResult } from '../api/client';
 
 export interface FamilyGrowthJourneyApi {
+  get?<T>(path: string): Promise<ApiResult<T>>;
   post<T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }): Promise<ApiResult<T>>;
 }
+
+type ProgressProjection = {
+  current_stage: string;
+  next_step: string;
+  can_pause: boolean;
+  can_cancel: boolean;
+  last_family_signal: 'HELPFUL' | 'A_LITTLE_HELPFUL' | 'NOT_HELPFUL' | 'NOT_ANSWERED' | null;
+  truth_boundary: 'SERVICE_PROGRESS_NOT_GROWTH_OUTCOME';
+};
 
 interface Candidate {
   resource_offer_id: string;
@@ -28,6 +38,7 @@ interface JourneyState {
   decisionId?: string;
   planId?: string;
   serviceCaseId?: string;
+  progress?: ProgressProjection;
 }
 
 /**
@@ -47,6 +58,11 @@ export function mountFamilyGrowthJourney(
     'x-source': 'family-app-experience-vertical-001',
   });
   const setNotice = (notice: string) => { state.notice = notice; };
+  const refreshProgress = async () => {
+    if (!input.api.get) return;
+    const result = await input.api.get<ProgressProjection>(`/families/${input.familyId}/orchestration/progress/${input.subjectPersonId}`);
+    if (result.ok) { state.progress = result.data; render(); }
+  };
   const call = async <T>(path: string, body: unknown): Promise<T> => {
     const result = await input.api.post<T>(path, body, { headers: headers() });
     if (!result.ok) throw new Error(result.error.message || '暂时无法完成这一步。');
@@ -65,6 +81,7 @@ export function mountFamilyGrowthJourney(
     const intro = element('section', 'growth-hero');
     intro.append(element('p', 'growth-eyebrow', '我们的成长旅程'), element('h1', 'growth-title', titleFor(state.mode)), element('p', 'growth-lead', leadFor(state.mode)));
     shell.appendChild(intro);
+    if (state.progress) renderProgress(shell, state.progress);
 
     const content = element('section', 'growth-step-card');
     if (state.mode === 'need') renderNeed(content);
@@ -81,6 +98,14 @@ export function mountFamilyGrowthJourney(
     const privacy = element('p', 'growth-privacy', '仅家庭可见。记录只用于当前服务过程，不生成分数、标签、公开人设或成长结果承诺。');
     shell.appendChild(privacy);
     root.appendChild(shell);
+  };
+
+  const renderProgress = (host: HTMLElement, progress: ProgressProjection) => {
+    const card = element('aside', 'growth-progress-card');
+    card.append(element('p', 'growth-eyebrow', '家庭服务进度'), element('strong', 'growth-progress-stage', progressStageLabel(progress.current_stage)), element('p', 'growth-progress-next', `下一步：${nextStepLabel(progress.next_step)}`));
+    if (progress.last_family_signal) card.appendChild(element('small', 'growth-progress-signal', `家庭主观感受：${helpfulnessLabel(progress.last_family_signal)}`));
+    card.appendChild(element('small', 'growth-progress-boundary', '这是服务过程投影，不是孩子成长结果。家庭可以暂停或不继续。'));
+    host.appendChild(card);
   };
 
   const renderNeed = (host: HTMLElement) => {
@@ -103,8 +128,10 @@ export function mountFamilyGrowthJourney(
           subject_person_id: input.subjectPersonId, signal_text: signalText, goal_text: goalText,
         });
         state.growthIntentId = intent.growth_intent_id;
+        void refreshProgress();
         const recommendation = await call<Recommendation>(`/families/${input.familyId}/orchestration/recommendations`, { growth_intent_id: intent.growth_intent_id });
         state.recommendation = recommendation;
+        void refreshProgress();
         state.mode = 'recommendation';
         setNotice('这里只呈现已经过准入且符合当前同意范围的资源。');
       } catch (error) {
@@ -159,6 +186,7 @@ export function mountFamilyGrowthJourney(
         resource_recommendation_id: state.recommendation.resource_recommendation_id, decision_type: 'NO_ACTION', selected_offer_ids: [],
       });
       setNotice('已记录：这次先不行动。Family 不会自动安排后续服务。');
+      void refreshProgress();
     } catch (error) { setNotice(error instanceof Error ? error.message : '暂时无法记录选择。'); }
     finally { state.busy = false; render(); }
   };
@@ -177,7 +205,7 @@ export function mountFamilyGrowthJourney(
         const decision = await call<{ family_service_decision_id: string }>(`/families/${input.familyId}/orchestration/decisions`, {
           resource_recommendation_id: state.recommendation?.resource_recommendation_id, decision_type: 'ACCEPT', selected_offer_ids: [chosen.resource_offer_id],
         });
-        state.decisionId = decision.family_service_decision_id; state.mode = 'plan'; setNotice('家庭决定已记录；下一步只准备一个声明式计划。');
+        state.decisionId = decision.family_service_decision_id; state.mode = 'plan'; void refreshProgress(); setNotice('家庭决定已记录；下一步只准备一个声明式计划。');
       } catch (error) { setNotice(error instanceof Error ? error.message : '暂时无法确认。'); }
       finally { state.busy = false; render(); }
     });
@@ -195,7 +223,7 @@ export function mountFamilyGrowthJourney(
         const plan = await call<{ orchestration_plan_id: string }>(`/families/${input.familyId}/orchestration/plans`, { family_service_decision_id: state.decisionId });
         state.planId = plan.orchestration_plan_id;
         const serviceCase = await call<{ service_case_id: string }>(`/families/${input.familyId}/orchestration/service-cases`, { orchestration_plan_id: plan.orchestration_plan_id });
-        state.serviceCaseId = serviceCase.service_case_id; state.mode = 'case'; setNotice('练习已准备。你可以在合适的时候开始，也可以随时停下。');
+        state.serviceCaseId = serviceCase.service_case_id; state.mode = 'case'; void refreshProgress(); setNotice('练习已准备。你可以在合适的时候开始，也可以随时停下。');
       } catch (error) { setNotice(error instanceof Error ? error.message : '暂时无法准备练习。'); }
       finally { state.busy = false; render(); }
     });
@@ -227,7 +255,7 @@ export function mountFamilyGrowthJourney(
         await call(`/families/${input.familyId}/orchestration/service-cases/${state.serviceCaseId}/follow-up`, {
           helpfulness: helpfulness.value, response_text: reflection.value.trim() || undefined,
         });
-        setNotice('已记录这次主观感受。它不会被写成成长结果、因果结论或公开标签。');
+        setNotice('已记录这次主观感受。它不会被写成成长结果、因果结论或公开标签。'); void refreshProgress();
       } catch (error) { setNotice(error instanceof Error ? error.message : '暂时无法记录感受。'); }
       finally { state.busy = false; render(); }
     });
@@ -235,7 +263,12 @@ export function mountFamilyGrowthJourney(
   };
 
   render();
+  void refreshProgress();
 }
+
+function progressStageLabel(stage: string): string { return ({ NEED_CONFIRMED: '需要已确认', RESOURCE_OPTIONS: '正在查看可用选择', FAMILY_DECIDED: '家庭已作出选择', PLAN_READY: '计划已准备', SERVICE_OPEN: '服务进行中', FOLLOW_UP_DUE: '等待家庭回访', FOLLOW_UP_CAPTURED: '已记录家庭感受', NO_ACTION: '这次先不行动' } as Record<string, string>)[stage] ?? '家庭服务进行中'; }
+function nextStepLabel(step: string): string { return ({ CONFIRM_SERVICE: '确认这次想解决的事', REVIEW_OPTIONS: '查看已准入的候选', REVIEW_PLAN: '查看这次家庭决定', OPEN_SERVICE_CASE: '准备服务案例', RECORD_FOLLOW_UP: '记录家庭主观感受', NONE: '暂时没有必须做的事' } as Record<string, string>)[step] ?? '按家庭节奏继续'; }
+function helpfulnessLabel(value: ProgressProjection['last_family_signal']): string { return ({ HELPFUL: '有帮助', A_LITTLE_HELPFUL: '有一点帮助', NOT_HELPFUL: '暂时没有帮助', NOT_ANSWERED: '这次不回答' } as Record<string, string>)[value ?? ''] ?? '未记录'; }
 
 function element(tag: string, className = '', text?: string): HTMLElement {
   const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node;

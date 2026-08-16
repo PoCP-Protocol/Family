@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import pg from 'pg';
-import type { AuditInput, CreateIntentInput, CreatePlanInput, DecideServiceInput, OpenCaseInput, RecordFollowUpInput, RequestRecommendationInput, ResourceOffer, ResourceType } from './orchestration.types';
+import type { AuditInput, CreateIntentInput, CreatePlanInput, DecideServiceInput, FamilyProgressProjection, FamilyServiceMetrics, OpenCaseInput, RecordFollowUpInput, RequestRecommendationInput, ResourceOffer, ResourceType, StewardHandoffDraft, StewardQueueItem, CreateStewardHandoffDraftInput, UpdateStewardHandoffDraftInput } from './orchestration.types';
 import { COMMUNICATION_CONFLICT_NEED, VERTICAL_POLICY_VERSION } from './orchestration.types';
 
 @Injectable()
@@ -294,6 +294,106 @@ export class OrchestrationRepository implements OnModuleDestroy {
        WHERE p.family_id=$1 AND p.orchestration_plan_id=$2`, [familyId, planId]);
     if (!r.rowCount) throw new Error('plan_not_found_in_family');
     return this.activeServiceConsent(client, familyId, r.rows[0].subject_person_id);
+  }
+
+  async progressProjection(familyId: string, subjectPersonId: string): Promise<FamilyProgressProjection> {
+    const result = await this.pool.query({
+      text: `WITH latest_intent AS (
+        SELECT i.* FROM growth_intents i WHERE i.family_id=$1 AND i.subject_person_id=$2 ORDER BY i.created_at DESC LIMIT 1
+      )
+      SELECT i.growth_intent_id,
+             rr.resource_recommendation_id,
+             d.family_service_decision_id AS decision_id,
+             d.decision_type,
+             p.orchestration_plan_id,
+             c.service_case_id,
+             c.status AS case_status,
+             c.next_action_at,
+             fu.follow_up_response_id,
+             fu.helpfulness
+        FROM latest_intent i
+        LEFT JOIN LATERAL (SELECT * FROM resource_recommendations r WHERE r.family_id=$1 AND r.growth_intent_id=i.growth_intent_id ORDER BY r.created_at DESC LIMIT 1) rr ON true
+        LEFT JOIN LATERAL (SELECT * FROM family_service_decisions x WHERE x.family_id=$1 AND x.resource_recommendation_id=rr.resource_recommendation_id ORDER BY x.decided_at DESC LIMIT 1) d ON true
+        LEFT JOIN LATERAL (SELECT * FROM orchestration_plans x WHERE x.family_id=$1 AND x.family_service_decision_id=d.family_service_decision_id ORDER BY x.created_at DESC LIMIT 1) p ON true
+        LEFT JOIN LATERAL (SELECT * FROM service_cases x WHERE x.family_id=$1 AND x.orchestration_plan_id=p.orchestration_plan_id ORDER BY x.opened_at DESC LIMIT 1) c ON true
+        LEFT JOIN LATERAL (SELECT * FROM follow_up_responses x WHERE x.family_id=$1 AND x.service_case_id=c.service_case_id ORDER BY x.created_at DESC LIMIT 1) fu ON true`,
+      values: [familyId, subjectPersonId],
+    });
+    if (!result.rowCount) {
+      return { family_id: familyId, subject_person_id: subjectPersonId, current_stage: 'NEED_CONFIRMED', next_step: 'CONFIRM_SERVICE', can_pause: false, can_cancel: false, last_family_signal: null, source_refs: { growth_intent_id: null, recommendation_id: null, decision_id: null, plan_id: null, service_case_id: null, follow_up_response_id: null }, truth_boundary: 'SERVICE_PROGRESS_NOT_GROWTH_OUTCOME' };
+    }
+    const row = result.rows[0] as { growth_intent_id: string; resource_recommendation_id: string | null; decision_id: string | null; decision_type: string | null; orchestration_plan_id: string | null; service_case_id: string | null; case_status: string | null; next_action_at: string | null; follow_up_response_id: string | null; helpfulness: FamilyProgressProjection['last_family_signal'] };
+    const noAction = row.decision_type === 'NO_ACTION' || row.decision_type === 'DECLINE';
+    const stage = row.follow_up_response_id ? 'FOLLOW_UP_CAPTURED' : noAction ? 'NO_ACTION' : row.service_case_id ? (row.case_status === 'AWAITING_FOLLOW_UP' ? 'FOLLOW_UP_DUE' : 'SERVICE_OPEN') : row.orchestration_plan_id ? 'PLAN_READY' : row.decision_id ? 'FAMILY_DECIDED' : row.resource_recommendation_id ? 'RESOURCE_OPTIONS' : 'NEED_CONFIRMED';
+    const nextStep = stage === 'NEED_CONFIRMED' ? 'CONFIRM_SERVICE' : stage === 'RESOURCE_OPTIONS' ? 'REVIEW_OPTIONS' : stage === 'FAMILY_DECIDED' ? 'REVIEW_PLAN' : stage === 'PLAN_READY' ? 'OPEN_SERVICE_CASE' : stage === 'SERVICE_OPEN' || stage === 'FOLLOW_UP_DUE' ? 'RECORD_FOLLOW_UP' : 'NONE';
+    return { family_id: familyId, subject_person_id: subjectPersonId, current_stage: stage, next_step: nextStep, can_pause: stage === 'SERVICE_OPEN' || stage === 'FOLLOW_UP_DUE', can_cancel: stage !== 'FOLLOW_UP_CAPTURED' && stage !== 'NO_ACTION', last_family_signal: row.helpfulness, source_refs: { growth_intent_id: row.growth_intent_id, recommendation_id: row.resource_recommendation_id, decision_id: row.decision_id, plan_id: row.orchestration_plan_id, service_case_id: row.service_case_id, follow_up_response_id: row.follow_up_response_id }, truth_boundary: 'SERVICE_PROGRESS_NOT_GROWTH_OUTCOME' };
+  }
+
+  async stewardQueue(familyId: string): Promise<StewardQueueItem[]> {
+    const result = await this.pool.query<{ family_id: string; service_case_id: string; subject_person_id: string; status: string; sla_class: string; next_action_at: string | null; escalation_reason: string | null; has_follow_up: boolean }>(
+      `SELECT c.family_id,c.service_case_id,c.subject_person_id,c.status,c.sla_class,c.next_action_at,c.escalation_reason,
+              EXISTS (SELECT 1 FROM follow_up_responses fu WHERE fu.family_id=c.family_id AND fu.service_case_id=c.service_case_id) AS has_follow_up
+         FROM service_cases c
+        WHERE c.family_id=$1 AND c.status NOT IN ('CLOSED','CANCELLED')
+        ORDER BY c.next_action_at NULLS LAST,c.opened_at`, [familyId]);
+    return result.rows.map((row) => ({ family_id: row.family_id, service_case_id: row.service_case_id, subject_person_id: row.subject_person_id, status: row.status, needs_follow_up: !row.has_follow_up && row.status === 'AWAITING_FOLLOW_UP', needs_recovery: row.status === 'ESCALATED' || !!row.escalation_reason, sla_class: row.sla_class, next_action_at: row.next_action_at, reason_code: row.status === 'ESCALATED' || row.escalation_reason ? 'ESCALATION_REVIEW' : !row.has_follow_up && row.status === 'AWAITING_FOLLOW_UP' ? 'FOLLOW_UP_DUE' : 'OPEN_CASE', truth_boundary: 'INTERNAL_SERVICE_QUEUE_NOT_CHILD_OR_FAMILY_RISK_SCORE' }));
+  }
+
+  async serviceMetrics(familyId: string, subjectPersonId: string): Promise<FamilyServiceMetrics> {
+    const result = await this.pool.query<{ recommendation_count: string; decision_count: string; accepted_decision_count: string; case_count: string; follow_up_count: string; first_intent_at: string | null; first_recommendation_at: string | null; helpfulness: FamilyServiceMetrics['helpfulness_signal'] }>(
+      `WITH intents AS (SELECT growth_intent_id,created_at FROM growth_intents WHERE family_id=$1 AND subject_person_id=$2),
+       recs AS (SELECT r.resource_recommendation_id,r.growth_intent_id,r.created_at FROM resource_recommendations r JOIN intents i ON i.growth_intent_id=r.growth_intent_id),
+       decisions AS (SELECT d.family_service_decision_id,d.status,r.growth_intent_id FROM family_service_decisions d JOIN recs r ON r.resource_recommendation_id=d.resource_recommendation_id),
+       cases AS (SELECT c.service_case_id,c.orchestration_plan_id FROM service_cases c WHERE c.family_id=$1 AND c.subject_person_id=$2),
+       followups AS (SELECT fu.follow_up_response_id,fu.service_case_id,fu.helpfulness,fu.created_at FROM follow_up_responses fu JOIN cases c ON c.service_case_id=fu.service_case_id),
+       latest_fu AS (SELECT helpfulness FROM followups ORDER BY created_at DESC LIMIT 1)
+       SELECT (SELECT count(*) FROM recs)::text AS recommendation_count,
+              (SELECT count(*) FROM decisions)::text AS decision_count,
+              (SELECT count(*) FROM decisions WHERE status='ACCEPTED')::text AS accepted_decision_count,
+              (SELECT count(*) FROM cases)::text AS case_count,
+              (SELECT count(*) FROM followups)::text AS follow_up_count,
+              (SELECT min(created_at)::text FROM intents) AS first_intent_at,
+              (SELECT min(created_at)::text FROM recs) AS first_recommendation_at,
+              (SELECT helpfulness FROM latest_fu) AS helpfulness`, [familyId, subjectPersonId]);
+    const row = result.rows[0];
+    const recommendations = Number(row.recommendation_count);
+    const decisions = Number(row.decision_count);
+    const accepted = Number(row.accepted_decision_count);
+    const cases = Number(row.case_count);
+    const followups = Number(row.follow_up_count);
+    const time = row.first_intent_at && row.first_recommendation_at ? Math.max(0, new Date(row.first_recommendation_at).getTime() - new Date(row.first_intent_at).getTime()) : null;
+    return { family_id: familyId, subject_person_id: subjectPersonId, time_to_first_recommendation_ms: time, family_decision_rate: recommendations ? decisions / recommendations : 0, service_case_open_rate: accepted ? cases / accepted : 0, follow_up_capture_rate: cases ? followups / cases : 0, helpfulness_signal: row.helpfulness, context_reuse_available: cases > 0, truth_boundary: 'SERVICE_DELIVERY_AND_FAMILY_PERCEPTION_NOT_GROWTH_OUTCOME' };
+  }
+
+  async createStewardHandoffDraft(input: CreateStewardHandoffDraftInput, audit: AuditInput): Promise<StewardHandoffDraft> {
+    return this.withTransaction(async (client) => {
+      const existing = await client.query<StewardHandoffDraft>(`SELECT steward_handoff_draft_id,family_id,service_case_id,subject_person_id,source_follow_up_response_id,status,summary_text,limitation_text,created_at::text,updated_at::text FROM steward_handoff_drafts WHERE family_id=$1 AND idempotency_key=$2`, [input.familyId, input.idempotencyKey]);
+      if (existing.rowCount) return existing.rows[0];
+      await this.assertAdultActor(client, input.familyId, audit.actorId);
+      const relation = await client.query(`SELECT service_case_id FROM service_cases WHERE family_id=$1 AND service_case_id=$2 AND subject_person_id=$3 AND status NOT IN ('CLOSED','CANCELLED')`, [input.familyId, input.serviceCaseId, input.subjectPersonId]);
+      if (!relation.rowCount) throw new Error('service_case_not_open_in_family');
+      if (input.sourceFollowUpResponseId) {
+        const followup = await client.query(`SELECT follow_up_response_id FROM follow_up_responses WHERE family_id=$1 AND service_case_id=$2 AND follow_up_response_id=$3`, [input.familyId, input.serviceCaseId, input.sourceFollowUpResponseId]);
+        if (!followup.rowCount) throw new Error('follow_up_not_found_in_family');
+      }
+      const inserted = await client.query<StewardHandoffDraft>(`INSERT INTO steward_handoff_drafts(family_id,service_case_id,subject_person_id,source_follow_up_response_id,summary_text,created_by_person_id,updated_by_person_id,idempotency_key,policy_version) VALUES($1,$2,$3,$4,$5,$6,$6,$7,$8) RETURNING steward_handoff_draft_id,family_id,service_case_id,subject_person_id,source_follow_up_response_id,status,summary_text,limitation_text,created_at::text,updated_at::text`, [input.familyId,input.serviceCaseId,input.subjectPersonId,input.sourceFollowUpResponseId ?? null,input.summaryText,audit.actorId,input.idempotencyKey,VERTICAL_POLICY_VERSION]);
+      await this.writeAudit(client, input.familyId, audit, input.idempotencyKey, 'CreateStewardHandoffDraft', 'steward_handoff_draft', inserted.rows[0].steward_handoff_draft_id, 'SUCCESS');
+      return inserted.rows[0];
+    });
+  }
+
+  async updateStewardHandoffDraft(input: UpdateStewardHandoffDraftInput, audit: AuditInput): Promise<StewardHandoffDraft> {
+    return this.withTransaction(async (client) => {
+      await this.assertAdultActor(client, input.familyId, audit.actorId);
+      const updated = await client.query<StewardHandoffDraft>(`UPDATE steward_handoff_drafts SET summary_text=$1,status=coalesce($2,status),updated_by_person_id=$3,updated_at=now() WHERE family_id=$4 AND steward_handoff_draft_id=$5 RETURNING steward_handoff_draft_id,family_id,service_case_id,subject_person_id,source_follow_up_response_id,status,summary_text,limitation_text,created_at::text,updated_at::text`, [input.summaryText,input.status ?? null,audit.actorId,input.familyId,input.draftId]);
+      if (!updated.rowCount) throw new Error('steward_handoff_draft_not_found_in_family');
+      await this.writeAudit(client, input.familyId, audit, input.idempotencyKey, 'UpdateStewardHandoffDraft', 'steward_handoff_draft', input.draftId, 'SUCCESS');
+      return updated.rows[0];
+    });
+  }
+
+  private async writeAudit(client: pg.PoolClient, familyId: string, audit: AuditInput, idempotencyKey: string, actionName: string, resourceType: string, resourceId: string, result: string): Promise<void> {
+    await client.query(`INSERT INTO audit_logs(family_id,actor_type,actor_id,action_name,resource_type,resource_id,correlation_id,idempotency_key,result,metadata) VALUES($1,'PERSON',$2,$3,$4,$5,$6,$7,$8,$9)`, [familyId,audit.actorId,actionName,resourceType,resourceId,audit.correlationId,idempotencyKey,result,JSON.stringify({ source: audit.source, policy_version: VERTICAL_POLICY_VERSION, boundary: 'INTERNAL_FAMILY_SCOPED_DRAFT_NOT_EXTERNAL_HANDOFF' })]);
   }
 
   private async assertAdultActor(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {

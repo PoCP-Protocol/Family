@@ -46,6 +46,18 @@ describe('FAMILY_APP_EXPERIENCE_VERTICAL_001', () => {
     expect(root.textContent).toContain('这次先不行动');
   });
 
+  it('renders a read-only service progress projection without internal ids or growth outcome claims', async () => {
+    const root = document.createElement('div');
+    const get = vi.fn().mockResolvedValue({ ok: true, data: { current_stage: 'FOLLOW_UP_DUE', next_step: 'RECORD_FOLLOW_UP', can_pause: true, can_cancel: true, last_family_signal: null, truth_boundary: 'SERVICE_PROGRESS_NOT_GROWTH_OUTCOME' } });
+    mountFamilyGrowthJourney(root, { api: { get, post: vi.fn() }, familyId: 'family-from-server', subjectPersonId: 'child-from-server', onBack: vi.fn() });
+    await tick();
+    expect(get).toHaveBeenCalledWith('/families/family-from-server/orchestration/progress/child-from-server');
+    expect(root.textContent).toContain('等待家庭回访');
+    expect(root.textContent).toContain('不是孩子成长结果');
+    expect(root.textContent).not.toContain('family-from-server');
+    expect(root.textContent).not.toContain('child-from-server');
+  });
+
   it('hides non-Practice/Content candidates and still preserves the family NO_ACTION path', async () => {
     const root = document.createElement('div');
     const post = vi.fn()

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Patch, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction, RequireTrustedFamilyContext } from '../auth/family-platform-auth.guard';
 import { OrchestrationService } from './orchestration.service';
 import { assertIdempotencyKey, assertUuid, type CreateIntentInput, type CreatePlanInput, type DecideServiceInput, type OpenCaseInput, type RecordFollowUpInput, type RequestRecommendationInput } from './orchestration.types';
@@ -100,6 +100,41 @@ export class OrchestrationController {
     return this.service.recordFollowUp(input, audit(actorId, correlationId, source));
   }
 
+  @Get('progress/:subjectPersonId')
+  @RequireFamilyAction('ReadFamilyProgressProjection')
+  async progress(@Param('familyId') familyId: string, @Param('subjectPersonId') subjectPersonId: string, @ActorId() actorId: string) {
+    assertTrusted(actorId); assertUuidSafe(familyId, 'family_id'); assertUuidSafe(subjectPersonId, 'subject_person_id');
+    return this.service.getProgressProjection(familyId, subjectPersonId);
+  }
+
+  @Get('steward/queue')
+  @RequireFamilyAction('ReadFamilyStewardQueue')
+  async stewardQueue(@Param('familyId') familyId: string, @ActorId() actorId: string) {
+    assertTrusted(actorId); assertUuidSafe(familyId, 'family_id');
+    return { family_id: familyId, items: await this.service.getStewardQueue(familyId), boundary: 'INTERNAL_FAMILY_SCOPED_QUEUE_NOT_CROSS_FAMILY' };
+  }
+
+  @Get('service-metrics/:subjectPersonId')
+  @RequireFamilyAction('ReadFamilyServiceMetrics')
+  async serviceMetrics(@Param('familyId') familyId: string, @Param('subjectPersonId') subjectPersonId: string, @ActorId() actorId: string) {
+    assertTrusted(actorId); assertUuidSafe(familyId, 'family_id'); assertUuidSafe(subjectPersonId, 'subject_person_id');
+    return this.service.getServiceMetrics(familyId, subjectPersonId);
+  }
+
+  @Post('steward/handoff-drafts')
+  @RequireFamilyAction('CreateStewardHandoffDraft')
+  async createStewardHandoffDraft(@Param('familyId') familyId: string, @Body() body: unknown, @ActorId() actorId: string, @Headers('idempotency-key') idempotencyKey?: string, @Headers('x-correlation-id') correlationId?: string, @Headers('x-source') source?: string) {
+    assertTrusted(actorId); assertUuidSafe(familyId, 'family_id');
+    return this.service.createStewardHandoffDraft(stewardDraftInput(familyId, body, idempotencyKey), audit(actorId, correlationId, source));
+  }
+
+  @Patch('steward/handoff-drafts/:draftId')
+  @RequireFamilyAction('UpdateStewardHandoffDraft')
+  async updateStewardHandoffDraft(@Param('familyId') familyId: string, @Param('draftId') draftId: string, @Body() body: unknown, @ActorId() actorId: string, @Headers('idempotency-key') idempotencyKey?: string, @Headers('x-correlation-id') correlationId?: string, @Headers('x-source') source?: string) {
+    assertTrusted(actorId); assertUuidSafe(familyId, 'family_id'); assertUuidSafe(draftId, 'draft_id');
+    return this.service.updateStewardHandoffDraft(stewardDraftUpdateInput(familyId, draftId, body, idempotencyKey), audit(actorId, correlationId, source));
+  }
+
   @Get('context-reuse/:subjectPersonId')
   @RequireFamilyAction('ReadFamily')
   async contextReuse(
@@ -150,6 +185,15 @@ function decisionInput(familyId: string, body: unknown, idempotencyKey?: string)
 }
 function planInput(familyId: string, body: unknown, idempotencyKey?: string): CreatePlanInput { const b = obj(body); return { familyId, decisionId: id(b.family_service_decision_id, 'family_service_decision_id'), idempotencyKey: key(idempotencyKey) }; }
 function openCaseInput(familyId: string, body: unknown, idempotencyKey?: string): OpenCaseInput { const b = obj(body); return { familyId, planId: id(b.orchestration_plan_id, 'orchestration_plan_id'), idempotencyKey: key(idempotencyKey) }; }
+function stewardDraftInput(familyId: string, body: unknown, idempotencyKey?: string) {
+  const b = obj(body);
+  return { familyId, serviceCaseId: id(b.service_case_id, 'service_case_id'), subjectPersonId: id(b.subject_person_id, 'subject_person_id'), sourceFollowUpResponseId: b.source_follow_up_response_id === undefined ? undefined : id(b.source_follow_up_response_id, 'source_follow_up_response_id'), summaryText: text(b.summary_text, 'summary_text', 3, 4000), idempotencyKey: key(idempotencyKey) };
+}
+function stewardDraftUpdateInput(familyId: string, draftId: string, body: unknown, idempotencyKey?: string) {
+  const b = obj(body); const status = b.status === undefined ? undefined : text(b.status, 'status', 4, 16);
+  if (status !== undefined && !['DRAFT', 'CANCELLED'].includes(status)) throw new BadRequestException('invalid_status');
+  return { familyId, draftId, summaryText: text(b.summary_text, 'summary_text', 3, 4000), status: status as 'DRAFT' | 'CANCELLED' | undefined, idempotencyKey: key(idempotencyKey) };
+}
 function followUpInput(familyId: string, serviceCaseId: string, body: unknown, idempotencyKey?: string): RecordFollowUpInput {
   const b = obj(body); const helpfulness = text(b.helpfulness, 'helpfulness', 2, 32) as RecordFollowUpInput['helpfulness'];
   if (!['HELPFUL','A_LITTLE_HELPFUL','NOT_HELPFUL','NOT_ANSWERED'].includes(helpfulness)) throw new BadRequestException('invalid_helpfulness');

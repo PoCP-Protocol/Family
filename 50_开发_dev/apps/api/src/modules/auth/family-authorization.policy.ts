@@ -11,7 +11,9 @@ export type FamilyNamedAction =
   | 'GrantConsent' | 'WithdrawConsent' | 'RecordPerspective'
   | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
   | 'CreateGrowthIntent' | 'RequestResourceRecommendation' | 'DecideFamilyService'
-  | 'CreateOrchestrationPlan' | 'OpenServiceCase' | 'RecordServiceFollowUp';
+  | 'CreateOrchestrationPlan' | 'OpenServiceCase' | 'RecordServiceFollowUp'
+  | 'ReadFamilyProgressProjection' | 'ReadFamilyStewardQueue' | 'ReadFamilyServiceMetrics'
+  | 'CreateStewardHandoffDraft' | 'UpdateStewardHandoffDraft';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -34,6 +36,11 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   CreateOrchestrationPlan:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
   OpenServiceCase:             { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
   RecordServiceFollowUp:       { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
+  ReadFamilyProgressProjection: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'LIMITED' },
+  ReadFamilyStewardQueue:        { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
+  ReadFamilyServiceMetrics:      { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'LIMITED' },
+  CreateStewardHandoffDraft:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  UpdateStewardHandoffDraft:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */

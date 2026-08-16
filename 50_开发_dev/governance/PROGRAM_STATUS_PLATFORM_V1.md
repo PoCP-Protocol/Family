@@ -6,9 +6,10 @@ RULING   = 总架构师/用户主计划执行指令(2026-08-16;仅校准可变�
 BASE     = master @ 2ce16a377d27898e48be10e11f75b15a4b12b26d
 PHASE0   = PASS_CLOSED(product-runtime-001 已合入 master)
 PHASE1   = ARCH-001 / master@2ce16a3 / ARCHITECTURE_MERGED(运行时代码仍须独立 Gate)
-PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / INTERNAL_DEVELOPMENT_AND_DB_VERIFICATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@210a5fe)
+PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@f77915e;仅开发分支)
+PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / INTERNAL_DETERMINISTIC_DESIGN_AND_IMPLEMENTATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@f77915e)
 RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
-NEXT_AUTHORIZED_STEP = G1_REAL_DATABASE_AND_SECURITY_VERIFICATION(按主计划；每次合 master 仍须 explicit per-merge authorization)
+NEXT_AUTHORIZED_STEP = PHASE8_FAMILY_PRIVATE_PROGRESS_STEWARD_METRICS(真实 DB/E2E/安全验证；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -21,7 +22,8 @@ PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```text
 Phase0 战略+代码重定基            = PASS_CLOSED(北极星→编排;Program01→FIRST_PROGRAM_RESOURCE;Program Runtime→@family/program-runtime;Program-派生 completed 已移除)
 Phase1 Growth Resource 架构契约   = ARCHITECTURE_MERGED(master@2ce16a3;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程；运行时代码另行验证)
-Phase2 首条纵切 runtime           = INTERNAL_DEVELOPMENT_AND_DB_VERIFICATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@210a5fe;仅确定性内部验证；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
+Phase2 首条纵切 runtime           = APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@f77915e;仅开发分支；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
+Phase8 单家庭连续服务基础          = INTERNAL_DETERMINISTIC_DESIGN_AND_IMPLEMENTATION_IN_PROGRESS(家庭私有进度/上下文投影、内部 Steward 队列与服务过程度量；不含组织/跨家庭/真人交付/外部模型)
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 

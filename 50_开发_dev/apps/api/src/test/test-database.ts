@@ -75,6 +75,7 @@ export async function seedAiConsentSubject(
 /** 清 V3 编排表(FK 安全序);若库未迁移 0020 则逐表跳过。 */
 export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [
+    'steward_handoff_drafts',
     'follow_up_responses',
     'service_eligibility_evaluations',
     'service_cases',
