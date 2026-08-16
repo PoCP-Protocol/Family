@@ -178,7 +178,10 @@ M5 CONTEXT_REUSE_READY
   CONTEXT_REUSE_PROJECTION = PASS   NO_CAUSAL_REUSE_CLAIM = PASS   REPEAT_EXPLANATION_REDUCTION = DESIGNED
 GLOBAL
   CHILD_INTEREST_FIRST = PASS   FAMILY_SOVEREIGN = PASS   CANONICAL_DUPLICATION = 0   AI_DIAGNOSIS = 0
-  ML_RANKING = 0   MARKETPLACE = 0   PAYMENT = 0   COMMISSION = 0   RUNTIME_STARTED = 0
+  ML_RANKING = 0   MARKETPLACE = 0   PAYMENT = 0   COMMISSION = 0   RUNTIME_STARTED = 0   SEMANTIC_ALIASING = 0
+CODE_READINESS(与 master 实际代码对齐,见 §14)
+  ONBOARDING_REBASE_REQUIRED = ACKNOWLEDGED   HOME_REBASE_REQUIRED = ACKNOWLEDGED   PRINCIPAL_ADAPTER_BOUNDARY = PASS
+  GROWTH_OS_WRITE_BOUNDARY = PASS   MODULE_TOPOLOGY = PASS   CONTRACT_LOCATION = PASS   MIGRATION_BOUNDARY = PASS
 ```
 本 Gate 未全 PASS 前:`RUNTIME_AUTHORIZATION = NO`。文档"大致完成"不得替代 Gate。
 
@@ -189,3 +192,82 @@ Demand Network / 匿名聚合 runtime · ML ranking · Marketplace · Payment ·
 ## 13. 与 PR#32 对账(forward,非原样合入)
 
 PR#32 A–H = reference 输入。本 ARCH V1 增补:V3 命名统一 · 补 GrowthCapability/OrchestrationPlan · **ResourceOffer 原子化** · **FamilyServiceDecision 边界** · **Plan≠Execution 状态分离** · **Follow-up 真相分类** · **Capability cardinality** · **Provider Qualification 连接** · **ContextReuseProjection(M5)** · **Intent CLOSED+close_reason** · Assessment HOLD · NeedSignal source 收敛 · 两 Gate 分离 · Priority 可选 · Revenue 非排序 · 禁 Closed≠Resolved 混淆 · 自有 Architecture Gate。以本文件为 Phase1 架构 SSOT。
+
+---
+
+# 代码现实对齐(CODE-REALITY-FINAL-CLOSEOUT)
+
+首个 runtime 前的最终架构收尾。**以 master 实际代码为实现真相**,显式对账既有代码与 V3(非复述抽象)。以下事实经核验 master @ 2aa6da6。
+
+## 14. CURRENT_CODE_REALITY(已核验)
+
+```text
+A. apps/api/src/modules/family/onboarding.service.ts —— ORDER 强制:
+   create_family → add_child → assign_life_stage → grant_consent → growth_onboarding → confirm_priority → enter_today
+   (complete 判据含 grant_consent;当前把 growth_onboarding/confirm_priority 作为进入产品前置)。
+B. apps/web/src/platform/onboarding/onboarding-flow.ts —— screenFor 含同一强制成长路径:
+   growth_onboarding「此刻最困扰的亲子沟通问题」→ confirm_priority「确认成长重点」→ enter_today。
+C. apps/web/src/platform/today/today-view.ts —— PRIMARY_NAV = ['today','growth','principal','family'](Principal 仍一级);
+   Today 卡片围绕 今天 One Small Action(today_action)+ Check-in + principalFollowup 组织。
+D. apps/api/src/modules/family/today.service.ts —— TodayService 依赖 GrowthActionService.getTodayAction;currentFocus 目前=null(注明需 onboarding 上下文)。
+E. apps/api/src/modules/principal/principal.service.ts —— handleMessage(可复用为 AI_COACH 交付能力)。
+F. 同文件 acceptProposal(params: { onboarding_id, priority_id, idempotency_key }) → 桥接 intervention.startIntervention(...)
+   = LEGACY Growth-Intervention Bridge;【不得】成为新 V3 FamilyServiceDecision/Orchestration 路径。
+G. apps/api/src/modules/family/growth-review.service.ts —— recordOutcomeObservation 必须 getEpisode(intervention_episode_id),
+   并经 episode.onboarding_id/priority_id + assertNormalSafetyRoute + review 门。⇒ FollowUpResponse ≠ Observation;不得直插 outcome_observations、不得伪造 episode_id。
+H. packages/contracts/src/index.ts —— 主要为旧 Family Core/GrowthOnboarding/Consent/Perspective/Safety 等契约;
+   【禁】把旧类型伪装为 GrowthNeedSignal/GrowthIntent/ResourceRecommendation/OrchestrationPlan/ServiceCase 的别名。
+I. database/migrations 止于 0019;尚无 V3 Orchestration 域表。
+```
+
+## 15. LEGACY vs V3 边界(冻结)
+
+```text
+LEGACY / 既有能力(保留、非删除,但【不再】是求助的强制入口路径):
+  GrowthOnboarding · GrowthPriority · Intervention · GrowthAction · GrowthReview · Principal Action Bridge · Today
+NEW V3 路径:
+  Home → GrowthNeedSignal → GrowthIntent → GrowthCapability → Resource → Recommendation → FamilyServiceDecision → OrchestrationPlan → ServiceCase
+GrowthPriority 仍 OPTIONAL;既有 Growth OS 仅当 V3 服务合法跨越"human-confirmed Growth OS 边界"时才被调用。
+真实生活出问题 → Family 先帮助 →(必要时才)进入 Growth OS;【不是】先建 GrowthPriority 才能得到帮助。
+```
+
+## 16. Runtime 目标态(仅架构,PR#35 不写代码)
+
+```text
+① Onboarding 目标态:仅建最小家庭上下文 —— Account/Family/Child/Relationship(必要时)/Required Consent;
+   LifeStage 可作为 12–15 纵切的轻量 child context 捕获,但【不得】强制 GrowthPriority。
+   移出强制目标:growth_onboarding、confirm_priority。最小设置后 ENTER_HOME(非 ENTER_TODAY)。不变量 FIRST_VALUE_BEFORE_GROWTH_PRIORITY=PASS。
+② Home 目标态:PRIMARY_NAV = HOME/GROWTH/SERVICE/FAMILY;Principal=嵌入 AI 资源(非一级);Today=Home 的一种只读状态投影(非平台身份)。
+   Home 主问句"现在有什么需要 Family 帮忙的吗?";可显示 当前孩子/进行中服务/一个下一步/近期 context reuse,但【不得】要求 active GrowthPriority。
+③ Principal adapter 边界:handleMessage 适配为 AI_COACH Resource Provider,既有安全(Consent/Policy/Provider Gate/Safety/Human Gate/quality/fail-closed)不变、不重写、不绕过;
+   acceptProposal() ≠ FamilyServiceDecision ≠ Orchestration 接纳(保留为 legacy bridge);新 Orchestrator 即时沟通支持【不得】要求 onboarding_id/priority_id。
+④ Follow-up/Growth OS 写边界:Follow-up → FollowUpResponse(服务层)→ 分类 {PERSPECTIVE|SERVICE_NOTE|OBSERVATION_CANDIDATE};
+   仅 OBSERVATION_CANDIDATE 且过既有 Named Action/subject/observer/consent/safety 门才 RecordOutcomeObservation;禁服务层直插 outcome_observations、禁伪造 intervention_episode_id。
+⑤ 模块拓扑:新建 apps/api/src/modules/orchestration/(OrchestrationModule/Controller/Service/Repository),AppModule 导入;
+   【不得】塞进既有巨大 FamilyService、【不得】让 FamilyModule 拥有 Orchestration;避免环依赖(PrincipalModule 已依赖 FamilyModule,不得反向让 FamilyModule 导入 OrchestrationModule)。
+   角色:Family Core/Growth OS=既有真相提供者;Principal=AI 资源;Program Runtime=Program 资源;Orchestration=协调域。
+⑥ 契约位置:V3 runtime 契约入 @family/contracts 的独立 orchestration section;CANONICAL_DUPLICATION=0、SEMANTIC_ALIASING=0
+   (禁 GrowthNeedSignal=GrowthOnboarding / GrowthIntent=GrowthPriority / ServiceCase=InterventionEpisode / FamilyServiceDecision=PrincipalProposal)。
+⑦ 数据库边界:PR#35【不得】建 migration 0020;Gate PASS 后首个 runtime 才提 0020_growth_orchestration_v1.sql(仅纵切最小表);
+   【不得】复用 growth_onboardings/growth_priorities/intervention_episodes 存 V3 Need/Intent/Plan/Case(语义正确性 > schema 复用)。
+```
+
+## 17. 首个 Runtime 纵切(冻结 scope,PR#35 不实现)
+
+```text
+任务名:FAMILY-GROWTH-VERTICAL-SLICE-001(THIN END-TO-END,非"仅 M1 基础设施";必须证明有用的服务)。
+唯一场景:12–15 · PARENT_CHILD_COMMUNICATION_CONFLICT · "孩子刚摔门,我今晚不知道怎么重新开口。"
+须最终证明:HOME → NeedSignal → 显式 Intent 确认 → Capability → 原子 eligible ResourceOffers → 确定性 Recommendation
+  → FamilyServiceDecision → 声明式 OrchestrationPlan → ServiceCase → AI_COACH/PRACTICE → Follow-up → FollowUpResponse → 第二次同类 Context Reuse。
+Observation 可选;不强制 GrowthPriority;不强制 Intervention。
+V1 资源集:NO_ACTION · AI_COACH · PRACTICE · EXTERNAL_REFERRAL;PROGRAM 可注册但条件化/非默认;
+  HUMAN_COACH/QUALIFIED_EXPERT 可经既有 Human Gate 概念路由,但不建 marketplace/provider runtime;CONTENT 仅当有真实 Content Ref 才用,绝不臆造内容。
+确定性 only:无 ML ranking、无 embeddings 排序、无 LLM 选商业资源、无 revenue signal;need_type 仅 PARENT_CHILD_COMMUNICATION_CONFLICT;
+  capabilities 仅 {DE_ESCALATION, COMMUNICATION_REOPENING};排序=确定性可检视规则;PLATFORM_REVENUE_RANKING_SIGNAL=0。
+```
+
+## 18. DO NOT IMPLEMENT(PR#35)
+
+```text
+RUNTIME_STARTED = 0。PR#35 不改:apps/api runtime · apps/web runtime · database migrations · @family/contracts runtime types。不动 PR#34。不启动 Vertical Slice。
+```
