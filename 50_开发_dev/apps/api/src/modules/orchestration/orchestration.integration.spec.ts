@@ -100,6 +100,16 @@ describe('FAMILY-GROWTH-VERTICAL-SLICE-001 real PostgreSQL integration', () => {
       note: 'USER_PERCEIVED_HELPFULNESS_NOT_GROWTH_OUTCOME',
     });
 
+    await pool.query(
+      `update consents set status='WITHDRAWN', withdrawn_at=now()
+        where family_id=$1 and subject_person_id=$2 and purpose='SERVICE' and status='GRANTED'`,
+      [seed.familyId, seed.childId],
+    );
+    const withdrawnContext = await service.getContextReuse(seed.familyId, seed.childId);
+    expect(withdrawnContext.items).toEqual([]);
+    const preserved = await pool.query(`select count(*)::int as count from follow_up_responses where family_id=$1`, [seed.familyId]);
+    expect(preserved.rows[0].count).toBe(1);
+
     const counts = await pool.query(
       `select
         (select count(*)::int from growth_need_signals) as signals,

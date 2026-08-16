@@ -247,6 +247,15 @@ export class OrchestrationRepository implements OnModuleDestroy {
   }
 
   async contextReuse(familyId: string, subjectPersonId: string): Promise<Array<{ serviceCaseId: string; needType: string; selectedResources: Array<{ resourceCode: string; resourceType: ResourceType; title: string }>; helpfulness: 'HELPFUL' | 'A_LITTLE_HELPFUL' | 'NOT_HELPFUL' | 'NOT_ANSWERED' | null; followUpAt: string | null }>> {
+    const activeConsent = await this.pool.query(
+      `SELECT 1
+         FROM consents
+        WHERE family_id=$1 AND subject_person_id=$2 AND purpose='SERVICE' AND status='GRANTED' AND withdrawn_at IS NULL
+        LIMIT 1`,
+      [familyId, subjectPersonId],
+    );
+    if (!activeConsent.rowCount) return [];
+
     const cases = await this.pool.query<{ service_case_id: string; need_type: string; helpfulness: 'HELPFUL' | 'A_LITTLE_HELPFUL' | 'NOT_HELPFUL' | 'NOT_ANSWERED' | null; follow_up_at: string | null }>(
       `SELECT c.service_case_id,i.need_type,fu.helpfulness,fu.created_at::text AS follow_up_at
          FROM service_cases c
