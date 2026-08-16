@@ -195,8 +195,8 @@ M5 CONTEXT_REUSE_READY
 ```text
 Phase0 战略+代码重定基            = 北极星→编排 · Program01→FIRST_PROGRAM_RESOURCE · Program Runtime→@family/program-runtime
 Phase1 Growth Resource 架构契约   = FAMILY-GROWTH-ORCHESTRATION-ARCH-001(§2b 八对象 + 一条 Golden Journey),过其自有 Architecture Gate 才写 runtime
-Phase2 首条纵切 runtime(13岁冲突:Need→Intent→Capability→Resource→AI→Practice→Follow-up→Observation)
-Phase3 Context Reuse   Phase4 Micro Program(验证 Program=资源)  Phase5 Human Service  Phase6 Family Steward(SLA/Recovery)
+Phase2 首条纵切 runtime(13岁冲突:Need→Intent→Capability→Candidate Resources→Eligibility→Recommendation→Family Decision→Plan→ServiceCase→AI/Practice→Follow-up→FollowUpResponse→minimal Context Reuse;**Observation 可选,仅经既有 Growth OS 边界;不得让 Follow-up 自动变 Observation**)
+Phase3 Context Reuse 强化/更广复用(Phase2 已证明同场景最小复用)   Phase4 Micro Program(验证 Program=资源)  Phase5 Human Service  Phase6 Family Steward(SLA/Recovery)
 Phase7 Demand Aggregation(匿名)  Phase8 FGCN Provider Collaboration  Phase9 Learning-to-rank(现禁 ML)  Phase10 Economics(最后)
 ```
 
