@@ -17,7 +17,13 @@ function assertCookieOriginOk(req: { method?: string; headers?: Record<string, u
 
 /** 声明某端点所需的 Family NamedAction;guard 在 required 模式据此按角色矩阵强制。 */
 export const FAMILY_ACTION_KEY = 'family_named_action';
+export const FAMILY_TRUSTED_CONTEXT_KEY = 'family_trusted_context_required';
 export const RequireFamilyAction = (action: FamilyNamedAction) => SetMetadata(FAMILY_ACTION_KEY, action);
+/**
+ * V3 纵切端点必须始终使用 Account → ACTIVE binding → ACTIVE membership 的可信家庭上下文。
+ * 这允许既有 legacy 端点保留受控兼容，而新的高敏感编排写入不接受 x-actor-id 降级。
+ */
+export const RequireTrustedFamilyContext = () => SetMetadata(FAMILY_TRUSTED_CONTEXT_KEY, true);
 
 /** PLATFORM-IAM-104:消费路径是否强制真实 Bearer(默认关=内部 dogfood 仍 x-actor-id)。 */
 function platformAuthRequired(): boolean {
@@ -44,9 +50,10 @@ export class FamilyPlatformAuthGuard implements CanActivate {
     const familyId: string | undefined = req.params?.familyId;
     const token = sessionTokenFromHeaders(req.headers ?? {}); // cookie 优先,否则 Bearer
     const xActor = (req.headers?.['x-actor-id'] ?? '').toString().trim();
-    const requiredAction = this.reflector.get<FamilyNamedAction | undefined>(FAMILY_ACTION_KEY, context.getHandler());
+    const requiredAction = this.reflector.getAllAndOverride<FamilyNamedAction | undefined>(FAMILY_ACTION_KEY, [context.getHandler(), context.getClass()]);
+    const trustedContextRequired = this.reflector.getAllAndOverride<boolean | undefined>(FAMILY_TRUSTED_CONTEXT_KEY, [context.getHandler(), context.getClass()]) === true;
 
-    if (platformAuthRequired()) {
+    if (platformAuthRequired() || trustedContextRequired) {
       if (!token) throw new UnauthorizedException('bearer_token_required'); // x-actor-id-only 拒
       if (familyId) {
         const ctx = await this.auth.resolveFamilyContext(token, familyId);

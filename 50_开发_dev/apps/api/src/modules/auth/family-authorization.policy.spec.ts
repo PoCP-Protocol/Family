@@ -4,13 +4,13 @@ import { assertFamilyRoleCan, roleCan, decisionFor, type FamilyRole } from './fa
 /** TENANCY-V2 T2 · Family 角色→NamedAction 显式矩阵真值(裁决 §6)。 */
 describe('FamilyAuthorizationPolicy explicit matrix', () => {
   it('OWNER_GUARDIAN 可做全部登记的 NamedAction', () => {
-    for (const a of ['ReadFamily','AddChild','InviteAdult','RevokeMembership','GrantConsent','WithdrawConsent','RecordPerspective','ConfirmGrowthPriority','StartIntervention','CompleteAction','GrantExternalAccess'] as const) {
+    for (const a of ['ReadFamily','AddChild','InviteAdult','RevokeMembership','GrantConsent','WithdrawConsent','RecordPerspective','ConfirmGrowthPriority','StartIntervention','CompleteAction','GrantExternalAccess','CreateGrowthIntent','RequestResourceRecommendation','DecideFamilyService','CreateOrchestrationPlan','OpenServiceCase','RecordServiceFollowUp'] as const) {
       expect(roleCan('OWNER_GUARDIAN', a)).toBe(true);
     }
   });
 
   it('CHILD_SUBJECT 不能 AddChild/GrantConsent/StartIntervention/ConfirmGrowthPriority', () => {
-    for (const a of ['AddChild','GrantConsent','WithdrawConsent','InviteAdult','ConfirmGrowthPriority','StartIntervention','CompleteAction'] as const) {
+    for (const a of ['AddChild','GrantConsent','WithdrawConsent','InviteAdult','ConfirmGrowthPriority','StartIntervention','CompleteAction','CreateGrowthIntent','RequestResourceRecommendation','DecideFamilyService','CreateOrchestrationPlan','OpenServiceCase','RecordServiceFollowUp'] as const) {
       expect(roleCan('CHILD_SUBJECT', a)).toBe(false);
     }
     expect(roleCan('CHILD_SUBJECT', 'ReadFamily')).toBe(true);      // LIMITED = 过角色门
@@ -23,6 +23,18 @@ describe('FamilyAuthorizationPolicy explicit matrix', () => {
     }
     expect(roleCan('ADULT_MEMBER', 'RecordPerspective')).toBe(true);
     expect(roleCan('ADULT_MEMBER', 'CompleteAction')).toBe(true);
+    expect(roleCan('ADULT_MEMBER', 'CreateGrowthIntent')).toBe(true); // LIMITED:领域层仍要求受信任的成人身份和同家庭 subject
+    expect(roleCan('ADULT_MEMBER', 'DecideFamilyService')).toBe(false);
+    expect(roleCan('ADULT_MEMBER', 'OpenServiceCase')).toBe(false);
+  });
+
+  it('首条 V3 编排的决定、计划和执行均要求具家庭责任的成人', () => {
+    for (const action of ['DecideFamilyService','CreateOrchestrationPlan','OpenServiceCase'] as const) {
+      expect(roleCan('OWNER_GUARDIAN', action)).toBe(true);
+      expect(roleCan('GUARDIAN', action)).toBe(true);
+      expect(roleCan('ADULT_MEMBER', action)).toBe(false);
+      expect(roleCan('CHILD_SUBJECT', action)).toBe(false);
+    }
   });
 
   it('GUARDIAN 可做家庭管理类;RevokeMembership/GrantExternalAccess = LIMITED', () => {

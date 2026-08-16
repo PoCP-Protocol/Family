@@ -20,8 +20,8 @@ import type {
 import { FamilyRepository } from './family.repository';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
+import { assertFamilyManagePermission } from './family-permission';
 
-const CREATE_FAMILY_ACTION = 'CreateFamily';
 const RECORD_OUTCOME_OBSERVATION_ACTION = 'RecordOutcomeObservation';
 const COMPLETE_GROWTH_REVIEW_ACTION = 'CompleteGrowthReview';
 const RECORD_NEXT_STEP_DECISION_ACTION = 'RecordNextStepDecision';
@@ -166,17 +166,6 @@ async function storeIdempotencyResponse<TResponse>(client: pg.PoolClient, idempo
 async function ensureFamilyExists(client: pg.PoolClient, familyId: string): Promise<void> {
   const result = await client.query('select family_id from families where family_id = $1 for share', [familyId]);
   if (result.rowCount !== 1) throw new NotFoundException('family_not_found');
-}
-
-async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
-  const result = await client.query(
-    `select audit_id
-     from audit_logs
-     where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS'
-     limit 1`,
-    [familyId, actorId, CREATE_FAMILY_ACTION],
-  );
-  if (result.rowCount !== 1) throw new ForbiddenException('actor_has_family_manage_permission');
 }
 
 async function assertRequiredGrowthConsents(client: pg.PoolClient, familyId: string, childId: string): Promise<void> {

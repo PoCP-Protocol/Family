@@ -162,8 +162,8 @@ class FakeInterventionClient {
     if (normalized.startsWith('select family_id from families')) {
       return { rowCount: 1, rows: [{ family_id: familyId }] };
     }
-    if (normalized.startsWith('select audit_id from audit_logs')) {
-      return { rowCount: 1, rows: [{ audit_id: 'audit-create-family' }] };
+    if (normalized.startsWith('select 1 from family_memberships m join account_person_bindings b')) {
+      return { rowCount: 1, rows: [{ '?column?': 1 }] };
     }
     if (this.replayResponse) {
       throw new Error(`unexpected query after idempotency replay: ${normalized}`);

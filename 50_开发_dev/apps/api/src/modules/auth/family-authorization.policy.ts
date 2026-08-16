@@ -9,7 +9,9 @@ export type FamilyRole = 'OWNER_GUARDIAN' | 'GUARDIAN' | 'ADULT_MEMBER' | 'CHILD
 export type FamilyNamedAction =
   | 'ReadFamily' | 'AddChild' | 'InviteAdult' | 'RevokeMembership'
   | 'GrantConsent' | 'WithdrawConsent' | 'RecordPerspective'
-  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess';
+  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
+  | 'CreateGrowthIntent' | 'RequestResourceRecommendation' | 'DecideFamilyService'
+  | 'CreateOrchestrationPlan' | 'OpenServiceCase' | 'RecordServiceFollowUp';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -24,7 +26,14 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   ConfirmGrowthPriority: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
   StartIntervention:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
   CompleteAction:        { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'ALLOW',   CHILD_SUBJECT: 'DENY' },
-  GrantExternalAccess:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'LIMITED', ADULT_MEMBER: 'DENY',  CHILD_SUBJECT: 'DENY' },
+    GrantExternalAccess:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'LIMITED', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  // FAMILY-GROWTH-VERTICAL-SLICE-001：孩子可表达观点，但服务意图、资源选择与服务执行须由具备家庭责任的成人发起/确认。
+  CreateGrowthIntent:          { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
+  RequestResourceRecommendation:{ OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
+  DecideFamilyService:         { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  CreateOrchestrationPlan:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  OpenServiceCase:             { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY',    CHILD_SUBJECT: 'DENY' },
+  RecordServiceFollowUp:       { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */

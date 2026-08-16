@@ -737,3 +737,199 @@ export interface HealthStatus {
   version: string;
   time: string;
 }
+
+
+// -----------------------------------------------------------------------------
+// FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 Growth Resource Orchestration contracts
+// 独立于 Growth Onboarding/Priority/Intervention。它们不能相互替代或越层写入。
+// -----------------------------------------------------------------------------
+export type GrowthNeedType = 'PARENT_CHILD_COMMUNICATION_CONFLICT';
+export type GrowthCapabilityCode = 'DE_ESCALATION' | 'COMMUNICATION_REOPENING';
+export type GrowthNeedSignalBoundary = 'NON_CANONICAL_NOT_FACT_NOT_DIAGNOSIS_NOT_PRIORITY';
+export type ResourceOfferType =
+  | 'NO_ACTION' | 'CONTENT' | 'PRACTICE' | 'AI_COACH'
+  | 'PROGRAM' | 'HUMAN_COACH' | 'QUALIFIED_EXPERT' | 'EXTERNAL_REFERRAL';
+export type ResourceEligibilityResult = 'ELIGIBLE' | 'INELIGIBLE';
+export type ResourceEligibilityPhase = 'T1_RECOMMENDATION' | 'T2_EXECUTION';
+export type OrchestrationRecommendationStatus = 'PROPOSED' | 'DECIDED' | 'SUPERSEDED';
+export type FamilyServiceDecisionType = 'ACCEPT' | 'SELECT_ALTERNATIVE' | 'DECLINE' | 'NO_ACTION';
+export type FamilyServiceDecisionStatus = 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
+export type OrchestrationPlanStatus = 'DRAFT' | 'READY' | 'CANCELLED';
+export type ServiceCaseStatus = 'OPEN' | 'IN_PROGRESS' | 'AWAITING_FOLLOW_UP' | 'CLOSED' | 'CANCELLED' | 'ESCALATED';
+export type HelpfulnessSignal = 'HELPFUL' | 'A_LITTLE_HELPFUL' | 'NOT_HELPFUL' | 'NOT_ANSWERED';
+
+export interface GrowthNeedSignalDto {
+  need_signal_id: string;
+  family_id: string;
+  subject_person_id: string;
+  need_type: GrowthNeedType;
+  signal_text: string;
+  fact_boundary: GrowthNeedSignalBoundary;
+  policy_version: string;
+  created_at: string;
+}
+
+export interface GrowthIntentDto {
+  growth_intent_id: string;
+  family_id: string;
+  subject_person_id: string;
+  need_signal_id: string;
+  need_type: GrowthNeedType;
+  goal_text: string;
+  status: 'OPEN' | 'CANCELLED' | 'CLOSED' | 'SUPERSEDED';
+  confirmed_at: string;
+  policy_version: string;
+}
+
+export interface GrowthCapabilityDto {
+  capability_code: GrowthCapabilityCode;
+  display_name: string;
+  need_type: GrowthNeedType;
+  policy_version: string;
+}
+
+export interface ResourceOfferDto {
+  resource_offer_id: string;
+  resource_code: string;
+  resource_type: ResourceOfferType;
+  capability_codes: GrowthCapabilityCode[];
+  title: string;
+  description: string;
+  age_scope: string;
+  problem_scope: GrowthNeedType;
+  evidence_level: string;
+  risk_boundary: string;
+  privacy_boundary: string;
+  effort: string;
+  duration: string;
+  availability_status: 'ACTIVE' | 'INACTIVE' | 'RETIRED';
+  requires_consent: boolean;
+  requires_human: boolean;
+  content_ref: string | null;
+  policy_version: string;
+}
+
+export interface ResourceEligibilityDto {
+  resource_offer_id: string;
+  phase: ResourceEligibilityPhase;
+  result: ResourceEligibilityResult;
+  reason_code: string;
+  detail: string;
+  policy_version: string;
+}
+
+export interface ResourceRecommendationCandidateDto {
+  resource_offer_id: string;
+  resource_code: string;
+  resource_type: ResourceOfferType;
+  rank: number;
+  eligibility: ResourceEligibilityResult;
+  rationale: string;
+  limitations: string;
+}
+
+export interface ResourceRecommendationDto {
+  resource_recommendation_id: string;
+  family_id: string;
+  growth_intent_id: string;
+  status: OrchestrationRecommendationStatus;
+  candidates: ResourceRecommendationCandidateDto[];
+  policy_version: string;
+  ranking_boundary: 'ELIGIBILITY_FIRST_NO_REVENUE_OR_ENGAGEMENT_SIGNAL';
+}
+
+export interface FamilyServiceDecisionDto {
+  family_service_decision_id: string;
+  family_id: string;
+  resource_recommendation_id: string;
+  decision_type: FamilyServiceDecisionType;
+  status: FamilyServiceDecisionStatus;
+  selected_resource_offer_ids: string[];
+  policy_version: string;
+}
+
+export interface OrchestrationPlanDto {
+  orchestration_plan_id: string;
+  family_id: string;
+  family_service_decision_id: string;
+  status: OrchestrationPlanStatus;
+  resource_offer_ids: string[];
+  boundary: 'DECLARATIVE_PLAN_NOT_EXECUTION_OR_COMPLETION_TRUTH';
+  policy_version: string;
+}
+
+export interface ServiceCaseDto {
+  service_case_id: string;
+  family_id: string;
+  subject_person_id: string;
+  orchestration_plan_id: string;
+  status: ServiceCaseStatus;
+  next_action_at: string | null;
+  policy_version: string;
+}
+
+export interface FollowUpResponseDto {
+  follow_up_response_id: string;
+  family_id: string;
+  service_case_id: string;
+  helpfulness: HelpfulnessSignal;
+  response_text: string | null;
+  fact_boundary: 'USER_PERCEIVED_HELPFULNESS_NOT_GROWTH_OUTCOME_OR_CAUSAL_PROOF';
+  policy_version: string;
+}
+
+export interface CreateGrowthIntentRequest {
+  family_id: string;
+  subject_person_id: string;
+  signal_text: string;
+  goal_text: string;
+  idempotency_key: string;
+}
+
+export interface RequestResourceRecommendationRequest {
+  family_id: string;
+  growth_intent_id: string;
+  idempotency_key: string;
+}
+
+export interface DecideFamilyServiceRequest {
+  family_id: string;
+  resource_recommendation_id: string;
+  decision_type: FamilyServiceDecisionType;
+  selected_resource_offer_ids: string[];
+  rationale?: string;
+  idempotency_key: string;
+}
+
+export interface CreateOrchestrationPlanRequest {
+  family_id: string;
+  family_service_decision_id: string;
+  idempotency_key: string;
+}
+
+export interface OpenServiceCaseRequest {
+  family_id: string;
+  orchestration_plan_id: string;
+  idempotency_key: string;
+}
+
+export interface RecordServiceFollowUpRequest {
+  family_id: string;
+  service_case_id: string;
+  helpfulness: HelpfulnessSignal;
+  response_text?: string;
+  idempotency_key: string;
+}
+
+export interface ContextReuseProjectionDto {
+  family_id: string;
+  subject_person_id: string;
+  items: Array<{
+    service_case_id: string;
+    need_type: GrowthNeedType;
+    selected_resources: Array<{ resource_code: string; resource_type: ResourceOfferType; title: string }>;
+    helpfulness: HelpfulnessSignal | null;
+    follow_up_at: string | null;
+  }>;
+  boundary: 'MINIMAL_FAMILY_SCOPED_CONTEXT_REUSE_NO_CROSS_FAMILY_LEARNING_OR_CAUSAL_CLAIM';
+}

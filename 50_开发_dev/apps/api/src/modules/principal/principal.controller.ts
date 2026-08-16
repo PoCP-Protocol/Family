@@ -8,10 +8,6 @@ function requireActor(actorId?: string): string {
   if (!actorId || actorId.trim().length === 0) throw new BadRequestException('x-actor-id header is required');
   return actorId.trim();
 }
-/** IAM-103:消费路径是否强制真实 Bearer(默认关=内部 dogfood 仍可 x-actor-id;开=x-actor-id-only 必拒)。 */
-function requireBearer(): boolean {
-  return process.env.FPAI_REQUIRE_BEARER === 'true';
-}
 function corr(id?: string): string {
   return id && id.trim() ? id.trim() : randomUUID();
 }
@@ -73,25 +69,21 @@ export class PrincipalController {
   ) {}
 
   /**
-   * IAM-103 消费主体解析:Bearer → AuthService.resolveActor → 可信 actor,且 actor.familyId 必须 == :familyId(否则 403)。
-   * FPAI_REQUIRE_BEARER=true:无 Bearer(仅 x-actor-id)→ 401(x-actor-id-only 消费路径必拒)。
-   * flag 关(默认内部 dogfood):无 Bearer 回退 x-actor-id;但若带 Bearer 仍强制解析 + family scope。
+   * FAMILY-GROWTH-VERTICAL-SLICE-001 Principal Consumer Auth Bridge:
+   * 消费路径只信任 Account → ACTIVE binding → ACTIVE membership → family scope 的 Bearer 解析结果。
+   * x-actor-id 不能单独构成家庭消费端身份；Reviewer/Internal Ops 面仍使用独立的受控身份策略。
    */
-  private async resolveConsumerActor(familyId: string, authorization?: string, actorId?: string): Promise<string> {
+  private async resolveConsumerActor(familyId: string, authorization?: string, _actorId?: string): Promise<string> {
     const token = bearerToken(authorization);
-    if (token) {
-      const resolved = await this.auth.resolveActor(token);
-      if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
-      if (resolved.familyId !== familyId) throw new ForbiddenException('actor_family_mismatch');
-      return resolved.personId;
-    }
-    if (requireBearer()) throw new UnauthorizedException('bearer_token_required');
-    return requireActor(actorId); // 仅 flag 关时允许 x-actor-id 降级(内部 dogfood)
+    if (!token) throw new UnauthorizedException('bearer_token_required');
+    const resolved = await this.auth.resolveActor(token);
+    if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
+    if (resolved.familyId !== familyId) throw new ForbiddenException('actor_family_mismatch');
+    return resolved.personId;
   }
 
   /**
-   * IAM-103 复核主体解析:认证身份(Bearer,flag 开时强制)+ reviewer 授权(assertReviewer allowlist)。
-   * flag 关时保持既有 x-actor-id + reviewer-policy(默认关)行为。
+   * 复核主体解析：认证身份 + reviewer 授权(assertReviewer allowlist)。Reviewer/Internal Ops 与家庭消费端隔离。
    */
   private async resolveReviewerActor(authorization?: string, actorId?: string): Promise<string> {
     const token = bearerToken(authorization);
@@ -101,7 +93,6 @@ export class PrincipalController {
       if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
       actor = resolved.personId;
     } else {
-      if (requireBearer()) throw new UnauthorizedException('bearer_token_required');
       actor = requireActor(actorId);
     }
     assertReviewer(actor); // reviewer 授权门(FPAI_REQUIRE_REVIEWER_AUTH)
