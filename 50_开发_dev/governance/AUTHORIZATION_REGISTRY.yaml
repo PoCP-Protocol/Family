@@ -419,6 +419,25 @@ capabilities:
       必须复用现有 Family Core、Growth OS、Orchestration、ServiceCase、FollowUp 与 Web App；不实现 Organization、AccessGrant、
       跨家庭/跨组织访问、真人顾问交付、Enrollment/Delivery、成长结果、永久标签、外部模型外呼、训练、试点、生产或商业化。
 
+  # Phase 9：用户在审阅任务契约后明确授权，仅执行既有能力的内部确定性集成、安全、E2E 与回归验证。
+  - capability_id: FAMILY_PHASE9_INTEGRATION_E2E_REGRESSION_001
+    stage: FAMILY-V3-PHASE9
+    status: INTERNAL_VALIDATION_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: false              # 本 Gate 不授权新增产品代码、DTO、Named Action 或迁移；仅验证既有实现。
+    runtime_authorized: true            # 仅 localhost + synthetic family + isolated family_test 的确定性验证。
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 继续授权按照主计划开始开发；Phase 9 task-contract boundaries accepted (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      只验证既有 Family V3 纵切（身份/家庭范围、资源准入、编排、进度投影、Steward 队列、过程度量、handoff draft）的
+      内部确定性集成、安全、浏览器 E2E 与回归。禁止新增数据库迁移、DTO、Named Action、产品页面或运行时能力；如发现缺陷需新迁移/权限/模型/组织/跨家庭能力，必须停止并另行申请 Gate。
+      master、真实家庭试点、生产、商业化、支付/权益、Enrollment/Delivery、真人顾问、组织跨边界、外部模型、训练/自学习、多模态运行时、公开分享、成长 IP、成长结果、永久标签、公开画像、跨家庭统计/推荐继续 HOLD。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2

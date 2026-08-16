@@ -6,10 +6,11 @@ RULING   = 总架构师/用户主计划执行指令(2026-08-16;仅校准可变�
 BASE     = master @ 2ce16a377d27898e48be10e11f75b15a4b12b26d
 PHASE0   = PASS_CLOSED(product-runtime-001 已合入 master)
 PHASE1   = ARCH-001 / master@2ce16a3 / ARCHITECTURE_MERGED(运行时代码仍须独立 Gate)
-PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@f77915e;仅开发分支)
-PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / INTERNAL_DETERMINISTIC_DESIGN_AND_IMPLEMENTATION_IN_PROGRESS(branch=family-growth-vertical-slice-001@f77915e)
+PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支)
+PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支)
+PHASE9   = FAMILY_PHASE9_INTEGRATION_E2E_REGRESSION_001 / INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(branch=family-growth-vertical-slice-001@8b9c68e;验证既有实现,不授权新能力)
 RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
-NEXT_AUTHORIZED_STEP = PHASE8_FAMILY_PRIVATE_PROGRESS_STEWARD_METRICS(真实 DB/E2E/安全验证；每次合 master 仍须 explicit per-merge authorization)
+NEXT_AUTHORIZED_STEP = PHASE9_INTEGRATION_E2E_REGRESSION(真实 DB/安全/本地浏览器/浏览器后 DB 回归；无新增迁移、DTO、Named Action 或产品能力；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -22,8 +23,9 @@ PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```text
 Phase0 战略+代码重定基            = PASS_CLOSED(北极星→编排;Program01→FIRST_PROGRAM_RESOURCE;Program Runtime→@family/program-runtime;Program-派生 completed 已移除)
 Phase1 Growth Resource 架构契约   = ARCHITECTURE_MERGED(master@2ce16a3;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程；运行时代码另行验证)
-Phase2 首条纵切 runtime           = APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@f77915e;仅开发分支；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
-Phase8 单家庭连续服务基础          = INTERNAL_DETERMINISTIC_DESIGN_AND_IMPLEMENTATION_IN_PROGRESS(家庭私有进度/上下文投影、内部 Steward 队列与服务过程度量；不含组织/跨家庭/真人交付/外部模型)
+Phase2 首条纵切 runtime           = APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
+Phase8 单家庭连续服务基础          = VERIFIED_AND_PUSHED(家庭私有进度/上下文投影、内部 Steward 队列与服务过程度量；不含组织/跨家庭/真人交付/外部模型)
+Phase9 集成/安全/E2E/回归验证       = INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(只验证既有 Phase 2/8 实现；无新增迁移、DTO、Named Action 或产品页面；未合 master/未试点/未生产)
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 
