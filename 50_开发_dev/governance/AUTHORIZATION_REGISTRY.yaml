@@ -4,7 +4,7 @@
 # 授权只能由总架构师(或其上级)通过 authorized_by + authorization_ref 落记;AI Agent 不得自增授权。
 schema_version: AUTH_REGISTRY_V1
 maintained_by: family-chief-architect
-updated_at: "2026-08-11"
+updated_at: "2026-08-16"
 
 # M3-W1 收口(架构师 M3_W1_RUNTIME_INTEGRATION_FINAL_REVIEW = PASS,授权合并 PR #1)
 program_gates:
@@ -339,6 +339,28 @@ capabilities:
     authorized_at: "2026-08-15"
     supersedes: []
     notes: 消费路径 Bearer 强制(flag FPAI_REQUIRE_BEARER;默认关=内部 dogfood 仍 x-actor-id,带 Bearer 仍强制解析+family scope)。硬测试 9/9(valid/no-bearer/x-actor-only/expired/revoked/wrong-family/member/non-reviewer/reviewer)+ CANONICAL_WRITE_BYPASS=0。pilot/production 仍 NO;与 W2R-105 最终须共同 integration 跑 Golden E2E。
+
+  # V3 首条服务纵切：经用户明确授权，仅限代码开发和确定性内部验证。
+  # 该授权不扩大真实外部模型调用、真实家庭试点、生产或商业交易能力。
+  - capability_id: FAMILY_GROWTH_VERTICAL_SLICE_001
+    stage: FAMILY-V3-PHASE2
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 授权启动首条 V3 Vertical Slice 的代码开发 (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      范围仅限 FAMILY-GROWTH-VERTICAL-SLICE-001：12–15 岁亲子沟通冲突的确定性内部实现与验证。
+      允许 V3 Orchestration 契约、最小迁移、Account→ACTIVE binding→ACTIVE membership→role 安全桥接、
+      角色→NamedAction 权限桥接、内部 fake/确定性 AI_COACH、PRACTICE approved-content 引用、
+      FollowUpResponse 和 ContextReuseProjection。禁止真实外部模型调用、真实用户试点、生产、支付、
+      佣金、市场撮合、ML 排序、诊断、Assessment runtime、Enrollment/Delivery runtime 和服务结果承诺。
 
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
