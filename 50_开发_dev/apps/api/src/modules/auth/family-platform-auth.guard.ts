@@ -4,7 +4,7 @@ import { AuthService, bearerToken, cookieToken, sessionTokenFromHeaders } from '
 import { assertFamilyRoleCan, type FamilyNamedAction, type FamilyRole } from './family-authorization.policy';
 
 /** cookie 认证的变更请求须同源(CSRF 基本防护);Bearer(内部/API/测试)不走 cookie 故豁免。允许来源经 env 配置。 */
-function assertCookieOriginOk(req: { method?: string; headers?: Record<string, unknown> }): void {
+export function assertCookieOriginOk(req: { method?: string; headers?: Record<string, unknown> }): void {
   const usingCookie = !!cookieToken(req.headers?.['cookie'] as string | undefined) && !bearerToken(req.headers?.['authorization'] as string | undefined);
   const mutating = !['GET', 'HEAD', 'OPTIONS'].includes((req.method ?? 'GET').toUpperCase());
   if (!usingCookie || !mutating) return;

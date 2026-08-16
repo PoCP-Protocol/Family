@@ -60,6 +60,7 @@ export class OrchestrationController {
     @Body() body: { intent_id?: string; recommendation_id?: string; recommendation_version?: number; decision_type?: FamilyDecisionType; selected_offer_refs?: string[] },
     @OrchestrationActor() actor: Actor,
     @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     if (!body?.intent_id || !body?.recommendation_id || typeof body?.recommendation_version !== 'number' || !body?.decision_type) {
       throw new BadRequestException('intent_id, recommendation_id, recommendation_version, decision_type required');
@@ -68,6 +69,7 @@ export class OrchestrationController {
       familyId, actorPersonId: actor.personId, intentId: body.intent_id, recommendationId: body.recommendation_id,
       recommendationVersion: body.recommendation_version, decisionType: body.decision_type,
       selectedOfferRefs: body.selected_offer_refs ?? [], correlationId: corr(correlationId),
+      idempotencyKey: idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined,
     });
   }
 

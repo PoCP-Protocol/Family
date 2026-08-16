@@ -4,8 +4,8 @@
  * 执行按【所选 Offer 类型】分派(绝不都跑 AI_COACH);subject 链服务端派生;不写 canonical;不臆造家庭文本。
  * SERVICE consent 是落库/执行前提;AI_PERSONALIZATION 是 AI_COACH 额外要求;年龄严格 12–15。
  */
-import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { createHash, randomUUID } from 'node:crypto';
 import { safetyPrecheck } from '@family/principal-ai';
 import type {
   ContextReuseProjectionDto, FamilyDecisionType, GrowthCapabilityKey,
@@ -54,6 +54,23 @@ export class OrchestrationService {
       evaluatedAt: new Date().toISOString(),
       evaluationRef,
     };
+  }
+
+  /**
+   * §21 幂等(顺序重放):同 key+同 request → 重放已存响应;同 key+异 request → 409;首次 → 执行 work 并存响应。
+   * 复用共享 idempotency_keys 表。非并发锁(V1 只保障 retry 不产生重复 ServiceCase/AI 交付等)。
+   */
+  private async withIdempotency<T>(action: string, key: string | undefined, request: unknown, work: () => Promise<T>): Promise<T> {
+    if (!key) return work();
+    const requestHash = createHash('sha256').update(JSON.stringify(request)).digest('hex');
+    await this.repo.query(`insert into idempotency_keys(idempotency_key, action_name, request_hash) values ($1,$2,$3) on conflict (idempotency_key) do nothing`, [key, action, requestHash]);
+    const row = (await this.repo.query<{ action_name: string; request_hash: string; response_body: unknown | null }>(
+      `select action_name, request_hash, response_body from idempotency_keys where idempotency_key=$1`, [key])).rows[0];
+    if (!row || row.action_name !== action || row.request_hash !== requestHash) throw new ConflictException('idempotency_conflict');
+    if (row.response_body) return row.response_body as T;
+    const response = await work();
+    await this.repo.query(`update idempotency_keys set response_code=200, response_body=$2::jsonb where idempotency_key=$1`, [key, JSON.stringify(response)]);
+    return response;
   }
 
   private registryEnv() {
@@ -163,9 +180,10 @@ export class OrchestrationService {
   /** ④ 决定 → 完整性 → Plan(声明) → T2 exact-offer 复验(FAIL CLOSED) → 按类型分派执行。 */
   async decide(params: {
     familyId: string; actorPersonId: string; intentId: string; recommendationId: string; recommendationVersion: number;
-    decisionType: FamilyDecisionType; selectedOfferRefs: string[]; correlationId: string;
+    decisionType: FamilyDecisionType; selectedOfferRefs: string[]; correlationId: string; idempotencyKey?: string;
   }): Promise<DecideResult> {
-    const { familyId, actorPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, correlationId } = params;
+    const { familyId, actorPersonId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs, correlationId, idempotencyKey } = params;
+    return this.withIdempotency('DecideGrowthService', idempotencyKey, { familyId, intentId, recommendationId, recommendationVersion, decisionType, selectedOfferRefs }, async (): Promise<DecideResult> => {
     const intent = await this.loadOpenIntent(familyId, intentId);
     const subjectPersonId = intent.subjectPersonId; // 服务端派生
 
@@ -273,6 +291,7 @@ export class OrchestrationService {
     // Intent 保持 OPEN;SERVICE_DELIVERED 只在 follow-up 完成时写(见 submitFollowUp)。
 
     return { decision_id: decisionId, outcome: 'SERVICE_STARTED', case_id: caseId, executed_resource_type: executedType, ai_coach: aiCoachResult };
+    });
   }
 
   async getCase(familyId: string, caseId: string): Promise<Record<string, unknown> | null> {

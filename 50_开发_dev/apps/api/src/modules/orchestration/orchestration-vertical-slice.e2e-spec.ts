@@ -172,4 +172,43 @@ describe('Security / correctness 矩阵(3A)', () => {
     const r = await post(`/families/${a.familyId}/orchestration/needs`, a.token, { subject_person_id: b.childId, raw_text: '孩子摔门' });
     expect(r.status).toBe(403);
   });
+
+  it('§16 DISABLED account → 401(会话失效)', async () => {
+    const s = await seedGuardianSession();
+    await pool!.query(`update accounts set status='DISABLED' where account_id = (select account_ref from identity_sessions where token_hash=$1)`, [sha256(s.token)]);
+    expect((await get(`/families/${s.familyId}/home`, s.token)).status).toBe(401);
+  });
+
+  it('§17 同 account+family 有 >1 ACTIVE person 上下文 → 403 ambiguous', async () => {
+    const s = await seedGuardianSession();
+    const acctId = (await pool!.query(`select account_ref from identity_sessions where token_hash=$1`, [sha256(s.token)])).rows[0].account_ref;
+    const p2 = (await pool!.query(`insert into persons(family_id, person_type, parent_role, display_name) values ($1,'PARENT','FATHER','爸爸') returning person_id`, [s.familyId])).rows[0].person_id;
+    await pool!.query(`insert into account_person_bindings(account_id, person_id, status) values ($1,$2,'ACTIVE')`, [acctId, p2]);
+    await pool!.query(`insert into family_memberships(family_id, person_id, role, status, joined_at) values ($1,$2,'GUARDIAN','ACTIVE', now())`, [s.familyId, p2]);
+    expect((await get(`/families/${s.familyId}/home`, s.token)).status).toBe(403);
+  });
+
+  it('§18 cookie 变更请求跨源 → 403 CSRF', async () => {
+    const s = await seedGuardianSession();
+    process.env.PLATFORM_ALLOWED_ORIGINS = 'https://app.family.example';
+    try {
+      const r = await post(`/families/${s.familyId}/orchestration/needs`, s.token, { subject_person_id: s.childId, raw_text: '孩子摔门' }, { origin: 'https://evil.example' });
+      expect(r.status).toBe(403);
+    } finally { delete process.env.PLATFORM_ALLOWED_ORIGINS; }
+  });
+
+  it('§21 decide 幂等:同 key 重放不产生第二个 ServiceCase', async () => {
+    const s = await seedGuardianSession();
+    const { intentId, rec } = await runToRecommendation(s);
+    const key = `idem-${randomUUID()}`;
+    const body = { intent_id: intentId, recommendation_id: rec.recommendation_id, recommendation_version: rec.version, decision_type: 'ACCEPT_RECOMMENDATION', selected_offer_refs: rec.recommended_offer_refs };
+    const d1 = await (await post(`/families/${s.familyId}/orchestration/decisions`, s.token, body, { 'idempotency-key': key })).json();
+    const d2 = await (await post(`/families/${s.familyId}/orchestration/decisions`, s.token, body, { 'idempotency-key': key })).json();
+    expect(d1.case_id).toBe(d2.case_id);
+    expect(await count(`select count(*) n from service_cases`)).toBe(1);
+    expect(await count(`select count(*) n from family_service_decisions`)).toBe(1);
+    // 同 key 异 request → 409
+    const conflict = await post(`/families/${s.familyId}/orchestration/decisions`, s.token, { ...body, decision_type: 'DISMISS', selected_offer_refs: [] }, { 'idempotency-key': key });
+    expect(conflict.status).toBe(409);
+  });
 });

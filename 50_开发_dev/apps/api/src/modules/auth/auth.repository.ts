@@ -118,12 +118,27 @@ export class AuthRepository {
 
   /** 有效 account 会话 → account_ref。 */
   async findActiveAccountSession(tokenHash: string): Promise<{ session_id: string; account_ref: string | null } | null> {
+    // VERTICAL-SLICE-001 §16:account 会话仅当其 account 为 ACTIVE 才可用(DISABLED account → 立即失去授权)。
     const r = await this.pool.query<{ session_id: string; account_ref: string | null }>(
-      `select session_id, account_ref from identity_sessions
-        where token_hash=$1 and revoked_at is null and expires_at > now()`,
+      `select s.session_id, s.account_ref from identity_sessions s
+         join accounts a on a.account_id = s.account_ref
+        where s.token_hash=$1 and s.revoked_at is null and s.expires_at > now() and a.status='ACTIVE'`,
       [tokenHash],
     );
     return r.rows[0] ?? null;
+  }
+
+  /** 严格路径:返回某 account 在某 family 的全部 ACTIVE person 上下文(不 LIMIT;供歧义检测 §17)。 */
+  async resolveFamilyContextRows(accountId: string, familyId: string): Promise<Array<{ family_id: string; person_id: string; membership_id: string; role: string }>> {
+    const r = await this.pool.query<{ family_id: string; person_id: string; membership_id: string; role: string }>(
+      `select m.family_id, p.person_id, m.membership_id, m.role
+         from account_person_bindings b
+         join persons p on p.person_id = b.person_id
+         join family_memberships m on m.person_id = p.person_id and m.family_id = p.family_id
+        where b.account_id=$1 and m.family_id=$2 and b.status='ACTIVE' and m.status='ACTIVE'`,
+      [accountId, familyId],
+    );
+    return r.rows;
   }
 
   /** 列出 Account 的全部 ACTIVE Family 上下文(经 ACTIVE binding + ACTIVE membership)。 */
