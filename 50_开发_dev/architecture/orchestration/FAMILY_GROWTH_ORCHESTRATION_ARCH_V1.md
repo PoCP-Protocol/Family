@@ -44,28 +44,40 @@ Recommendation(建议)   ≠ Decision(决定)   ≠ Plan(计划)   ≠ Execution
    不变量:声明"需要什么能力",不绑定具体资源;同一 capability 可由多类 ResourceOffer 满足;禁 Need→直接推荐一个 Product。
 
 ④ ResourceOffer         【原子资源】ONE ResourceOffer = ONE callable resource
-   offer_id, provider_ref, resource_type(**恰好一个**:NO_ACTION|CONTENT|PRACTICE|AI_COACH|PROGRAM|HUMAN_COACH|QUALIFIED_EXPERT|EXTERNAL_REFERRAL),
+   offer_id, resource_type(**恰好一个**:NO_ACTION|CONTENT|PRACTICE|AI_COACH|PROGRAM|HUMAN_COACH|QUALIFIED_EXPERT|EXTERNAL_REFERRAL),
    qualification_mode(REQUIRED|NOT_APPLICABLE|EXTERNAL_REFERRAL_POLICY;见 §4),
+   provider_ref?,                 # 条件字段:仅 qualification_mode=REQUIRED 时必填
+   external_referral_target_ref?, # 条件字段:仅 EXTERNAL_REFERRAL_POLICY 时使用
    supports_capability_keys[](1..N), age_scope, need_scope, evidence_refs[], risk_boundary,
    privacy_class, effort, duration, availability, cost_class, requires_human, requires_consent
-   不变量:**ResourceOffer ≠ Solution Bundle**(组合是 OrchestrationPlan 的职责);NO_ACTION 是一等 Offer;cost 仅分级、无真实支付;八型封闭,ASSESSMENT=HOLD(见 §10)。
+   provider_ref/资格 规则:
+     A REQUIRED(AI_COACH/CONTENT/PRACTICE/PROGRAM/HUMAN_COACH/QUALIFIED_EXPERT):provider_ref 必填;provider qualification 在 eligibility 评估与执行复验时都 MUST=ACTIVE。
+     B NOT_APPLICABLE(NO_ACTION):provider_ref=null;**不得为满足 schema 伪造 SYSTEM Provider**。
+     C EXTERNAL_REFERRAL_POLICY(EXTERNAL_REFERRAL):provider_ref 可 null,用 external_referral_target_ref;**不强迫转介对象先成为平台 Provider**;仍过 safety/scope/risk/referral-quality/consent。
+   不变量:**ResourceOffer ≠ Solution Bundle**(组合是 OrchestrationPlan 的职责);**PLATFORM_MEMBERSHIP ≠ REFERRAL_ELIGIBILITY**;NO_ACTION 是一等 Offer;cost 仅分级、无真实支付;八型封闭,ASSESSMENT=HOLD(见 §10)。
 
-⑤ ResourceRecommendation  Recommendation ≠ Decision ≠ Orchestration(可推荐 1..N 原子 Offer,但【不排序/不编排】)
-   recommendation_id, intent_id,
-   candidates[]{ offer_ref, covered_capability_keys[], why_this, limitations[], rank },
+⑤ ResourceRecommendation  Recommendation ≠ Decision ≠ Orchestration(可对 eligible Offer 确定性【排序】,但【不编排执行】)
+   recommendation_id, intent_id, version,
+   candidates[]{ offer_ref, covered_capability_keys[], why_this, limitations[], rank },   # rank=确定性排序,非执行顺序
    recommended_offer_refs[], required_capability_keys[], covered_capability_keys[], uncovered_capability_keys[], why_now,
    status(PROPOSED|SHOWN|SUPERSEDED|EXPIRED)   # 仅描述推荐自身生命周期
-   不变量:可解释规则产生(禁 ML/黑盒);**不含 ACCEPTED/ALTERNATIVE_SELECTED**(那是 Family Decision);**不含 order/timing/condition**(那是 OrchestrationPlan);Resource Fit 必须以 covered/uncovered capabilities 可解释。**无 RecommendationSet 聚合,不新增核心对象。**
+   MAY:对 eligible candidate Offers 做确定性排序(rank)· 推荐 1..N 原子 Offer · 解释 why_this/why_now/limitations · 描述 capability coverage。
+   MUST NOT:定义执行顺序 / 时间 / 触发 / 条件服务路径 / 启动服务。
+   不变量:**RANKING ≠ ORCHESTRATION**(Recommendation 答"推荐哪些 eligible 资源";OrchestrationPlan 答"已接受资源如何/何时/以何顺序/在何条件下使用");可解释规则产生(禁 ML/黑盒);**不含 ACCEPTED/ALTERNATIVE_SELECTED**(那是 Family Decision);Resource Fit 以 covered/uncovered capabilities 可解释。无 RecommendationSet 聚合,不新增核心对象。
 
 〔边界/事件〕FamilyServiceDecision  【家庭决定边界,非核心 Aggregate】(Recommendation → Decision 的可审计边界)
-   decision_id, family_id, subject_person_id, intent_id, recommendation_ref,
-   decision_type(ACCEPT_RECOMMENDATION|SELECT_ALTERNATIVE|DISMISS), selected_offer_refs[], actor_person_id, decided_at
-   不变量:家庭决定是独立可审计真相,不是 Recommendation 的状态;需家庭决定处,无有效 Decision 不得启动服务。**CORE_OBJECTS=8,DECISION_BOUNDARY=1(本条不计入八核心)。**
+   decision_id, family_id, subject_person_id, intent_id, recommendation_ref, recommendation_version, decision_type, selected_offer_refs[], actor_person_id, decided_at
+   选择完整性(禁注入任意 offer):
+     ACCEPT_RECOMMENDATION → selected_offer_refs == 该 recommendation version 的 recommended_offer_refs;
+     SELECT_ALTERNATIVE → selected_offer_refs 为 recommendation.candidates[].offer_ref 的非空子集(否则须先生成新 Recommendation);
+     DISMISS → selected_offer_refs = []。
+   不变量:家庭决定是独立可审计真相,不是 Recommendation 的状态;**必须可追溯到其响应的 exact Recommendation version/snapshot**;需家庭决定处,无有效 Decision 不得启动服务。**CORE_OBJECTS=8,DECISION_BOUNDARY=1(本条不计入八核心)。**
 
 ⑥ OrchestrationPlan      【声明式期望路径】desired path,不拥有执行真相
    plan_id, intent_id, family_id, subject_person_id, version, accepted_by_decision_ref,
-   steps[]{ step_no, capability_key, offer_ref, trigger(NOW|AFTER_PREV|SCHEDULED|CONDITIONAL), condition(repeated≥N|complex|risk|out_of_scope) },
+   steps[]{ step_no, capability_keys[](1..N), offer_ref, covered_capability_keys[], trigger(NOW|AFTER_PREV|SCHEDULED|CONDITIONAL), condition(repeated≥N|complex|risk|out_of_scope) },
    status(DRAFT|PROPOSED|ACCEPTED|SUPERSEDED)   # 仅 proposal/version 生命周期
+   步骤基数:**一个 plan step 可覆盖 1..N GrowthCapability**(不为多能力重复同一 step);须保留可解释性:此步 accepted offer 覆盖哪些 required capability。
    不变量:**不含 ACTIVE/COMPLETED;step 不含执行状态**(执行真相归 ServiceCase);V1 不做通用 workflow DSL(仅上述有限条件路径)。Plan 回答"计划是什么",不回答"执行到哪"。
 
 ⑦ ServiceCase           【实际执行真相】actual service execution(Family Steward 拥有)
@@ -108,6 +120,18 @@ B. Resource Eligibility Gate(编排层,每次针对某家庭此刻,FAIL CLOSED):
 仅 eligible Offer 进入 **Growth Fiduciary Ranking**(蓝图 §4):child_growth_interest > confirmed_family_intent > resource_fit > evidence > past_context > family_preference > user_burden > cost。
 **Platform Revenue = NOT_A_RANKING_SIGNAL(根本不参与)。** 必须支持 NO_ACTION / FREE_RESOURCE / EXTERNAL_REFERRAL。
 
+### 4b. 执行时 Eligibility 复验(最高安全不变量)+ 可追溯
+
+**家庭 Decision 不永久授权执行。** 在 Recommendation(T1)→ Decision → Plan → ServiceCase 执行(T2)之间,时变资格可能改变。
+ServiceCase 执行某 selected Offer **前**,MUST 复验(FAIL CLOSED):active consent · safety/risk route · provider qualification(REQUIRED 时 ==ACTIVE)· resource availability · age/scope · professional/risk boundary。
+```text
+不变量:FAMILY_DECISION ≠ ELIGIBILITY_BYPASS;RECOMMENDATION_ELIGIBLE_AT_T1 ≠ EXECUTION_ELIGIBLE_AT_T2。
+若 selected Offer 在 T2 变 INELIGIBLE:不得执行、【不得静默替换】其他资源;仅允许显式安全出口 RE_RECOMMEND_REQUIRED / NO_ACTION / EXTERNAL_REFERRAL;
+  服务路径实质变化时,家庭须重新决定。
+可追溯(仅最小语义 ref,不建大审计引擎、不复制 canonical 真相):eligibility_evaluation_ref · evaluated_at · policy_version;
+  足以回答"推荐时为何 eligible(T1)"与"执行开始时是否仍 eligible(T2)"。
+```
+
 ## 5. GrowthPriority 可选
 
 `GrowthIntent ≠ GrowthPriority`;GrowthPriority = OPTIONAL / Growth-OS-owned / family-confirmed,**不是本链前置**;Intent 可事后可选 inform 一条 Priority(经既有 human-confirmed 边界)。临时求助不被强制"成长规划化"。
@@ -139,10 +163,11 @@ FollowUpResponse 字段: response_ref(原话/勾选) · helpfulness(HELPFUL|SOME
   → GrowthIntent 确认   [in: signal + 家长显式确认 · out: intent(OPEN) · owner: Orchestration · write: 服务层;需家长确认]
   → 必需 Capability: DE_ESCALATION + COMMUNICATION_REOPENING   [in: intent · out: required_capability_keys[2] · owner: Capability Engine · write: 无(声明)]
   → Candidate ResourceOffers(原子): OFFER_A(AI_COACH) · OFFER_B(PRACTICE) [· OFFER_C(PROGRAM) 条件]   [owner: Resource Network · write: 无]
-  → Resource Eligibility Gate(按 qualification_mode:A/B REQUIRED→ACTIVE;consent/age_scope/safety)   [out: eligible set 或 INELIGIBLE · owner: Eligibility Gate · write: 无]
-  → Growth Fiduciary Ranking(确定性)→ ResourceRecommendation(candidates:A→COMMUNICATION_REOPENING, B→DE_ESCALATION;recommended=[A,B];why_this/why_now/limitations)   [status: SHOWN · owner: Orchestration · write: 服务层]
-  → FamilyServiceDecision(ACCEPT_RECOMMENDATION, selected=[A,B])   [in: recommendation + 家庭 · out: decision · owner: Family · write: 决定边界,可审计]
+  → Resource Eligibility 评估 @T1(按 qualification_mode:A REQUIRED→ACTIVE;consent/age_scope/safety;记 eligibility_evaluation_ref/evaluated_at/policy_version)   [out: eligible set 或 INELIGIBLE · owner: Eligibility Gate · write: 无]
+  → Growth Fiduciary Ranking(确定性,rank≠执行顺序)→ ResourceRecommendation(candidates:A→COMMUNICATION_REOPENING, B→DE_ESCALATION;recommended=[A,B];why_this/why_now/limitations)   [status: SHOWN · owner: Orchestration · write: 服务层]
+  → FamilyServiceDecision(ACCEPT_RECOMMENDATION;selected==recommended=[A,B];追溯 recommendation_version)   [in: recommendation + 家庭 · out: decision · owner: Family · write: 决定边界,可审计]
   → OrchestrationPlan(声明: A now → B tonight → FOLLOWUP tomorrow; IF repeated → C)   [status: ACCEPTED · owner: Orchestration · write: 声明,无执行真相]
+  → Eligibility 复验 @T2(执行前重判 consent/safety/qualification/availability/scope;FAIL CLOSED;变 INELIGIBLE→RE_RECOMMEND/NO_ACTION/EXTERNAL_REFERRAL,不静默替换)   [owner: Eligibility Gate · write: 无]
   → ServiceCase(OPEN→IN_PROGRESS)   [owner: Family Steward · write: 执行真相]
   → AI service(复用 Principal) → Practice(仅当有 approved Content Ref 才交付,否则该 Offer INELIGIBLE/省略)
   → Follow-up(24h) → FollowUpResponse(helpfulness=SOMEWHAT_HELPFUL, "感觉好一点")   [owner: 服务层 · write: 服务层,非 Growth Truth]
@@ -180,6 +205,8 @@ M2 RESOURCE_NETWORK_READY
   NO_ACTION_SUPPORTED = PASS   EXTERNAL_REFERRAL_SUPPORTED = PASS   CORE_OBJECT_COUNT = 8
 M3 ORCHESTRATION_READY
   RECOMMENDATION_NE_DECISION = PASS   RECOMMENDATION_CARDINALITY = PASS   RECOMMENDATION_NE_PLAN = PASS
+  RECOMMENDATION_RANKING_NE_EXECUTION_ORDER = PASS   PROVIDER_REF_CONDITIONALITY = PASS   PLAN_CAPABILITY_CARDINALITY = PASS
+  DECISION_SELECTION_INTEGRITY = PASS   EXECUTION_ELIGIBILITY_REVALIDATION = PASS   ELIGIBILITY_TRACEABILITY = PASS
   FAMILY_DECISION_BOUNDARY = PASS   PLAN_NE_EXECUTION = PASS   ORCHESTRATION_PLAN_DECLARATIVE = PASS   PLATFORM_REVENUE_RANKING_SIGNAL = 0
 M4 SERVICE_CONTINUITY_READY
   SERVICE_CASE_OWNS_EXECUTION = PASS   CASE_CLOSED_NE_RESOLVED = PASS   FOLLOWUP_NE_OBSERVATION = PASS   HUMAN_ESCALATION_DESIGNED = PASS
