@@ -1,12 +1,14 @@
 # FAMILY GROWTH PLATFORM —— 正式总蓝图(SSOT)
 
 ```text
-DOC_KIND = MASTER_BLUEPRINT(最高架构 SSOT;统合前几轮所有反向论证)
-RULING   = 总架构师正式定版/冻结(2026-08-16),经 FAMILY-PLATFORM-V3-BLUEPRINT-CLOSEOUT-001 修订
-BASE     = master @ 9d52358
-PHASE0   = PASS_CANDIDATE / NOT_CLOSED(PR#31 尚未 merge,仍受 exact-head 架构复审约束;不得声称"已完成")
-PHASE1   = 架构契约草案存在(PR#32),NOT AUTHORIZED_RUNTIME、NOT FINAL_SSOT
+DOC_KIND        = MASTER_BLUEPRINT(最高、稳定的架构 SSOT;统合前几轮所有反向论证)
+RULING          = 总架构师正式定版/冻结(2026-08-16),经 CLOSEOUT-001 / FINAL-SEMANTIC / ARCH-CLOSEOUT 修订
+PARENT          = (无;本文件即最高战略 SSOT)
+STRATEGIC_SCOPE = Child & Family Growth(跨学科生命周期;Vision Wide, Entry Narrow)
 ```
+
+> **本文件只承载稳定架构真相(定义 / 架构不变量 / 成熟度模型 / 战略范围),不承载可变执行状态。**
+> Phase / PR / BASE / merge 等**可变执行状态**一律归 `governance/PROGRAM_STATUS_PLATFORM_V1.md` 与 `governance/MERGE_AUTHORIZATIONS.yaml`;阶段变化不需修改本最高蓝图。
 
 ## 0. 定义与使命
 
@@ -189,26 +191,22 @@ M5 CONTEXT_REUSE_READY
 **关键战略分界(固定):`M1–M5 = Single-family Platform Value`(先证明一个家庭的服务能连续、能复用);`M6–M8 = Network / Platform Economic Value`(拼多多需求网络 / 贝壳协作网络 / 经济)。在 M1–M5 未成之前,不进入 M6–M8。**
 (旧"M1 求助→M2 组织→M3 跟进→M4 复用→M5 需求网络→M6 协作→M7 学习→M8 经济"映射 SUPERSEDED,已删除,避免双状态机。)
 
-阶段路线(先冻结语义,再写运行时):
+阶段路线(稳定语义;各 Phase 的实时进度/PR/SHA 归 PROGRAM_STATUS,不在此承载):
 ```text
-Phase0 战略+代码重定基            = PASS_CANDIDATE / NOT_CLOSED(PR#31:北极星→编排 · Program01→FIRST_PROGRAM_RESOURCE · Program Runtime→@family/program-runtime;待 exact-head 复审)
-Phase1 Growth Resource 架构契约   = 草案(PR#32,见 §9);正式 Phase1 = FAMILY-GROWTH-ORCHESTRATION-ARCH-001(八对象 + 一条 Golden Journey),过 Architecture Gate 才写 runtime
+Phase0 战略+代码重定基            = 北极星→编排 · Program01→FIRST_PROGRAM_RESOURCE · Program Runtime→@family/program-runtime
+Phase1 Growth Resource 架构契约   = FAMILY-GROWTH-ORCHESTRATION-ARCH-001(§2b 八对象 + 一条 Golden Journey),过其自有 Architecture Gate 才写 runtime
 Phase2 首条纵切 runtime(13岁冲突:Need→Intent→Capability→Resource→AI→Practice→Follow-up→Observation)
 Phase3 Context Reuse   Phase4 Micro Program(验证 Program=资源)  Phase5 Human Service  Phase6 Family Steward(SLA/Recovery)
 Phase7 Demand Aggregation(匿名)  Phase8 FGCN Provider Collaboration  Phase9 Learning-to-rank(现禁 ML)  Phase10 Economics(最后)
 ```
 
-## 9. 与现有工件的对账
+## 9. 架构纪律:推进顺序(稳定)
 
 ```text
-PR#31(product-runtime-001):Phase 0 —— 北极星/Program 降级/包移出 web。状态 = Phase0 Closeout Candidate(尚未合并);
-  exact merge SHA 归 governance/review ledger,不在本最高蓝图硬写(避免 SHA 漂移)。第二轮须:移除 Program completion 真相 · rebase 到含本蓝图的 master · 修剩余状态漂移。
-PR#32(allocation-v1-001):= EARLY PHASE1 ARCHITECTURE REFERENCE;NOT AUTHORIZED_RUNTIME;NOT FINAL_SSOT。
-  流程记录:PROCESS_DEVIATION = PHASE1_ARCH_ARTIFACT_CREATED_BEFORE_PHASE0_REVIEW;影响 = NO_RUNTIME / NO_CANONICAL / NO_ROLLBACK。
-  须在 Phase0 closeout 后,以 #32 为输入 rebase/forward 成 FAMILY-GROWTH-ORCHESTRATION-ARCH-001(命名统一到 §2b 八对象:补齐 GrowthCapability 与 OrchestrationPlan)。
-PR#30(web-entry-mount):Entry Foundation,独立冻结,不混入。
+Phase0 重定基 → Phase1 架构契约(ARCH-001)→ 其自有 Architecture Gate → 首条纵切 runtime → …(逐 Phase 后置网络/经济)
+纪律:先冻结语义再写 runtime;不并行开新架构/runtime PR;每次合 master 须显式 per-merge 授权(见 MERGE_AUTHORIZATIONS.yaml)。
 ```
-推进顺序(冻结):**PR#33 V3 蓝图 → 合入 master → PR#31 rebase+第二轮 → 合入 → PR#32 forward 成 ARCH-001 → Architecture Gate → 首条纵切 runtime。不再并行开新架构 PR。**
+**各 PR 的 exact SHA / merge / Phase 完成状态等可变执行真相,一律归 `governance/PROGRAM_STATUS_PLATFORM_V1.md` 与 `governance/MERGE_AUTHORIZATIONS.yaml`,不在本最高蓝图硬写(避免 SHA/状态漂移)。**
 
 ## 10. DO_NOT_BUILD 过滤器(每个任务开工前必答)
 
