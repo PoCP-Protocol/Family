@@ -33,7 +33,7 @@ describe('need classification (确定性,无 ML,未知不臆造)', () => {
   });
 });
 
-describe('resource registry (原子 + provider_ref 条件化 + PRACTICE 需 approved ref)', () => {
+describe('resource registry (原子 + provider_ref 条件化 + PRACTICE 需真实 executor)', () => {
   it('无 approved content ref → 无 PRACTICE;NO_ACTION/AI_COACH 始终在', () => {
     const offers = candidateOffersForCommunicationConflict({});
     const types = offers.map((o) => o.resource_type);
@@ -41,9 +41,9 @@ describe('resource registry (原子 + provider_ref 条件化 + PRACTICE 需 appr
     expect(types).toContain('AI_COACH');
     expect(types).not.toContain('PRACTICE');
   });
-  it('有 approved content ref → 出现 PRACTICE', () => {
+  it('只有 approved content ref 仍不出现 PRACTICE：没有 real executor 就不把引用伪装为可交付服务', () => {
     const offers = candidateOffersForCommunicationConflict({ approvedPracticeContentRef: 'content.comm21.day1.practice' });
-    expect(offers.map((o) => o.resource_type)).toContain('PRACTICE');
+    expect(offers.map((o) => o.resource_type)).not.toContain('PRACTICE');
   });
   it('NO_ACTION provider_ref=null(不伪造 SYSTEM);AI_COACH provider_ref=自营', () => {
     const offers = candidateOffersForCommunicationConflict({});
@@ -96,6 +96,19 @@ describe('eligibility (FAIL CLOSED;T1/T2 同函数;qualification_mode)', () => {
     expect(t1.eligible).toBe(true);
     expect(t2.eligible).toBe(false);
   });
+  it('遗留或注入 PRACTICE snapshot 在 T1/T2 均因无 executor fail-closed', () => {
+    const practice: ResourceOfferDto = {
+      offer_id: 'resource:v1:practice:legacy-ref', resource_type: 'PRACTICE', qualification_mode: 'REQUIRED',
+      provider_ref: SELF_AI_COACH_PROVIDER_REF, external_referral_target_ref: null,
+      supports_capability_keys: ['DE_ESCALATION'], age_scope: 'EARLY_ADOLESCENCE_12_15',
+      need_scope: 'PARENT_CHILD_COMMUNICATION_CONFLICT', requires_consent: false, requires_human: false, cost_class: 'FREE',
+    };
+    for (const stage of ['T1', 'T2'] as const) {
+      const evaluation = evaluateOfferEligibility(practice, stage, baseCtx());
+      expect(evaluation.eligible).toBe(false);
+      expect(evaluation.reason_codes).toContain('INELIGIBLE_NO_EXECUTOR');
+    }
+  });
 });
 
 describe('recommendation (确定性排序,不编排;coverage)', () => {
@@ -134,5 +147,16 @@ describe('decision integrity (禁注入任意 offer)', () => {
     expect(checkDecisionIntegrity(rec, 'DISMISS', [], 3).ok).toBe(true);
     expect(checkDecisionIntegrity(rec, 'DISMISS', ['x'], 3).ok).toBe(false);
     expect(checkDecisionIntegrity(rec, 'ACCEPT_RECOMMENDATION', rec.recommended_offer_refs, 2).code).toBe('RECOMMENDATION_VERSION_MISMATCH');
+  });
+  it('NO_ACTION 只能经 DISMISS 空选择表达，不能被 ACCEPT 或 alternative 伪装成可执行资源', () => {
+    const noActionOnly = buildRecommendation({
+      recommendationId: 'rec-no-action', intentId: 'intent-no-action', version: 4,
+      requiredCapabilityKeys: ['DE_ESCALATION'],
+      eligibleOffers: [offers.find((offer) => offer.resource_type === 'NO_ACTION')!],
+    });
+    const noActionRef = noActionOnly.candidates[0].offer_ref;
+    expect(checkDecisionIntegrity(noActionOnly, 'ACCEPT_RECOMMENDATION', [noActionRef], 4).code).toBe('NO_ACTION_REQUIRES_DISMISS');
+    expect(checkDecisionIntegrity(noActionOnly, 'SELECT_ALTERNATIVE', [noActionRef], 4).code).toBe('NO_ACTION_REQUIRES_DISMISS');
+    expect(checkDecisionIntegrity(noActionOnly, 'DISMISS', [], 4).ok).toBe(true);
   });
 });

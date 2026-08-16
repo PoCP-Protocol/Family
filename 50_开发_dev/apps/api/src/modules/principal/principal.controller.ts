@@ -1,7 +1,8 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, Header, Headers, Inject, NotFoundException, Param, Post, UnauthorizedException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrincipalService } from './principal.service';
-import { AuthService, bearerToken } from '../auth/auth.service';
+import { AuthService, bearerToken, sessionTokenFromHeaders } from '../auth/auth.service';
+import { assertCookieOriginOk } from '../auth/family-platform-auth.guard';
 import { assertReviewer } from './reviewer-policy';
 
 function requireActor(actorId?: string): string {
@@ -73,20 +74,22 @@ export class PrincipalController {
   ) {}
 
   /**
-   * IAM-103 消费主体解析:Bearer → AuthService.resolveActor → 可信 actor,且 actor.familyId 必须 == :familyId(否则 403)。
-   * FPAI_REQUIRE_BEARER=true:无 Bearer(仅 x-actor-id)→ 401(x-actor-id-only 消费路径必拒)。
-   * flag 关(默认内部 dogfood):无 Bearer 回退 x-actor-id;但若带 Bearer 仍强制解析 + family scope。
+   * P0 Runtime Trust:消费主体只能由 Account→ACTIVE binding→ACTIVE membership→family strict context 得出。
+   * 不允许 x-actor-id 回退；同一 Account 在该家庭出现多条有效 person context 时明确拒绝，绝不任选一条。
    */
-  private async resolveConsumerActor(familyId: string, authorization?: string, actorId?: string): Promise<string> {
-    const token = bearerToken(authorization);
-    if (token) {
-      const resolved = await this.auth.resolveActor(token);
-      if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
-      if (resolved.familyId !== familyId) throw new ForbiddenException('actor_family_mismatch');
-      return resolved.personId;
-    }
-    if (requireBearer()) throw new UnauthorizedException('bearer_token_required');
-    return requireActor(actorId); // 仅 flag 关时允许 x-actor-id 降级(内部 dogfood)
+  private async resolveConsumerActor(familyId: string, authorization?: string, cookie?: string): Promise<string> {
+    const token = sessionTokenFromHeaders({ authorization, cookie });
+    if (!token) throw new UnauthorizedException('account_session_required');
+    const strict = await this.auth.resolveFamilyContextStrict(token, familyId);
+    if (strict.status === 'AMBIGUOUS') throw new ForbiddenException('ambiguous_family_context');
+    if (strict.status === 'OK' && strict.ctx) return strict.ctx.personId;
+    const account = await this.auth.resolveAccount(token);
+    if (!account) throw new UnauthorizedException('invalid_or_expired_account_session');
+    throw new ForbiddenException('account_has_no_active_membership_in_family');
+  }
+
+  private assertConsumerOrigin(method: string, authorization?: string, cookie?: string, origin?: string): void {
+    assertCookieOriginOk({ method, headers: { authorization, cookie, origin } });
   }
 
   /**
@@ -112,11 +115,13 @@ export class PrincipalController {
   async createSession(
     @Param('familyId') familyId: string,
     @Body() body: { subject_ref?: string },
-    @Headers('x-actor-id') actorId?: string,
     @Headers('authorization') authorization?: string,
+    @Headers('cookie') cookie?: string,
+    @Headers('origin') origin?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
+    this.assertConsumerOrigin('POST', authorization, cookie, origin);
+    const actor = await this.resolveConsumerActor(familyId, authorization, cookie);
     if (!body?.subject_ref) throw new BadRequestException('subject_ref is required');
     return this.service.createSession(familyId, body.subject_ref, actor, corr(correlationId));
   }
@@ -126,11 +131,13 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Param('sessionId') sessionId: string,
     @Body() body: { message?: string; subject_ref?: string; images?: Array<{ media_type?: string; data?: string }> },
-    @Headers('x-actor-id') actorId?: string,
     @Headers('authorization') authorization?: string,
+    @Headers('cookie') cookie?: string,
+    @Headers('origin') origin?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
+    this.assertConsumerOrigin('POST', authorization, cookie, origin);
+    const actor = await this.resolveConsumerActor(familyId, authorization, cookie);
     if (!body?.message) throw new BadRequestException('message is required');
     if (!body?.subject_ref) throw new BadRequestException('subject_ref is required');
     let images: Array<{ media_type: string; data: string }> | undefined;
@@ -151,10 +158,10 @@ export class PrincipalController {
   async getSession(
     @Param('familyId') familyId: string,
     @Param('sessionId') sessionId: string,
-    @Headers('x-actor-id') actorId?: string,
     @Headers('authorization') authorization?: string,
+    @Headers('cookie') cookie?: string,
   ) {
-    await this.resolveConsumerActor(familyId, authorization, actorId);
+    await this.resolveConsumerActor(familyId, authorization, cookie);
     const agg = await this.service.getSession(familyId, sessionId);
     if (!agg) throw new NotFoundException('session not found');
     return agg;
@@ -212,11 +219,13 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Param('proposalId') proposalId: string,
     @Body() body: { onboarding_id?: string; priority_id?: string; idempotency_key?: string },
-    @Headers('x-actor-id') actorId?: string,
     @Headers('authorization') authorization?: string,
+    @Headers('cookie') cookie?: string,
+    @Headers('origin') origin?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
+    this.assertConsumerOrigin('POST', authorization, cookie, origin);
+    const actor = await this.resolveConsumerActor(familyId, authorization, cookie);
     if (!body?.onboarding_id) throw new BadRequestException('onboarding_id is required');
     if (!body?.priority_id) throw new BadRequestException('priority_id is required');
     if (!body?.idempotency_key) throw new BadRequestException('idempotency_key is required');
@@ -232,11 +241,13 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Param('responseId') responseId: string,
     @Body() body: { rating?: string; note?: string },
-    @Headers('x-actor-id') actorId?: string,
     @Headers('authorization') authorization?: string,
+    @Headers('cookie') cookie?: string,
+    @Headers('origin') origin?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
+    this.assertConsumerOrigin('POST', authorization, cookie, origin);
+    const actor = await this.resolveConsumerActor(familyId, authorization, cookie);
     await this.service.submitFeedback(familyId, responseId, actor, body?.rating ?? null, body?.note ?? null, corr(correlationId));
     return { ok: true };
   }

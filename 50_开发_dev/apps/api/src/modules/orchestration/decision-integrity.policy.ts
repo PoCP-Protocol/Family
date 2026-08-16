@@ -5,6 +5,7 @@
  * DISMISS → selected = []。必须追溯 exact recommendation_version。
  */
 import type { FamilyDecisionType, ResourceRecommendationDto } from '@family/contracts';
+import { OFFER_IDS } from './resource.registry';
 
 export interface DecisionIntegrityResult {
   ok: boolean;
@@ -27,6 +28,11 @@ export function checkDecisionIntegrity(
     return { ok: false, code: 'RECOMMENDATION_VERSION_MISMATCH' };
   }
   const candidateRefs = new Set(recommendation.candidates.map((c) => c.offer_ref));
+  const noActionRefs = new Set(recommendation.candidates.filter((c) => c.offer_ref === OFFER_IDS.NO_ACTION).map((c) => c.offer_ref));
+  // NO_ACTION 是家庭明确选择暂不执行的语义，不是可被 ACCEPT/alternative 当作服务资源的 offer。
+  if (decisionType !== 'DISMISS' && selectedOfferRefs.some((r) => noActionRefs.has(r))) {
+    return { ok: false, code: 'NO_ACTION_REQUIRES_DISMISS' };
+  }
 
   switch (decisionType) {
     case 'ACCEPT_RECOMMENDATION':

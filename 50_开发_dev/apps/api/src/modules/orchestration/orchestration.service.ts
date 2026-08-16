@@ -81,7 +81,8 @@ export class OrchestrationService {
   }
 
   /** ① 表达需求:先校验 subject(家庭/CHILD/12–15)+ SERVICE consent,再写服务层输入 + NON_CANONICAL NeedSignal。 */
-  async requestHelp(familyId: string, subjectPersonId: string, actorPersonId: string, rawText: string, source: 'MANUAL' | 'PRINCIPAL' | 'SERVICE_FOLLOWUP', _correlationId: string): Promise<RequestHelpResult> {
+  async requestHelp(familyId: string, subjectPersonId: string, actorPersonId: string, rawText: string, source: 'MANUAL' | 'PRINCIPAL' | 'SERVICE_FOLLOWUP', _correlationId: string, idempotencyKey?: string): Promise<RequestHelpResult> {
+    return this.withIdempotency('RequestGrowthHelp', idempotencyKey, { familyId, subjectPersonId, actorPersonId, rawText, source }, async () => {
     if (!rawText?.trim()) throw new BadRequestException('raw_text_required');
     const subj = await this.repo.checkSubject(familyId, subjectPersonId);
     if (!subj.exists || !subj.inFamily) throw new ForbiddenException('subject_not_in_family');
@@ -109,10 +110,12 @@ export class OrchestrationService {
         supported,
       };
     });
+    });
   }
 
   /** ② 显式确认:subject 从 signal 派生(不信客户端);创建 GrowthIntent(OPEN)。不建 GrowthPriority。 */
-  async confirmIntent(familyId: string, actorPersonId: string, signalId: string, goalText: string): Promise<{ intent_id: string; subject_person_id: string; required_capability_keys: GrowthCapabilityKey[] }> {
+  async confirmIntent(familyId: string, actorPersonId: string, signalId: string, goalText: string, idempotencyKey?: string): Promise<{ intent_id: string; subject_person_id: string; required_capability_keys: GrowthCapabilityKey[] }> {
+    return this.withIdempotency('ConfirmGrowthIntent', idempotencyKey, { familyId, actorPersonId, signalId, goalText }, async () => {
     const sig = await this.repo.query<{ subject_person_id: string; inferred_need_type: string | null }>(
       `select subject_person_id, inferred_need_type from growth_need_signals where signal_id=$1 and family_id=$2`, [signalId, familyId],
     );
@@ -128,6 +131,7 @@ export class OrchestrationService {
       [familyId, subjectPersonId, signalId, needType, goalText.trim(), caps, actorPersonId],
     );
     return { intent_id: intent.rows[0].intent_id, subject_person_id: subjectPersonId, required_capability_keys: caps };
+    });
   }
 
   private async loadOpenIntent(familyId: string, intentId: string): Promise<{ subjectPersonId: string; requiredCaps: GrowthCapabilityKey[]; goalText: string; status: string }> {
@@ -139,7 +143,8 @@ export class OrchestrationService {
   }
 
   /** ③ 推荐:候选原子 Offer → T1 Eligibility(FAIL CLOSED,持久化 offer_snapshot)→ 确定性排序。subject 从 intent 派生。 */
-  async recommend(familyId: string, intentId: string): Promise<ResourceRecommendationDto> {
+  async recommend(familyId: string, intentId: string, idempotencyKey?: string): Promise<ResourceRecommendationDto> {
+    return this.withIdempotency('RequestGrowthRecommendation', idempotencyKey, { familyId, intentId }, async () => {
     const intent = await this.loadOpenIntent(familyId, intentId);
     if (intent.status !== 'OPEN') throw new BadRequestException('intent_not_open');
     const subjectPersonId = intent.subjectPersonId;
@@ -165,6 +170,7 @@ export class OrchestrationService {
         [rec.recommendation_id, familyId, intentId, rec.version, JSON.stringify(rec.candidates), rec.recommended_offer_refs, rec.required_capability_keys, rec.covered_capability_keys, rec.uncovered_capability_keys, rec.why_now],
       );
       return rec;
+    });
     });
   }
 
@@ -303,7 +309,8 @@ export class OrchestrationService {
   }
 
   /** ⑤ 回访 + helpfulness(actor provenance;非 Observation)。有效反馈→完成服务环:Case COMPLETED + Intent CLOSED/SERVICE_DELIVERED。 */
-  async submitFollowUp(familyId: string, actorPersonId: string, caseId: string, helpfulness: string, text: string | null): Promise<{ followup_id: string }> {
+  async submitFollowUp(familyId: string, actorPersonId: string, caseId: string, helpfulness: string, text: string | null, idempotencyKey?: string): Promise<{ followup_id: string }> {
+    return this.withIdempotency('SubmitServiceFollowUp', idempotencyKey, { familyId, actorPersonId, caseId, helpfulness, text }, async () => {
     const allowed = ['HELPFUL', 'SOMEWHAT_HELPFUL', 'NOT_HELPFUL_YET', 'UNANSWERED'];
     if (!allowed.includes(helpfulness)) throw new BadRequestException('invalid_helpfulness');
     const own = await this.repo.query<{ intent_ref: string; status: string }>(`select intent_ref, status from service_cases where case_id=$1 and family_id=$2`, [caseId, familyId]);
@@ -319,6 +326,7 @@ export class OrchestrationService {
       await this.repo.query(`update growth_intents set status='CLOSED', close_reason='SERVICE_DELIVERED' where intent_id=$1 and family_id=$2`, [own.rows[0].intent_ref, familyId]);
     }
     return { followup_id: r.rows[0].followup_id };
+    });
   }
 
   /** ⑥ Context Reuse(只读;按 need_type 过滤,同类才复用;禁因果)。 */

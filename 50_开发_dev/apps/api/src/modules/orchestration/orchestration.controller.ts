@@ -30,10 +30,11 @@ export class OrchestrationController {
     @Body() body: { subject_person_id?: string; raw_text?: string },
     @OrchestrationActor() actor: Actor,
     @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     if (!body?.subject_person_id) throw new BadRequestException('subject_person_id required');
     if (!body?.raw_text) throw new BadRequestException('raw_text required');
-    return this.svc.requestHelp(familyId, body.subject_person_id, actor.personId, body.raw_text, 'MANUAL', corr(correlationId));
+    return this.svc.requestHelp(familyId, body.subject_person_id, actor.personId, body.raw_text, 'MANUAL', corr(correlationId), idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined);
   }
 
   @Post('orchestration/intents')
@@ -42,15 +43,16 @@ export class OrchestrationController {
     @Param('familyId') familyId: string,
     @Body() body: { signal_id?: string; goal_text?: string },
     @OrchestrationActor() actor: Actor,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     if (!body?.signal_id || !body?.goal_text) throw new BadRequestException('signal_id, goal_text required');
-    return this.svc.confirmIntent(familyId, actor.personId, body.signal_id, body.goal_text);
+    return this.svc.confirmIntent(familyId, actor.personId, body.signal_id, body.goal_text, idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined);
   }
 
   @Post('orchestration/intents/:intentId/recommendations')
   @RequireOrchestrationAction('RequestGrowthHelp')
-  async recommend(@Param('familyId') familyId: string, @Param('intentId') intentId: string) {
-    return this.svc.recommend(familyId, intentId);
+  async recommend(@Param('familyId') familyId: string, @Param('intentId') intentId: string, @Headers('idempotency-key') idempotencyKey?: string) {
+    return this.svc.recommend(familyId, intentId, idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined);
   }
 
   @Post('orchestration/decisions')
@@ -87,9 +89,10 @@ export class OrchestrationController {
     @Param('caseId') caseId: string,
     @Body() body: { helpfulness?: string; text?: string },
     @OrchestrationActor() actor: Actor,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     if (!body?.helpfulness) throw new BadRequestException('helpfulness required');
-    return this.svc.submitFollowUp(familyId, actor.personId, caseId, body.helpfulness, body.text ?? null);
+    return this.svc.submitFollowUp(familyId, actor.personId, caseId, body.helpfulness, body.text ?? null, idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined);
   }
 
   @Get('orchestration/context-reuse')

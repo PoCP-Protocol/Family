@@ -38,6 +38,8 @@ export class PrincipalAiCoachResource {
       input.actorPersonId,
       input.message,
       input.correlationId,
+      undefined,
+      { deliveryMode: 'ORCHESTRATION_AI_COACH' },
     );
     return {
       session_id: result.session_id,

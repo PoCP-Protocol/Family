@@ -38,9 +38,10 @@ export function evaluateOfferEligibility(offer: ResourceOfferDto, stage: Eligibi
       if (!ctx.available) reasons.push('RESOURCE_UNAVAILABLE');
       break;
     case 'PRACTICE':
-      if (!ctx.safetyRouteNormal) reasons.push('SAFETY_ROUTE_NOT_NORMAL');
-      if (!ctx.providerQualificationActive) reasons.push('PROVIDER_QUALIFICATION_NOT_ACTIVE');
-      if (!ctx.available) reasons.push('RESOURCE_UNAVAILABLE');
+      // Architect ruling: APPROVED_CONTENT_REF alone is not execution. Until a real
+      // approved-content executor is implemented and independently gated, Practice
+      // must be invisible to both T1 recommendation and T2 execution.
+      reasons.push('INELIGIBLE_NO_EXECUTOR');
       break;
     case 'EXTERNAL_REFERRAL':
       // 外部转介:过 SERVICE/age/safety(上面已判 SERVICE/age;safety 见下),但不要求入网。

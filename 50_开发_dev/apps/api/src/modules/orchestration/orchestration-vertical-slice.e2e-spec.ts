@@ -84,6 +84,16 @@ describe('Golden Product E2E(3A 修正语义)', () => {
     expect(dec.outcome).toBe('SERVICE_STARTED');
     expect(dec.executed_resource_type).toBe('AI_COACH');   // 执行类型=所选类型
     expect(dec.ai_coach.risk_route).toBe('NORMAL');
+    // 编排 AI_COACH 显式 deliveryMode:完整 Principal 安全管线复用，但 V3 不写 legacy proposal / 不走 acceptProposal。
+    expect(await count('select count(*) n from principal_action_proposals')).toBe(0);
+    const subjectChain = await pool!.query(
+      `select gi.subject_person_id as intent_subject, fsd.subject_person_id as decision_subject, sc.subject_person_id as case_subject
+         from growth_intents gi
+         join family_service_decisions fsd on fsd.intent_ref=gi.intent_id
+         join service_cases sc on sc.intent_ref=gi.intent_id
+        where gi.intent_id=$1`, [intentId],
+    );
+    expect(subjectChain.rows[0]).toMatchObject({ intent_subject: s.childId, decision_subject: s.childId, case_subject: s.childId });
 
     // 交付后:Case=WAITING_FAMILY;Intent 仍 OPEN(未 SERVICE_DELIVERED)。
     expect((await (await get(`/families/${s.familyId}/orchestration/cases/${dec.case_id}`, s.token)).json()).status).toBe('WAITING_FAMILY');
@@ -210,5 +220,44 @@ describe('Security / correctness 矩阵(3A)', () => {
     // 同 key 异 request → 409
     const conflict = await post(`/families/${s.familyId}/orchestration/decisions`, s.token, { ...body, decision_type: 'DISMISS', selected_offer_refs: [] }, { 'idempotency-key': key });
     expect(conflict.status).toBe(409);
+  });
+
+  it('§21 全链路幂等:RequestHelp/ConfirmIntent/Recommend/FollowUp 同键重放零重复、同键异请求 409', async () => {
+    const s = await seedGuardianSession();
+    const needKey = `need-${randomUUID()}`;
+    const needBody = { subject_person_id: s.childId, raw_text: '孩子刚摔门，我今晚不知道怎么重新开口' };
+    const need1 = await (await post(`/families/${s.familyId}/orchestration/needs`, s.token, needBody, { 'idempotency-key': needKey })).json();
+    const need2 = await (await post(`/families/${s.familyId}/orchestration/needs`, s.token, needBody, { 'idempotency-key': needKey })).json();
+    expect(need2.signal_id).toBe(need1.signal_id);
+    expect(await count('select count(*) n from growth_need_signals')).toBe(1);
+    expect((await post(`/families/${s.familyId}/orchestration/needs`, s.token, { ...needBody, raw_text: '不同请求' }, { 'idempotency-key': needKey })).status).toBe(409);
+
+    const intentKey = `intent-${randomUUID()}`;
+    const intentBody = { signal_id: need1.signal_id, goal_text: '今晚怎么重新开口，先别再吵' };
+    const intent1 = await (await post(`/families/${s.familyId}/orchestration/intents`, s.token, intentBody, { 'idempotency-key': intentKey })).json();
+    const intent2 = await (await post(`/families/${s.familyId}/orchestration/intents`, s.token, intentBody, { 'idempotency-key': intentKey })).json();
+    expect(intent2.intent_id).toBe(intent1.intent_id);
+    expect(await count('select count(*) n from growth_intents')).toBe(1);
+    expect((await post(`/families/${s.familyId}/orchestration/intents`, s.token, { ...intentBody, goal_text: '不同目标' }, { 'idempotency-key': intentKey })).status).toBe(409);
+
+    const recKey = `recommend-${randomUUID()}`;
+    const recPath = `/families/${s.familyId}/orchestration/intents/${intent1.intent_id}/recommendations`;
+    const rec1 = await (await post(recPath, s.token, {}, { 'idempotency-key': recKey })).json();
+    const rec2 = await (await post(recPath, s.token, {}, { 'idempotency-key': recKey })).json();
+    expect(rec2.recommendation_id).toBe(rec1.recommendation_id);
+    expect(await count('select count(*) n from resource_recommendations')).toBe(1);
+
+    const dec = await (await post(`/families/${s.familyId}/orchestration/decisions`, s.token, {
+      intent_id: intent1.intent_id, recommendation_id: rec1.recommendation_id, recommendation_version: rec1.version,
+      decision_type: 'ACCEPT_RECOMMENDATION', selected_offer_refs: rec1.recommended_offer_refs,
+    }, { 'idempotency-key': `decide-${randomUUID()}` })).json();
+    const followupKey = `followup-${randomUUID()}`;
+    const followupPath = `/families/${s.familyId}/orchestration/cases/${dec.case_id}/followups`;
+    const followupBody = { helpfulness: 'SOMEWHAT_HELPFUL', text: '感觉好一点' };
+    const followup1 = await (await post(followupPath, s.token, followupBody, { 'idempotency-key': followupKey })).json();
+    const followup2 = await (await post(followupPath, s.token, followupBody, { 'idempotency-key': followupKey })).json();
+    expect(followup2.followup_id).toBe(followup1.followup_id);
+    expect(await count('select count(*) n from service_followup_responses')).toBe(1);
+    expect((await post(followupPath, s.token, { ...followupBody, helpfulness: 'NOT_HELPFUL_YET' }, { 'idempotency-key': followupKey })).status).toBe(409);
   });
 });

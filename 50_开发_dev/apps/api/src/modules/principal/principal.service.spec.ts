@@ -52,12 +52,13 @@ function fakeRepo(consents: CanonicalConsentRow[]) {
 const row = (status: 'GRANTED' | 'WITHDRAWN'): CanonicalConsentRow =>
   ({ subject_person_id: 'child-1', guardian_person_id: 'mom-1', purpose: 'AI_PERSONALIZATION', status, policy_version: 'v1' });
 
-async function handle(consents: CanonicalConsentRow[], profile: string | undefined, message: string, images?: Array<{ media_type: string; data: string }>) {
+async function handle(consents: CanonicalConsentRow[], profile: string | undefined, message: string, images?: Array<{ media_type: string; data: string }>, options?: { deliveryMode?: 'LEGACY' | 'ORCHESTRATION_AI_COACH' }) {
   if (profile) process.env.FPAI_RUNTIME_PROFILE = profile; else delete process.env.FPAI_RUNTIME_PROFILE;
   const { gw, state } = spyGateway();
-  const svc = new PrincipalService(fakeRepo(consents), {} as never, gw);
-  const res = await svc.handleMessage('fam-1', 'sess-1', 'child-1', 'actor-1', message, 'corr-1', images);
-  return { state, res };
+  const repo = fakeRepo(consents);
+  const svc = new PrincipalService(repo, {} as never, gw);
+  const res = await svc.handleMessage('fam-1', 'sess-1', 'child-1', 'actor-1', message, 'corr-1', images, options);
+  return { state, res, repo };
 }
 
 describe('W2R-101 object-aware Principal context', () => {
@@ -88,6 +89,34 @@ describe('W2R-101 object-aware Principal context', () => {
     const { state, res } = await handle([row('GRANTED')], 'model_first_internal', '孩子说不想活了');
     expect(state.called).toBe(false);                        // 危机不外呼
     expect(res.human_handoff).toBe(true);
+  });
+});
+
+describe('Principal delivery mode boundary', () => {
+  afterEach(() => { delete process.env.FPAI_RUNTIME_PROFILE; });
+
+  it('LEGACY remains the default and writes the existing Action Proposal', async () => {
+    const { res, repo } = await handle([row('GRANTED')], undefined, '孩子写作业拖拉怎么办');
+    expect(res.risk_route).toBe('NORMAL');
+    expect(res.action_proposal_id).toBeTruthy();
+    expect(repo.saveProposal).toHaveBeenCalledTimes(1);
+  });
+
+  it('ORCHESTRATION_AI_COACH reuses the same safe deterministic pipeline but proposal delta is zero', async () => {
+    const { res, repo } = await handle([row('GRANTED')], undefined, '孩子写作业拖拉怎么办', undefined, { deliveryMode: 'ORCHESTRATION_AI_COACH' });
+    expect(res.risk_route).toBe('NORMAL');
+    expect(res.response).toBeTruthy();
+    expect(res.action_proposal_id).toBeNull();
+    expect(repo.saveProposal).not.toHaveBeenCalled();
+    expect(repo.recordProductEvent).toHaveBeenCalledWith('principal_orchestration_ai_coach_delivered', expect.anything(), expect.anything(), expect.anything(), expect.objectContaining({ proposal_delta: 0, delivery_mode: 'ORCHESTRATION_AI_COACH' }));
+  });
+
+  it('ORCHESTRATION_AI_COACH keeps HIGH_RISK fail-closed and does not create a proposal', async () => {
+    const { res, repo } = await handle([row('GRANTED')], undefined, '孩子说不想活了', undefined, { deliveryMode: 'ORCHESTRATION_AI_COACH' });
+    expect(res.risk_route).toBe('HIGH_RISK');
+    expect(res.human_handoff).toBe(true);
+    expect(res.action_proposal_id).toBeNull();
+    expect(repo.saveProposal).not.toHaveBeenCalled();
   });
 });
 
