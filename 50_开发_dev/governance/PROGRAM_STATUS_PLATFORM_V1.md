@@ -9,8 +9,9 @@ PHASE1   = ARCH-001 / master@2ce16a3 / ARCHITECTURE_MERGED(运行时代码仍须
 PHASE2   = FAMILY-GROWTH-VERTICAL-SLICE-001 / APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支)
 PHASE8   = FAMILY_PHASE8_PROGRESS_STEWARD_METRICS_001 / VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支)
 PHASE9   = FAMILY_PHASE9_INTEGRATION_E2E_REGRESSION_001 / INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(branch=family-growth-vertical-slice-001@8b9c68e;验证既有实现,不授权新能力)
+PHASE10A = FAMILY_PHASE10_DATA_LIFECYCLE_001 / INTERNAL_DETERMINISTIC_VALIDATED(branch=family-growth-vertical-slice-001;WithdrawConsent;真实 PostgreSQL;待 Gate 报告)
 RUNTIME  = INTERNAL_DETERMINISTIC_ONLY(未合 master、未试点、未生产、无真实外部模型外呼)
-NEXT_AUTHORIZED_STEP = PHASE9_INTEGRATION_E2E_REGRESSION(真实 DB/安全/本地浏览器/浏览器后 DB 回归；无新增迁移、DTO、Named Action 或产品能力；每次合 master 仍须 explicit per-merge authorization)
+NEXT_AUTHORIZED_STEP = PHASE10A_GATE_REPORT(生命周期撤回纵切已验证；提交后等待裁决；Context Reuse/多模态/商业化架构按独立边界推进；每次合 master 仍须 explicit per-merge authorization)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ```
 
@@ -25,7 +26,8 @@ Phase0 战略+代码重定基            = PASS_CLOSED(北极星→编排;Progra
 Phase1 Growth Resource 架构契约   = ARCHITECTURE_MERGED(master@2ce16a3;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程；运行时代码另行验证)
 Phase2 首条纵切 runtime           = APP_GATE_VERIFIED_AND_PUSHED(branch=family-growth-vertical-slice-001@8b9c68e;仅开发分支；未合 master/未试点/未生产);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
 Phase8 单家庭连续服务基础          = VERIFIED_AND_PUSHED(家庭私有进度/上下文投影、内部 Steward 队列与服务过程度量；不含组织/跨家庭/真人交付/外部模型)
-Phase9 集成/安全/E2E/回归验证       = INTERNAL_DETERMINISTIC_VALIDATION_AUTHORIZED(只验证既有 Phase 2/8 实现；无新增迁移、DTO、Named Action 或产品页面；未合 master/未试点/未生产)
+Phase9 集成/安全/E2E/回归验证       = PASS_INTERNAL_ONLY(39 API 文件/190 测试；8 Web 文件/51 测试；浏览器黄金路径；未合 master/未试点/未生产)
+Phase10A 数据生命周期              = INTERNAL_DETERMINISTIC_VALIDATED(WithdrawConsent；4 个真实 PostgreSQL 集成测试 + 3 个 DTO 测试；未实现物理删除；待 Gate)
 后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
 ```
 

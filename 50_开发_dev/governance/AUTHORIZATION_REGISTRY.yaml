@@ -438,6 +438,76 @@ capabilities:
       内部确定性集成、安全、浏览器 E2E 与回归。禁止新增数据库迁移、DTO、Named Action、产品页面或运行时能力；如发现缺陷需新迁移/权限/模型/组织/跨家庭能力，必须停止并另行申请 Gate。
       master、真实家庭试点、生产、商业化、支付/权益、Enrollment/Delivery、真人顾问、组织跨边界、外部模型、训练/自学习、多模态运行时、公开分享、成长 IP、成长结果、永久标签、公开画像、跨家庭统计/推荐继续 HOLD。
 
+  # Phase 10A：家庭私有数据生命周期，用户授权仅限内部确定性开发与隔离 DB 验证。
+  - capability_id: FAMILY_PHASE10_DATA_LIFECYCLE_001
+    stage: FAMILY-V3-PHASE10A
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 授权开发；Phase 10 家庭私有数据生命周期工作包 (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅限家庭私有的 SERVICE consent 撤回/删除/最小可见/审计边界，复用现有 Family Core、Orchestration、ServiceCase、FollowUp 与权限桥接。
+      禁止组织/跨家庭访问、生产数据、支付、外发、外部模型、训练、试点和 master 合入。
+
+  # Phase 10B：Context Reuse 扩展，用户授权仅限家庭范围确定性投影与可删除草案。
+  - capability_id: FAMILY_PHASE10_CONTEXT_REUSE_001
+    stage: FAMILY-V3-PHASE10B
+    status: INTERNAL_DEVELOPMENT_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 授权开发；Phase 10 Context Reuse 工作包 (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅限家庭私有、可解释、可删除的只读上下文投影与家庭确认草案；不得写入成长结果、永久标签、公开画像或跨家庭模型。
+      组织访问、真人外发、外部模型、训练、跨家庭统计/推荐、试点、生产和 master 继续 HOLD。
+
+  # Phase 10C：受控多模态，仅授权设计、离线/合成验证和文本等价路径，不授权运行时外呼。
+  - capability_id: FAMILY_PHASE10_CONTROLLED_MULTIMODAL_DESIGN_001
+    stage: FAMILY-V3-PHASE10C
+    status: DESIGN_ONLY_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 授权开发；Phase 10 受控多模态设计工作包 (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅可更新设计、威胁模型、Consent/隐私边界、人工 Gate、文本等价路径和 fail-closed 验证方案；不得新增模型外呼、训练、自学习、核心 Ontology 写入、真实媒体数据处理或生产运行时。
+
+  # Phase 10D：商业化架构，仅授权需求、合同、成本与治理设计，不授权商业交易运行时。
+  - capability_id: FAMILY_PHASE10_COMMERCIAL_ARCHITECTURE_001
+    stage: FAMILY-V3-PHASE10D
+    status: DESIGN_ONLY_AUTHORIZED
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect (user authorization)
+    authorization_ref: "User authorization: 授权开发；Phase 10 商业化架构设计工作包 (session 2026-08-16)"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: >-
+      仅可形成客户/提供者/交易/收入/成本/治理设计；不得实现 Payment、Entitlement、Marketplace、Commission/Settlement、Provider 自动派单、商业化、试点或生产运行时。
+
   # 明确未授权(危险能力)
   - capability_id: IAM_REAL_SMS_PROVIDER
     stage: M3-W2

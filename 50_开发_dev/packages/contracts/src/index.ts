@@ -164,6 +164,16 @@ export interface GrantConsentResponse {
   consent: ConsentDto;
 }
 
+export interface WithdrawConsentRequest {
+  family_id: string;
+  consent_id: string;
+  idempotency_key: string;
+}
+
+export interface WithdrawConsentResponse {
+  consent: ConsentDto;
+}
+
 export interface FamilyAggregateResponse {
   family: FamilyDto;
   members: PersonDto[];

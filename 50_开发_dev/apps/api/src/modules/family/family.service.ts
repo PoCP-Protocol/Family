@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { assertFamilyManagePermission as sharedAssertFamilyManagePermission } from './family-permission';
 import { createHash, randomUUID } from 'node:crypto';
-import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, M2GrowthDimensionId, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
+import type { AddChildRequest, AddChildResponse, AddParentRequest, AddParentResponse, AssignLifeStageRequest, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsRequest, BuildGrowthProfileDraftsResponse, ConfirmGrowthProfileRequest, ConfirmGrowthProfileResponse, ConsentDto, ConsentPurpose, ConsentStatus, CreateFamilyRelationshipRequest, CreateFamilyRelationshipResponse, CreateFamilyRequest, CreateFamilyResponse, EvidenceRecordDto, EvidenceSnapshotDto, EvidenceSynthesisDto, FamilyAggregateResponse, FamilyDto, FamilyRelationshipDto, GrantConsentRequest, GrantConsentResponse, WithdrawConsentRequest, WithdrawConsentResponse, GrowthInsightResponse, GrowthOnboardingDto, GrowthProfileDraftDto, GrowthProfileDto, LifeStageAssignmentDto, LifeStageCode, M2GrowthDimensionId, PersonDto, PerspectiveDto, PerspectiveSummaryResponse, RecordPerspectiveRequest, RecordPerspectiveResponse, RelationshipType, SafetyDispositionDto, StartGrowthOnboardingRequest, StartGrowthOnboardingResponse } from '@family/contracts';
 import type pg from 'pg';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyAggregateRepository } from './family-aggregate.repository';
@@ -15,6 +15,7 @@ const ADD_CHILD_ACTION = 'AddChild';
 const CREATE_FAMILY_RELATIONSHIP_ACTION = 'CreateFamilyRelationship';
 const ASSIGN_LIFE_STAGE_ACTION = 'AssignLifeStage';
 const GRANT_CONSENT_ACTION = 'GrantConsent';
+const WITHDRAW_CONSENT_ACTION = 'WithdrawConsent';
 const START_GROWTH_ONBOARDING_ACTION = 'StartGrowthOnboarding';
 const RECORD_PERSPECTIVE_ACTION = 'RecordPerspective';
 const BUILD_GROWTH_PROFILE_DRAFTS_ACTION = 'BuildGrowthProfileDrafts';
@@ -23,6 +24,7 @@ const FAMILY_MEMBER_ADDED_EVENT = 'FamilyMemberAdded';
 const FAMILY_RELATIONSHIP_CREATED_EVENT = 'FamilyRelationshipCreated';
 const LIFE_STAGE_ASSIGNED_EVENT = 'LifeStageAssigned';
 const CONSENT_GRANTED_EVENT = 'ConsentGranted';
+const CONSENT_WITHDRAWN_EVENT = 'ConsentWithdrawn';
 const GROWTH_ONBOARDING_STARTED_EVENT = 'GrowthOnboardingStarted';
 const PERSPECTIVE_RECORDED_EVENT = 'PerspectiveRecorded';
 const GROWTH_PROFILE_DRAFTED_EVENT = 'GrowthProfileDrafted';
@@ -196,6 +198,34 @@ export class FamilyService {
 
       await insertAudit(client, GRANT_CONSENT_ACTION, 'Consent', request.family_id, consent.consent_id, request.idempotency_key, meta, response);
       await insertConsentGrantedEvent(client, request.family_id, consent, eventId, occurredAt, meta);
+      await storeIdempotencyResponse(client, request.idempotency_key, response);
+
+      return response;
+    });
+  }
+
+  async withdrawConsent(request: WithdrawConsentRequest, meta: AuditMeta): Promise<WithdrawConsentResponse> {
+    const requestHash = hashWithdrawConsentRequest(request);
+
+    return this.repository.withTransaction(async (client) => {
+      const idempotency = await lockIdempotencyKey<WithdrawConsentResponse>(client, WITHDRAW_CONSENT_ACTION, request.idempotency_key, requestHash);
+      if (idempotency.replay) {
+        return idempotency.response;
+      }
+
+      await ensureFamilyExists(client, request.family_id);
+      await assertFamilyManagePermission(client, request.family_id, meta.actor);
+      const consent = await getConsentForWithdrawal(client, request.family_id, request.consent_id);
+      assertConsentGuardian(consent, meta.actor);
+      assertConsentCanBeWithdrawn(consent);
+
+      const withdrawnConsent = await withdrawConsentRow(client, request.consent_id);
+      const occurredAt = new Date().toISOString();
+      const eventId = randomUUID();
+      const response: WithdrawConsentResponse = { consent: withdrawnConsent };
+
+      await insertAudit(client, WITHDRAW_CONSENT_ACTION, 'Consent', request.family_id, request.consent_id, request.idempotency_key, meta, response);
+      await insertConsentWithdrawnEvent(client, request.family_id, withdrawnConsent, eventId, occurredAt, meta);
       await storeIdempotencyResponse(client, request.idempotency_key, response);
 
       return response;
@@ -429,6 +459,12 @@ function hashGrantConsentRequest(request: GrantConsentRequest): string {
       purpose: request.purpose,
       policy_version: request.policy_version,
     }))
+    .digest('hex');
+}
+
+function hashWithdrawConsentRequest(request: WithdrawConsentRequest): string {
+  return createHash('sha256')
+    .update(JSON.stringify({ family_id: request.family_id, consent_id: request.consent_id }))
     .digest('hex');
 }
 
@@ -1923,6 +1959,47 @@ async function assertGuardianAuthorizedForSubject(client: pg.PoolClient, request
   }
 }
 
+async function getConsentForWithdrawal(client: pg.PoolClient, familyId: string, consentId: string): Promise<ConsentDto> {
+  const result = await client.query<ConsentRow>(
+    `select consent_id, family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at, withdrawn_at, created_at
+     from consents
+     where family_id = $1 and consent_id = $2
+     for update`,
+    [familyId, consentId],
+  );
+
+  if (result.rowCount !== 1) {
+    throw new NotFoundException('consent_not_found');
+  }
+  return mapConsent(result.rows[0]);
+}
+
+function assertConsentGuardian(consent: ConsentDto, actorId: string): void {
+  if (consent.guardian_person_id !== actorId) {
+    throw new ForbiddenException('consent_guardian_required');
+  }
+}
+
+function assertConsentCanBeWithdrawn(consent: ConsentDto): void {
+  if (consent.status !== 'GRANTED') {
+    throw new ConflictException('consent_not_active');
+  }
+}
+
+async function withdrawConsentRow(client: pg.PoolClient, consentId: string): Promise<ConsentDto> {
+  const result = await client.query<ConsentRow>(
+    `update consents
+     set status = 'WITHDRAWN', withdrawn_at = now()
+     where consent_id = $1 and status = 'GRANTED'
+     returning consent_id, family_id, subject_person_id, guardian_person_id, purpose, policy_version, status, granted_at, withdrawn_at, created_at`,
+    [consentId],
+  );
+  if (result.rowCount !== 1) {
+    throw new ConflictException('consent_not_active');
+  }
+  return mapConsent(result.rows[0]);
+}
+
 async function getActiveConsent(client: pg.PoolClient, familyId: string, subjectPersonId: string, purpose: ConsentPurpose): Promise<ConsentDto | null> {
   const result = await client.query<ConsentRow>(
     `select consent_id, family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at, withdrawn_at, created_at
@@ -2035,6 +2112,46 @@ async function insertConsentGrantedEvent(
           source: meta.source,
           schema_version: '0.1',
         },
+        consent,
+      }),
+      occurredAt,
+    ],
+  );
+}
+
+async function insertConsentWithdrawnEvent(
+  client: pg.PoolClient,
+  familyId: string,
+  consent: ConsentDto,
+  eventId: string,
+  occurredAt: string,
+  meta: AuditMeta,
+): Promise<void> {
+  await client.query(
+    `insert into outbox_events(
+       aggregate_type, aggregate_id, event_name, event_version, event_id,
+       correlation_id, payload, occurred_at
+     ) values ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)`,
+    [
+      'Family',
+      familyId,
+      CONSENT_WITHDRAWN_EVENT,
+      1,
+      eventId,
+      meta.correlationId,
+      JSON.stringify({
+        event_id: eventId,
+        family_id: familyId,
+        consent_id: consent.consent_id,
+        subject_person_id: consent.subject_person_id,
+        guardian_person_id: consent.guardian_person_id,
+        purpose: consent.purpose,
+        policy_version: consent.policy_version,
+        withdrawn_at: consent.withdrawn_at,
+        occurred_at: occurredAt,
+        actor_id: meta.actor,
+        correlation_id: meta.correlationId,
+        metadata: { source: meta.source, schema_version: '0.1' },
         consent,
       }),
       occurredAt,

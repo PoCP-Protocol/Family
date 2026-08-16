@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, WithdrawConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
@@ -12,6 +12,7 @@ import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dt
 import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
+import { validateWithdrawConsentRequest } from './withdraw-consent.dto';
 import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
 import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
@@ -218,6 +219,32 @@ export class FamilyController {
     };
 
     return this.familyService.grantConsent(request, meta);
+  }
+
+  @RequireFamilyAction('WithdrawConsent')
+  @Post(':familyId/consents/:consentId/withdraw')
+  async withdrawConsent(
+    @Param('familyId') familyId: string,
+    @Param('consentId') consentId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<WithdrawConsentResponse> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+
+    const request = validateWithdrawConsentRequest(familyId, consentId, idempotencyKey, body);
+    const meta: AuditMeta = {
+      actor: actorId,
+      correlationId: correlationId && correlationId.trim().length > 0 ? correlationId : crypto.randomUUID(),
+      source: source && source.trim().length > 0 ? source : 'api',
+      occurredAt: new Date().toISOString(),
+    };
+
+    return this.familyService.withdrawConsent(request, meta);
   }
 
   @Post(':familyId/growth/onboarding')
