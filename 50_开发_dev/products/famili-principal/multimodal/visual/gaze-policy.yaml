@@ -1,0 +1,110 @@
+---
+# FAMILI PRINCIPAL GAZE POLICY V1.0
+# Frozen: 2026-08-17
+# Defines eye/gaze behavior and policy
+
+version: gaze_policy_v1.0
+frozen_date: '2026-08-17'
+
+gaze_policies:
+  LISTENING:
+    id: LISTENING
+    description: Stable gaze toward user, steady attention
+    context: Parent is sharing
+    eye_movement: Minimal (steady focus)
+    blink_rate: Natural (~17/min)
+    direction: Toward user (forward / slightly upward)
+    intensity: Warm but focused
+    duration_typical_ms: 1000-8000
+
+  THINKING:
+    id: THINKING
+    description: Brief, gentle gaze shift; allows look-away
+    context: Processing, considering
+    eye_movement: Allowed brief look-away (0.5-1 sec max)
+    blink_rate: May increase slightly (20-25/min)
+    direction: Down or to side (soft, not sharp)
+    intensity: Thoughtful, introspective
+    duration_typical_ms: 1500-2500
+
+  EXPLAINING:
+    id: EXPLAINING
+    description: Return to user gaze; steady but warm
+    context: Principal is teaching / explaining concept
+    eye_movement: Mostly forward, minimal shifts
+    blink_rate: Natural (~17/min)
+    direction: Toward user (forward)
+    intensity: Clear, engaged, teaching
+    duration_typical_ms: 2000-6000
+
+  BOUNDARY:
+    id: BOUNDARY
+    description: Direct, clear gaze; firm but not intense
+    context: Setting expectation, naming hard truth
+    eye_movement: Minimal (steady, unwavering)
+    blink_rate: Natural
+    direction: Toward user (direct eye contact)
+    intensity: Clear, caring but firm
+    duration_typical_ms: 1500-3500
+
+  ENCOURAGING:
+    id: ENCOURAGING
+    description: Warm, slightly softer gaze
+    context: Affirming parent's effort
+    eye_movement: Minimal
+    blink_rate: Natural (may include warm blink)
+    direction: Toward user (warm focus)
+    intensity: Soft, warm, supportive
+    duration_typical_ms: 1200-3000
+
+  CURIOUS:
+    id: CURIOUS
+    description: Engaged, interested gaze with head tilt
+    context: Asking question, genuine inquiry
+    eye_movement: May include slight head tilt
+    blink_rate: Natural
+    direction: Toward user (engaged)
+    intensity: Open, inquisitive
+    duration_typical_ms: 1000-2500
+
+prohibited_gaze:
+  - MECHANICAL_STARE: "Never: Perpetual unblinking eye contact"
+  - RAPID_EYE_DART: "Never: Quick random eye movements (saccades)"
+  - PERFECT_STILLNESS: "Never: Zero natural blink or micro-movement"
+  - AVOIDANT_LOOK: "Never: Consistent looking away (suggests evasion)"
+  - PREDATORY_STARE: "Never: Intense unblinking focus (threatening)"
+  - DISCONNECTED_GAZE: "Never: Eyes fixed but not present"
+
+blink_behavior:
+  frequency_per_minute: 15-20 (natural human range)
+  duration_ms: 100-150
+  animation:
+    - Frame 0: Eyes open
+    - Frame 3: Eyelid halfway
+    - Frame 4: Eyes closed
+    - Frame 5: Eyelid halfway
+    - Frame 6: Eyes open
+  distribution: Random (not perfectly spaced)
+
+head_angle_policy:
+  neutral: 0 degrees (facing forward)
+  curious: +5 to +10 degrees lateral tilt
+  thinking: -5 to 0 degrees (downward subtle)
+  listening: 0 degrees (neutral, forward)
+  boundary: 0 degrees (neutral, steady)
+
+eye_direction_mapping:
+  forward_gaze: Direction(0, 0, 1) in avatar space
+  down_gaze: Direction(0, -0.3, 1) in avatar space
+  side_gaze: Direction(±0.2, 0, 1) in avatar space
+
+animation_sync:
+  gaze_with_expression: Coordinated (gaze + expression change together)
+  gaze_with_speech: Gaze leads or precedes speech by 100-200ms
+  blink_frequency: Independent of speech (natural rhythm)
+
+versioning:
+  gaze_policy_version: gaze_policy_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE

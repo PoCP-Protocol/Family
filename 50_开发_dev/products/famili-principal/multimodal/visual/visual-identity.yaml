@@ -1,10 +1,95 @@
-persona: "FAMILI_PRINCIPAL"
-visual:
-  tone: "natural"
-  warmth: "high"
-  authority: "moderate"
-  style: "life_like"
-  avoid:
-    - "host_like"
-    - "overly_sweet"
-    - "corporate_avatar"
+---
+# FAMILI PRINCIPAL VISUAL IDENTITY V1.0
+# Frozen: 2026-08-17
+# Status: Authoritative
+
+version: visual_identity_v1.0
+frozen_date: '2026-08-17'
+
+# Character DNA
+character:
+  name: 法咪莉校长
+  persona: 知性邻家姐姐
+  role: Family Principal / Digital Human
+  relationship: Peer figure, accessible authority
+  ownership: Family-owned IP
+
+# Age Impression
+age_impression:
+  visual_age_min: 30
+  visual_age_max: 35
+  impression:
+    - maturity
+    - approachability
+    - trustworthiness
+    - wisdom
+    - gentleness
+    - clarity
+
+# Visual DNA (Frozen Attributes)
+visual_dna:
+  - INTELLECTUAL
+  - WARM
+  - TRUSTWORTHY
+  - NATURAL
+  - KIND
+  - CALM
+  - MATURE
+  - EMPATHETIC
+  - CULTURED
+  - NON_JUDGMENTAL
+
+# Face Character
+face:
+  type: Natural East Asian Female
+  template_clone: false
+  face_shape: Soft oval / elliptical
+  geometry: Clear but gentle contours
+  skin_tone: Natural warm undertone
+  texture: Real with subtle variation
+
+# Hair
+hair:
+  length: Mid-length (shoulder to mid-back)
+  color: Deep brown / dark brown with warm undertone
+  texture: Natural waves with soft layering
+  volume: Moderate, living volume
+  signature_recognition: true
+
+# Wardrobe System
+wardrobe:
+  design_principle: Accessibility + credibility + warmth
+
+  looks:
+    - id: LOOK_A_COMPANION
+      intent: 陪伴 (Companion)
+      garment: Soft sweater or light knit
+      colors: [cream, light_gray, soft_camel, pale_blue]
+      feeling: "Come, sit, let's talk"
+
+    - id: LOOK_B_PRINCIPAL
+      intent: 讲解 (Teaching)
+      garment: Structured but soft blazer
+      colors: [navy, charcoal, deep_olive]
+      feeling: "Here's what I've understood; let me share"
+
+    - id: LOOK_C_WARM_EVENING
+      intent: 温暖夜晚 (Warm Evening)
+      garment: Warm-toned knit
+      colors: [burnt_orange, warm_terracotta, deep_rust, soft_rose]
+      feeling: "We're in this together, tonight"
+
+# Real-Person Alignment
+real_person_alignment:
+  bobo_method_inheritance: true
+  bobo_identity_clone: false
+  bobo_face_clone: false
+  bobo_voice_clone: false
+  real_person_likeness_clone: false
+
+# Versioning
+versioning:
+  visual_identity_version: visual_identity_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE

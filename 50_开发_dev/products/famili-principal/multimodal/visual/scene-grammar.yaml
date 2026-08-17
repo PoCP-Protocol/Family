@@ -1,0 +1,277 @@
+---
+# FAMILI PRINCIPAL SCENE GRAMMAR V1.0
+# Frozen: 2026-08-17
+# Defines the three primary scenes for avatar presentation
+
+version: scene_grammar_v1.0
+frozen_date: '2026-08-17'
+
+scene_philosophy: |
+  Three core scenes create distinct contexts while maintaining character consistency.
+  Scene grammar defines camera, lighting, background, voice tone, gesture density,
+  gaze policy, visual aids, and avatar framing for each context.
+
+scenes:
+  SCENE_A_COMPANION:
+    id: SCENE_A_COMPANION
+    label_cn: 陪伴 (Companion)
+    primary_context: Family conversation, household counseling
+    emotional_frame: Safe, warm, accessible
+
+    camera:
+      framing: Mid-chest to top of head
+      distance: Conversational (1.5-2.5m equivalent)
+      angle: Slightly above neutral (user at ease)
+      zoom: Medium (fills 60-70% of viewport)
+
+    lighting:
+      principle: Warm, even, human
+      key_light:
+        angle: 45 degrees (left or right)
+        intensity: Primary / 100%
+        temperature_k: 3500 (warm white)
+        softness: Soft (diffused, not hard shadows)
+      fill_light:
+        angle: Opposite of key
+        intensity: 30-40% of key
+        temperature_k: 3500
+        softness: Very soft
+      back_light:
+        intensity: 10-15%
+        role: Subtle rim light, separation
+      shadow:
+        type: Soft, graduated
+        intensity: Never harsh or studio-style
+
+    background:
+      type: Neutral, home-like aesthetic
+      colors: Soft gray, warm beige, pale cream
+      pattern: Minimal (solid or subtle texture)
+      depth: Slightly blurred or soft gradient
+      psychological_effect: Safe, intimate, home-like
+
+    wardrobe:
+      look: LOOK_A_COMPANION
+      color_range: Warm neutrals
+
+    voice_tone:
+      quality: Conversational, warm, unhurried
+      pace: Natural, allowing pauses
+      pitch: Warm, slightly lower
+      energy: Calm, present
+      prosody: Natural inflection, not scripted
+
+    gesture_density:
+      per_response: 1-2 gestures
+      dominant_gestures:
+        - LISTENING_GAZE
+        - SMALL_NOD
+        - SLIGHT_LEAN_IN
+      motion_speed: Slow, deliberate
+
+    gaze_policy: LISTENING
+    gaze_primary: Steady toward user, warm focus
+
+    visual_aids:
+      screen_share: Not primary in this scene
+      text_overlay: Minimal (name / status only)
+      emotional_cues: Expressions and gaze carry meaning
+
+    avatar_presence:
+      distance: Close, intimate but not invasive
+      body_language: Open, welcoming
+      posture: Slightly leaned-in or centered
+
+    behavioral_markers:
+      comfort: User should feel heard
+      safety: Non-judgmental, accepting
+      presence: Avatar is fully attentive
+      validation: Affirmations via nod, expression
+
+    session_examples:
+      - Parent shares recent conflict with child
+      - Family discussing difficult emotions
+      - Parent seeking reassurance
+
+  SCENE_B_PRINCIPAL_EXPLAIN:
+    id: SCENE_B_PRINCIPAL_EXPLAIN
+    label_cn: 讲解 (Teaching / Explaining)
+    primary_context: Explaining family education concepts, microlearning
+    emotional_frame: Clear, knowledgeable, supportive
+
+    camera:
+      framing: Mid-shot (mid-chest to top of head)
+      distance: Conversational to slightly distant (2-3m equivalent)
+      angle: Neutral or slightly above
+      zoom: Medium (fills 50-60% of viewport)
+
+    lighting:
+      principle: Even, clear, suggests clarity
+      key_light:
+        angle: 45 degrees
+        intensity: 100%
+        temperature_k: 4000 (neutral white)
+        softness: Soft (not harsh, not dramatic)
+      fill_light:
+        angle: Opposite
+        intensity: 40-50% of key
+        temperature_k: 4000
+        softness: Medium
+      back_light:
+        intensity: 15-20%
+        role: Clear separation, definition
+      shadow:
+        type: Soft with clear definition
+        intensity: Moderate (readable)
+
+    background:
+      type: Simple, focused, educational
+      colors: Soft gradient, soft pattern, or solid
+      pattern: Minimal decoration (suggests focus)
+      depth: Clean, not cluttered
+      psychological_effect: Clarity, focus, learning
+
+    wardrobe:
+      look: LOOK_B_PRINCIPAL
+      color_range: Navy, charcoal, deep olive
+
+    voice_tone:
+      quality: Articulate, thoughtful, paced
+      pace: Clear enough for note-taking
+      pitch: Warm, confident
+      energy: Engaged but not high-energy
+      prosody: Structured for understanding
+
+    gesture_density:
+      per_response: 2-4 gestures
+      dominant_gestures:
+        - EXPLAINING_GAZE
+        - SMALL_NOD
+        - GENTLE_HAND_GESTURE (to emphasize)
+        - THINKING_PAUSE
+      motion_speed: Moderate, purposeful
+
+    gaze_policy: EXPLAINING
+    gaze_primary: Steady user contact, may shift to illustrate
+
+    visual_aids:
+      screen_share: Possible (diagram, framework)
+      text_overlay: Possible (key concepts)
+      callouts: Possible (highlighting structure)
+
+    avatar_presence:
+      distance: Conversational, clear
+      body_language: Engaged, teaching
+      posture: Upright, confident
+
+    behavioral_markers:
+      clarity: User should understand concepts
+      authority: Avatar embodies knowledge without condescension
+      accessibility: Teaching should be warm, not cold
+      structure: Ideas presented in logical flow
+
+    session_examples:
+      - Explaining "second growth" concept
+      - Teaching communication framework
+      - Discussing family development stages
+
+  SCENE_C_TONIGHT_ACTION:
+    id: SCENE_C_TONIGHT_ACTION
+    label_cn: 温暖夜晚 (Warm Evening / Tonight Action)
+    primary_context: "今晚怎么说" (How to say it tonight), evening support
+    emotional_frame: Intimate, emotionally supportive, hopeful
+
+    camera:
+      framing: Intimate mid-shot, close
+      distance: Very close (0.8-1.5m equivalent)
+      angle: Slightly above or neutral
+      zoom: Larger (fills 70-80% of viewport)
+
+    lighting:
+      principle: Warm evening, intimate, candlelight-like
+      key_light:
+        angle: 45 degrees
+        intensity: 80-90% (slightly dimmer for intimacy)
+        temperature_k: 3000-3200 (warm, golden)
+        softness: Very soft (diffused, intimate)
+      fill_light:
+        angle: Opposite
+        intensity: 20-30% (more shadows for intimacy)
+        temperature_k: 3200
+        softness: Very soft
+      back_light:
+        intensity: 5-10% (subtle)
+        role: Gentle rim, warmth
+      shadow:
+        type: Soft, graduated
+        intensity: Moderate (intimate, not theatrical)
+
+    background:
+      type: Intimate, home-like, evening
+      colors: Darker warm tones, warm gray, deep cream
+      pattern: Minimal (solid or soft organic)
+      depth: Soft focus or blurred
+      psychological_effect: Intimate, safe, evening warmth
+
+    wardrobe:
+      look: LOOK_C_WARM_EVENING
+      color_range: Burnt orange, terracotta, rust, soft rose
+
+    voice_tone:
+      quality: Intimate, encouraging, warm
+      pace: Slower, allowing emotional space
+      pitch: Warm, slightly lower
+      energy: Calm, emotionally present
+      prosody: Natural, conversational
+
+    gesture_density:
+      per_response: 1-3 gestures
+      dominant_gestures:
+        - LISTENING_GAZE
+        - WARM_FIRM_GAZE
+        - SLIGHT_LEAN_IN
+        - SOFT_SMILE
+      motion_speed: Slow, gentle
+
+    gaze_policy: WARM_ENCOURAGING
+    gaze_primary: Warm, steady, emotionally present
+
+    visual_aids:
+      screen_share: Minimal (focus on avatar presence)
+      text_overlay: Minimal (action point only)
+      emotional_cues: Expressions, gaze, warmth carry meaning
+
+    avatar_presence:
+      distance: Very close, supportive
+      body_language: Open, warm, embracing
+      posture: Leaned-in, present
+
+    behavioral_markers:
+      support: User should feel supported
+      warmth: Emotional presence, not clinical
+      courage: Affirming difficult conversations
+      hope: Small actions lead to change
+
+    session_examples:
+      - "Today I said X, tomorrow I'll say Y"
+      - Preparing for difficult parent-child conversation
+      - Planning one small action for evening
+
+scene_transitions:
+  principle: Smooth transition between scenes
+  wardrobe_change: Animated fade or cut (not jarring)
+  lighting_change: Smooth color temperature shift (500-1000ms)
+  background_change: Fade transition (300-500ms)
+  avatar_reposition: Smooth interpolation (500ms)
+
+scene_selection_rule:
+  principal_output:
+    if_advice_type_is_companion: Use SCENE_A_COMPANION
+    if_advice_type_is_teaching: Use SCENE_B_PRINCIPAL_EXPLAIN
+    if_advice_type_is_tonight_action: Use SCENE_C_TONIGHT_ACTION
+
+versioning:
+  scene_grammar_version: scene_grammar_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE

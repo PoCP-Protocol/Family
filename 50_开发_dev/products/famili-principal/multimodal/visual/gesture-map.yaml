@@ -1,7 +1,125 @@
-gestures:
-  small_open_hand:
-    name: "SMALL_OPEN_HAND"
-  slight_nod:
-    name: "SLIGHT_NOD"
-  steady_gaze:
-    name: "STEADY_GAZE"
+---
+# FAMILI PRINCIPAL MOTION IDENTITY V1.0
+# Frozen: 2026-08-17
+# Defines the approved motion / gesture vocabulary for avatar
+
+version: motion_identity_v1.0
+frozen_date: '2026-08-17'
+
+# Core Motion Vocabulary
+motions:
+  SMALL_NOD:
+    id: SMALL_NOD
+    description: Subtle agreement, understanding
+    amplitude: Small (15-20 degrees)
+    duration_ms: 600-800
+    context: Agreement, affirmation
+    frequency_per_minute: 1-2
+    head_axis: Vertical (pitch)
+
+  DOUBLE_SMALL_NOD:
+    id: DOUBLE_SMALL_NOD
+    description: Emphasis without exaggeration
+    amplitude: Small x2
+    duration_ms: 400-600 per nod
+    context: Strong affirmation, clarity
+    frequency_per_minute: 0.5-1
+    head_axis: Vertical (pitch)
+
+  SLIGHT_LEAN_IN:
+    id: SLIGHT_LEAN_IN
+    description: Engagement, genuine interest
+    amplitude: 3-5 degrees forward
+    duration_ms: 1000-2000 (held)
+    context: Parent is sharing something important
+    frequency_per_minute: 0.2-0.5
+    body_axis: Forward (leaning)
+
+  THINKING_PAUSE:
+    id: THINKING_PAUSE
+    description: Thoughtful pause for reflection
+    amplitude: Minimal (micro-motion)
+    duration_ms: 1500-2500
+    context: Processing, considering
+    frequency_per_minute: 0.3-0.7
+    motion_type: Stillness with subtle micro-expressions
+
+  SOFT_SMILE:
+    id: SOFT_SMILE
+    description: Warmth without performance
+    amplitude: Gentle mouth curve (0.2-0.3 smile intensity)
+    duration_ms: 800-1500
+    context: Warmth, encouragement
+    frequency_per_minute: 1-3
+    facial_feature: Mouth + eyes
+
+  CALM_SERIOUS:
+    id: CALM_SERIOUS
+    description: Stability under difficulty
+    amplitude: Minimal facial motion
+    duration_ms: 2000-5000
+    context: Family in crisis
+    frequency_per_minute: Not continuous
+    posture: Upright, steady
+
+  WARM_FIRM_GAZE:
+    id: WARM_FIRM_GAZE
+    description: Boundary setting with care
+    amplitude: Direct eye contact (no movement)
+    duration_ms: 2000-4000
+    context: Setting expectation, affirming value
+    frequency_per_minute: 0.2-0.5
+    facial_feature: Eyes + mouth (neutral or firm)
+
+  LISTENING_GAZE:
+    id: LISTENING_GAZE
+    description: Presence and focus
+    amplitude: Steady gaze (minimal motion)
+    duration_ms: 1000-8000
+    context: Parent is speaking
+    frequency_per_minute: Continuous
+    facial_feature: Eyes (steady, forward)
+
+  GENTLE_HEAD_TILT:
+    id: GENTLE_HEAD_TILT
+    description: Curiosity, humanity
+    amplitude: 5-10 degrees lateral
+    duration_ms: 600-1000
+    context: Question, curiosity
+    frequency_per_minute: 0.5-1
+    head_axis: Lateral (roll)
+
+  RETURN_TO_NEUTRAL:
+    id: RETURN_TO_NEUTRAL
+    description: Reset to default resting state
+    amplitude: Smooth return
+    duration_ms: 400-600
+    context: After any motion, return to neutral
+    frequency_per_minute: Depends on prior motion
+    motion_type: Interpolation to neutral pose
+
+prohibited_motions:
+  - BROADCAST_HOST_HAND: "Never: Large hand waving, sweeping gestures"
+  - CONTINUOUS_HAND_WAVING: "Never: Repetitive hand movements"
+  - EXAGGERATED_NODDING: "Never: Head bouncing, oversized nods"
+  - FREQUENT_BODY_SHIFTING: "Never: Constant postural changes"
+  - OVERJOYED_EXPRESSION: "Never: Shock, extreme joy, overacting"
+  - PERMANENT_MICROEXPRESSION: "Never: Continuous expression cycling"
+  - MECHANICAL_MOVEMENT: "Never: Repetitive, robotic motion loops"
+
+animation_timing:
+  principle: Natural, human-like motion
+  frame_rate: 60 FPS (60 Hz canvas render loop)
+  easing: Ease-in-ease-out for smooth transitions
+  no_instant_teleport: true (all motions interpolated)
+
+gesture_density:
+  scene_companion: Low (1-2 gestures per response)
+  scene_principal_explain: Moderate (2-4 gestures per response)
+  scene_tonight_action: Low to moderate (1-3 gestures per response)
+
+versioning:
+  motion_identity_version: motion_identity_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE

@@ -1,0 +1,181 @@
+---
+# FAMILI PRINCIPAL WARDROBE POLICY V1.0
+# Frozen: 2026-08-17
+# Defines clothing and appearance for three signature looks
+
+version: wardrobe_policy_v1.0
+frozen_date: '2026-08-17'
+
+design_principle: |
+  Wardrobe signals accessibility + credibility + warmth.
+  Never authority, sales, or formality.
+  Each look creates a distinct context without breaking character identity.
+
+wardrobe_looks:
+  LOOK_A_COMPANION:
+    id: LOOK_A_COMPANION
+    label_cn: 陪伴 (Companion)
+    context: Family conversation, household counseling, living-room setting
+    primary_intent: Create safe, approachable context for difficult conversations
+
+    garment_top:
+      type: Soft sweater or light knit
+      weight: Medium (visible texture, not thin)
+      fit: Relaxed, comfortable, not tight
+      collar: Crew neck or soft v-neck
+      sleeve: 3/4 or long
+
+    garment_bottom:
+      type: Not shown (mid-shot framing) or simple pants
+      fit: Neutral, comfortable
+
+    color_palette:
+      - cream
+      - light_gray
+      - soft_camel
+      - pale_blue
+      - warm_taupe
+
+    accessories:
+      earrings: Optional, simple (studs or small dangles)
+      necklace: None or minimal pendant
+      rings: None or simple band
+
+    material:
+      - cotton blend
+      - linen
+      - soft wool
+      - cashmere blend
+
+    feeling: "Come, sit down. Let's talk through this together."
+    avatar_distance: Close, intimate
+    scene_association: SCENE_A_COMPANION
+
+  LOOK_B_PRINCIPAL:
+    id: LOOK_B_PRINCIPAL
+    label_cn: 讲解 (Teaching / Explaining)
+    context: Explaining family education concepts, microlearning moments
+    primary_intent: Signal knowledge, credibility, clear thinking
+
+    garment_top:
+      type: Structured but soft blazer or cardigan + simple undershirt
+      weight: Medium to substantial
+      fit: Tailored but not corporate, shoulder structure visible
+      collar: Lapel or soft structured
+      sleeve: Full length
+
+    garment_inner:
+      type: Simple cotton or linen shirt
+      color: White, cream, or soft neutral
+      fit: Fitted but comfortable
+
+    garment_bottom:
+      type: Not shown (mid-shot framing) or simple trousers
+      fit: Tailored, neutral
+
+    color_palette:
+      - navy
+      - charcoal
+      - deep_olive
+      - warm_brown
+      - deep_gray
+
+    accessories:
+      earrings: Optional, simple (studs)
+      necklace: Optional, delicate pendant (gold or silver)
+      rings: Optional, simple band or one meaningful ring
+
+    material:
+      - wool blend
+      - cotton
+      - linen blend
+      - structured knit
+
+    feeling: "Here's what I've understood. Let me share this with you."
+    avatar_distance: Conversational (mid-distance)
+    scene_association: SCENE_B_PRINCIPAL_EXPLAIN
+
+  LOOK_C_WARM_EVENING:
+    id: LOOK_C_WARM_EVENING
+    label_cn: 温暖夜晚 (Warm Evening)
+    context: "今晚怎么说" (How to say it tonight), evening support sessions
+    primary_intent: Create warm, intimate, emotionally supportive context
+
+    garment_top:
+      type: Warm-toned knit or sweater
+      weight: Medium to substantial (cozy)
+      fit: Soft, relaxed, comfortable
+      collar: Crew neck or soft v-neck
+      sleeve: 3/4 or long
+
+    garment_bottom:
+      type: Not shown (mid-shot framing) or simple soft pants
+      fit: Relaxed, comfortable
+
+    color_palette:
+      - burnt_orange
+      - warm_terracotta
+      - deep_rust
+      - soft_rose
+      - warm_copper
+      - muted_plum
+
+    accessories:
+      earrings: Optional, warm-toned
+      necklace: None or minimal
+      rings: None or comforting band
+
+    material:
+      - cashmere
+      - soft wool
+      - cotton blend
+      - bamboo fiber
+
+    feeling: "We're in this together tonight. You're not alone."
+    avatar_distance: Very close, supportive
+    scene_association: SCENE_C_TONIGHT_ACTION
+
+wardrobe_rules:
+  consistency:
+    same_character: true
+    face_and_hair: Consistent across all looks
+    color_harmony: Warm palette maintained
+
+  scene_association:
+    each_look_maps_to_one_scene: true
+    scene_change_implies_wardrobe_change: true
+    consistency_within_scene: true
+
+  material_quality:
+    visible_texture: true
+    natural_fibers_preferred: true
+    plastic_looking_materials: false
+    overly_shiny_synthetic: false
+
+prohibited_wardrobe:
+  - livestream_host_outfit: "Never: Camera-ready glamorous apparel"
+  - uniform_schoolteacher: "Never: Formal uniform, classroom authority"
+  - luxury_ostentatious: "Never: Luxury branding, wealth display"
+  - business_sales_formal: "Never: Structured business suit, sales energy"
+  - childlike_babydoll: "Never: Juvenile clothing, cutesy style"
+  - heavily_accessorized_glamorous: "Never: Excessive jewelry, dramatic styling"
+  - healthcare_white_coat: "Never: Medical or professional clinical appearance"
+  - celebrity_haute_couture: "Never: Fashion magazine aesthetic"
+
+wardrobe_evolution:
+  v1_0: Three signature looks frozen
+  future_additions: |
+    Post-V1 may add seasonal variants or cultural context looks,
+    but base three looks remain core identity.
+
+wardrobe_asset_specs:
+  resolution_minimum: 2K (2048x2048 per garment asset)
+  format: PNG with alpha (transparency)
+  layers: Separated by body part (torso, sleeves, etc.)
+  color_matching: Exact hex values locked in color_palette
+
+versioning:
+  wardrobe_policy_version: wardrobe_policy_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE

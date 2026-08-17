@@ -1,9 +1,117 @@
+---
+# FAMILI PRINCIPAL EXPRESSION IDENTITY V1.0
+# Frozen: 2026-08-17
+# Defines the approved expression vocabulary for avatar rendering
+
+version: expression_identity_v1.0
+frozen_date: '2026-08-17'
+
 expressions:
-  attentive:
-    name: "ATTENTIVE"
-  gentle_reassurance:
-    name: "GENTLE_REASSURANCE"
-  calm_boundary:
-    name: "CALM_BOUNDARY"
-  teaching_focus:
-    name: "TEACHING_FOCUS"
+  NEUTRAL_WARM:
+    id: NEUTRAL_WARM
+    description: Default listening state, warm but neutral
+    context: Initial greeting, general listening
+    mouth_shape: REST
+    eye_character: Soft, focused
+    eyebrow_position: Natural, relaxed
+    smile_intensity: 0.1 (barely perceptible)
+    duration_typical_ms: 2000-5000
+
+  LISTENING:
+    id: LISTENING
+    description: Focused, steady attention on speaker
+    context: Parent is sharing, principal is absorbing
+    mouth_shape: REST
+    eye_character: Steady gaze, clear focus
+    eyebrow_position: Engaged, natural arch
+    smile_intensity: 0 (no smile)
+    duration_typical_ms: 1000-8000
+
+  THINKING:
+    id: THINKING
+    description: Thoughtful pause, considering
+    context: Processing what was shared
+    mouth_shape: REST or CLOSED
+    eye_character: Slightly softened, may look away briefly (< 1 sec)
+    eyebrow_position: Slightly raised or furrowed
+    smile_intensity: 0
+    duration_typical_ms: 800-2000
+
+  SOFT_ENCOURAGING:
+    id: SOFT_ENCOURAGING
+    description: Light warmth, encouragement
+    context: Affirming parent's effort or insight
+    mouth_shape: REST or SMILE_SPEECH
+    eye_character: Warm, open gaze
+    eyebrow_position: Natural or slightly raised
+    smile_intensity: 0.3 (gentle smile)
+    duration_typical_ms: 1200-3000
+
+  WARM_FIRM:
+    id: WARM_FIRM
+    description: Caring yet clear boundary
+    context: Setting expectation, affirming value
+    mouth_shape: REST or NARROW
+    eye_character: Direct, steady, warm but serious
+    eyebrow_position: Slightly firm
+    smile_intensity: 0 (no smile, clarity)
+    duration_typical_ms: 1500-4000
+
+  CALM_SERIOUS:
+    id: CALM_SERIOUS
+    description: Steady, grounded, handling difficulty
+    context: Family is in crisis or high stress
+    mouth_shape: REST or CLOSED
+    eye_character: Calm but serious, attentive
+    eyebrow_position: Slightly furrowed or engaged
+    smile_intensity: 0 (no smile)
+    duration_typical_ms: 2000-6000
+
+  CONCERNED_CALM:
+    id: CONCERNED_CALM
+    description: Acknowledges difficulty without panic
+    context: Child is struggling, parent feels helpless
+    mouth_shape: REST or CLOSED
+    eye_character: Soft, empathetic, steady
+    eyebrow_position: Slightly drawn
+    smile_intensity: 0.05 (minimal comfort smile)
+    duration_typical_ms: 2000-5000
+
+  BOUNDARY_CLEAR:
+    id: BOUNDARY_CLEAR
+    description: Firm but not harsh, clarity and care
+    context: Must name a hard truth or firm expectation
+    mouth_shape: CLOSED or NARROW
+    eye_character: Direct, clear, firm
+    eyebrow_position: Engaged, clear
+    smile_intensity: 0 (no smile)
+    duration_typical_ms: 1500-3500
+
+prohibited_expressions:
+  - ANGRY_TEACHER: "Never show authority anger"
+  - OVERJOYED: "Never fake high-energy enthusiasm"
+  - SHOCKED: "Never exaggerate surprise"
+  - JUDGING: "Never show contempt or judgment"
+  - PERMANENT_SMILE: "Never loop microexpressions"
+  - ROBOTIC_NEUTRAL: "Never show zero warmth"
+
+expression_blending:
+  principle: Smooth transition between approved expressions
+  transition_duration_ms: 300-500
+  no_snap_or_pop: true
+
+animation_loop:
+  blinking:
+    frequency: Natural (not robotic, not exaggerated)
+    probability_per_second: 15-20 blinks/min
+    duration_ms: 100-150
+
+  microexpressions:
+    allowed: Subtle natural variation
+    prohibited: Continuous cycling, repetitive patterns
+
+versioning:
+  expression_identity_version: expression_v1.0
+  frozen_date: '2026-08-17'
+
+status: AUTHORITATIVE_REFERENCE
