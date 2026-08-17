@@ -8,6 +8,7 @@ export const FAMILY_PRODUCT_EVENT_TYPES = [
   'publication_recorded', 'service_record_viewed', 'profile_viewed', 'record_withdrawn', 'asset_revoked',
   'order_intent_submitted', 'order_intent_cancelled', 'entitlement_receipted',
   'booking_request_submitted', 'booking_request_cancelled',
+  'membership_subscribed', 'membership_benefit_consumed', 'membership_benefit_revoked',
 ] as const;
 export type FamilyProductEventType = (typeof FAMILY_PRODUCT_EVENT_TYPES)[number];
 

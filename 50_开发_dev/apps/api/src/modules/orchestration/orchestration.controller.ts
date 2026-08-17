@@ -10,8 +10,10 @@ import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction 
 import { OrchestrationService } from './orchestration.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
+import { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';
 import type { CancelOrderIntentDto, SubmitOrderIntentDto } from './family-commerce-intent.contract';
 import type { CancelBookingDto, RequestBookingDto } from './family-service-booking.contract';
+import type { ConsumeMembershipBenefitDto, RevokeMembershipBenefitDto, SubscribeMembershipDto } from './family-membership-entitlement.contract';
 import type { ConfirmSyntheticIntentDto, RecordSyntheticDecisionDto, StartSyntheticNeedDto } from './l0-l1-test-loop.dto';
 import { assessmentIntakeStub, gatewayStub, humanGatePlaceholder } from './stubs/test-loop-governance-stubs';
 
@@ -25,6 +27,7 @@ export class OrchestrationController {
     @Inject(OrchestrationService) private readonly svc: OrchestrationService,
     @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,
     @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,
+    @Inject(FamilyMembershipEntitlementService) private readonly membershipEntitlements: FamilyMembershipEntitlementService,
   ) {}
 
   @Get('home')
@@ -296,6 +299,54 @@ export class OrchestrationController {
   @RequireOrchestrationAction('ReadFamily')
   async serviceBookingCustomerProjection(@Param('familyId') familyId: string) {
     return this.serviceBookings.customerProjection(familyId);
+  }
+
+
+  @Get('orchestration/test-loop/membership/plans')
+  @RequireOrchestrationAction('ReadFamily')
+  async membershipPlans(@Param('familyId') familyId: string) {
+    return this.membershipEntitlements.plans(familyId);
+  }
+
+  @Post('orchestration/test-loop/membership/subscriptions')
+  @RequireOrchestrationAction('ManageMembershipEntitlement')
+  async subscribeMembership(
+    @Param('familyId') familyId: string,
+    @Body() body: SubscribeMembershipDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.membershipEntitlements.subscribe(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/membership/benefits/consume')
+  @RequireOrchestrationAction('ManageMembershipEntitlement')
+  async consumeMembershipBenefit(
+    @Param('familyId') familyId: string,
+    @Body() body: ConsumeMembershipBenefitDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.membershipEntitlements.consume(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/membership/benefits/revoke')
+  @RequireOrchestrationAction('ManageMembershipEntitlement')
+  async revokeMembershipBenefit(
+    @Param('familyId') familyId: string,
+    @Body() body: RevokeMembershipBenefitDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    return this.membershipEntitlements.revoke(familyId, actor.personId, body ?? {}, corr(correlationId));
+  }
+
+  @Get('orchestration/test-loop/membership/customer-projection')
+  @RequireOrchestrationAction('ReadFamily')
+  async membershipCustomerProjection(@Param('familyId') familyId: string) {
+    return this.membershipEntitlements.customerProjection(familyId);
   }
 
 }

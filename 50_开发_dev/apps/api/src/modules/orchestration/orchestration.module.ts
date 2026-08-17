@@ -17,6 +17,7 @@ import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';
 import { FamilyProductEventService } from './family-product-event.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
+import { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';
 
 @Module({
   imports: [AuthModule, PrincipalModule],
@@ -32,6 +33,7 @@ import { FamilyServiceBookingService } from './family-service-booking.service';
     FamilyProductEventService,
     FamilyCommerceIntentService,
     FamilyServiceBookingService,
+    FamilyMembershipEntitlementService,
   ],
 })
 export class OrchestrationModule {}

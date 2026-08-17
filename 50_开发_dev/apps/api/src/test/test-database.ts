@@ -75,6 +75,8 @@ export async function seedAiConsentSubject(
 /** 清编排域表(FAMILY-GROWTH-VERTICAL-SLICE-001;children-first FK 序);to_regclass 守卫兼容未迁移 0020 的库。 */
 export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [
+    'family_membership_benefit_ledger', 'family_membership_benefit_grants', 'family_membership_subscriptions',
+    'family_membership_benefit_definitions', 'family_membership_plans',
     'family_product_events',
     'family_booking_service_records', 'family_booking_requests', 'family_service_availability_slots', 'family_service_offerings', 'family_service_providers',
     'family_entitlements', 'family_order_intent_lines', 'family_order_intents', 'family_product_offerings',
