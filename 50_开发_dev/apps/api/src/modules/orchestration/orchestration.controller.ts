@@ -8,6 +8,10 @@ import { randomUUID } from 'node:crypto';
 import type { FamilyDecisionType } from '@family/contracts';
 import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';
 import { OrchestrationService } from './orchestration.service';
+import { FamilyCommerceIntentService } from './family-commerce-intent.service';
+import { FamilyServiceBookingService } from './family-service-booking.service';
+import type { CancelOrderIntentDto, SubmitOrderIntentDto } from './family-commerce-intent.contract';
+import type { CancelBookingDto, RequestBookingDto } from './family-service-booking.contract';
 import type { ConfirmSyntheticIntentDto, RecordSyntheticDecisionDto, StartSyntheticNeedDto } from './l0-l1-test-loop.dto';
 import { assessmentIntakeStub, gatewayStub, humanGatePlaceholder } from './stubs/test-loop-governance-stubs';
 
@@ -17,7 +21,11 @@ function corr(c?: string): string { return c && c.trim() ? c : randomUUID(); }
 @Controller('families/:familyId')
 @UseGuards(OrchestrationAuthGuard)
 export class OrchestrationController {
-  constructor(@Inject(OrchestrationService) private readonly svc: OrchestrationService) {}
+  constructor(
+    @Inject(OrchestrationService) private readonly svc: OrchestrationService,
+    @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,
+    @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,
+  ) {}
 
   @Get('home')
   @RequireOrchestrationAction('ReadFamily')
@@ -209,4 +217,85 @@ export class OrchestrationController {
     if (!subject) throw new BadRequestException('subject_person_id required');
     return this.svc.contextReuse(familyId, subject);
   }
+
+  @Get('orchestration/test-loop/commerce/products')
+  @RequireOrchestrationAction('ReadFamily')
+  async commerceProducts(@Param('familyId') familyId: string) {
+    return this.commerceIntents.products(familyId);
+  }
+
+  @Post('orchestration/test-loop/commerce/order-intents')
+  @RequireOrchestrationAction('SubmitCommerceIntent')
+  async submitCommerceIntent(
+    @Param('familyId') familyId: string,
+    @Body() body: SubmitOrderIntentDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.commerceIntents.submit(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/commerce/order-intents/cancel')
+  @RequireOrchestrationAction('SubmitCommerceIntent')
+  async cancelCommerceIntent(
+    @Param('familyId') familyId: string,
+    @Body() body: CancelOrderIntentDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    return this.commerceIntents.cancel(familyId, actor.personId, body ?? {}, corr(correlationId));
+  }
+
+  @Get('orchestration/test-loop/commerce/customer-projection')
+  @RequireOrchestrationAction('ReadFamily')
+  async commerceCustomerProjection(@Param('familyId') familyId: string) {
+    return this.commerceIntents.customerProjection(familyId);
+  }
+
+  @Get('orchestration/test-loop/services/offerings')
+  @RequireOrchestrationAction('ReadFamily')
+  async serviceOfferings(@Param('familyId') familyId: string) {
+    return this.serviceBookings.offerings(familyId);
+  }
+
+  @Get('orchestration/test-loop/services/slots')
+  @RequireOrchestrationAction('ReadFamily')
+  async serviceSlots(@Param('familyId') familyId: string, @Query('service_offering_ref') serviceOfferingRef?: string, @Query('service_offering_version') serviceOfferingVersion?: string) {
+    const version = Number(serviceOfferingVersion);
+    if (!serviceOfferingRef || !Number.isInteger(version) || version <= 0) {
+      throw new BadRequestException('service_offering_ref and service_offering_version required');
+    }
+    return this.serviceBookings.slots(familyId, serviceOfferingRef, version);
+  }
+
+  @Post('orchestration/test-loop/services/booking-requests')
+  @RequireOrchestrationAction('SubmitServiceBooking')
+  async requestServiceBooking(
+    @Param('familyId') familyId: string,
+    @Body() body: RequestBookingDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.serviceBookings.request(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/services/booking-requests/cancel')
+  @RequireOrchestrationAction('SubmitServiceBooking')
+  async cancelServiceBooking(
+    @Param('familyId') familyId: string,
+    @Body() body: CancelBookingDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    return this.serviceBookings.cancel(familyId, actor.personId, body ?? {}, corr(correlationId));
+  }
+
+  @Get('orchestration/test-loop/services/customer-projection')
+  @RequireOrchestrationAction('ReadFamily')
+  async serviceBookingCustomerProjection(@Param('familyId') familyId: string) {
+    return this.serviceBookings.customerProjection(familyId);
+  }
+
 }

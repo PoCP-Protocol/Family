@@ -41,6 +41,14 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     'llm-community-publish': ['UI-26', 'publish-dynamic'],
     'llm-my-services': ['UI-31', 'family-profile'],
   };
+  const commerceActionRoutes = {
+    'commerce-submit-intent': { pageId: 'UI-14', productRef: 'PRODUCT_PARENT_CHILD_CAMP', productVersion: 1, nextPage: 'orders-assets' },
+    'commerce-load-customer-assets': { pageId: null, productRef: null, productVersion: null, nextPage: 'orders-assets' },
+  };
+  const serviceBookingActionRoutes = {
+    'service-submit-booking': { pageId: 'UI-21', serviceOfferingRef: 'SERVICE_PARENT_CHILD_PRIMARY', serviceOfferingVersion: 1, availabilitySlotRef: 'SLOT_PRIMARY', nextPage: 'service-mine' },
+    'service-load-customer-projection': { pageId: null, serviceOfferingRef: null, serviceOfferingVersion: null, availabilitySlotRef: null, nextPage: 'service-mine' },
+  };
   async function requestPageExplanation(pageId) {
     const correlationId = `family-web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
@@ -58,6 +66,36 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       llmTextEquivalent = '当前说明暂不可用。你可以返回、暂停或现在先不继续。';
       root.dataset.familyLlmDecision = 'CLIENT_FAILURE';
       root.dataset.familyLlmTrace = correlationId;
+      return null;
+    }
+  }
+  async function requestCommerceIntent(routeKey) {
+    const route = commerceActionRoutes[routeKey];
+    const correlationId = `family-commerce-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      const isProjection = route.pageId === null;
+      const response = await fetch(
+        isProjection
+          ? `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/customer-projection`
+          : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/order-intents`,
+        {
+          method: isProjection ? 'GET' : 'POST',
+          credentials: 'include',
+          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
+          ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, product_ref: route.productRef, product_version: route.productVersion }) }),
+        },
+      );
+      const payload = await response.json();
+      llmTextEquivalent = payload?.intent?.text_equivalent || payload?.text_equivalent || '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';
+      root.dataset.familyCommerceAction = isProjection ? 'READ_CUSTOMER_COMMERCE_PROJECTION' : 'SUBMIT_ORDER_INTENT';
+      root.dataset.familyCommerceStatus = payload?.intent?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');
+      root.dataset.familyCommerceOrderIntent = payload?.intent?.order_intent_id || '';
+      return payload;
+    } catch (_error) {
+      llmTextEquivalent = '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';
+      root.dataset.familyCommerceAction = route.pageId === null ? 'READ_CUSTOMER_COMMERCE_PROJECTION' : 'SUBMIT_ORDER_INTENT';
+      root.dataset.familyCommerceStatus = 'CLIENT_FAILURE';
+      root.dataset.familyCommerceOrderIntent = '';
       return null;
     }
   }
@@ -102,18 +140,48 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function growthChild() { return clearReference('growth-child-assistant-reference-448x920.png', '成长小助手：欢迎 Banner、成长能量、四色活动卡、今日挑战、奖励和开始挑战', [['clear-bottom-cta', 'growth-daily-task', '开始挑战']], '448/920'); }
   function growthRanking() { return clearReference('growth-ranking-reference-450x918.png', '成长排行榜：筛选栏、领奖台、排名列表、个人排名与成长行动家称号，仅作原图静态视觉展示', [], '450/918'); }
   function growthPoster() { return clearReference('growth-poster-reference-444x970.png', '成长成果海报：成长故事、成长前后、连续打卡、成长值、勋章、二维码与分享方式，仅作原图静态视觉展示', [['clear-poster-share', 'home', '返回首页']], '444/970'); }
+  async function requestServiceBooking(routeKey) {
+    const route = serviceBookingActionRoutes[routeKey];
+    const correlationId = `family-service-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      const isProjection = route.pageId === null;
+      const response = await fetch(
+        isProjection
+          ? `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/customer-projection`
+          : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/booking-requests`,
+        {
+          method: isProjection ? 'GET' : 'POST',
+          credentials: 'include',
+          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
+          ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, service_offering_ref: route.serviceOfferingRef, service_offering_version: route.serviceOfferingVersion, availability_slot_ref: route.availabilitySlotRef }) }),
+        },
+      );
+      const payload = await response.json();
+      llmTextEquivalent = payload?.booking?.text_equivalent || payload?.text_equivalent || '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';
+      root.dataset.familyServiceBookingAction = isProjection ? 'READ_SERVICE_BOOKING_PROJECTION' : 'SUBMIT_SERVICE_BOOKING';
+      root.dataset.familyServiceBookingStatus = payload?.booking?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');
+      root.dataset.familyServiceBookingRequest = payload?.booking?.booking_request_id || '';
+      return payload;
+    } catch (_error) {
+      llmTextEquivalent = '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';
+      root.dataset.familyServiceBookingAction = route.pageId === null ? 'READ_SERVICE_BOOKING_PROJECTION' : 'SUBMIT_SERVICE_BOOKING';
+      root.dataset.familyServiceBookingStatus = 'CLIENT_FAILURE';
+      root.dataset.familyServiceBookingRequest = '';
+      return null;
+    }
+  }
   function commerceMall() { return clearReference('family-growth-mall-reference-424x978.png', '家庭成长商城：首页问候、邀请成长礼包、六宫格入口、今日推荐和商城底部导航', [['clear-mall-invite', 'commerce-invite', '立即邀请'], ['clear-mall-product-1', 'commerce-product', '21天亲子沟通挑战营'], ['clear-mall-product-2', 'commerce-product', '家庭成长测评卡'], ['clear-mall-product-3', 'commerce-product', '亲子阅读工具包']], '424/978'); }
-  function commerceProduct() { return clearReference('product-detail-reference-418x970.png', '商品详情：21天亲子沟通挑战营、价格、服务权益、邀请优惠券和购买拼团操作区', [['clear-product-group', 'llm-commerce-group', '发起拼团'], ['clear-product-invite', 'commerce-invite', '去分享']], '418/970'); }
+  function commerceProduct() { return clearReference('product-detail-reference-418x970.png', '商品详情：21天亲子沟通挑战营、价格、服务权益、邀请优惠券和购买拼团操作区', [['clear-product-buy', 'commerce-submit-intent', '立即购买'], ['clear-product-group', 'llm-commerce-group', '发起拼团']], '418/970'); }
   function commerceInvite() { return clearReference('invite-rewards-reference-432x992.png', '邀请有礼：邀请3个家庭、1/3进度、奖励卡、立即邀请、邀请方式和二维码横幅', [['clear-invite-cta', 'commerce-mine', '立即邀请']], '432/992'); }
   function commerceGroup() { return clearReference('group-buy-reference-440x960.png', '拼团专区：分类Tab、四张拼团卡、团长、倒计时、参与头像、原价拼团价和去拼团按钮', [], '440/960'); }
   function commercePoints() { return clearReference('points-mall-reference-472x982.png', '积分商城：成长积分、签到、五项任务奖励、四项兑换礼和立即兑换按钮', [], '472/982'); }
   function commerceMine() { return clearReference('partner-mine-reference-440x994.png', '我的：成长合伙人、邀请成交积分可提现数据、等级进度、功能菜单与年度会员服务', [['clear-bottom-nav-home', 'home', '首页']], '440/994'); }
   function teacherZone() { return clearReference('teacher-zone-reference-458x1008.png', '名师专区：搜索、咨询 Banner、热门领域、推荐名师与底部导航，仅作静态视觉展示', [['clear-bottom-nav-home', 'home', '首页'], ['clear-teacher-detail', 'teacher-detail', '查看名师详情']], '458/1008'); }
   function teacherDetail() { return clearReference('teacher-detail-reference-426x1002.png', '名师详情：名师资料、擅长领域、可预约时间、家长评价与咨询预约操作区', [['clear-teacher-book', 'llm-teacher-booking', '预约一对一']], '426/1002'); }
-  function consultationBooking() { return clearReference('consultation-booking-reference-492x1008.png', '在线咨询预约：咨询方式、时间、问题描述与确认预约，仅作静态视觉展示', [['clear-booking-back', 'teacher-detail', '返回名师详情']], '492/1008'); }
+  function consultationBooking() { return clearReference('consultation-booking-reference-492x1008.png', '在线咨询预约：咨询方式、时间、问题描述与确认预约', [['clear-booking-back', 'teacher-detail', '返回名师详情'], ['clear-booking-confirm', 'service-submit-booking', '确认预约']], '492/1008'); }
   function salonList() { return clearReference('salon-list-reference-466x1008.png', '线下沙龙：城市主题筛选、活动列表与活动详情入口', [['clear-salon-detail', 'llm-activity', '查看活动详情']], '466/1008'); }
   function activityDetail() { return clearReference('activity-detail-reference-470x1016.png', '活动详情：活动亮点、流程、适合人群、参与收获与报名操作区，仅作静态视觉展示', [['clear-activity-mine', 'service-mine', '我的预约和活动']], '470/1016'); }
-  function serviceMine() { return clearReference('service-mine-reference-472x1018.png', '我的咨询和活动：用户资料、咨询、活动与会员信息，仅作静态视觉展示', [['clear-service-mine-home', 'home', '首页']], '472/1018'); }
+  function serviceMine() { return clearReference('service-mine-reference-472x1018.png', '我的咨询和活动：用户资料、咨询、活动与会员信息', [['clear-service-mine-home', 'home', '首页'], ['clear-service-mine-projection', 'service-load-customer-projection', '查看我的预约和服务记录']], '472/1018'); }
   function parentCommunity() { return clearReference('parent-community-reference-552x1034.png', '家长社区：搜索、话题、内容流与互动入口', [['clear-community-detail', 'dynamic-detail', '查看动态详情'], ['clear-community-publish', 'llm-community-publish', '发布动态'], ['clear-community-mine', 'my-community', '我的社区']], '552/1034'); }
   function publishDynamic() { return clearReference('publish-dynamic-reference-548x1028.png', '发布动态：发布类型、素材、话题、挑战与发布打卡操作区，仅作静态视觉展示', [['clear-publish-back', 'parent-community', '返回家长社区']], '548/1028'); }
   function dynamicDetail() { return clearReference('dynamic-detail-reference-524x1022.png', '动态详情：内容、图片、评论、顾问回复与互动操作区，仅作静态视觉展示', [['clear-dynamic-back', 'parent-community', '返回家长社区']], '524/1022'); }
@@ -121,11 +189,11 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function growthOutcomes() { return clearReference('growth-outcomes-reference-522x1110.png', '成长成果：本周成长数据、荣誉勋章、成果案例对比与成长海报入口，仅作静态视觉展示', [['clear-outcomes-poster', 'growth-poster', '生成成长海报']], '522/1110'); }
   function annualMemberMine() { return clearReference('annual-member-mine-reference-532x994.png', '我的年度会员服务：成长积分、家庭等级、累计服务、邀请奖励、快捷入口和服务进度', [['clear-annual-services', 'llm-my-services', '查看我的服务']], '532/994'); }
   function myServices() { return clearReference('my-services-reference-532x1000.png', '我的服务：90天成长计划、任务进度、服务入口和继续打卡，仅作静态视觉展示', [['clear-services-profile', 'family-profile', '查看家庭档案']], '532/1000'); }
-  function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心，仅作静态视觉展示', [['clear-orders-mine', 'annual-member-mine', '返回我的']], '552/1010'); }
+  function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010'); }
   function familyProfile() { return clearReference('family-profile-reference-542x1002.png', '家庭档案：孩子资料、关注问题、诊断方案、记录与时间线，仅作静态视觉展示', [['clear-profile-services', 'my-services', '查看服务']], '542/1002'); }
   function serviceRecords() { return clearReference('service-records-reference-566x1008.png', '服务记录：咨询、活动和客服支持，仅作静态视觉展示', [['clear-records-mine', 'service-mine', '我的预约和活动']], '566/1008'); }
   function render() { const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); }
-  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
+  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
   render();
   return {
     navigate: (nextPage) => {

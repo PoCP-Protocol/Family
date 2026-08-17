@@ -14,6 +14,9 @@ import { AuditReplayService } from './llm-gateway/audit-replay.service';
 import { ContextAssemblerService } from './llm-gateway/context-assembler.service';
 import { FamilyLlmGatewayService } from './llm-gateway/family-llm-gateway.service';
 import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';
+import { FamilyProductEventService } from './family-product-event.service';
+import { FamilyCommerceIntentService } from './family-commerce-intent.service';
+import { FamilyServiceBookingService } from './family-service-booking.service';
 
 @Module({
   imports: [AuthModule, PrincipalModule],
@@ -26,6 +29,9 @@ import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';
     FamilyLlmOutputValidator,
     AuditReplayService,
     FamilyLlmGatewayService,
+    FamilyProductEventService,
+    FamilyCommerceIntentService,
+    FamilyServiceBookingService,
   ],
 })
 export class OrchestrationModule {}

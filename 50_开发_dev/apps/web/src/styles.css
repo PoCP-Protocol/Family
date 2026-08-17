@@ -2846,7 +2846,9 @@ h3 {
 .by-assistive-status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 /* Transparent hit areas preserve every supplied visual master while enabling the documented closed-loop routes. */
 .clear-mall-invite{left:7%;top:18%;width:86%;height:14%}.clear-mall-product-1{left:5%;top:62%;width:29%;height:25%}.clear-mall-product-2{left:35%;top:62%;width:29%;height:25%}.clear-mall-product-3{left:66%;top:62%;width:29%;height:25%}
-.clear-product-group{left:51%;bottom:1%;width:45%;height:9%}.clear-product-invite{left:4%;bottom:1%;width:45%;height:9%}.clear-invite-cta{left:7%;top:58%;width:86%;height:8%}
+.clear-product-group{left:51%;bottom:1%;width:45%;height:9%}.clear-product-buy{left:4%;bottom:1%;width:45%;height:9%}.clear-invite-cta{left:7%;top:58%;width:86%;height:8%}
+.clear-booking-confirm{left:7%;top:82%;width:86%;height:8%}
+.clear-service-mine-projection{left:28%;bottom:1%;width:68%;height:8%}
 .clear-teacher-detail{left:4%;top:40%;width:92%;height:25%}.clear-teacher-book{left:5%;bottom:2%;width:90%;height:8%}.clear-booking-back{left:4%;top:2%;width:15%;height:8%}.clear-salon-detail{left:5%;top:28%;width:90%;height:22%}.clear-activity-mine{left:5%;bottom:2%;width:90%;height:8%}.clear-service-mine-home{left:4%;bottom:1%;width:24%;height:8%}
 .clear-community-detail{left:4%;top:34%;width:92%;height:20%}.clear-community-publish{right:5%;bottom:7%;width:20%;height:10%}.clear-community-mine{right:4%;bottom:1%;width:24%;height:8%}.clear-publish-back,.clear-dynamic-back,.clear-my-community-back{left:4%;top:2%;width:16%;height:8%}
 .clear-outcomes-poster{left:5%;bottom:2%;width:90%;height:9%}.clear-annual-services{left:5%;top:57%;width:90%;height:12%}.clear-services-profile{left:5%;top:20%;width:90%;height:20%}.clear-orders-mine{left:4%;bottom:1%;width:24%;height:8%}.clear-profile-services{left:5%;top:78%;width:90%;height:10%}.clear-records-mine{left:4%;bottom:1%;width:24%;height:8%}

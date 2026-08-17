@@ -11,7 +11,8 @@ export type FamilyNamedAction =
   | 'GrantConsent' | 'WithdrawConsent' | 'RecordPerspective'
   | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
   // FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 编排 NamedActions(家长面向 12–15 纵切)。
-  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp';
+  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp'
+  | 'SubmitCommerceIntent' | 'SubmitServiceBooking';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -33,6 +34,8 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   ConfirmGrowthIntent:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */
