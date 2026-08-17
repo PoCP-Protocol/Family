@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';   // PLATFORM-IAM-104:FamilyPlatformAuthGuard 依赖 AuthService
 import { FamilyAggregateRepository } from './family-aggregate.repository';
 import { EvidenceSynthesisService } from './evidence-synthesis.service';
 import { FamilyController } from './family.controller';
@@ -9,6 +10,8 @@ import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { InterventionService } from './intervention.service';
+import { OnboardingService } from './onboarding.service';
+import { TodayService } from './today.service';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -17,6 +20,7 @@ import { InterventionService } from './intervention.service';
  * bootstrap 阶段不实现任何业务写操作。
  */
 @Module({
+	imports: [AuthModule],
 	controllers: [FamilyController],
 	providers: [
 		FamilyRepository,
@@ -28,6 +32,8 @@ import { InterventionService } from './intervention.service';
 		InterventionService,
 		GrowthActionService,
 		GrowthReviewService,
+		OnboardingService,
+		TodayService,
 	],
 	// M3-101A-C:导出 InterventionService,供 Principal Action Bridge 调用既有 StartIntervention Named Action(不复制其 canonical 门)。
 	exports: [InterventionService],

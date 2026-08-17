@@ -3,6 +3,10 @@
 把「榜样教育」现有家庭教育业务,收敛为一个统一的 **Family Growth AI Platform**:
 经营对象从「一次成交的课程客户」升级为「持续成长的家庭 Family」。
 
+> ⚠️ **本 README 是叙述性文档,处于真相权威序最低层(见 `50_开发_dev/governance/TRUTH_HIERARCHY.md`)。**
+> 项目**实际**状态以高序为准:Runtime/DB → GitHub → 机器登记册(governance/*_REGISTRY.yaml)→ Gate 证据 → `50_开发_dev/PROJECT_STATUS.md`。
+> 本表"状态"列可能滞后,勿据此判断完成度。当前 `PROGRAM_MODE = M3_MOS_CLOSEOUT`。
+
 ---
 
 ## 目录体系
@@ -13,7 +17,7 @@
 |---|---|---|
 | `00_复盘\` | 阶段性复盘记录 | 最新:`2026-08-09_全面复盘.md` |
 | `10_规格_spec\` | **权威规格** —— 产品架构、Ontology、技术架构、迁移矩阵、180天WBS、门禁清单 | 完整,11 个文件。**写代码前先服从这里** |
-| `20_知识_knowledge\` | 循证知识五层卡片库 + 证据治理 E0–E7 + 引文核验 | **代码可跑,卡片库为空(0 张卡)** |
+| `20_知识_knowledge\` | 循证知识五层卡片库 + 证据治理 E0–E7 + 引文核验 | 代码可跑;LISTEN_BEFORE_RESPOND 链已循证落地(TinT/Coercive 真实 DOI,见 library + W2R-103B)。以 `PROJECT_STATUS.md`/registries 为准 |
 | `25_研究_research\` | 商业假设证伪(BM/MKT/SCI/AI 四线 + 单位经济) | **仅设计,尚无实现** |
 | `30_素材_materials\` | 原始素材,4 份内容(S1–S4)+ 抽取文本 | 只读。溯源见 `PROVENANCE.md` |
 | `40_产出_derived\` | 自家生成的成品 + 生成器 | 25 页纲领与逐页解读 |

@@ -1,0 +1,89 @@
+{
+  "schema_version": "KNOWLEDGE_CHAIN_V2",
+  "intervention_id": "LISTEN_BEFORE_RESPOND",
+  "compiled_by": "byresearch/compile_principal_bundle.py",
+  "source_ssot": "20_知识_knowledge/library + byresearch/evidence.py",
+  "theories": [
+    {
+      "id": "TH-001",
+      "title": "情绪社会化与\"先连接再纠正\"",
+      "summary": "关系通道未打开时纠正易触发防御;先接住情绪、建立\"被听见\"再进入规则更有效。",
+      "evidence_grade": "E2",
+      "external_evidence_count": 1,
+      "family_decision_non_decisive": true,
+      "source_refs": []
+    }
+  ],
+  "constructs": [
+    {
+      "id": "CN-001",
+      "title": "被听见感(felt-listening)",
+      "summary": "说话者感到对方真的听懂其在意的点,而非急于评价或纠正。",
+      "evidence_grade": "E0",
+      "external_evidence_count": 0,
+      "family_decision_non_decisive": true,
+      "source_refs": []
+    },
+    {
+      "id": "CN-002",
+      "title": "防御/强制互动循环(coercive loop)",
+      "summary": "一方开口另一方即防御/顶嘴/退出,双方都更难继续对话,冲突自我强化。",
+      "evidence_grade": "E6",
+      "external_evidence_count": 1,
+      "family_decision_non_decisive": true,
+      "source_refs": [
+        "doi:10.1017/S0954579414000169"
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "id": "MD-001",
+      "title": "先连接再纠正(情绪教练式回应)",
+      "summary": "先让对话能继续(承接情绪/复述/低防御提问),再进入规则或纠正。",
+      "evidence_grade": "E7",
+      "external_evidence_count": 2,
+      "family_decision_non_decisive": true,
+      "source_refs": [
+        "doi:10.1016/j.adolescence.2015.04.005",
+        "doi:10.1037/dev0000875"
+      ]
+    }
+  ],
+  "modalities": [
+    {
+      "id": "MM-001",
+      "title": "亲子互动观察编码 / 家长情绪社会化自评",
+      "summary": "通过结构化互动观察编码与家长自评,估计被听见感与强制/防御循环的变化。",
+      "evidence_grade": "E0",
+      "external_evidence_count": 0,
+      "family_decision_non_decisive": true,
+      "source_refs": []
+    }
+  ],
+  "evidence_summary": {
+    "external_verified_count": 4,
+    "highest_grade": "E7",
+    "has_third_party_real": true,
+    "source_registry_gate": "PASS",
+    "python_evidence_gate": "PASS",
+    "gate_checks": {
+      "library_validate_errors": 0,
+      "external_verified_count": 4,
+      "adolescent_direct_evidence": 2,
+      "method_evidence_max_grade": "E7",
+      "construct_external_evidence": 1,
+      "unverified_decisive_evidence": 0,
+      "fake_or_missing_source": 0,
+      "unregistered_external_source": 0
+    }
+  },
+  "limitations": [
+    "ResearchEvidence 恒 family_decision_non_decisive:不直接决定任何家庭必须做什么。",
+    "强制/防御循环证据为早期儿童样本,外推到 12-15 岁青少年 LIMITED(见 CN-002)。",
+    "被听见感(CN-001)当前直接实证有限,未过度赋级。",
+    "微动作(今晚复述一句)本身直接效果证据有限;方法效果来自情绪教练式家长干预整体证据。",
+    "Gottman 1996 待核验(unverified,非 decisive);Rogers/Gottman&DeClaire 仅理论背景。"
+  ],
+  "bundle_version": "sha256:77031babcfbb538a"
+}

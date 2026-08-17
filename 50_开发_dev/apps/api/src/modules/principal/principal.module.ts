@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AttemptRecordingGateway, RoutingAiGateway, buildVendorGateway, type AiGateway, type AttemptSink } from '@family/ai-gateway';
 import { FamilyModule } from '../family/family.module';
+import { AuthModule } from '../auth/auth.module';   // IAM-103:消费/复核路径复用 AuthService.resolveActor
 import { PrincipalController } from './principal.controller';
 import { PrincipalService, PRINCIPAL_AI_GATEWAY } from './principal.service';
 import { PrincipalRepository } from './principal.repository';
@@ -20,7 +21,9 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
   const requested = spec.split(',').map((s) => s.trim()).filter(Boolean);
   if (!requested.length) return null;
   const profile = env.FPAI_RUNTIME_PROFILE || 'internal';
-  const approvedSet = profile === 'internal_livecheck'
+  // W2R-102:internal_livecheck 与 model_first_internal(受控内部默认,已授权 provider=anthropic-cc-switch)自动批准请求的 vendor;
+  // pilot/production 仍须 FPAI_APPROVED_PROVIDERS 显式批准。
+  const approvedSet = (profile === 'internal_livecheck' || profile === 'model_first_internal')
     ? new Set(requested)
     : new Set((env.FPAI_APPROVED_PROVIDERS || '').split(',').map((s) => s.trim()).filter(Boolean));
   const approved = requested.filter((v) => approvedSet.has(v));
@@ -35,7 +38,7 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
  * 只写 principal_* / product_events;不写 Growth canonical(那属 101A-C Action Bridge → 既有 Named Action)。
  */
 @Module({
-  imports: [FamilyModule], // 复用 InterventionService(既有 StartIntervention Named Action)
+  imports: [FamilyModule, AuthModule], // FamilyModule=InterventionService;AuthModule=IAM-103 Bearer 解析
   controllers: [PrincipalController],
   providers: [
     PrincipalService,

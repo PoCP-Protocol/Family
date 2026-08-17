@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
 import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
@@ -21,8 +22,11 @@ import { GrowthActionService } from './growth-action.service';
 import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
+import { OnboardingService } from './onboarding.service';
+import { TodayService } from './today.service';
 
 @Controller('families')
+@UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
 export class FamilyController {
   constructor(
     @Inject(FamilyService) private readonly familyService: FamilyService,
@@ -30,12 +34,39 @@ export class FamilyController {
     @Inject(InterventionService) private readonly interventionService: InterventionService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
+    @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
+    @Inject(TodayService) private readonly todayService: TodayService,
   ) {}
 
+  // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/onboarding/status')
+  async onboardingStatus(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return this.onboardingService.getStatus(familyId, actorId);
+  }
+
+  // TODAY-001:Today 首页只读聚合(0 canonical 写)。
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/today')
+  async today(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return this.todayService.getToday(familyId, actorId);
+  }
+
+  @RequireFamilyAction('ReadFamily')
   @Get(':familyId')
   async getFamilyAggregate(
     @Param('familyId') familyId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<FamilyAggregateResponse> {
     if (!actorId || actorId.trim().length === 0) {
       throw new UnauthorizedException('actor_is_authenticated');
@@ -51,7 +82,7 @@ export class FamilyController {
   @Post()
   async create(
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
   ): Promise<CreateFamilyResponse> {
@@ -70,11 +101,12 @@ export class FamilyController {
     return this.familyService.createFamily(request, meta);
   }
 
+  @RequireFamilyAction('InviteAdult')
   @Post(':familyId/parents')
   async addParent(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
   ): Promise<AddParentResponse> {
@@ -93,11 +125,12 @@ export class FamilyController {
     return this.familyService.addParent(request, meta);
   }
 
+  @RequireFamilyAction('AddChild')
   @Post(':familyId/children')
   async addChild(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
   ): Promise<AddChildResponse> {
@@ -120,7 +153,7 @@ export class FamilyController {
   async createRelationship(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
   ): Promise<CreateFamilyRelationshipResponse> {
@@ -143,7 +176,7 @@ export class FamilyController {
   async assignLifeStage(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
   ): Promise<AssignLifeStageResponse> {
@@ -162,11 +195,12 @@ export class FamilyController {
     return this.familyService.assignLifeStage(request, meta);
   }
 
+  @RequireFamilyAction('GrantConsent')
   @Post(':familyId/consents')
   async grantConsent(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -190,7 +224,7 @@ export class FamilyController {
   async startGrowthOnboarding(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -210,12 +244,13 @@ export class FamilyController {
     return this.familyService.startGrowthOnboarding(request, meta);
   }
 
+  @RequireFamilyAction('RecordPerspective')
   @Post(':familyId/growth/onboardings/:onboardingId/perspectives')
   async recordPerspective(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -239,7 +274,7 @@ export class FamilyController {
   async getPerspectiveSummary(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<PerspectiveSummaryResponse> {
     if (!actorId || actorId.trim().length === 0) {
       throw new UnauthorizedException('actor_is_authenticated');
@@ -257,7 +292,7 @@ export class FamilyController {
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -281,7 +316,7 @@ export class FamilyController {
   async getGrowthInsight(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<GrowthInsightResponse> {
     if (!actorId || actorId.trim().length === 0) {
       throw new UnauthorizedException('actor_is_authenticated');
@@ -298,7 +333,7 @@ export class FamilyController {
   async getGrowthPriorityInsight(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<GrowthPriorityInsightResponse> {
     if (!actorId || actorId.trim().length === 0) {
       throw new UnauthorizedException('actor_is_authenticated');
@@ -311,12 +346,13 @@ export class FamilyController {
     return this.growthPriorityService.getGrowthPriorityInsight(familyId, onboardingId, actorId);
   }
 
+  @RequireFamilyAction('ConfirmGrowthPriority')
   @Post(':familyId/growth/onboardings/:onboardingId/priority/confirm')
   async confirmGrowthPriority(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -333,18 +369,19 @@ export class FamilyController {
   @Get(':familyId/growth/interventions/LISTEN_BEFORE_RESPOND')
   async getInterventionCard(
     @Param('familyId') familyId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<InterventionCardDto> {
     assertReadContext(familyId, actorId);
     return this.interventionService.getInterventionCard(familyId, actorId!);
   }
 
+  @RequireFamilyAction('StartIntervention')
   @Post(':familyId/growth/onboardings/:onboardingId/interventions/start')
   async startIntervention(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -362,7 +399,7 @@ export class FamilyController {
   async getActiveIntervention(
     @Param('familyId') familyId: string,
     @Param('onboardingId') onboardingId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<StartInterventionResponse | null> {
     assertReadContext(familyId, actorId, onboardingId);
     return this.interventionService.getActiveIntervention(familyId, onboardingId, actorId!);
@@ -371,18 +408,19 @@ export class FamilyController {
   @Get(':familyId/growth/actions/today')
   async getTodayGrowthAction(
     @Param('familyId') familyId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<GrowthActionDto | null> {
     assertReadContext(familyId, actorId);
     return this.growthActionService.getTodayAction(familyId, actorId!);
   }
 
+  @RequireFamilyAction('CompleteAction')
   @Post(':familyId/growth/actions/:actionId/complete')
   async completeGrowthAction(
     @Param('familyId') familyId: string,
     @Param('actionId') actionId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -400,7 +438,7 @@ export class FamilyController {
   async recordOutcomeObservation(
     @Param('familyId') familyId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -419,7 +457,7 @@ export class FamilyController {
     @Param('familyId') familyId: string,
     @Param('episodeId') episodeId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -438,7 +476,7 @@ export class FamilyController {
     @Param('familyId') familyId: string,
     @Param('reviewId') reviewId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,
@@ -456,7 +494,7 @@ export class FamilyController {
   async getGrowthTimeline(
     @Param('familyId') familyId: string,
     @Param('episodeId') episodeId: string,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
   ): Promise<FamilyTimelineResponse> {
     assertReadContext(familyId, actorId, episodeId);
     return this.growthReviewService.getTimeline(familyId, episodeId, actorId!);
@@ -467,7 +505,7 @@ export class FamilyController {
     @Param('familyId') familyId: string,
     @Param('draftId') draftId: string,
     @Body() body: unknown,
-    @Headers('x-actor-id') actorId?: string,
+    @ActorId() actorId: string,
     @Headers('x-correlation-id') correlationId?: string,
     @Headers('x-source') source?: string,
     @Headers('idempotency-key') idempotencyKey?: string,

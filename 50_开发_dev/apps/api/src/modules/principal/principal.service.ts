@@ -4,11 +4,13 @@ import type { InterventionCode, StartInterventionResponse } from '@family/contra
 import type { AiGateway } from '@family/ai-gateway';
 import { InterventionService } from '../family/intervention.service';
 import {
-  runPrincipalTextMvp, safetyPrecheck,
+  runPrincipalTextMvp, safetyPrecheck, assessResponseQuality,
+  parentVerbalEscalationReview, imminentSelfLossOfControlReview,
   type PrincipalAiInput, type PrincipalAiOutput,
 } from '@family/principal-ai';
-import { resolvePrincipalConsent, evaluateProcessing, type ProcessingDataCategory } from '@family/principal-runtime';
+import { resolvePrincipalConsent, evaluateProcessing, buildPrincipalFamilyContext, resolveProviderPolicy, FPAI_PROVIDER_REGISTRY_SNAPSHOT, type ProcessingDataCategory } from '@family/principal-runtime';
 import { PrincipalRepository } from './principal.repository';
+import { loadGroundedKnowledge } from './principal-knowledge';
 
 /** DI token:Principal 真实模型网关(env-gated)。未配置真实 provider 时为 null → 确定性回退(不发外部调用)。 */
 export const PRINCIPAL_AI_GATEWAY = 'PRINCIPAL_AI_GATEWAY';
@@ -25,10 +27,12 @@ interface RuntimeProfile {
 }
 function resolveRuntimeProfile(): RuntimeProfile {
   const p = process.env.FPAI_RUNTIME_PROFILE || 'internal';
-  if (p === 'internal_livecheck') {
+  // W2R-102 受控模型优先内部门(架构师授权,provider=anthropic-cc-switch):
+  //   model_first_internal = 内部 dogfood 默认走真实模型(仍需 gateway+consent+processing 门);pilot/production 仍未授权。
+  //   与 internal_livecheck 同为受控外呼档(文本类;图片始终隔离);默认(unset)= internal = 关,CI 零外呼不变。
+  if (p === 'internal_livecheck' || p === 'model_first_internal') {
     return {
       name: p, externalText: true,
-      // 受控内部测试环境:文本类可外呼(含未成年人);图片仍隔离(不在白名单)。
       authorizedExternalCategories: ['USER_PROVIDED_TEXT', 'MINIMAL_GROWTH_CONTEXT', 'MINOR_PRIVATE_TEXT', 'FAMILY_PRIVATE_TEXT'],
     };
   }
@@ -90,15 +94,26 @@ export class PrincipalService {
     // M3-INT-001 §9-14 P0:真实外呼前强制 Consent → Processing Policy → Provider 门。
     // userMessage 即家庭私有文本(USER_PROVIDED_TEXT);Family 场景默认按未成年人从严。
     const profile = resolveRuntimeProfile();
+    // PROVIDER_POLICY_RUNTIME_001(behind flag,默认关):flag=on 时 providerApproved/categories 由 Provider Registry 派生
+    // (堵 §15 漂移:registry 明确 minor/private_text 不外发,profile 曾错误全允许);flag 关=现行为不变。
+    const useRegistry = process.env.FPAI_PROVIDER_POLICY_RUNTIME === 'on';
+    const providerId = process.env.FPAI_MODEL_VENDOR === 'zhipu' ? 'zhipu-glm4v' : 'anthropic-cc-switch';
+    const policy = useRegistry
+      ? resolveProviderPolicy(FPAI_PROVIDER_REGISTRY_SNAPSHOT, providerId, profile.name)
+      : { providerApproved: profile.externalText, authorizedExternalCategories: profile.authorizedExternalCategories };
+    if (useRegistry) {
+      await this.repo.recordProductEvent('principal_provider_policy_evaluated', familyId, sessionId, correlationId,
+        { provider: providerId, environment: profile.name, approved: policy.providerApproved, categories: policy.authorizedExternalCategories, source: 'provider_registry' });
+    }
     const processing = evaluateProcessing({
       consent, policyVersion: consent.matched?.policy_version ?? 'unknown',
       policyVersionApproved: profile.externalText, // 受控 env 视为已批;生产以治理为准
       subjectPersonId: subjectRef, guardianPersonId: consent.matched?.guardian_person_id ?? 'unknown',
       dataCategory: 'USER_PROVIDED_TEXT', minorData: true,
       providerClass: this.gateway ? 'EXTERNAL_PROVIDER' : 'FAKE',
-      providerApproved: profile.externalText,          // 受控 env approved;生产以 Provider Registry 为准
+      providerApproved: policy.providerApproved,          // flag=on: Provider Registry;off: 受控 env
       externalProcessingEnabled: profile.externalText, // 默认 internal → false
-      authorizedExternalCategories: profile.authorizedExternalCategories,
+      authorizedExternalCategories: policy.authorizedExternalCategories,
     });
     // 只有 processing 判定 ALLOW 且存在真实网关,才真正对外调用;否则确定性回退(零外呼)。
     const willCallExternal = !!this.gateway && processing.allowed;
@@ -121,11 +136,25 @@ export class PrincipalService {
       }
     }
 
+    // W2R-101 对象化上下文:仅在 consent 允许时,注入【最小 allowlist】typed PrincipalFamilyContextV1
+    // (canonical FACT/状态,不含私有文本/AI_INFERENCE)。否则 null(输出=0,不偷偷降级)。
+    let familyContext: Record<string, unknown> | undefined;
+    if (consent.allowed) {
+      const slice = await this.repo.loadFamilyContextSlice(familyId, subjectRef);
+      const ctx = buildPrincipalFamilyContext(slice, consent);
+      if (ctx) {
+        familyContext = ctx as unknown as Record<string, unknown>;
+        await this.repo.recordProductEvent('principal_object_context_injected', familyId, sessionId, correlationId,
+          { life_stage: ctx.lifeStage, priorities: ctx.confirmedGrowthPriority.length, interventions: ctx.activeIntervention.length });
+      }
+    }
+
     const requestId = randomUUID();
     const input: PrincipalAiInput = {
       request_id: requestId, session_id: sessionId, entry_point: 'ASK_FAMILI_PRINCIPAL',
       user_message: userMessage,
       consent_context: { fpai_lab_consent: consent.allowed, family_context_read_allowed: consent.allowed },
+      ...(familyContext ? { family_context: familyContext } : {}),
       // 图片隔离:不注入 images(即使收到);外呼由 willCallExternal 决定。
     };
 
@@ -133,9 +162,11 @@ export class PrincipalService {
     //  precheck=HIGH_RISK → 根本不调用模型;调用后 postcheck;schema 不过 → FAIL_CLOSED(REVIEW,绝不返自由文本)。
     //  gateway=null(默认/CI/测试)→ 确定性回退,零外部调用;gateway=真实(FPAI_PRINCIPAL_PROVIDER=real)→ cc switch(anthropic-compatible)。
     // FAIL CLOSED:真实网关任何失败(超时/网络/4xx/5xx/非法JSON/schema)绝不 500、绝不返原始文本 —— 安全降级到人工复核。
+    // W2R-103B:注入唯一 Intervention(LISTEN_BEFORE_RESPOND)的循证链;找不到 bundle → grounded=false(不编造)。
+    const grounding = loadGroundedKnowledge('LISTEN_BEFORE_RESPOND');
     let run: Awaited<ReturnType<typeof runPrincipalTextMvp>>;
     try {
-      run = await runPrincipalTextMvp(input, willCallExternal ? (this.gateway ?? undefined) : undefined);
+      run = await runPrincipalTextMvp(input, willCallExternal ? (this.gateway ?? undefined) : undefined, grounding);
     } catch (e) {
       const kind = (e as { kind?: string })?.kind ?? 'MODEL_ERROR';
       await this.repo.saveHandoff(sessionId, familyId, subjectRef, 'REVIEW', 'model_error', 'REVIEWER');
@@ -143,7 +174,7 @@ export class PrincipalService {
       return { session_id: sessionId, response_id: null, risk_route: 'REVIEW', consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
     const output = run.output;
-    const route = output.risk_route;
+    let route = output.risk_route;
     const schemaPass = run.model_run.schema_validation === 'PASS';
 
     await this.repo.saveModelRun({
@@ -153,6 +184,20 @@ export class PrincipalService {
       scenario_id: run.model_run.scenario_id, method_refs: run.model_run.method_refs, source_refs: run.model_run.source_refs,
       input_hash: sha256(userMessage), output_hash: run.model_run.output_hash,
       risk_route: route, schema_validation: run.model_run.schema_validation, latency_ms: run.model_run.latency_ms,
+    });
+
+    // W2R-103B grounding 证据(§13):记录本次响应依据的循证链摘要(已穿进模型输入的同一对象)。
+    // 只记结构化元数据,不写论文/心理原文;不写 canonical。
+    await this.repo.recordProductEvent('principal_knowledge_grounded', familyId, sessionId, correlationId, {
+      intervention_id: run.grounded_knowledge.intervention_id,
+      bundle_version: run.grounded_knowledge.bundle_version ?? null,
+      grounded: run.grounded_knowledge.grounded,
+      knowledge_refs: run.grounded_knowledge.knowledge_refs,
+      external_evidence_count: run.grounded_knowledge.external_evidence_count,
+      highest_grade: run.grounded_knowledge.highest_grade,
+      evidence_gate_status: run.grounded_knowledge.evidence_gate_status,
+      source_registry_gate: run.grounded_knowledge.source_registry_gate,
+      family_decision_non_decisive: run.grounded_knowledge.family_decision_non_decisive,
     });
 
     // M3-108 阈值告警:真实外呼(attempt)达到 warn 阈值(默认 80%)发一次 principal_quota_warning(exceeded 由前置守卫另发)。
@@ -175,13 +220,45 @@ export class PrincipalService {
       return { session_id: sessionId, response_id: null, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
 
+    // W2R-104 智能质量闸:非 HIGH_RISK 输出经【理解/标签化/漏判风险】独立评估。judge 与主模型同门控
+    // (willCallExternal 才注入真实网关;CI/默认无 judge → 确定性底座,零外呼)。不过 → 安全降级 REVIEW,
+    // 只降级不放宽(仅在 NORMAL 时下调;绝不把 REVIEW/HIGH_RISK 提升)。
+    const verdict = await assessResponseQuality(
+      { user_message: userMessage, output, scenario_id: run.model_run.scenario_id, precheck_route: safetyPrecheck({ user_message: userMessage }) },
+      willCallExternal ? (this.gateway ?? undefined) : undefined,
+    );
+    await this.repo.recordProductEvent('principal_quality_gate_evaluated', familyId, sessionId, correlationId,
+      { pass: verdict.pass, dimensions: verdict.dimensions, judged_by: verdict.judged_by });
+    if (!verdict.pass && route === 'NORMAL') {
+      route = 'REVIEW';
+      await this.repo.recordProductEvent('principal_quality_gate_failed', familyId, sessionId, correlationId,
+        { dimensions: verdict.dimensions, failed_checks: verdict.failed_checks, judged_by: verdict.judged_by });
+    }
+
+    // W2R-104-FINAL-FIX-001:确定性 REVIEW 升级护栏(落实专家 Huangxia 对 GOLD-051 的裁定 KEEP_REVIEW)。
+    // 家长本人【已经发生】的激烈言语攻击/情绪失控言语 → 至少 REVIEW。只升不降(仅 NORMAL→REVIEW),
+    // 独立于 HIGH_RISK precheck 与生成式 judge;model 可判 NORMAL,专家接地的确定性策略据此升级。
+    if (route === 'NORMAL') {
+      const verbalEscalation = parentVerbalEscalationReview({ user_message: userMessage });   // Tier1:已发生激烈言语(GOLD-051)
+      const imminentLossOfControl = imminentSelfLossOfControlReview({ user_message: userMessage }); // Tier2:临界失控(GOLD-053)
+      if (verbalEscalation || imminentLossOfControl) {
+        route = 'REVIEW';
+        await this.repo.recordProductEvent('principal_review_escalation_guard', familyId, sessionId, correlationId,
+          { guard: verbalEscalation ? 'parent_verbal_escalation' : 'imminent_self_loss_of_control', escalated_from: 'NORMAL', escalated_to: 'REVIEW' });
+      }
+    }
+
     const resp = await this.repo.saveResponse(sessionId, familyId, route, schemaPass, output);
     await this.repo.recordProductEvent('principal_response_received', familyId, sessionId, correlationId, { response_id: resp.response_id, risk_route: route });
 
-    // REVIEW(含 FAIL_CLOSED 降级)→ 进人工复核队列(REVIEWER),响应已存供复核;不建 proposal。
+    // REVIEW(含 FAIL_CLOSED 降级)→ W2R-105 Human Confirmation 闭环:
+    // 响应已存但【扣留】,response_id 挂到 handoff 供复核;不展示给家长、不建 proposal、human_handoff=true。
+    // 人工复核 APPROVED 后经 resolveHandoff 释放(supersedes W2R-104 的过渡"直接展示 REVIEW 响应")。
     if (route === 'REVIEW') {
-      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, 'review', 'REVIEWER');
+      await this.repo.saveHandoff(sessionId, familyId, subjectRef, route, 'review', 'REVIEWER', resp.response_id);
       await this.repo.recordProductEvent('principal_review_queued', familyId, sessionId, correlationId, { response_id: resp.response_id });
+      await this.repo.recordProductEvent('principal_human_handoff_created', familyId, sessionId, correlationId, {});
+      return { session_id: sessionId, response_id: resp.response_id, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
 
     // NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
@@ -233,10 +310,26 @@ export class PrincipalService {
     return this.repo.listOpenHandoffs(familyId);
   }
 
-  async resolveHandoff(familyId: string, handoffId: string, actorId: string, resolution: string, note: string | null, correlationId: string): Promise<boolean> {
+  // W2R-105 Human Confirmation 闭环:复核结论落库;仅 APPROVED 释放此前【扣留】的候选响应给家长。
+  // 返回 released_response:APPROVED 且 handoff 挂有扣留响应 → 释放的响应体;否则 null。
+  async resolveHandoff(familyId: string, handoffId: string, actorId: string, resolution: string, note: string | null, correlationId: string): Promise<{ ok: boolean; released_response: unknown | null }> {
     const ok = await this.repo.resolveHandoff(handoffId, familyId, actorId, resolution, note);
-    if (ok) await this.repo.recordProductEvent('principal_handoff_resolved', familyId, null, correlationId, { handoff_id: handoffId, resolution });
-    return ok;
+    if (!ok) return { ok: false, released_response: null };
+    await this.repo.recordProductEvent('principal_handoff_resolved', familyId, null, correlationId, { handoff_id: handoffId, resolution });
+
+    // 只降级不放宽的对偶:只有人工 APPROVED 才把扣留响应释放给家长(Human Gate);其余 resolution 保持扣留。
+    if (resolution === 'APPROVED') {
+      const ho = await this.repo.loadHandoff(handoffId, familyId);
+      if (ho?.response_id) {
+        const released = await this.repo.markHandoffReleased(handoffId, familyId, ho.response_id);
+        if (released) {
+          const resp = await this.repo.loadResponse(ho.response_id, familyId);
+          await this.repo.recordProductEvent('principal_handoff_response_released', familyId, null, correlationId, { handoff_id: handoffId, response_id: ho.response_id });
+          return { ok: true, released_response: resp?.output ?? null };
+        }
+      }
+    }
+    return { ok: true, released_response: null };
   }
 
   /**

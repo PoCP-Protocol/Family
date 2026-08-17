@@ -55,6 +55,41 @@ export class PrincipalRepository {
     return r.rows as CanonicalConsentRow[];
   }
 
+  /**
+   * W2R-101 对象化上下文:从真实 Growth read model 取【最小 allowlist】slice(仅 canonical FACT/状态,
+   * 不含私有文本/全量 perspectives/AI_INFERENCE)。供 buildPrincipalFamilyContext 构造 PrincipalFamilyContextV1。
+   * subjectRef 须为 person uuid(consent 允许时才调用)。
+   */
+  async loadFamilyContextSlice(familyId: string, subjectRef: string): Promise<{
+    familyRef: string; subjectRef: string; lifeStage: string;
+    confirmedGrowthPriority: string[]; activeIntervention: string[];
+    recentGrowthActionState: string[]; recentPermittedObservationSummary: string[];
+  }> {
+    const ls = await this.pool.query<{ life_stage_code: string }>(
+      `select life_stage_code from life_stage_assignments where family_id=$1 and child_id=$2 order by effective_from desc limit 1`,
+      [familyId, subjectRef],
+    );
+    const pr = await this.pool.query<{ dimension_id: string }>(
+      `select dimension_id from growth_priorities where family_id=$1 and status='ACTIVE' order by created_at desc limit 5`,
+      [familyId],
+    );
+    const iv = await this.pool.query<{ intervention_code: string }>(
+      `select intervention_code from intervention_episodes where family_id=$1 and status='ACTIVE' order by created_at desc limit 5`,
+      [familyId],
+    );
+    const ga = await this.pool.query<{ status: string }>(
+      `select status from growth_actions where family_id=$1 order by created_at desc limit 7`,
+      [familyId],
+    );
+    return {
+      familyRef: familyId, subjectRef, lifeStage: ls.rows[0]?.life_stage_code ?? 'UNKNOWN',
+      confirmedGrowthPriority: pr.rows.map((x) => x.dimension_id),
+      activeIntervention: iv.rows.map((x) => x.intervention_code),
+      recentGrowthActionState: ga.rows.map((x) => x.status),
+      recentPermittedObservationSummary: [], // 最小必要:观察摘要暂不外露(敏感);allowlist 空
+    };
+  }
+
   async addMessage(sessionId: string, familyId: string, sender: string, body: string, correlationId: string): Promise<void> {
     await this.pool.query(
       `insert into principal_messages(session_id, family_id, sender, body, correlation_id) values ($1,$2,$3,$4,$5)`,
@@ -115,17 +150,18 @@ export class PrincipalRepository {
     );
   }
 
-  async saveHandoff(sessionId: string, familyId: string, subjectRef: string, riskRoute: string, trigger: string, assignedRole: string | null = null): Promise<void> {
+  // W2R-105:responseId 挂 REVIEW 扣留的候选响应(HIGH_RISK 无响应 → null)。
+  async saveHandoff(sessionId: string, familyId: string, subjectRef: string, riskRoute: string, trigger: string, assignedRole: string | null = null, responseId: string | null = null): Promise<void> {
     await this.pool.query(
-      `insert into principal_human_handoffs(session_id, family_id, subject_ref, risk_route, trigger_reason, assigned_role)
-         values ($1,$2,$3,$4,$5,$6)`,
-      [sessionId, familyId, subjectRef, riskRoute, trigger, assignedRole],
+      `insert into principal_human_handoffs(session_id, family_id, subject_ref, risk_route, trigger_reason, assigned_role, response_id)
+         values ($1,$2,$3,$4,$5,$6,$7)`,
+      [sessionId, familyId, subjectRef, riskRoute, trigger, assignedRole, responseId],
     );
   }
 
   async listOpenHandoffs(familyId: string): Promise<Array<Record<string, unknown>>> {
     const r = await this.pool.query(
-      `select handoff_id, session_id, subject_ref, risk_route, trigger_reason, assigned_role, status, created_at
+      `select handoff_id, session_id, subject_ref, risk_route, trigger_reason, assigned_role, status, response_id, created_at
          from principal_human_handoffs where family_id=$1 and status='OPEN' order by created_at desc`,
       [familyId],
     );
@@ -138,6 +174,38 @@ export class PrincipalRepository {
           set status='RESOLVED', resolution=$3, resolution_note=$4, resolved_by_actor_id=$5, resolved_at=now()
         where handoff_id=$1 and family_id=$2 and status='OPEN'`,
       [handoffId, familyId, resolution, note, actorId],
+    );
+    return (r.rowCount ?? 0) > 0;
+  }
+
+  // W2R-105 Human Confirmation 闭环:读 handoff(含扣留响应指针)、读候选响应、标记释放。
+  async loadHandoff(handoffId: string, familyId: string): Promise<{ handoff_id: string; family_id: string; status: string; resolution: string | null; response_id: string | null; released_at: Date | null } | null> {
+    const r = await this.pool.query(
+      `select handoff_id, family_id, status, resolution, response_id, released_at
+         from principal_human_handoffs where handoff_id=$1 and family_id=$2`,
+      [handoffId, familyId],
+    );
+    return r.rows[0] ?? null;
+  }
+
+  async loadResponse(responseId: string, familyId: string): Promise<{ response_id: string; risk_route: string; output: unknown } | null> {
+    const r = await this.pool.query(
+      `select response_id, risk_route, output from principal_responses where response_id=$1 and family_id=$2`,
+      [responseId, familyId],
+    );
+    const row = r.rows[0];
+    if (!row) return null;
+    return { response_id: row.response_id, risk_route: row.risk_route, output: typeof row.output === 'string' ? JSON.parse(row.output) : row.output };
+  }
+
+  // 仅对【已 APPROVED 且未释放】的 handoff 打释放戳,幂等(重复调用不二次释放)。返回是否本次真正释放。
+  async markHandoffReleased(handoffId: string, familyId: string, responseId: string): Promise<boolean> {
+    const r = await this.pool.query(
+      `update principal_human_handoffs
+          set released_at=now()
+        where handoff_id=$1 and family_id=$2 and response_id=$3
+          and resolution='APPROVED' and released_at is null`,
+      [handoffId, familyId, responseId],
     );
     return (r.rowCount ?? 0) > 0;
   }

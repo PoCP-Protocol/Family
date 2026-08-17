@@ -1,10 +1,16 @@
-import { BadRequestException, Body, Controller, Get, Header, Headers, Inject, NotFoundException, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Header, Headers, Inject, NotFoundException, Param, Post, UnauthorizedException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrincipalService } from './principal.service';
+import { AuthService, bearerToken } from '../auth/auth.service';
+import { assertReviewer } from './reviewer-policy';
 
 function requireActor(actorId?: string): string {
   if (!actorId || actorId.trim().length === 0) throw new BadRequestException('x-actor-id header is required');
   return actorId.trim();
+}
+/** IAM-103:消费路径是否强制真实 Bearer(默认关=内部 dogfood 仍可 x-actor-id;开=x-actor-id-only 必拒)。 */
+function requireBearer(): boolean {
+  return process.env.FPAI_REQUIRE_BEARER === 'true';
 }
 function corr(id?: string): string {
   return id && id.trim() ? id.trim() : randomUUID();
@@ -61,16 +67,56 @@ load();
 
 @Controller('families/:familyId/principal')
 export class PrincipalController {
-  constructor(@Inject(PrincipalService) private readonly service: PrincipalService) {}
+  constructor(
+    @Inject(PrincipalService) private readonly service: PrincipalService,
+    @Inject(AuthService) private readonly auth: AuthService,
+  ) {}
+
+  /**
+   * IAM-103 消费主体解析:Bearer → AuthService.resolveActor → 可信 actor,且 actor.familyId 必须 == :familyId(否则 403)。
+   * FPAI_REQUIRE_BEARER=true:无 Bearer(仅 x-actor-id)→ 401(x-actor-id-only 消费路径必拒)。
+   * flag 关(默认内部 dogfood):无 Bearer 回退 x-actor-id;但若带 Bearer 仍强制解析 + family scope。
+   */
+  private async resolveConsumerActor(familyId: string, authorization?: string, actorId?: string): Promise<string> {
+    const token = bearerToken(authorization);
+    if (token) {
+      const resolved = await this.auth.resolveActor(token);
+      if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
+      if (resolved.familyId !== familyId) throw new ForbiddenException('actor_family_mismatch');
+      return resolved.personId;
+    }
+    if (requireBearer()) throw new UnauthorizedException('bearer_token_required');
+    return requireActor(actorId); // 仅 flag 关时允许 x-actor-id 降级(内部 dogfood)
+  }
+
+  /**
+   * IAM-103 复核主体解析:认证身份(Bearer,flag 开时强制)+ reviewer 授权(assertReviewer allowlist)。
+   * flag 关时保持既有 x-actor-id + reviewer-policy(默认关)行为。
+   */
+  private async resolveReviewerActor(authorization?: string, actorId?: string): Promise<string> {
+    const token = bearerToken(authorization);
+    let actor: string;
+    if (token) {
+      const resolved = await this.auth.resolveActor(token);
+      if (!resolved) throw new UnauthorizedException('invalid_or_expired_token');
+      actor = resolved.personId;
+    } else {
+      if (requireBearer()) throw new UnauthorizedException('bearer_token_required');
+      actor = requireActor(actorId);
+    }
+    assertReviewer(actor); // reviewer 授权门(FPAI_REQUIRE_REVIEWER_AUTH)
+    return actor;
+  }
 
   @Post('sessions')
   async createSession(
     @Param('familyId') familyId: string,
     @Body() body: { subject_ref?: string },
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = requireActor(actorId);
+    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
     if (!body?.subject_ref) throw new BadRequestException('subject_ref is required');
     return this.service.createSession(familyId, body.subject_ref, actor, corr(correlationId));
   }
@@ -81,9 +127,10 @@ export class PrincipalController {
     @Param('sessionId') sessionId: string,
     @Body() body: { message?: string; subject_ref?: string; images?: Array<{ media_type?: string; data?: string }> },
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = requireActor(actorId);
+    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
     if (!body?.message) throw new BadRequestException('message is required');
     if (!body?.subject_ref) throw new BadRequestException('subject_ref is required');
     let images: Array<{ media_type: string; data: string }> | undefined;
@@ -105,8 +152,9 @@ export class PrincipalController {
     @Param('familyId') familyId: string,
     @Param('sessionId') sessionId: string,
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
   ) {
-    requireActor(actorId);
+    await this.resolveConsumerActor(familyId, authorization, actorId);
     const agg = await this.service.getSession(familyId, sessionId);
     if (!agg) throw new NotFoundException('session not found');
     return agg;
@@ -133,8 +181,9 @@ export class PrincipalController {
   async listHandoffs(
     @Param('familyId') familyId: string,
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
   ) {
-    requireActor(actorId);
+    await this.resolveReviewerActor(authorization, actorId);   // IAM-103:认证身份 + reviewer 授权
     return { handoffs: await this.service.listHandoffs(familyId) };
   }
 
@@ -144,16 +193,18 @@ export class PrincipalController {
     @Param('handoffId') handoffId: string,
     @Body() body: { resolution?: string; note?: string },
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = requireActor(actorId);
+    const actor = await this.resolveReviewerActor(authorization, actorId);   // IAM-103:认证身份 + reviewer 授权
     const resolution = body?.resolution ?? 'INFO_ONLY';
     if (!['APPROVED', 'REJECTED', 'ESCALATED', 'INFO_ONLY'].includes(resolution)) {
       throw new BadRequestException('resolution must be APPROVED|REJECTED|ESCALATED|INFO_ONLY');
     }
-    const ok = await this.service.resolveHandoff(familyId, handoffId, actor, resolution, body?.note ?? null, corr(correlationId));
-    if (!ok) throw new NotFoundException('open handoff not found for family');
-    return { ok: true, resolution };
+    const result = await this.service.resolveHandoff(familyId, handoffId, actor, resolution, body?.note ?? null, corr(correlationId));
+    if (!result.ok) throw new NotFoundException('open handoff not found for family');
+    // W2R-105:APPROVED 释放此前扣留的候选响应;其余 resolution released_response=null(保持扣留)。
+    return { ok: true, resolution, released_response: result.released_response };
   }
 
   @Post('proposals/:proposalId/accept')
@@ -162,9 +213,10 @@ export class PrincipalController {
     @Param('proposalId') proposalId: string,
     @Body() body: { onboarding_id?: string; priority_id?: string; idempotency_key?: string },
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = requireActor(actorId);
+    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
     if (!body?.onboarding_id) throw new BadRequestException('onboarding_id is required');
     if (!body?.priority_id) throw new BadRequestException('priority_id is required');
     if (!body?.idempotency_key) throw new BadRequestException('idempotency_key is required');
@@ -181,9 +233,10 @@ export class PrincipalController {
     @Param('responseId') responseId: string,
     @Body() body: { rating?: string; note?: string },
     @Headers('x-actor-id') actorId?: string,
+    @Headers('authorization') authorization?: string,
     @Headers('x-correlation-id') correlationId?: string,
   ) {
-    const actor = requireActor(actorId);
+    const actor = await this.resolveConsumerActor(familyId, authorization, actorId);
     await this.service.submitFeedback(familyId, responseId, actor, body?.rating ?? null, body?.note ?? null, corr(correlationId));
     return { ok: true };
   }

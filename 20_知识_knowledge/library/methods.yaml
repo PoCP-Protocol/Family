@@ -1,40 +1,49 @@
 # 方法卡｜可执行到家庭日常粒度的动作 —— 回答"今晚这个家庭具体做什么"
-# id 前缀必须为 MD-。
-# grounded_in 指向 TH- 卡(必填,否则 error);targets_constructs 指向 CN- 卡(必填,否则 error)。
-# derived_from 指向 PG- 卡,说明这个动作是从哪套已验证项目里拆出来的。
-# dose 缺失 = warn(无法执行也无法复核);contraindication 缺失 = warn。
-# risk_level 缺失 = warn;risk_level 为 中/高(medium/high)却无 human_requirement = error。
-#
-# risk_level / human_requirement 已按 ..\..\10_规格_spec\ISSUES.md B1 裁决补入,
-# 与 spec 02 §3.5 Intervention 同名同义 —— 高风险家庭场景必须 Human Gate。
+# id 前缀必须为 MD-。grounded_in→TH-(必填);targets_constructs→CN-(必填)。
+# risk_level 中/高却无 human_requirement = error。
 
-methods: []
-
-# 模板:
-#
-# - id: MD-001
-#   name: 先听完再回应
-#   summary: 一句话说清这个动作
-#   grounded_in: [TH-001]
-#   targets_constructs: [CN-001]
-#   derived_from: [PG-001]
-#   steps:
-#     - 孩子开口时,先不打断,听完整段
-#     - 复述你听到的内容,问"我理解对吗"
-#     - 得到确认后再表达你的看法
-#   dose: 每日 1 次晚间对话,连续 2 周     # 必填,否则 warn
-#   age_range: 12-15
-#   observable_signal: 孩子主动开口的次数增加;打断后的沉默变短
-#   contraindication: 涉及安全风险的话题不适用,须直接进入 Human Gate  # 必填,否则 warn
-#   failure_mode: 家长把"复述"做成"审问",或复述后立刻接"但是"
-#   risk_level: low                        # low / medium / high
-#   human_requirement: none                # none / review / mandatory;中高风险必填,否则 error
-#   tags: [倾听, 沟通]
-#   open_questions:
-#     - 单亲家庭中执行难度是否显著更高
-#   evidence:
-#     - claim: 反映式倾听可短期降低亲子冲突频次
-#       grade: 6
-#       provenance: third_party_real
-#       source: "10.xxxx/xxxxx"
-#       population: 青少年家庭
+methods:
+  - id: MD-001
+    name: 先连接再纠正(情绪教练式回应)
+    summary: 先让对话能继续(承接情绪/复述/低防御提问),再进入规则或纠正。
+    grounded_in: [TH-001]
+    targets_constructs: [CN-001, CN-002]
+    steps:
+      - 孩子开口时先不打断,听完整段;
+      - 承接并命名情绪("听起来你觉得…"),复述你听到的要点,问"我理解对吗";
+      - 得到确认后再表达看法或进入规则。
+    dose: 每日 1 次晚间对话,连续 2 周
+    age_range: 12-15
+    observable_signal: 孩子主动开口次数增加;被打断后的沉默变短;顶撞升级频次下降。
+    contraindication: 涉即时人身危险/暴力升级/自伤等不适用,须直接进入 Human Gate 转人工/专业支持。
+    failure_mode: 把"复述"做成"审问";复述后立刻接"但是";用倾听换取顺从。
+    risk_level: low
+    human_requirement: none
+    tags: [倾听, 沟通, 情绪教练, method]
+    open_questions:
+      - 微动作(今晚复述一句)本身的直接效果证据仍有限;方法效果主要来自情绪教练式家长干预的整体证据。
+    evidence:
+      - claim: >
+          情绪聚焦的家长干预(Tuning in to Teens)可改善家长情绪社会化实践,
+          并可能降低家庭冲突 / 青少年外化问题(以学校为单位随机分配)。
+        grade: 7
+        provenance: third_party_real
+        source: "doi:10.1016/j.adolescence.2015.04.005"
+        year: 2015
+        sample_n: 225
+        population: 主要照顾者(225)与青少年(224);学校随机分配干预/控制
+        note: >
+          METHOD_EFFECT;DIRECT_OR_NEAR_DIRECT。claim 已收窄:支持"情绪教练式家长干预"方向,
+          不等于"先听再回应一定有效"或"今晚复述一句必然改善关系"。
+        tags: [method-effect, RCT, adolescence, emotion-socialization, tuning-in-to-teens]
+      - claim: >
+          在同一随机分配设计的数据上,家长情绪觉察/调节与情绪社会化的变化,中介了青少年内化问题的改善。
+        grade: 6
+        provenance: third_party_real
+        source: "doi:10.1037/dev0000875"
+        year: 2020
+        population: 青少年家长(TinT 机制分析)
+        note: >
+          MECHANISM_SUPPORT。claim-specific 降级为 E6:整个试验是随机的,但"中介机制本身"
+          不因原研究是 RCT 就自动被解释为完全因果。不做 paper=RCT → every claim=E7。
+        tags: [mechanism-support, mediation, adolescence, tuning-in-to-teens]

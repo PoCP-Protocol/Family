@@ -1,26 +1,43 @@
 # 构念卡｜可测量的中间变量 —— 回答"到底在改变什么"
-# id 前缀必须为 CN-。这一层最容易被跳过,跳过就没法测量。
-# grounded_in 指向 TH- 卡;measured_by 指向 MM- 卡。
-# 校验器规则:没有测量通道 = error(无法验证);没有理论根 = error(来源不明)。
+# id 前缀必须为 CN-。grounded_in 指向 TH- 卡;measured_by 指向 MM- 卡。
+# 校验器:没有测量通道 = error;没有理论根 = error。
 
-constructs: []
+constructs:
+  - id: CN-001
+    name: 被听见感(felt-listening)
+    summary: 说话者感到对方真的听懂其在意的点,而非急于评价或纠正。
+    definition: 亲子沟通中,子女主观感到父母接住了其情绪与关切的程度。
+    grounded_in: [TH-001]
+    measured_by: [MM-001]
+    direction: 越高越好
+    proxy_risk: 用"家长自评"测会高估;应尽量取子女视角或第三方观察编码。
+    tags: [倾听, 情绪, construct]
+    open_questions:
+      - 该构念当前直接实证有限,不得过度赋级(DO NOT OVERGRADE)。
+    # 证据有限:暂不挂 decisive 证据(诚实留空,strongest=E0),待直接测量研究补入。
+    evidence: []
 
-# 模板:
-#
-# - id: CN-001
-#   name: 父母自主支持
-#   summary: 一句话说清这个构念指什么
-#   definition: 家长在多大程度上给孩子提供选择、解释理由、接纳其视角
-#   grounded_in: [TH-001]            # 必填,否则 error
-#   measured_by: [MM-001, MM-002]    # 必填,否则 error
-#   direction: 越高越好               # 越高越好 / 越低越好 / 适中
-#   proxy_risk: 用"家长自评"测它会高估,家长倾向于报告理想自我
-#   tags: [父母, 自主]
-#   open_questions:
-#     - 与"放任"的边界如何在测量上区分
-#   evidence:
-#     - claim: 该构念有成熟量表且信效度良好
-#       grade: 6
-#       provenance: third_party_real
-#       source: "10.xxxx/xxxxx"
-#       population: 12-15 岁家庭
+  - id: CN-002
+    name: 防御/强制互动循环(coercive loop)
+    summary: 一方开口另一方即防御/顶嘴/退出,双方都更难继续对话,冲突自我强化。
+    definition: 家庭互动中可观察的强制/防御性往复模式(coercive family process)。
+    grounded_in: [TH-001]
+    measured_by: [MM-001]
+    direction: 越低越好
+    proxy_risk: 单靠家长回忆易漏报;宜用互动观察编码。
+    tags: [冲突, 强制循环, construct]
+    open_questions:
+      - 早期儿童样本的强制循环证据外推到 12-15 岁青少年 = LIMITED。
+    evidence:
+      - claim: >
+          可观察的强制/防御性亲子互动循环与后续对立/不顺从行为相关(强制家庭过程,观察性证据)。
+        grade: 6
+        provenance: third_party_real
+        source: "doi:10.1017/S0954579414000169"
+        year: 2014
+        sample_n: 731
+        population: 2 岁至入学儿童及其照顾者(早期儿童)
+        note: >
+          CONSTRUCT_SUPPORT;观察性(E6)。适用限制:早期儿童样本,外推到青少年 LIMITED;
+          仅证明"强制/防御循环是可实证观察的家庭过程",不证明"12-15 岁所有顶嘴都源自强制循环"。
+        tags: [construct-support, coercive-process, observational, early-childhood, generalization-limited]
