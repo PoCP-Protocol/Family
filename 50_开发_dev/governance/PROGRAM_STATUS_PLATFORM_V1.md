@@ -2,13 +2,13 @@
 
 ```text
 DOC_KIND = PROGRAM_STATUS(执行/状态 SSOT —— 仅承载可变执行真相 + 指针,不承载战略)
-RULING   = 总架构师(2026-08-16)
-BASE     = master @ 2aa6da66050df087fd21b58df5718c1d274510e9
-PHASE0   = PASS_CLOSED(product-runtime-001 已合入 master)
-PHASE1   = ARCH-001 / PR#35 / PASS_CANDIDATE(架构契约,exact-head 复审中)
-RUNTIME  = HOLD
-NEXT_AUTHORIZED_STEP = NONE(合 master / 启动 runtime 均须总架构师点名授权)
+RULING   = 总架构师(2026-08-16;PR#36 P0-RUNTIME-TRUST-CLOSEOUT 已授权)
+BASE     = master @ 2ce16a377d27898e48be10e11f75b15a4b12b26d
+PR36     = platform/family-growth-vertical-slice-001 @ 6103981dec6c7a4b9ceb988ddcdb75b5c44f6154
+RUNTIME  = P0_RUNTIME_TRUST_CLOSEOUT / PASS_CANDIDATE_ACCEPTED_FOR_REVIEW(内部确定性收口已接受;开发面冻结)
+NEXT_AUTHORIZED_STEP = APP_FIRST_GATE_DECISION_INPUT_ONLY(不得写业务代码/DTO/API/数据库;不得进入 HOME/mobile runtime/merge/pilot/production)
 PR34     = PARK(商业蓝图 companion,未授权 runtime)
+PR37     = STRATEGIC_DIRECTION_ONLY(runtime/merge/modification-in-PR36=HOLD)
 ```
 
 > **最高战略 SSOT = `architecture/FAMILY_PLATFORM_V3_BLUEPRINT.md`(架构 SSOT)。本文件只承载执行状态 + 指针,不得另立/重述与蓝图竞争的战略。**
@@ -18,18 +18,21 @@ PR34     = PARK(商业蓝图 companion,未授权 runtime)
 ## 一、当前执行状态
 
 ```text
-Phase0 战略+代码重定基            = PASS_CLOSED(北极星→编排;Program01→FIRST_PROGRAM_RESOURCE;Program Runtime→@family/program-runtime;Program-派生 completed 已移除)
-Phase1 Growth Resource 架构契约   = PASS_CANDIDATE(ARCH-001 / PR#35;八对象 + FamilyServiceDecision 边界 + 一条黄金旅程 + 自有 Architecture Gate;RUNTIME=HOLD)
-Phase2 首条纵切 runtime           = 未授权(待 ARCH-001 §11 Gate 全 PASS + per-phase runtime 授权);任务名 FAMILY-GROWTH-VERTICAL-SLICE-001
-后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)
+Phase0 战略+代码重定基            = PASS_CLOSED(历史基线)
+Phase1 Growth Resource 架构契约   = ARCH-001(战略/架构锚)
+Phase2 首条纵切 runtime           = P0_RUNTIME_TRUST_CLOSEOUT / PASS_CANDIDATE_ACCEPTED_FOR_REVIEW(PR#36 exact head=6103981;开发面冻结)
+当前已验证范围                    = Principal ORCHESTRATION_AI_COACH 无 legacy proposal、strict Account family context、cookie Origin、NO_ACTION、PRACTICE no-executor、全链路幂等、T1/T2、handoff、主体链、canonical delta=0
+当前唯一允许工作                  = DRAFT_FOR_APP_GATE_DECISION_INPUT(榜样教育材料→Family App-first 体验设计映射;不写业务代码)
+下一步                            = 等待 App Gate；HOME_PRODUCT_GATE=HOLD；MOBILE_RUNTIME_GATE=HOLD；MERGE_AUTHORIZATION=NONE
+后续 Phase3–10                    = 见蓝图 §8(锚 M0–M8)，均须另行 Gate
 ```
 
 ## 二、开放 PR 处置
 
 ```text
-PR#35 orchestration-arch-001 = Phase1 架构契约,exact-head 复审中,AUTO_MERGE=NO
-PR#34 v3-commerce-blueprint   = PARK(商业蓝图 companion;六点待修;RUNTIME=HOLD)
-PR#24 / PR#25(历史 W2R-106/PRODUCT-001 设计)= 见各自 PR;非当前纵切,不做 Runtime
+PR#36 family-growth-vertical-slice-001 = DRAFT / P0_RUNTIME_TRUST_CLOSEOUT / PASS_CANDIDATE_ACCEPTED_FOR_REVIEW / exact head=6103981 / AUTO_MERGE=NO / DEVELOPMENT_FROZEN
+PR#37 service-os-account-blueprint       = 战略方向有效 / RUNTIME=HOLD / MERGE=HOLD / 不在 PR#36 修改
+PR#34 v3-commerce-blueprint              = PARK(商业蓝图 companion;RUNTIME=HOLD)
 合 master 一律须显式 per-merge 授权(pr + exact head_sha + authorized_by: family-chief-architect)。
 ```
 

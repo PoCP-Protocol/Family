@@ -120,6 +120,20 @@ export class AuthService {
       familyId: ctx.family_id, personId: ctx.person_id, membershipId: ctx.membership_id, familyRole: ctx.role,
     };
   }
+
+  /**
+   * 严格 V3 路径(VERTICAL-SLICE-001 §17):0 个 ACTIVE 上下文→NONE;1 个→OK;>1 个→AMBIGUOUS(fail closed,不任选)。
+   * 不改动上面遗留 resolveFamilyContext(LIMIT 1),仅供严格编排 Guard 使用。
+   */
+  async resolveFamilyContextStrict(token: string | undefined, familyId: string): Promise<{ status: 'OK' | 'NONE' | 'AMBIGUOUS'; ctx?: FamilyAuthContext }> {
+    const account = await this.resolveAccount(token);
+    if (!account) return { status: 'NONE' };
+    const rows = await this.repo.resolveFamilyContextRows(account.accountId, familyId);
+    if (rows.length === 0) return { status: 'NONE' };
+    if (rows.length > 1) return { status: 'AMBIGUOUS' };
+    const r = rows[0];
+    return { status: 'OK', ctx: { accountId: account.accountId, sessionId: account.sessionId, familyId: r.family_id, personId: r.person_id, membershipId: r.membership_id, familyRole: r.role } };
+  }
 }
 
 /** 从 Authorization: Bearer <token> 头取令牌。 */

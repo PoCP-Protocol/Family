@@ -4,6 +4,9 @@
  * 后续可由 specs 自动生成;此处先手工承载 M1 Family Core 所需最小集合。
  */
 
+// Growth Orchestration V3 运行时契约(FAMILY-GROWTH-VERTICAL-SLICE-001;禁语义别名)。
+export * from './orchestration';
+
 export type FamilyStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 export type PersonType = 'PARENT' | 'CHILD';
 export type ParentRole = 'MOTHER' | 'FATHER' | 'GUARDIAN' | 'OTHER_GUARDIAN';

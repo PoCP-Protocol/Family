@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';   // IAM-103:消费/复核路�
 import { PrincipalController } from './principal.controller';
 import { PrincipalService, PRINCIPAL_AI_GATEWAY } from './principal.service';
 import { PrincipalRepository } from './principal.repository';
+import { PrincipalAiCoachResource } from './principal-ai-coach.resource';
 
 const VENDOR_PROVIDER_ID: Record<string, string> = { anthropic: 'anthropic-cc-switch', zhipu: 'zhipu-glm4v' };
 
@@ -43,6 +44,7 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
   providers: [
     PrincipalService,
     PrincipalRepository,
+    PrincipalAiCoachResource, // FAMILY-GROWTH-VERTICAL-SLICE-001:窄 AI_COACH 适配(不暴露 acceptProposal)
     // M3-101B:env-gated 真实模型网关。仅 FPAI_PRINCIPAL_PROVIDER=real 时接 cc switch(AnthropicAiGateway);
     // 否则 null → runPrincipalTextMvp 走确定性回退,零外部调用(CI/测试默认安全)。
     {
@@ -51,5 +53,7 @@ function buildPrincipalGateway(env: Record<string, string | undefined>, sink: At
       useFactory: (repo: PrincipalRepository) => buildPrincipalGateway(process.env, repo as unknown as AttemptSink),
     },
   ],
+  // Orchestration 消费窄 AI_COACH 资源(依赖方向 Orchestration→Principal)。
+  exports: [PrincipalAiCoachResource],
 })
 export class PrincipalModule {}

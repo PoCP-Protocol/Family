@@ -9,7 +9,11 @@ export type FamilyRole = 'OWNER_GUARDIAN' | 'GUARDIAN' | 'ADULT_MEMBER' | 'CHILD
 export type FamilyNamedAction =
   | 'ReadFamily' | 'AddChild' | 'InviteAdult' | 'RevokeMembership'
   | 'GrantConsent' | 'WithdrawConsent' | 'RecordPerspective'
-  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess';
+  | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
+  // FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 编排 NamedActions(家长面向 12–15 纵切)。
+  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp'
+  | 'ExecuteTestExperienceAction'
+  | 'SubmitCommerceIntent' | 'SubmitServiceBooking' | 'ManageMembershipEntitlement';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
 // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。
@@ -25,6 +29,16 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   StartIntervention:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'LIMITED', CHILD_SUBJECT: 'DENY' },
   CompleteAction:        { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'ALLOW',   CHILD_SUBJECT: 'DENY' },
   GrantExternalAccess:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'LIMITED', ADULT_MEMBER: 'DENY',  CHILD_SUBJECT: 'DENY' },
+  // V3 编排(3A §20 保守首版:本纵切家长/监护人面向;ADULT_MEMBER/CHILD_SUBJECT 一律 DENY,不用 LIMITED 作未兑现承诺;
+  // 待专门的孩子/成员权利设计再放宽)。
+  RequestGrowthHelp:     { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  ConfirmGrowthIntent:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  ExecuteTestExperienceAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  ManageMembershipEntitlement: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
 };
 
 /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */
