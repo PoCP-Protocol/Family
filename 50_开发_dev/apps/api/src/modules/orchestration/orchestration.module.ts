@@ -14,6 +14,7 @@ import { AuditReplayService } from './llm-gateway/audit-replay.service';
 import { ContextAssemblerService } from './llm-gateway/context-assembler.service';
 import { FamilyLlmGatewayService } from './llm-gateway/family-llm-gateway.service';
 import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';
+import { TestExperienceService } from './test-experience.service';
 import { FamilyProductEventService } from './family-product-event.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
@@ -30,6 +31,7 @@ import { FamilyMembershipEntitlementService } from './family-membership-entitlem
     FamilyLlmOutputValidator,
     AuditReplayService,
     FamilyLlmGatewayService,
+    TestExperienceService,
     FamilyProductEventService,
     FamilyCommerceIntentService,
     FamilyServiceBookingService,

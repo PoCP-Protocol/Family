@@ -80,6 +80,7 @@ export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<
     'family_product_events',
     'family_booking_service_records', 'family_booking_requests', 'family_service_availability_slots', 'family_service_offerings', 'family_service_providers',
     'family_entitlements', 'family_order_intent_lines', 'family_order_intents', 'family_product_offerings',
+    'test_experience_operations',
     'tenant_family_bindings', 'tenant_policy_profiles', 'tenant_catalog_bindings', 'tenant_account_memberships', 'tenants',
     'family_llm_gateway_audits',
     'service_followup_responses', 'service_contributions', 'service_cases',

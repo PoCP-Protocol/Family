@@ -6,8 +6,10 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { FamilyDecisionType } from '@family/contracts';
+import type { ExecuteTestExperienceDto } from './test-experience.contract';
 import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';
 import { OrchestrationService } from './orchestration.service';
+import { TestExperienceService } from './test-experience.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
 import { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';
@@ -25,6 +27,7 @@ function corr(c?: string): string { return c && c.trim() ? c : randomUUID(); }
 export class OrchestrationController {
   constructor(
     @Inject(OrchestrationService) private readonly svc: OrchestrationService,
+    @Inject(TestExperienceService) private readonly testExperience: TestExperienceService,
     @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,
     @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,
     @Inject(FamilyMembershipEntitlementService) private readonly membershipEntitlements: FamilyMembershipEntitlementService,
@@ -219,6 +222,35 @@ export class OrchestrationController {
   async contextReuse(@Param('familyId') familyId: string, @Query('subject_person_id') subject?: string) {
     if (!subject) throw new BadRequestException('subject_person_id required');
     return this.svc.contextReuse(familyId, subject);
+  }
+
+
+  /**
+   * 正式 DEV/TEST 体验动作入口。请求只能引用固定 fixture，页面和动作组合由服务端策略复验；
+   * 绝不接收金额、联系人、自由文本、provider 参数或任何生产副作用参数。
+   */
+  @Post('orchestration/test-loop/experience/operations')
+  @RequireOrchestrationAction('ExecuteTestExperienceAction')
+  async executeTestExperience(
+    @Param('familyId') familyId: string,
+    @Body() body: ExecuteTestExperienceDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.testExperience.execute(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/experience/operations/:operationId/cancel')
+  @RequireOrchestrationAction('ExecuteTestExperienceAction')
+  async cancelTestExperience(@Param('familyId') familyId: string, @Param('operationId') operationId: string) {
+    return this.testExperience.cancel(familyId, operationId);
+  }
+
+  @Get('orchestration/test-loop/experience/customer-projection')
+  @RequireOrchestrationAction('ReadFamily')
+  async testExperienceCustomerProjection(@Param('familyId') familyId: string) {
+    return this.testExperience.customerProjection(familyId);
   }
 
   @Get('orchestration/test-loop/commerce/products')
