@@ -7,9 +7,11 @@ import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Pos
 import { randomUUID } from 'node:crypto';
 import type { FamilyDecisionType } from '@family/contracts';
 import type { ExecuteTestExperienceDto } from './test-experience.contract';
+import type { FamilyPageObjectActionDto } from './family-page-objects.contract';
 import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';
 import { OrchestrationService } from './orchestration.service';
 import { TestExperienceService } from './test-experience.service';
+import { FamilyPageObjectsService } from './family-page-objects.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
 import { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';
@@ -28,6 +30,7 @@ export class OrchestrationController {
   constructor(
     @Inject(OrchestrationService) private readonly svc: OrchestrationService,
     @Inject(TestExperienceService) private readonly testExperience: TestExperienceService,
+    @Inject(FamilyPageObjectsService) private readonly pageObjects: FamilyPageObjectsService,
     @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,
     @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,
     @Inject(FamilyMembershipEntitlementService) private readonly membershipEntitlements: FamilyMembershipEntitlementService,
@@ -251,6 +254,24 @@ export class OrchestrationController {
   @RequireOrchestrationAction('ReadFamily')
   async testExperienceCustomerProjection(@Param('familyId') familyId: string) {
     return this.testExperience.customerProjection(familyId);
+  }
+
+  @Get('orchestration/test-loop/page-objects')
+  @RequireOrchestrationAction('ReadFamily')
+  async familyPageObjects(@Param('familyId') familyId: string) {
+    return this.pageObjects.projection(familyId);
+  }
+
+  @Post('orchestration/test-loop/page-objects/actions')
+  @RequireOrchestrationAction('ExecuteFamilyPageObjectAction')
+  async familyPageObjectAction(
+    @Param('familyId') familyId: string,
+    @Body() body: FamilyPageObjectActionDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.pageObjects.act(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
   }
 
   @Get('orchestration/test-loop/commerce/products')

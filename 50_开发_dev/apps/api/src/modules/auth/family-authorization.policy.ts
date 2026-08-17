@@ -12,7 +12,7 @@ export type FamilyNamedAction =
   | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'
   // FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 编排 NamedActions(家长面向 12–15 纵切)。
   | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp'
-  | 'ExecuteTestExperienceAction'
+  | 'ExecuteTestExperienceAction' | 'ExecuteFamilyPageObjectAction'
   | 'SubmitCommerceIntent' | 'SubmitServiceBooking' | 'ManageMembershipEntitlement';
 type Decision = 'ALLOW' | 'DENY' | 'LIMITED';
 
@@ -36,6 +36,7 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   ExecuteTestExperienceAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  ExecuteFamilyPageObjectAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   ManageMembershipEntitlement: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
