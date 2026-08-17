@@ -18,6 +18,29 @@ import { evaluateOfferEligibility, type EligibilityContext } from './eligibility
 import { buildRecommendation } from './recommendation.policy';
 import { checkDecisionIntegrity } from './decision-integrity.policy';
 import { OrchestrationRepository, type EligibilityFacts } from './orchestration.repository';
+import type {
+  ConfirmSyntheticIntentDto,
+  RecordSyntheticDecisionDto,
+  StartSyntheticNeedDto,
+  TestLoopAuditEntryDto,
+  TestLoopCandidatesDto,
+  TestLoopDecisionResultDto,
+  TestLoopIntentResultDto,
+  TestLoopNeedResultDto,
+} from './l0-l1-test-loop.dto';
+import { decisionTextEquivalent, noActionTextEquivalent, safeStop, toEqualCandidateView } from './l0-l1-test-loop.policy';
+import { requireDevSyntheticTestLoop, TEST_LOOP_POLICY_VERSION } from './test-env.policy';
+import {
+  createMockExecutorReceipt,
+  findSyntheticCandidate,
+  SYNTHETIC_ADMITTED_CANDIDATES,
+  SYNTHETIC_FIXTURE_VERSION,
+  SYNTHETIC_INTENT_CHOICES,
+  SYNTHETIC_NEED_CHOICES,
+} from './test-fixtures/synthetic-admitted-candidates';
+import { FamilyLlmGatewayService } from './llm-gateway/family-llm-gateway.service';
+import { getFamilyLlmPagePolicy, listFamilyLlmPagePolicies } from './llm-gateway/family-llm-page-policy';
+import type { FamilyLlmGatewayResult } from './llm-gateway/family-llm.contract';
 
 const POLICY_VERSION = 'orch-v1';
 const SELF_STEWARD = 'family-steward:v1';
@@ -35,9 +58,13 @@ export interface DecideResult {
 
 @Injectable()
 export class OrchestrationService {
+  /** DEV-only 内存审计：仅支持当前进程的内部演示回放，不持久化真实数据，也不是生产审计实现。 */
+  private readonly testLoopAudit = new Map<string, TestLoopAuditEntryDto[]>();
+
   constructor(
     @Inject(OrchestrationRepository) private readonly repo: OrchestrationRepository,
     @Inject(PrincipalAiCoachResource) private readonly aiCoach: PrincipalAiCoachResource,
+    @Inject(FamilyLlmGatewayService) private readonly familyLlmGateway: FamilyLlmGatewayService,
   ) {}
 
   private ctxFor(offer: ResourceOfferDto, facts: EligibilityFacts, safetyNormal: boolean, evaluationRef: string): EligibilityContext {
@@ -298,6 +325,240 @@ export class OrchestrationService {
 
     return { decision_id: decisionId, outcome: 'SERVICE_STARTED', case_id: caseId, executed_resource_type: executedType, ai_coach: aiCoachResult };
     });
+  }
+
+  // ===== ARCH-GO-TEST-FULL-FUNCTION-001: DEV synthetic full-loop only =====
+  // Never call recommend()/decide() below: those legacy paths rank candidates and/or create Plan/Case/AI/external execution.
+  private appendTestLoopAudit(correlationId: string, entry: Omit<TestLoopAuditEntryDto, 'correlation_id'>): void {
+    const existing = this.testLoopAudit.get(correlationId) ?? [];
+    existing.push({ correlation_id: correlationId, ...entry });
+    this.testLoopAudit.set(correlationId, existing);
+  }
+
+  private async findSyntheticTestSubject(familyId: string): Promise<string | null> {
+    const candidate = await this.repo.query<{ person_id: string }>(
+      `select person_id from persons where family_id=$1 and person_type='CHILD' order by person_id asc limit 1`,
+      [familyId],
+    );
+    const personId = candidate.rows[0]?.person_id ?? null;
+    if (!personId) return null;
+    const check = await this.repo.checkSubject(familyId, personId);
+    return check.exists && check.inFamily && check.isChild && check.ageInScope ? personId : null;
+  }
+
+  private async requireSyntheticFacts(familyId: string): Promise<{ subjectPersonId: string; facts: EligibilityFacts }> {
+    requireDevSyntheticTestLoop();
+    const subjectPersonId = await this.findSyntheticTestSubject(familyId);
+    if (!subjectPersonId) throw new ForbiddenException('test_loop_synthetic_subject_unavailable');
+    const facts = await this.repo.loadEligibilityFacts(familyId, subjectPersonId);
+    if (!facts.serviceConsentGranted) throw new ForbiddenException('service_consent_required');
+    return { subjectPersonId, facts };
+  }
+
+  async testLoopCapability(): Promise<{ enabled: boolean; mode: 'DEV_SYNTHETIC_ONLY'; policy_version: string; environment_status: 'DEV_IMPLEMENTING' | 'DEV_READY_FOR_TEST' | 'TEST_VALIDATED' | 'PROD_HOLD' }> {
+    const cap = requireDevSyntheticTestLoop();
+    return cap;
+  }
+
+  /** L0 synthetic Need: only controlled choices, server-derived synthetic child, no free text. */
+  async startSyntheticNeed(familyId: string, actorPersonId: string, dto: StartSyntheticNeedDto, correlationId: string, idempotencyKey?: string): Promise<TestLoopNeedResultDto> {
+    const cap = requireDevSyntheticTestLoop();
+    if (dto.skip === true && dto.need_choice) throw new BadRequestException('test_loop_need_choice_or_skip');
+    if (dto.skip === true) {
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'NEED', decision_type: 'DISMISS', allowed_state_upper_bound: 'NO_ACTION', safe_stop_reason: null, template_id: null, action_started: false });
+      return { need_ref: null, next_state: 'NO_ACTION', allowed_state_upper_bound: 'NO_ACTION', text_equivalent: noActionTextEquivalent() };
+    }
+    if (!dto.need_choice || !(dto.need_choice in SYNTHETIC_NEED_CHOICES)) throw new BadRequestException('test_loop_need_choice_required');
+    const choice = SYNTHETIC_NEED_CHOICES[dto.need_choice];
+    return this.withIdempotency('StartSyntheticTestLoopNeed', idempotencyKey, { familyId, actorPersonId, need_choice: dto.need_choice }, async () => {
+      const { subjectPersonId } = await this.requireSyntheticFacts(familyId);
+      const result = await this.repo.withTransaction(async (c) => {
+        const input = await c.query<{ input_id: string }>(
+          `insert into growth_need_inputs(family_id, subject_person_id, actor_person_id, data_class, raw_text)
+           values ($1,$2,$3,'FAMILY_PRIVATE_TEXT',$4) returning input_id`,
+          [familyId, subjectPersonId, actorPersonId, `[TEST_ONLY_SYNTHETIC_FIXTURE] ${choice.text}`],
+        );
+        const signal = await c.query<{ signal_id: string }>(
+          `insert into growth_need_signals(family_id, subject_person_id, source, raw_ref, inferred_need_type, confidence, canonical_family_fact)
+           values ($1,$2,'MANUAL',$3,'PARENT_CHILD_COMMUNICATION_CONFLICT',1,false) returning signal_id`,
+          [familyId, subjectPersonId, input.rows[0].input_id],
+        );
+        return signal.rows[0].signal_id;
+      });
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'NEED', decision_type: null, allowed_state_upper_bound: 'NEED', safe_stop_reason: null, template_id: null, action_started: false });
+      return { need_ref: result, next_state: 'INTENT', allowed_state_upper_bound: 'NEED', text_equivalent: `已记录内部演示的当下需要：${choice.text}。这不是诊断、评分或成长结论。你可以继续确认支持偏好，或返回。` };
+    });
+  }
+
+  /** L0 synthetic Intent: controlled choice only; no-action never creates Plan/Case/Task/Reminder. */
+  async confirmSyntheticIntent(familyId: string, actorPersonId: string, dto: ConfirmSyntheticIntentDto, correlationId: string, idempotencyKey?: string): Promise<TestLoopIntentResultDto> {
+    const cap = requireDevSyntheticTestLoop();
+    if (dto.no_action === true && (dto.intent_choice || dto.need_ref)) throw new BadRequestException('test_loop_intent_choice_or_no_action');
+    if (dto.no_action === true) {
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'INTENT', decision_type: 'DISMISS', allowed_state_upper_bound: 'NO_ACTION', safe_stop_reason: null, template_id: null, action_started: false });
+      return { intent_id: null, next_state: 'NO_ACTION', allowed_state_upper_bound: 'NO_ACTION', text_equivalent: noActionTextEquivalent() };
+    }
+    if (!dto.need_ref || !dto.intent_choice || !(dto.intent_choice in SYNTHETIC_INTENT_CHOICES)) throw new BadRequestException('test_loop_need_ref_and_intent_choice_required');
+    const choice = SYNTHETIC_INTENT_CHOICES[dto.intent_choice];
+    return this.withIdempotency('ConfirmSyntheticTestLoopIntent', idempotencyKey, { familyId, actorPersonId, need_ref: dto.need_ref, intent_choice: dto.intent_choice }, async () => {
+      const { subjectPersonId } = await this.requireSyntheticFacts(familyId);
+      const signal = await this.repo.query<{ subject_person_id: string }>(
+        `select subject_person_id from growth_need_signals where signal_id=$1 and family_id=$2`,
+        [dto.need_ref, familyId],
+      );
+      if ((signal.rowCount ?? 0) !== 1 || signal.rows[0].subject_person_id !== subjectPersonId) throw new ForbiddenException('test_loop_need_ref_not_in_synthetic_family');
+      const intent = await this.repo.query<{ intent_id: string }>(
+        `insert into growth_intents(family_id, subject_person_id, signal_ref, need_type, goal_text, required_capability_keys, status, confirmed_by)
+         values ($1,$2,$3,'PARENT_CHILD_COMMUNICATION_CONFLICT',$4,$5,'OPEN',$6) returning intent_id`,
+        [familyId, subjectPersonId, dto.need_ref, `[TEST_ONLY_SYNTHETIC_FIXTURE] ${choice.text}`, ['DE_ESCALATION', 'COMMUNICATION_REOPENING'], actorPersonId],
+      );
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'INTENT', decision_type: null, allowed_state_upper_bound: 'INTENT', safe_stop_reason: null, template_id: null, action_started: false });
+      return { intent_id: intent.rows[0].intent_id, next_state: 'CANDIDATES', allowed_state_upper_bound: 'INTENT', text_equivalent: `已确认内部演示的支持偏好：${choice.text}。接下来只会显示合成、已标记为 test-only 的候选；平台不会排序或替家庭决定。` };
+    });
+  }
+
+  async getSyntheticAdmittedCandidates(familyId: string, intentId: string, correlationId: string): Promise<TestLoopCandidatesDto> {
+    const cap = requireDevSyntheticTestLoop();
+    const intent = await this.loadOpenIntent(familyId, intentId);
+    const facts = await this.repo.loadEligibilityFacts(familyId, intent.subjectPersonId);
+    if (!facts.serviceConsentGranted) {
+      const stop = safeStop('SERVICE_CONSENT_REQUIRED');
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'CANDIDATES', decision_type: null, allowed_state_upper_bound: stop.allowed_state_upper_bound, safe_stop_reason: stop.reason, template_id: stop.template_id, action_started: false });
+      return { intent_id: intentId, fixture_version: SYNTHETIC_FIXTURE_VERSION, candidates: [], safe_stop: stop, allowed_state_upper_bound: stop.allowed_state_upper_bound, text_equivalent: stop.message };
+    }
+    const views = SYNTHETIC_ADMITTED_CANDIDATES.map(toEqualCandidateView);
+    this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'CANDIDATES', decision_type: null, allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', safe_stop_reason: null, template_id: null, action_started: false });
+    return {
+      intent_id: intentId,
+      fixture_version: SYNTHETIC_FIXTURE_VERSION,
+      candidates: views,
+      safe_stop: null,
+      allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES',
+      text_equivalent: '以下是用于内部演示的合成已准入候选。它们以相同字段展示，不表达排序、推荐、效果或真实服务资格。你可以查看说明、返回、暂停或现在先不行动。',
+    };
+  }
+
+  /** L1 decision-only route: writes FamilyServiceDecision only; never Plan/Case/AI/external execution. */
+  async recordSyntheticDecision(familyId: string, actorPersonId: string, dto: RecordSyntheticDecisionDto, correlationId: string, idempotencyKey?: string): Promise<TestLoopDecisionResultDto> {
+    const cap = requireDevSyntheticTestLoop();
+    if (dto.fixture_version !== SYNTHETIC_FIXTURE_VERSION) throw new BadRequestException('test_loop_fixture_version_mismatch');
+    if (dto.decision_type === 'SELECT' && !dto.candidate_ref) throw new BadRequestException('test_loop_candidate_ref_required');
+    if (dto.decision_type === 'DISMISS' && dto.candidate_ref) throw new BadRequestException('test_loop_dismiss_requires_empty_candidate');
+    return this.withIdempotency('RecordSyntheticTestLoopDecision', idempotencyKey, { familyId, actorPersonId, ...dto }, async () => {
+      const intent = await this.loadOpenIntent(familyId, dto.intent_id);
+      const facts = await this.repo.loadEligibilityFacts(familyId, intent.subjectPersonId);
+      if (!facts.serviceConsentGranted) throw new ForbiddenException('service_consent_required');
+      const fixture = dto.candidate_ref ? findSyntheticCandidate(dto.candidate_ref) : null;
+      if (dto.decision_type === 'SELECT' && !fixture) throw new BadRequestException('test_loop_candidate_not_admitted');
+      const recommendation = await this.repo.query<{ recommendation_id: string; version: number }>(
+        `select recommendation_id, version from resource_recommendations where family_id=$1 and intent_ref=$2 and status='SHOWN' order by created_at desc limit 1`,
+        [familyId, dto.intent_id],
+      );
+      let recommendationId = recommendation.rows[0]?.recommendation_id;
+      let recommendationVersion = recommendation.rows[0]?.version;
+      if (!recommendationId) {
+        const inserted = await this.repo.query<{ recommendation_id: string; version: number }>(
+          `insert into resource_recommendations(recommendation_id, family_id, intent_ref, version, candidates, recommended_offer_refs, required_capability_keys, covered_capability_keys, uncovered_capability_keys, why_now, status)
+           values (gen_random_uuid(),$1,$2,1,$3::jsonb,'{}',$4,'{}',$4,$5,'SHOWN') returning recommendation_id, version`,
+          [familyId, dto.intent_id, JSON.stringify(SYNTHETIC_ADMITTED_CANDIDATES.map((candidate) => ({ offer_ref: candidate.offer_ref, title: candidate.title, source_label: candidate.source_label, admission_version: candidate.admission_version }))), ['DE_ESCALATION', 'COMMUNICATION_REOPENING'], '[TEST_ONLY_SYNTHETIC_FIXTURE] candidate view only; no ranking, effect claim, or real execution.'],
+        );
+        recommendationId = inserted.rows[0].recommendation_id;
+        recommendationVersion = inserted.rows[0].version;
+      }
+      const decision = await this.repo.query<{ decision_id: string }>(
+        `insert into family_service_decisions(family_id, subject_person_id, intent_ref, recommendation_ref, recommendation_version, decision_type, selected_offer_refs, actor_person_id)
+         values ($1,$2,$3,$4,$5,$6,$7,$8) returning decision_id`,
+        [familyId, intent.subjectPersonId, dto.intent_id, recommendationId, recommendationVersion, dto.decision_type === 'DISMISS' ? 'DISMISS' : 'SELECT_ALTERNATIVE', dto.decision_type === 'DISMISS' ? [] : [fixture!.offer_ref], actorPersonId],
+      );
+      const noAction = dto.decision_type === 'DISMISS';
+      this.appendTestLoopAudit(correlationId, { policy_version: cap.policy_version, fixture_version: SYNTHETIC_FIXTURE_VERSION, input_category: 'DECISION', decision_type: dto.decision_type, allowed_state_upper_bound: noAction ? 'NO_ACTION' : 'DECISION', safe_stop_reason: null, template_id: null, action_started: false });
+      return {
+        decision_id: decision.rows[0].decision_id,
+        outcome: noAction ? 'NO_ACTION' : 'DECISION_RECORDED',
+        allowed_state_upper_bound: noAction ? 'NO_ACTION' : 'DECISION',
+        action_started: false,
+        plan_id: null,
+        case_id: null,
+        mock_executor: noAction ? null : createMockExecutorReceipt(),
+        text_equivalent: noAction ? noActionTextEquivalent() : decisionTextEquivalent(),
+      };
+    });
+  }
+
+  /**
+   * Real LLM page explanation for the 34-page Family DEV experience.
+   * Client input is limited to a registered page ID and a correlation/journey alias;
+   * use case, model policy, state bound, candidates, fixture, scope and audit are derived server-side.
+   */
+  async generateFamilyLlmPageDraft(
+    familyId: string,
+    actorPersonId: string,
+    input: { page_id?: string; journey_id?: string; fixture_version?: string },
+    correlationId: string,
+  ): Promise<FamilyLlmGatewayResult> {
+    const cap = requireDevSyntheticTestLoop();
+    const pageId = input.page_id?.trim();
+    if (!pageId) throw new BadRequestException('family_llm_page_id_required');
+    if (input.fixture_version && input.fixture_version !== SYNTHETIC_FIXTURE_VERSION) {
+      throw new BadRequestException('family_llm_fixture_version_mismatch');
+    }
+    const pagePolicy = getFamilyLlmPagePolicy(pageId);
+    if (!pagePolicy) throw new BadRequestException('family_llm_page_not_registered');
+    await this.requireSyntheticFacts(familyId);
+
+    const result = await this.familyLlmGateway.generate({
+      family_id: familyId,
+      actor_person_id: actorPersonId,
+      trace_id: correlationId,
+      context: {
+        environment: cap.environment_status === 'TEST_VALIDATED' ? 'TEST' : 'DEV',
+        fixture_id: 'family-34-page-dev-fixture',
+        fixture_version: SYNTHETIC_FIXTURE_VERSION,
+        journey_id: input.journey_id?.trim() || correlationId,
+        page_id: pagePolicy.page_id,
+        use_case: pagePolicy.use_case,
+        policy_version: cap.policy_version,
+        schema_version: 'family-llm-draft.v1',
+        allowed_state_upper_bound: pagePolicy.allowed_state_upper_bound,
+        mock_state: `TEST_PAGE_${pagePolicy.page_id}`,
+        admitted_candidates: SYNTHETIC_ADMITTED_CANDIDATES.map((candidate) => ({
+          alias: candidate.offer_ref,
+          title: candidate.title,
+          admission_version: candidate.admission_version,
+        })),
+        supported_actions: pagePolicy.supported_actions,
+      },
+    });
+    this.appendTestLoopAudit(correlationId, {
+      policy_version: cap.policy_version,
+      fixture_version: SYNTHETIC_FIXTURE_VERSION,
+      input_category: 'STUB',
+      decision_type: null,
+      allowed_state_upper_bound: result.audit.allowed_state_upper_bound,
+      safe_stop_reason: result.stop_code,
+      template_id: result.decision === 'ALLOW_DRAFT' ? null : result.stop_code,
+      action_started: false,
+    });
+    return result;
+  }
+
+  listFamilyLlmPages() {
+    requireDevSyntheticTestLoop();
+    return listFamilyLlmPagePolicies().map((policy) => ({
+      page_id: policy.page_id,
+      use_case: policy.use_case,
+      allowed_state_upper_bound: policy.allowed_state_upper_bound,
+    }));
+  }
+
+  async replayFamilyLlm(familyId: string, correlationId: string) {
+    requireDevSyntheticTestLoop();
+    return this.familyLlmGateway.replay(familyId, correlationId);
+  }
+
+  getSyntheticTestLoopAudit(correlationId: string): TestLoopAuditEntryDto[] {
+    requireDevSyntheticTestLoop();
+    return [...(this.testLoopAudit.get(correlationId) ?? [])];
   }
 
   async getCase(familyId: string, caseId: string): Promise<Record<string, unknown> | null> {

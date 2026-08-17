@@ -8,6 +8,8 @@ import { randomUUID } from 'node:crypto';
 import type { FamilyDecisionType } from '@family/contracts';
 import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';
 import { OrchestrationService } from './orchestration.service';
+import type { ConfirmSyntheticIntentDto, RecordSyntheticDecisionDto, StartSyntheticNeedDto } from './l0-l1-test-loop.dto';
+import { assessmentIntakeStub, gatewayStub, humanGatePlaceholder } from './stubs/test-loop-governance-stubs';
 
 type Actor = { personId: string; familyId: string; familyRole: string };
 function corr(c?: string): string { return c && c.trim() ? c : randomUUID(); }
@@ -93,6 +95,112 @@ export class OrchestrationController {
   ) {
     if (!body?.helpfulness) throw new BadRequestException('helpfulness required');
     return this.svc.submitFollowUp(familyId, actor.personId, caseId, body.helpfulness, body.text ?? null, idempotencyKey && idempotencyKey.trim() ? idempotencyKey.trim() : undefined);
+  }
+
+  // ===== ARCH-GO-TEST-FULL-FUNCTION-001: DEV-only synthetic full-loop =====
+  // These endpoints are capability-gated in the service. They remain authenticated and derive actor/family server-side.
+  @Get('orchestration/test-loop/capability')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopCapability() {
+    return this.svc.testLoopCapability();
+  }
+
+  @Post('orchestration/test-loop/need')
+  @RequireOrchestrationAction('RequestGrowthHelp')
+  async startTestLoopNeed(
+    @Param('familyId') familyId: string,
+    @Body() body: StartSyntheticNeedDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.svc.startSyntheticNeed(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Post('orchestration/test-loop/intent')
+  @RequireOrchestrationAction('ConfirmGrowthIntent')
+  async confirmTestLoopIntent(
+    @Param('familyId') familyId: string,
+    @Body() body: ConfirmSyntheticIntentDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    return this.svc.confirmSyntheticIntent(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Get('orchestration/test-loop/intents/:intentId/candidates')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopCandidates(
+    @Param('familyId') familyId: string,
+    @Param('intentId') intentId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    return this.svc.getSyntheticAdmittedCandidates(familyId, intentId, corr(correlationId));
+  }
+
+  @Post('orchestration/test-loop/decisions')
+  @RequireOrchestrationAction('DecideGrowthService')
+  async recordTestLoopDecision(
+    @Param('familyId') familyId: string,
+    @Body() body: RecordSyntheticDecisionDto,
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    if (!body?.intent_id || !body?.fixture_version || !body?.decision_type) throw new BadRequestException('intent_id, fixture_version, decision_type required');
+    return this.svc.recordSyntheticDecision(familyId, actor.personId, body, corr(correlationId), idempotencyKey?.trim() || undefined);
+  }
+
+  @Get('orchestration/test-loop/audit/:correlationId')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopAudit(@Param('correlationId') correlationId: string) {
+    return { entries: this.svc.getSyntheticTestLoopAudit(correlationId) };
+  }
+
+  /** Registered Family 34-page LLM capabilities; model, provider and credentials are never client inputs. */
+  @Get('orchestration/test-loop/llm/pages')
+  @RequireOrchestrationAction('ReadFamily')
+  async familyLlmPages() {
+    return { pages: this.svc.listFamilyLlmPages() };
+  }
+
+  @Post('orchestration/test-loop/llm/draft')
+  @RequireOrchestrationAction('ReadFamily')
+  async familyLlmDraft(
+    @Param('familyId') familyId: string,
+    @Body() body: { page_id?: string; journey_id?: string; fixture_version?: string },
+    @OrchestrationActor() actor: Actor,
+    @Headers('x-correlation-id') correlationId?: string,
+  ) {
+    return this.svc.generateFamilyLlmPageDraft(familyId, actor.personId, body ?? {}, corr(correlationId));
+  }
+
+  @Get('orchestration/test-loop/llm/replay/:correlationId')
+  @RequireOrchestrationAction('ReadFamily')
+  async familyLlmReplay(@Param('familyId') familyId: string, @Param('correlationId') correlationId: string) {
+    return { entries: await this.svc.replayFamilyLlm(familyId, correlationId) };
+  }
+
+  @Post('orchestration/test-loop/stubs/gateway')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopGatewayStub() {
+    await this.svc.testLoopCapability();
+    return gatewayStub();
+  }
+
+  @Post('orchestration/test-loop/stubs/intake')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopIntakeStub(@Body() body: { category?: 'L2_STANDARDIZED_TOOL' | 'L3_SAFETY_TOOL' | 'ADT_OR_BIOMETRIC' }) {
+    await this.svc.testLoopCapability();
+    return assessmentIntakeStub(body?.category ?? 'L2_STANDARDIZED_TOOL');
+  }
+
+  @Post('orchestration/test-loop/stubs/human-gate')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopHumanGateStub() {
+    await this.svc.testLoopCapability();
+    return humanGatePlaceholder();
   }
 
   @Get('orchestration/context-reuse')

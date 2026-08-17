@@ -1,6 +1,7 @@
 import { createGrowthApp, defaultConfig } from './app.js';
 import { createWafCommunityApp } from './waf.js';
 import { createPrincipalApp, defaultPrincipalConfig } from './principal.js';
+import { createTestLoopApp, defaultTestLoopConfig } from './test-loop.js';
 
 const root = /** @type {HTMLElement | null} */ (document.querySelector('#app'));
 
@@ -10,7 +11,15 @@ if (!root) {
 
 const searchParams = new URLSearchParams(window.location.search);
 
-if (searchParams.get('product') === 'principal' || window.location.hash === '#principal') {
+if (searchParams.get('product') === 'test-loop' || window.location.hash === '#test-loop') {
+  // ARCH-GO-TEST-FULL-FUNCTION-001: DEV synthetic internal demo only; server capability gate remains authoritative.
+  createTestLoopApp(root, {
+    ...defaultTestLoopConfig,
+    apiBaseUrl: searchParams.get('apiBaseUrl') ?? defaultTestLoopConfig.apiBaseUrl,
+    familyId: searchParams.get('familyId') ?? defaultTestLoopConfig.familyId,
+    initialPage: searchParams.get('page') ?? undefined,
+  });
+} else if (searchParams.get('product') === 'principal' || window.location.hash === '#principal') {
   // W2-101 消费端法咪莉校长(WF1-C 内部级);确定性、零外呼、x-actor-id。
   createPrincipalApp(root, {
     ...defaultPrincipalConfig,

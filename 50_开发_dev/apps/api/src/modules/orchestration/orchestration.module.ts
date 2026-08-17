@@ -10,10 +10,22 @@ import { OrchestrationController } from './orchestration.controller';
 import { OrchestrationService } from './orchestration.service';
 import { OrchestrationRepository } from './orchestration.repository';
 import { OrchestrationAuthGuard } from './orchestration-auth.guard';
+import { AuditReplayService } from './llm-gateway/audit-replay.service';
+import { ContextAssemblerService } from './llm-gateway/context-assembler.service';
+import { FamilyLlmGatewayService } from './llm-gateway/family-llm-gateway.service';
+import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';
 
 @Module({
   imports: [AuthModule, PrincipalModule],
   controllers: [OrchestrationController],
-  providers: [OrchestrationService, OrchestrationRepository, OrchestrationAuthGuard],
+  providers: [
+    OrchestrationService,
+    OrchestrationRepository,
+    OrchestrationAuthGuard,
+    ContextAssemblerService,
+    FamilyLlmOutputValidator,
+    AuditReplayService,
+    FamilyLlmGatewayService,
+  ],
 })
 export class OrchestrationModule {}
