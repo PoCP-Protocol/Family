@@ -18,7 +18,7 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 |---|---|---|
 | Batch 1 | UI-01~UI-05 | UI-01 既有门禁引用；UI-02~UI-05 pre-API gate。 |
 | Batch 2 | UI-06~UI-12 | UI-06~UI-10 pre-API gate 已准备；UI-11~UI-12 待后续补齐研究、BA、视觉和 Architect/Blocking 文档。 |
-| Batch 3 | UI-13~UI-18 | Commerce/Membership 研究和 External Effect gate。 |
+| Batch 3 | UI-11~UI-15 | Ranking/Poster/Commerce 研究和 Human Gate/External Effect gate；UI-16~UI-18 待后续批次。 |
 | Batch 4 | UI-19~UI-24 | Service Supply/Booking/Activity 研究和真人服务 gate。 |
 | Batch 5 | UI-25~UI-29 | Community/Evidence/Share 研究和 Human Gate。 |
 | Batch 6 | UI-30~UI-34 | Membership/Admin/Records 研究和数据权限 gate。 |
@@ -39,11 +39,11 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 | UI-08 | Growth Report | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NO_GO_WITH_BLOCKERS` / Batch 2 pre-API gate prepared | Report/Evidence provenance、解释/诊断边界、敏感内容、版本 | NO | NO | Runtime NONE；`RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-09 | Daily Task | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NO_GO_WITH_BLOCKERS` / Batch 2 pre-API gate prepared | Task projection、Complete/Pause/Amend、Outcome 不等同、既有测试需复核 | NO | NO | Runtime NONE；`RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-10 | Child Assistant | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NO_GO_WITH_BLOCKERS` / Batch 2 pre-API gate prepared; Human Gate HOLD | 未成年人、guardian Consent、敏感主题、Model Gateway、Agent/Ontology boundary | NO | NO | Runtime NONE；`RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-11 | Family Ranking | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_HUMAN_GATE` | 禁止 Ranking/Total Score；替代自我历史需求 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-12 | Growth Poster | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | Evidence/Outcome、媒体、公开分享、文案 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-13 | Mall Home | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | Product/Offering、成长服务与商业化边界 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-14 | Product Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | Payment、Order、Entitlement、退款 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-15 | Invite Rewards | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | Invite、通知、Reward、反滥用 | NO | NO | Runtime NONE；diff NOT_READY |
+| UI-11 | Family Ranking | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_HUMAN_GATE / NO_GO_WITH_BLOCKERS` | 禁止 Ranking/Total Score；替代自我历史需求、儿童比较和价值判断 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-12 | Growth Poster | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Evidence/Outcome、媒体、公开分享、文案、儿童 Consent | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-13 | Mall Home | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Product/Offering、成长服务与商业化边界、推荐/购买、支付/权益 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-14 | Product Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Payment、Order、Entitlement、退款、价格/权益 provenance | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-15 | Invite Rewards | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Invite、通知、Reward、反滥用、Consent、外发分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-16 | Group Buy | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 库存、订单、支付、通知 | NO | NO | Runtime NONE；diff NOT_READY |
 | UI-17 | Points Task | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | 积分规则、任务事件、权益事实 | NO | NO | Runtime NONE；diff NOT_READY |
 | UI-18 | Membership Center | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 续费、退款、权益变更 | NO | NO | Runtime NONE；diff NOT_READY |
