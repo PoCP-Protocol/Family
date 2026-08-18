@@ -18,6 +18,10 @@ if (searchParams.get('product') === 'test-loop' || window.location.hash === '#te
     apiBaseUrl: searchParams.get('apiBaseUrl') ?? defaultTestLoopConfig.apiBaseUrl,
     familyId: searchParams.get('familyId') ?? defaultTestLoopConfig.familyId,
     initialPage: searchParams.get('page') ?? undefined,
+    // Internal synthetic/dev demo only. The value is intentionally opt-in and
+    // the Bearer is read from sessionStorage rather than embedded in a page.
+    firstSliceApiMode: searchParams.get('firstSliceApi') === 'synthetic-api' ? 'synthetic-api' : 'disabled',
+    authToken: window.sessionStorage.getItem('family-ui01-ui09-synthetic-bearer') ?? undefined,
   });
 } else if (searchParams.get('product') === 'principal' || window.location.hash === '#principal') {
   // W2-101 消费端法咪莉校长(WF1-C 内部级);确定性、零外呼、x-actor-id。

@@ -97,3 +97,92 @@ describe('UI-09 daily task private object action', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+
+describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
+  const familyId = '22222222-2222-4222-8222-222222222222';
+  const taskId = '11111111-1111-4111-8111-111111111111';
+  const projection = {
+    projection_version: 'UI01_UI09_FAMILY_TODAY_V1',
+    family_id: familyId,
+    entry_state: 'READY',
+    today_task: {
+      task_id: taskId,
+      task_state: 'NOT_STARTED',
+      checkin_allowed: true,
+      assignment_text: '先听完再回应',
+    },
+    ai_ready: {
+      evidence_boundary: 'ACTION_CHECKIN_IS_NOT_OUTCOME_OR_CAUSAL_EFFECT',
+      recommendation_source: 'RULE_BASED_SYNTHETIC_NO_RECOMMENDATION',
+      model_gateway_status: 'NOOP_NOT_INVOKED',
+    },
+  };
+
+  it('loads the same family-scoped projection on UI-01 and submits UI-09 CompleteGrowthAction with no local fake success', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string, request: RequestInit) => {
+      if (String(url).endsWith(`/families/${familyId}/today`)) {
+        expect(request).toMatchObject({ method: 'GET', credentials: 'include' });
+        expect(request.headers).toMatchObject({ authorization: 'Bearer synthetic-dev-token' });
+        return { ok: true, json: async () => projection };
+      }
+      expect(String(url)).toBe(`http://family-api.test/families/${familyId}/tasks/${taskId}/check-in`);
+      expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
+      expect(request.headers).toMatchObject({
+        authorization: 'Bearer synthetic-dev-token',
+        'idempotency-key': expect.any(String),
+        'x-source': 'ui-01-ui-09-first-slice',
+      });
+      expect(JSON.parse(String(request.body))).toMatchObject({ completion_status: 'COMPLETED', reflection: '' });
+      return {
+        ok: true,
+        json: async () => ({
+          result_state: 'SUCCESS',
+          action: { ...projection.today_task, task_state: 'CHECKED_IN', checkin_allowed: false },
+          reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME',
+          audit_status: 'RECORDED',
+          next_hint: { source: 'RULE_BASED_SYNTHETIC_NOOP', text_key: 'REFRESH_TODAY_AFTER_CHECKIN', model_gateway_status: 'NOOP_NOT_INVOKED' },
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test', familyId, authToken: 'synthetic-dev-token',
+      firstSliceApiMode: 'synthetic-api', initialPage: 'home',
+    });
+    await tick();
+    await tick();
+
+    expect(root.querySelector('.by-reference-home')).not.toBeNull();
+    expect(root.dataset.familyTodayProjectionStatus).toBe('READY');
+    expect(root.querySelector('[data-first-slice-surface="UI-01"]')?.textContent).toContain('先听完再回应');
+    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不代表教育效果');
+
+    app.navigate('growth-daily-task');
+    expect(root.querySelector('.by-clear-reference')).not.toBeNull();
+    expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('先听完再回应');
+    root.querySelector<HTMLButtonElement>('[aria-label="完成今日任务"]')?.click();
+    await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(root.dataset.familyPageObjectsAction).toBe('CompleteGrowthAction');
+    expect(root.dataset.familyPageObjectsStatus).toBe('SUCCESS');
+    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('不代表教育效果');
+    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('rule-based 系统提示');
+  });
+
+  it('shows a blocked state instead of falling back to static local task data when the projection read fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ code: 'FAMILY_FORBIDDEN' }) }));
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, firstSliceApiMode: 'synthetic-api', initialPage: 'growth-daily-task' });
+    await tick();
+    await tick();
+
+    expect(root.dataset.familyTodayProjectionStatus).toBe('ERROR');
+    expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('未展示任何本地替代数据');
+  });
+});

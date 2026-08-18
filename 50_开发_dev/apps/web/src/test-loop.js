@@ -2,10 +2,16 @@
 // Family / 伐木累 visual shell. Historical `bangyang-reference` paths preserve the supplied source evidence.
 import { mountTeacherSupplyView } from './teacher-supply-view.js';
 /**
- * @typedef {{ apiBaseUrl: string, familyId: string, initialPage?: string }} TestLoopConfig
+ * @typedef {{ apiBaseUrl: string, familyId: string, initialPage?: string, firstSliceApiMode?: 'disabled'|'synthetic-api', authToken?: string }} TestLoopConfig
  */
 /** @type {TestLoopConfig} */
-export const defaultTestLoopConfig = { apiBaseUrl: 'http://localhost:3000', familyId: '22222222-2222-4222-8222-222222222222' };
+export const defaultTestLoopConfig = {
+  apiBaseUrl: 'http://localhost:3000',
+  familyId: '22222222-2222-4222-8222-222222222222',
+  // Disabled unless an internal synthetic/dev harness opts in. No production
+  // identity, token or fallback task is embedded in the static visual shell.
+  firstSliceApiMode: 'disabled',
+};
 
 const ICONS = { assessment: '🛡', task: '✓', child: '🎮', rank: '🏆', report: '📘', assistant: '🤖', invite: '🎁', group: '👥', points: '🪙', goods: '👜', member: '👤', plan: '📋', class: '📖', activity: '🎪' };
 const tap = (action, label, cls = '') => `<button class="by-btn ${cls}" data-by="${action}">${label}</button>`;
@@ -32,6 +38,11 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   let checked = [false, false, false];
   let currentNeed = '亲子沟通';
   let llmTextEquivalent = '';
+  /** @type {any | null} */
+  let familyTodayProjection = null;
+  let firstSliceLoadState = 'IDLE';
+  let firstSliceResultState = '';
+  let firstSliceNextHint = '';
   const llmActionRoutes = {
     'llm-growth-assessment': ['UI-02', 'assessment'],
     'llm-core-report': ['UI-04', 'core-plan'],
@@ -58,8 +69,92 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     'experience-publish-template': { pageId: 'UI-26', action: 'PUBLISH_TEMPLATE', fixtureRef: 'POST_TEMPLATE_GROWTH_CARD', nextPage: 'my-community' },
     'experience-load-assets': { pageId: 'UI-32', action: null, fixtureRef: null, nextPage: 'orders-assets' },
   };
+  const firstSliceApiEnabled = () => config.firstSliceApiMode === 'synthetic-api';
+  const firstSliceHeaders = (correlationId, write = false) => ({
+    ...(write ? { 'content-type': 'application/json' } : {}),
+    'x-correlation-id': correlationId,
+    ...(write ? { 'idempotency-key': correlationId, 'x-source': 'ui-01-ui-09-first-slice' } : {}),
+    ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}),
+  });
+  const firstSlicePanel = (surface) => {
+    if (!firstSliceApiEnabled()) return '';
+    if (firstSliceLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}">正在读取今日家庭任务…</output>`;
+    if (firstSliceLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-first-slice-surface="${surface}">今日任务暂不可读取；未展示任何本地替代数据。</output>`;
+    if (!familyTodayProjection) return '';
+    if (!familyTodayProjection.today_task) return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}">当前没有可打卡的今日任务。</output>`;
+    const task = familyTodayProjection.today_task;
+    const status = firstSliceResultState === 'SUCCESS' || firstSliceResultState === 'REPLAYED'
+      ? `本次家庭行动已记录；不代表教育效果，也不会触发外部通知。${firstSliceNextHint ? ` 下一步提示：${firstSliceNextHint}` : ''}`
+      : task.task_state === 'CHECKED_IN' ? '今日任务已记录；仅表示 check-in 状态。' : `当前任务：${task.assignment_text}`;
+    return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}" data-first-slice-task="${task.task_id}" data-first-slice-state="${task.task_state}">${status}</output>`;
+  };
+  async function requestFamilyToday() {
+    if (!firstSliceApiEnabled() || firstSliceLoadState === 'LOADING') return familyTodayProjection;
+    const correlationId = `family-ui01-today-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    firstSliceLoadState = 'LOADING';
+    root.dataset.familyTodayProjectionStatus = 'LOADING';
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/today`, {
+        method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload || payload.family_id !== config.familyId || !['READY', 'EMPTY'].includes(payload.entry_state)) {
+        throw new Error('family_today_projection_unavailable');
+      }
+      familyTodayProjection = payload;
+      firstSliceLoadState = 'READY';
+      root.dataset.familyTodayProjectionStatus = payload.entry_state;
+      root.dataset.familyTodayTaskId = payload.today_task?.task_id || '';
+      llmTextEquivalent = payload.today_task
+        ? `今日任务：${payload.today_task.assignment_text}。任务完成只表示 action/check-in，不代表教育效果。`
+        : '当前没有可打卡的今日任务。';
+      return payload;
+    } catch (_error) {
+      familyTodayProjection = null;
+      firstSliceLoadState = 'ERROR';
+      root.dataset.familyTodayProjectionStatus = 'ERROR';
+      root.dataset.familyTodayTaskId = '';
+      llmTextEquivalent = '今日任务暂不可读取；未展示任何本地替代数据。';
+      return null;
+    }
+  }
   async function requestUi09TaskCompletion() {
     const correlationId = `family-ui09-task-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    if (firstSliceApiEnabled()) {
+      const projection = familyTodayProjection || await requestFamilyToday();
+      const task = projection?.today_task;
+      root.dataset.familyPageObjectsAction = 'CompleteGrowthAction';
+      root.dataset.familyPageObjectsObject = task?.task_id || '';
+      if (!task || !task.checkin_allowed) {
+        root.dataset.familyPageObjectsStatus = 'NO_ACTION';
+        llmTextEquivalent = '当前没有可完成的今日任务；未发出 check-in 请求。';
+        return projection;
+      }
+      try {
+        const actionResponse = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/tasks/${task.task_id}/check-in`, {
+          method: 'POST', credentials: 'include', headers: firstSliceHeaders(correlationId, true),
+          body: JSON.stringify({ completion_status: 'COMPLETED', reflection: '', occurred_at: new Date().toISOString() }),
+        });
+        const payload = await actionResponse.json();
+        if (!actionResponse.ok || !payload?.action || !['SUCCESS', 'REPLAYED'].includes(payload?.result_state || 'SUCCESS')) {
+          throw new Error('task_checkin_failed');
+        }
+        firstSliceResultState = payload.result_state || 'SUCCESS';
+        firstSliceNextHint = payload?.next_hint?.text_key === 'REFRESH_TODAY_AFTER_CHECKIN'
+          ? '稍后可刷新今日任务；这是 rule-based 系统提示，不是模型建议。'
+          : '';
+        familyTodayProjection = { ...projection, today_task: payload.action, entry_state: 'READY' };
+        root.dataset.familyPageObjectsStatus = firstSliceResultState;
+        root.dataset.familyPageObjectsObject = payload.action.task_id || task.task_id;
+        llmTextEquivalent = '这项家庭行动已记录；不代表教育效果，不会发送通知、支付、发布或履约。';
+        return payload;
+      } catch (_error) {
+        root.dataset.familyPageObjectsStatus = 'CLIENT_FAILURE';
+        root.dataset.familyPageObjectsObject = '';
+        llmTextEquivalent = '当前任务暂不可完成；未创建任何外部效果。';
+        return null;
+      }
+    }
     const baseUrl = `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/page-objects`;
     root.dataset.familyPageObjectsAction = 'COMPLETE_TASK';
     root.dataset.familyPageObjectsObject = '';
@@ -202,7 +297,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function home() { return shell('', `<header class="home-spec-head"><strong>家庭成长平台</strong><span><button data-by="home">···</button><button data-by="home">◉</button></span></header><section class="home-spec-welcome"><div><h1>早上好，</h1><h2>今天也一起陪孩子成长 ☀</h2></div><button data-by="home">♧</button></section><section class="home-spec-banner"><div><h1>免费家庭测评</h1><p>3 分钟了解孩子成长状况</p><small>获取更科学的成长建议</small>${tap('assessment','立即测评 →','home-spec-cta')}</div><figure aria-label="一家四口的家庭插画"><span>👨</span><span>👩</span><span>🧒</span><span>👧</span></figure></section><section class="home-spec-grid">${mini('report','⌁','AI诊断')}${mini('plan','♙','21天挑战营')}${mini('plan','▣','90天成长计划')}${mini('poster','▤','成长案例')}${mini('home','▧','专家直播')}${mini('home','♧','家庭顾问')}</section><section class="home-spec-section"><div class="home-spec-title"><strong>今日成长任务</strong><button data-by="task">查看全部 ›</button></div><div class="home-spec-tasks"><button data-by="task"><i class="task-mint">▣</i><span>亲子沟通小练习</span><b class="complete">✓</b></button><button data-by="task"><i class="task-orange">▣</i><span>完成今日阅读打卡</span><b>去完成</b></button><button data-by="task"><i class="task-orange">▣</i><span>情绪记录</span><b>去完成</b></button></div></section><section class="home-spec-section"><div class="home-spec-title"><strong>推荐内容/服务</strong><button data-by="mall">更多 ›</button></div><div class="home-spec-recommend">${card('妈妈总问我：为什么？','今天 20:00 开播','product','home-r1')}${card('高效学习习惯养成课','限时 12 课 · 1268 人学习','product','home-r2')}${card('从紧张冲突到亲子和谐','真实案例分享','product','home-r3')}</div></section>` , true); }
   function assessment() { return `<section class="by-app by-reference-assessment"><div class="by-reference-assessment-screen" role="img" aria-label="家庭测评第2步：选择孩子当前最需要改善的问题，补充孩子年龄家庭情况和性别"><button class="by-hotspot as-option-1" data-by="assessment" aria-label="学习习惯"></button><button class="by-hotspot as-option-2" data-by="assessment" aria-label="情绪管理"></button><button class="by-hotspot as-option-3" data-by="assessment" aria-label="亲子沟通，已选中"></button><button class="by-hotspot as-option-4" data-by="assessment" aria-label="手机依赖"></button><button class="by-hotspot as-option-5" data-by="assessment" aria-label="自律能力"></button><button class="by-hotspot as-next" data-by="report" aria-label="下一步"></button></div></section>`; }
 
-  function home() { return `<section class="by-app by-reference-home"><div class="by-reference-screen" role="img" aria-label="家庭成长平台首页：免费家庭测评、六项成长服务、今日成长任务、推荐内容服务和首页计划社群我的导航"><button class="by-hotspot hs-assessment" data-by="growth-assessment" aria-label="立即开始测评"></button><button class="by-hotspot hs-ai" data-by="core-report" aria-label="AI成长诊断"></button><button class="by-hotspot hs-challenge" data-by="core-plan" aria-label="21天挑战营"></button><button class="by-hotspot hs-plan" data-by="core-plan" aria-label="90天成长计划"></button><button class="by-hotspot hs-case" data-by="poster" aria-label="成长案例"></button><button class="by-hotspot hs-live" data-by="home" aria-label="专家直播"></button><button class="by-hotspot hs-advisor" data-by="teacher-zone" aria-label="名师专区"></button><button class="by-hotspot hs-tasks" data-by="growth-daily-task" aria-label="今日成长任务"></button><button class="by-hotspot hs-card1" data-by="product" aria-label="妈妈总问我为什么"></button><button class="by-hotspot hs-card2" data-by="product" aria-label="高效学习习惯养成课"></button><button class="by-hotspot hs-card3" data-by="product" aria-label="从紧张冲突到亲子和谐"></button><button class="by-hotspot hs-nav-plan" data-by="plan" aria-label="计划"></button><button class="by-hotspot hs-nav-community" data-by="core-community" aria-label="社群"></button><button class="by-hotspot hs-nav-mine" data-by="core-mine" aria-label="我的"></button></div></section>`; }
+  function home() { return `<section class="by-app by-reference-home"><div class="by-reference-screen" role="img" aria-label="家庭成长平台首页：免费家庭测评、六项成长服务、今日成长任务、推荐内容服务和首页计划社群我的导航"><button class="by-hotspot hs-assessment" data-by="growth-assessment" aria-label="立即开始测评"></button><button class="by-hotspot hs-ai" data-by="core-report" aria-label="AI成长诊断"></button><button class="by-hotspot hs-challenge" data-by="core-plan" aria-label="21天挑战营"></button><button class="by-hotspot hs-plan" data-by="core-plan" aria-label="90天成长计划"></button><button class="by-hotspot hs-case" data-by="poster" aria-label="成长案例"></button><button class="by-hotspot hs-live" data-by="home" aria-label="专家直播"></button><button class="by-hotspot hs-advisor" data-by="teacher-zone" aria-label="名师专区"></button><button class="by-hotspot hs-tasks" data-by="growth-daily-task" aria-label="今日成长任务"></button><button class="by-hotspot hs-card1" data-by="product" aria-label="妈妈总问我为什么"></button><button class="by-hotspot hs-card2" data-by="product" aria-label="高效学习习惯养成课"></button><button class="by-hotspot hs-card3" data-by="product" aria-label="从紧张冲突到亲子和谐"></button><button class="by-hotspot hs-nav-plan" data-by="plan" aria-label="计划"></button><button class="by-hotspot hs-nav-community" data-by="core-community" aria-label="社群"></button><button class="by-hotspot hs-nav-mine" data-by="core-mine" aria-label="我的"></button></div>${firstSlicePanel('UI-01')}</section>`; }
   const visualReference = (file, label, hotspots = []) => `<section class="by-app by-ui-reference"><div class="by-ui-reference-screen" role="img" aria-label="${label}" style="background-image:url('/public/bangyang-reference/ui18/${file}.png')">${hotspots.map((x) => `<button class="by-hotspot ${x[0]}" data-by="${x[1]}" aria-label="${x[2]}"></button>`).join('')}</div></section>`;
   const clearReference = (file, label, hotspots = [], ratio = '434/1124') => `<section class="by-app by-clear-reference"><div class="by-clear-reference-screen" role="img" aria-label="${label}" style="background-image:url('/public/bangyang-reference/${file}');aspect-ratio:${ratio}">${hotspots.map((x) => `<button class="by-hotspot ${x[0]}" data-by="${x[1]}" aria-label="${x[2]}"></button>`).join('')}</div></section>`;
   function coreReport() { return clearReference('ai-growth-diagnosis-reference-436x1118.png', '家庭成长说明：儿童信息蓝卡、五维成长评估、核心问题、成长建议和生成个性化方案', [['clear-bottom-cta', 'llm-core-report', '生成个性化方案']], '436/1118'); }
@@ -211,7 +306,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function coreMine() { return clearReference('mine-member-reference-434x1124.png', '我的会员中心：深蓝会员信息、邀请权益、功能列表、年度会员服务和四栏导航', [['clear-bottom-nav-home', 'home', '首页']], '434/1124'); }
   function growthAssessment() { return clearReference('family-assessment-entry-reference-428x952.png', '家庭成长体检第1步：三分钟了解孩子成长状态、五大维度和示例问题', [['clear-entry-cta', 'llm-growth-assessment', '立即开始测评']], '428/952'); }
   function growthReport() { return visualReference('growth-02-ai-report', '家庭成长报告：综合评估、优势风险建议和推荐成长路径', [['ref-bottom-cta', 'core-plan', '生成个性化方案']]); }
-  function growthDailyTask() { return clearReference('daily-growth-task-reference-448x916.png', '今日成长任务：机器人提醒、三项任务、积分时长、本周完成度、连续打卡和完成今日任务', [['clear-bottom-cta', 'page-objects-complete-daily-task', '完成今日任务']], '448/916'); }
+  function growthDailyTask() { return `${clearReference('daily-growth-task-reference-448x916.png', '今日成长任务：机器人提醒、三项任务、积分时长、本周完成度、连续打卡和完成今日任务', [['clear-bottom-cta', 'page-objects-complete-daily-task', '完成今日任务']], '448/916')}${firstSlicePanel('UI-09')}`; }
   function growthChild() { return clearReference('growth-child-assistant-reference-448x920.png', '成长小助手：欢迎 Banner、成长能量、四色活动卡、今日挑战、奖励和开始挑战', [['clear-bottom-cta', 'growth-daily-task', '开始挑战']], '448/920'); }
   function growthRanking() { return clearReference('growth-ranking-reference-450x918.png', '成长排行榜：筛选栏、领奖台、排名列表、个人排名与成长行动家称号，仅作原图静态视觉展示', [], '450/918'); }
   function growthPoster() { return clearReference('growth-poster-reference-444x970.png', '成长成果海报：成长故事、成长前后、连续打卡、成长值、勋章、二维码与分享方式，仅作原图静态视觉展示', [['clear-poster-share', 'home', '返回首页']], '444/970'); }
@@ -267,7 +362,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010'); }
   function familyProfile() { return clearReference('family-profile-reference-542x1002.png', '家庭档案：孩子资料、关注问题、诊断方案、记录与时间线，仅作静态视觉展示', [['clear-profile-services', 'my-services', '查看服务']], '542/1002'); }
   function serviceRecords() { return clearReference('service-records-reference-566x1008.png', '服务记录：咨询、活动和客服支持，仅作静态视觉展示', [['clear-records-mine', 'service-mine', '我的预约和活动']], '566/1008'); }
-  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); }
+  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); if (firstSliceApiEnabled() && (page === 'home' || page === 'growth-daily-task') && firstSliceLoadState === 'IDLE') { void requestFamilyToday().then(() => render()); } }
   function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a === 'page-objects-complete-daily-task') { root.setAttribute('aria-busy', 'true'); await requestUi09TaskCompletion(); root.removeAttribute('aria-busy'); render(); return; } if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
   render();
   return {

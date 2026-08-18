@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest';
+import { FamilyController } from './family.controller';
+
+const familyId = '22222222-2222-4222-8222-222222222222';
+const taskId = '11111111-1111-4111-8111-111111111111';
+const actorId = '77777777-7777-4777-8777-777777777777';
+
+const action = {
+  action_id: taskId,
+  family_id: familyId,
+  onboarding_id: '33333333-3333-4333-8333-333333333333',
+  priority_id: '44444444-4444-4444-8444-444444444444',
+  intervention_episode_id: '55555555-5555-4555-8555-555555555555',
+  day_index: 1 as const,
+  status: 'COMPLETED' as const,
+  assignment_text: '先听完再回应',
+  due_date: '2026-08-18',
+  completed_at: '2026-08-18T10:00:00.000Z',
+  completion_status: 'COMPLETED' as const,
+  reflection: '',
+  reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME' as const,
+  boundary: 'ACTION_IS_NOT_OUTCOME' as const,
+  created_at: '2026-08-18T00:00:00.000Z',
+};
+
+function controller(overrides: Record<string, unknown> = {}) {
+  const growthActionService = {
+    completeGrowthAction: async () => ({ action, reflection_boundary: action.reflection_boundary, replayed: false }),
+    ...overrides,
+  };
+  const todayService = {
+    getFamilyTodayProjection: async () => ({
+      projection_version: 'UI01_UI09_FAMILY_TODAY_V1',
+      family_id: familyId,
+      entry_state: 'READY',
+      today_task: { task_id: taskId, assignment_text: action.assignment_text, task_state: 'NOT_STARTED' },
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED', evidence_boundary: 'ACTION_CHECKIN_IS_NOT_OUTCOME_OR_CAUSAL_EFFECT' },
+    }),
+  };
+  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any);
+}
+
+describe('UI-01/UI-09 first slice controller contract', () => {
+  it('returns the family-scoped Today projection without creating a canonical object', async () => {
+    const result = await controller().today(familyId, actorId);
+    expect(result).toMatchObject({
+      family_id: familyId,
+      entry_state: 'READY',
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED' },
+    });
+    expect(result).not.toHaveProperty('outcome');
+    expect(result).not.toHaveProperty('family_total_score');
+  });
+
+  it('wraps the existing CompleteGrowthAction readback in TaskCheckinResultProjection', async () => {
+    const result = await controller().checkInTodayTask(
+      familyId,
+      taskId,
+      { completion_status: 'COMPLETED', reflection: '', occurred_at: '2026-08-18T10:00:00.000Z' },
+      actorId,
+      'corr-ui01-ui09-contract',
+      'ui-01-ui-09-first-slice',
+      'idem-ui01-ui09-contract',
+    );
+
+    expect(result).toMatchObject({
+      result_state: 'SUCCESS',
+      action: { task_id: taskId, task_state: 'CHECKED_IN' },
+      audit_status: 'RECORDED',
+      correlation_id: 'corr-ui01-ui09-contract',
+      idempotency_key_ref: 'idem-ui01-ui09-contract',
+    });
+    expect(result).not.toHaveProperty('outcome');
+    expect(result).not.toHaveProperty('external_effect');
+  });
+});

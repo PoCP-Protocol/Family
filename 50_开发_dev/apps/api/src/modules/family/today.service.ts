@@ -1,4 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { FamilyTodayProjection } from '@family/contracts';
+import { projectFamilyToday } from '@family/contracts';
 import { GrowthActionService } from './growth-action.service';
 
 /** TODAY-001 · Today 首页输入(只读投影;view-model 由 web 侧 buildTodayView 消费)。 */
@@ -11,8 +13,11 @@ export interface TodayInputsView {
 }
 
 /**
- * TODAY-001 · Today 只读聚合。首版用 Growth OS 的 getTodayAction 得到今天行动 + 待 Check-in;
- * currentFocus/principal/expert 待「成员角色→领域权限」桥接后再从各只读源聚合(不新增 canonical)。
+ * UI-01/UI-09 first-slice Today read projection.
+ * It intentionally adapts the existing, policy-scoped GrowthAction read model
+ * instead of creating new canonical family, child, plan, evidence, or outcome
+ * records. Check-in consent/safety is revalidated by CompleteGrowthAction at
+ * write time; the read projection never claims a consent grant by itself.
  */
 @Injectable()
 export class TodayService {
@@ -27,5 +32,10 @@ export class TodayService {
       principalFollowup: null,
       expertReplyPending: false,
     };
+  }
+
+  async getFamilyTodayProjection(familyId: string, actorId: string): Promise<FamilyTodayProjection> {
+    const action = await this.growthActionService.getTodayAction(familyId, actorId);
+    return projectFamilyToday(familyId, action, new Date().toISOString());
   }
 }

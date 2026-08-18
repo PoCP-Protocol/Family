@@ -50,7 +50,7 @@ export class GrowthActionService {
       await assertFamilyManagePermission(client, request.family_id, meta.actor);
       const idempotency = await lockIdempotencyKey<CompleteGrowthActionResponse>(client, COMPLETE_GROWTH_ACTION_ACTION, request.idempotency_key, requestHash);
       if (idempotency.replay) {
-        return idempotency.response;
+        return { ...idempotency.response, replayed: true };
       }
 
       const existing = await getCompletableGrowthAction(client, request.family_id, request.action_id);
@@ -66,6 +66,7 @@ export class GrowthActionService {
       const response: CompleteGrowthActionResponse = {
         action,
         reflection_boundary: REFLECTION_BOUNDARY,
+        replayed: false,
       };
       await insertAudit(client, COMPLETE_GROWTH_ACTION_ACTION, 'GrowthAction', request.family_id, request.action_id, request.idempotency_key, meta, response);
       await insertGrowthActionCompletedEvent(client, response, meta);

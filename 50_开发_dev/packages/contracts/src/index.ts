@@ -6,6 +6,7 @@
 
 // Growth Orchestration V3 运行时契约(FAMILY-GROWTH-VERTICAL-SLICE-001;禁语义别名)。
 export * from './orchestration';
+export * from './ui01-ui09-first-slice';
 
 export type FamilyStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 export type PersonType = 'PARENT' | 'CHILD';
@@ -583,6 +584,8 @@ export interface CompleteGrowthActionRequest {
 export interface CompleteGrowthActionResponse {
   action: GrowthActionDto;
   reflection_boundary: ReflectionBoundary;
+  /** True only when an identical idempotency key/request hash replays a stored receipt. */
+  replayed?: boolean;
 }
 
 export type Wave3PolicyVersion = 'M2_106_DETERMINISTIC_V1';

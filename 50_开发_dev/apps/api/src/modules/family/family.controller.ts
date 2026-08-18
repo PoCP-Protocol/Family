@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
+import { projectTaskCheckinResult } from '@family/contracts';
 import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
@@ -50,7 +51,9 @@ export class FamilyController {
     return this.onboardingService.getStatus(familyId, actorId);
   }
 
-  // TODAY-001:Today 首页只读聚合(0 canonical 写)。
+  // UI-01/UI-09 first slice: family-scoped read projection, 0 canonical writes.
+  // The underlying GrowthAction read already applies family-manager authorization;
+  // the check-in command separately revalidates consent/safety immediately before write.
   @RequireFamilyAction('ReadFamily')
   @Get(':familyId/today')
   async today(
@@ -59,7 +62,7 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    return this.todayService.getToday(familyId, actorId);
+    return this.todayService.getFamilyTodayProjection(familyId, actorId);
   }
 
   @RequireFamilyAction('ReadFamily')
@@ -432,6 +435,31 @@ export class FamilyController {
     const request = validateCompleteGrowthActionRequest(familyId, actionId, idempotencyKey, body);
     const meta = buildAuditMeta(actorId, correlationId, source);
     return this.growthActionService.completeGrowthAction(request, meta);
+  }
+
+  /**
+   * UI-09 first real slice facade. The pre-existing growth/actions/:actionId/complete
+   * endpoint remains canonical for current consumers; this UI contract returns a
+   * family-scoped readback projection without adding any external effect.
+   */
+  @RequireFamilyAction('CompleteAction')
+  @Post(':familyId/tasks/:taskId/check-in')
+  async checkInTodayTask(
+    @Param('familyId') familyId: string,
+    @Param('taskId') taskId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+    const request = validateCompleteGrowthActionRequest(familyId, taskId, idempotencyKey, body);
+    const meta = buildAuditMeta(actorId, correlationId, source);
+    const response = await this.growthActionService.completeGrowthAction(request, meta);
+    return projectTaskCheckinResult(response.action, meta.correlationId, request.idempotency_key, response.replayed === true);
   }
 
   @Post(':familyId/growth/outcome-observations')

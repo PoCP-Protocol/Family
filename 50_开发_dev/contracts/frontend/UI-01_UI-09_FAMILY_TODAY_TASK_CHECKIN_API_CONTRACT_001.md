@@ -10,16 +10,16 @@ SOURCE_ADMISSION_COMMIT=10d494c5702cd085697499687e5b4d8ceebf66d3
 UI_SCOPE=UI-01,UI-09
 SLICE_NAME=Family Today and Daily Task Check-in
 CONTRACT_APPROVED_FOR_DRAFTING=YES
-IMPLEMENTATION_ALLOWED=NO
-BUSINESS_CODE_MODIFIED=NO
+IMPLEMENTATION_ALLOWED=YES__UI01_UI09_GUARDED_SLICE_ONLY
+BUSINESS_CODE_MODIFIED=YES__UI01_UI09_GUARDED_SLICE_ONLY
 OPENAPI_FILES_CREATED=0
 FILES_CREATED=1
-FILES_UPDATED=0
+FILES_UPDATED=1
 ```
 
-> **Human/Architect decision record summary.** Human/Architect approval is limited to drafting this Markdown contract from the admitted candidate. It authorizes neither controller/service/repository/migration/web component changes nor execution against non-synthetic family data. D-01 through D-05 are therefore **approved as contract-boundary subjects** and remain **implementation-activation gated**: their approved values, operational owner sign-off and visual/fixture evidence must be rechecked before business implementation starts.
+> **Human/Architect decision record summary.** Subsequent Human/Architect approval authorizes the **UI-01/UI-09 guarded implementation only**: family-scoped Today projection, `CompleteGrowthAction` facade, synthetic/dev fixture, associated tests and visual verification. It does not authorize another UI, non-synthetic family data, payment, community, human service, notification/share/export, model invocation, diagnosis, Outcome creation, ranking or total score. D-01 through D-05 remain bounded by the activated implementation rules below: the code must use existing policy guards and synthetic fixture data, while any expansion of semantics or scope requires a separate decision.
 
-This is a formal repository contract in Markdown, not a generated OpenAPI document. No `.yaml`, `.yml`, `.json` or `openapi/*` artifact is created by this contract. The `IMPLEMENTATION_ALLOWED=NO` field prevails over any implementation-oriented wording below.
+This is a formal repository contract in Markdown, not a generated OpenAPI document. No `.yaml`, `.yml`, `.json` or `openapi/*` artifact is created by this contract. The scoped `IMPLEMENTATION_ALLOWED=YES__UI01_UI09_GUARDED_SLICE_ONLY` field authorizes only the implementation stated above; all other UI and high-risk capabilities remain outside this contract.
 
 ## 2. Decision record summary
 
@@ -55,12 +55,13 @@ The UI must never treat the button press, a local optimistic update or free text
 
 ## 4. API surface
 
-The selected paths follow the existing controller’s most conservative `growth/actions` convention. A deployment may have a global `/api` prefix; this contract expresses the public prefix as `/api` and the implementation must validate the actual Nest global-prefix configuration without silently changing the semantic path.
+The implementation uses the existing Nest controller paths with no configured global `/api` prefix in this repository. Deployments adding a global prefix must preserve the same semantic route suffixes; this contract records the source-tree paths exercised by test and web harnesses.
 
 | Endpoint | UI use | Action class | External effect |
 |---|---|---|---|
-| `GET /api/families/{familyId}/growth/actions/today` | UI-01 task summary and UI-09 task detail bootstrap | Read Projection | None |
-| `POST /api/families/{familyId}/growth/actions/{taskId}/complete` | UI-09 submits a guardian task check-in | Named Action: `CompleteGrowthAction` | None; internal audit/outbox only |
+| `GET /families/{familyId}/today` | UI-01 task summary and UI-09 task detail bootstrap | `FamilyTodayProjection` read projection | None |
+| `POST /families/{familyId}/tasks/{taskId}/check-in` | UI-09 submits a guardian task check-in | facade over Named Action: `CompleteGrowthAction` | None; internal audit/outbox only |
+| `POST /families/{familyId}/growth/actions/{taskId}/complete` | Existing canonical action endpoint retained for existing consumers | Named Action: `CompleteGrowthAction` | None; internal audit/outbox only |
 
 ### 4.1 Common request requirements
 
@@ -118,10 +119,10 @@ interface FamilyTodayProjection {
   entry_state: EntryState;
   family_display: {
     display_name: string | null;
-    actor_role: 'OWNER' | 'GUARDIAN';
+    actor_scope: 'AUTHORIZED_FAMILY_MANAGER';
   };
   consent_state: {
-    state: 'GRANTED' | 'MISSING' | 'REVOKED' | 'REVIEW_REQUIRED';
+    state: 'COMMAND_POLICY_ENFORCED'; // GET does not claim a consent grant
     required_purposes: Array<'SERVICE' | 'ASSESSMENT' | 'GROWTH_TRACKING'>;
     policy_version: PolicyVersion;
   };
@@ -131,10 +132,16 @@ interface FamilyTodayProjection {
     policy_version: PolicyVersion;
     as_of: ISO8601;
   };
+  ai_ready: {
+    evidence_boundary: 'ACTION_CHECKIN_IS_NOT_OUTCOME_OR_CAUSAL_EFFECT';
+    recommendation_source: 'RULE_BASED_SYNTHETIC_NO_RECOMMENDATION';
+    model_gateway_status: 'NOOP_NOT_INVOKED';
+    agent_hint: 'READ_TODAY_AND_AWAIT_GUARDED_CHECKIN';
+  };
 }
 ```
 
-**Source rule.** `family_id`, `actor_role`, consent state, `today_task`, provenance and timestamps are server-derived. Clients must not submit or override any of these fields.
+**Source rule.** `family_id`, `actor_scope`, consent-state descriptor, `today_task`, provenance, AI-ready metadata and timestamps are server-derived. Clients must not submit or override any of these fields.
 
 ### 5.3 `TodayTaskProjection`
 
@@ -149,11 +156,11 @@ interface TodayTaskProjection {
   persisted_status: string; // existing controlled status, not client-owned
   completion_status: string | null;
   completed_at: ISO8601 | null;
-  reflection_boundary: 'PERSPECTIVE_ONLY';
+  reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME' | null;
   reflection_present: boolean;
   checkin_allowed: boolean;
   blocking_state: 'NONE' | 'CONSENT_REQUIRED' | 'REVIEW_REQUIRED' | 'FORBIDDEN' | 'STALE';
-  task_version: string | null;
+  task_version: null; // existing growth_actions has no version column in this slice
   as_of: ISO8601;
 }
 ```
@@ -198,10 +205,15 @@ interface TaskCheckinResultProjection {
     | 'VALIDATION_ERROR'
     | 'ERROR';
   action: TodayTaskProjection | null;
-  reflection_boundary: 'PERSPECTIVE_ONLY';
+  reflection_boundary: 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME' | null;
   correlation_id: CorrelationId;
   idempotency_key_ref: string;
   audit_status: 'RECORDED' | 'NOT_RECORDED';
+  next_hint: {
+    source: 'RULE_BASED_SYNTHETIC_NOOP';
+    text_key: 'REFRESH_TODAY_AFTER_CHECKIN';
+    model_gateway_status: 'NOOP_NOT_INVOKED';
+  };
 }
 ```
 
@@ -237,14 +249,14 @@ interface ApiError {
 ### 6.1 Read today projection
 
 ```http
-GET /api/families/{familyId}/growth/actions/today
+GET /families/{familyId}/today
 ```
 
 | Condition | HTTP status | Body | UI obligation |
 |---|---:|---|---|
 | Authorized family with pending task | `200` | `FamilyTodayProjection` with `entry_state='READY'` and non-null task | UI-01 renders summary; UI-09 renders task detail. |
 | Authorized family with no pending task | `200` | `FamilyTodayProjection` with `entry_state='EMPTY'`, `today_task=null` | Render canonical empty state; no fabricated task. |
-| Valid actor but consent blocked | `403` or approved policy mapping | `ApiError` with `CONSENT_REQUIRED` or `REVIEW_REQUIRED` | Preserve visual frame; hide task content according to policy. |
+| Valid actor with missing/revoked command consent | `200` read projection; `consent_state='COMMAND_POLICY_ENFORCED'` | `FamilyTodayProjection` does not claim a grant. | Preserve visual frame; command revalidates Consent and fails closed before write. |
 | Unauthorized / cross-family | `401` or `403` | `ApiError` | Do not disclose task/family existence beyond approved safe code. |
 | Invalid/missing family/task data | `404` | `ApiError` | Render safe non-sensitive error/empty route as approved. |
 | Projection stale/internal fault | `409` or `500` | `ApiError` | Do not fall back to static success data. |
@@ -252,7 +264,7 @@ GET /api/families/{familyId}/growth/actions/today
 ### 6.2 Submit task check-in
 
 ```http
-POST /api/families/{familyId}/growth/actions/{taskId}/complete
+POST /families/{familyId}/tasks/{taskId}/check-in
 Idempotency-Key: 4d21b42f-5c9a-42d4-8e49-7bda4c8eece4
 X-Correlation-Id: 9a15ec90-446f-4462-aea9-27af42a01f4a
 X-Source: ui-01-ui-09-first-slice
@@ -276,7 +288,7 @@ Content-Type: application/json
 | Idempotency | Lock action + key + request hash. Same hash replays stored receipt; different hash conflicts. | `IDEMPOTENCY_KEY_REQUIRED` / `IDEMPOTENCY_CONFLICT`. |
 | Transaction/audit/outbox | Persist state/readback, audit and internal outbox atomically; store response receipt. | `INTERNAL_ERROR`; no success state. |
 
-**Success response:** `200 TaskCheckinResultProjection` with `result_state='SUCCESS'` or `result_state='REPLAYED'`. The `action` field is the authoritative UI readback. No response may include an Outcome, diagnosis, score, ranking, provider recommendation, payment state or external-effect result.
+**Success response:** `201 TaskCheckinResultProjection` with `result_state='SUCCESS'` or `result_state='REPLAYED'`. The `action` field is the authoritative UI readback. No response may include an Outcome, diagnosis, score, ranking, provider recommendation, payment state or external-effect result.
 
 ## 7. State machine
 
@@ -344,9 +356,9 @@ The only allowed downstream record after a successful command is an internal aud
 | Playwright screenshot diff | capture runtime UI-01/UI-09 at approved baseline viewport, compare against frozen baseline and register deviations. | static shell, raw baseline, PPT/report image or fixture screenshot cannot be treated as runtime evidence. |
 
 ```text
-RUNTIME_SCREENSHOT_READY=NO
+RUNTIME_SCREENSHOT_READY=PENDING_DEV_SERVER_AND_SYNTHETIC_AUTH_FIXTURE
 PIXEL_DIFF_READY=NO
-FE_BE_CONSISTENCY=NOT_ESTABLISHED_UNTIL_IMPLEMENTATION_AND_TESTS
+FE_BE_CONSISTENCY=UNIT_AND_WEB_CONTRACT_TESTED__REAL_POSTGRES_E2E_PENDING_ENVIRONMENT
 ```
 
 ## 11. Implementation handoff checklist — not executed in this phase
@@ -372,10 +384,11 @@ This formal contract excludes AI or model calls, Outcome creation, diagnosis, fa
 
 ```text
 CONTRACT_APPROVED_FOR_DRAFTING=YES
-IMPLEMENTATION_ALLOWED=NO
-BUSINESS_CODE_MODIFIED=NO
+IMPLEMENTATION_ALLOWED=YES__UI01_UI09_GUARDED_SLICE_ONLY
+BUSINESS_CODE_MODIFIED=YES__UI01_UI09_GUARDED_SLICE_ONLY
 OPENAPI_FILES_CREATED=0
-NEXT_APPROVAL_REQUIRED=GUARDED_UI01_UI09_IMPLEMENTATION_APPROVAL
+IMPLEMENTATION_SCOPE=FamilyTodayProjection_to_CompleteGrowthAction_to_TaskCheckinResultProjection
+NEXT_APPROVAL_REQUIRED=NONE_FOR_CURRENT_GUARDED_SLICE__SEPARATE_APPROVAL_REQUIRED_FOR_ANY_OTHER_UI_OR_HIGH_RISK_EFFECT
 ```
 
 ## 14. References
@@ -387,3 +400,22 @@ NEXT_APPROVAL_REQUIRED=GUARDED_UI01_UI09_IMPLEMENTATION_APPROVAL
 [3] [OWASP API Security Project, API1:2023 / API3:2023](https://owasp.org/www-project-api-security/) (object- and property-level authorization context).
 
 [4] `reports/m2/frontend/PHASE_D_API_CONTRACT_ENTRY_CRITERIA_AND_BLOCKERS_001.md` (contract entry criteria and implementation hold).
+
+
+## 15. Runtime visual verification — guarded implementation evidence
+
+| Surface | Runtime URL/state | Evidence path | Result | Boundary interpretation |
+|---|---|---|---|---|
+| UI-01 Home baseline | `/?product=test-loop&page=home` | `/home/ubuntu/screenshots/localhost_2026-08-18_15-30-04_6621.webp` | Opened successfully with supplied reference canvas and Today-task hotspot. | This is a runtime shell capture, not proof of a successful check-in. |
+| UI-09 Task baseline | `/?product=test-loop&page=growth-daily-task` | `/home/ubuntu/screenshots/localhost_2026-08-18_15-30-14_2978.webp` | Opened successfully with supplied task canvas and guarded completion CTA. | The visual master remains intact when synthetic API mode is disabled. |
+| UI-09 synthetic-api failure | `/?product=test-loop&page=growth-daily-task&firstSliceApi=synthetic-api` with no reachable API | `/home/ubuntu/screenshots/localhost_2026-08-18_15-30-26_8783.webp` | Fail-closed panel states that no local substitute task is shown. | This proves the UI does not fabricate read or command success when the API is unavailable. |
+
+```text
+RUNTIME_SHELL_UI01=OPENED
+RUNTIME_SHELL_UI09=OPENED
+SYNTHETIC_API_FAIL_CLOSED=VERIFIED
+SUCCESSFUL_API_BROWSER_SCREENSHOT=BLOCKED_BY_REAL_POSTGRES_TEST_AUTH_ENVIRONMENT
+PIXEL_DIFF=NOT_CLAIMED__RUNTIME_VIEWPORT_AND_BASELINE_DIMENSIONS_NOT_YET_NORMALIZED
+```
+
+The image files above remain untracked validation evidence and are not part of this commit. Browser-level successful API check-in requires a disposable authenticated synthetic family against the real PostgreSQL E2E environment. The API unit/controller tests and Web contract test currently provide the positive path, while the browser proves the no-fallback runtime behavior.
