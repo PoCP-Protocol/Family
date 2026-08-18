@@ -16,6 +16,7 @@
     "@family/ai-gateway": "workspace:*",
     "@family/avatar-gateway": "workspace:*",
     "@family/fpai-multimodal-contracts": "workspace:*",
+    "@family/fpai-multimodal-runtime": "workspace:*",
     "@family/fpai-performance-planner": "workspace:*",
     "@family/principal-ai": "workspace:*",
     "@family/speech-gateway": "workspace:*"

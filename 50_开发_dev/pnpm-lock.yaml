@@ -257,6 +257,19 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  packages/fpai-multimodal-runtime:
+    dependencies:
+      '@family/fpai-multimodal-contracts':
+        specifier: workspace:*
+        version: link:../fpai-multimodal-contracts
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.4
+        version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)(lightningcss@1.33.0)
+
   packages/fpai-performance-planner:
     dependencies:
       '@family/fpai-multimodal-contracts':
@@ -353,6 +366,9 @@ importers:
       '@family/fpai-multimodal-contracts':
         specifier: workspace:*
         version: link:../../../../packages/fpai-multimodal-contracts
+      '@family/fpai-multimodal-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/fpai-multimodal-runtime
       '@family/fpai-performance-planner':
         specifier: workspace:*
         version: link:../../../../packages/fpai-performance-planner

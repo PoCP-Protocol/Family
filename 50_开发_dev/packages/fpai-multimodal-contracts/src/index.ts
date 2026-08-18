@@ -1,4 +1,5 @@
 // Character Identity Contracts (FPAI-MM Visual IP Machine Contract Authority)
+// Defines WHO (character identity, visual DNA, IP constraints)
 export {
   CharacterIdentity,
   CharacterPose,
@@ -13,14 +14,6 @@ export {
   isCharacterIdentity,
   isCharacterStateValid,
 } from './characterIdentity';
-
-// Identity Resolution Runtime
-export {
-  IdentityResolver,
-  getIdentityResolver,
-  setIdentityResolver,
-  resetIdentityResolver,
-} from './identityResolver';
 
 export type PrincipalSceneMode = 'INTERACTIVE_CHAT' | 'MICRO_LESSON' | 'FAMILY_DIALOGUE';
 

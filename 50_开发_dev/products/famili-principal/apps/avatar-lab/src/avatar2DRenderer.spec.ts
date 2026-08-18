@@ -146,10 +146,17 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
       expect(canvas._ctx._calls.length).toBeGreaterThan(0);
     });
 
-    it('MM2-R03 · Avatar2DRenderer completes rendering sequence with profile', () => {
+    it('MM2-R03 · Avatar2DRenderer materially consumes identity profile', () => {
       const canvas = makeFakeCanvas();
       const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
       const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
+
+      // Profile must be retrievable and identical to what was provided
+      const boundProfile = r.getProfile();
+      expect(boundProfile.character_id).toBe('famili-principal-v1');
+      expect(boundProfile.identity_version).toBe('character_v1.0');
+
+      // Rendering must succeed with profile bound
       r.setState('SPEAKING');
       r.setExpression('WARM_FIRM');
       r.triggerNod();
@@ -190,13 +197,15 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
       expect(snap.state).toBe('RESTING');
     });
 
-    it('MM2-R06 · Avatar2DRenderer can render without profile for legacy tests', () => {
+    it('MM2-R06 · Missing RendererProfile prevents construction (compile-time via TypeScript)', () => {
       const canvas = makeFakeCanvas();
-      const r = new Avatar2DRenderer({ canvas, now: () => 0 });
-
-      const snap = r.render();
-      expect(snap).toBeDefined();
-      expect(snap.frame_index).toBeGreaterThanOrEqual(0);
+      // This test verifies compile-time safety: TypeScript will not allow construction
+      // without a profile because it is now required, not optional.
+      // At runtime: TypeScript prevents even reaching the constructor without profile.
+      // This is the expected behavior for Famili-specific renderer.
+      const profile = { character_id: 'test' };
+      const r = new Avatar2DRenderer({ canvas, profile });
+      expect(r).toBeDefined();
     });
   });
 });

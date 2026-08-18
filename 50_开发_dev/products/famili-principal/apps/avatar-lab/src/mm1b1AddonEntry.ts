@@ -20,7 +20,8 @@ import { StreamingAudioPlayer } from './streamingAudioPlayer';
 import { SpeechPlaybackClock } from './speechPlaybackClock';
 import { VisemeScheduler } from './visemeScheduler';
 import { RealMicUi } from './realMicUi';
-import { getIdentityResolver, type CharacterIdentity } from '@family/fpai-multimodal-contracts'; // MM2: Runtime identity binding
+import { getIdentityResolver } from '@family/fpai-multimodal-runtime'; // MM2: Runtime identity binding (PATCH-003)
+import type { CharacterIdentity } from '@family/fpai-multimodal-contracts';
 
 interface AddonQueryFlags {
   real_speech: 'YES' | 'NO';
