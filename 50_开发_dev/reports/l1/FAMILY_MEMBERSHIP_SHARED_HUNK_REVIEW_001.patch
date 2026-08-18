@@ -1,0 +1,318 @@
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[1mindex d9060a1..fc7cb25 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[36m@@ -12,7 +12,8 @@[m [mexport type FamilyNamedAction =[m
+   | 'ConfirmGrowthPriority' | 'StartIntervention' | 'CompleteAction' | 'GrantExternalAccess'[m
+   // FAMILY-GROWTH-VERTICAL-SLICE-001 · V3 编排 NamedActions(家长面向 12–15 纵切)。[m
+   | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp'[m
+[31m-  | 'SubmitCommerceIntent' | 'SubmitServiceBooking';[m
+[32m+[m[32m  | 'ExecuteTestExperienceAction' | 'ExecuteFamilyPageObjectAction'[m
+[32m+[m[32m  | 'SubmitCommerceIntent' | 'SubmitServiceBooking' | 'ManageMembershipEntitlement';[m
+ type Decision = 'ALLOW' | 'DENY' | 'LIMITED';[m
+ [m
+ // 显式矩阵(裁决 §6):行=NamedAction,列=角色。缺省视为 DENY(fail closed)。[m
+[36m@@ -34,8 +35,15 @@[m [mconst MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {[m
+   ConfirmGrowthIntent:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+   DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+   SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 34 页商业流程的真实 DEV/TEST 状态机：仅测试 fixture、测试数据库和零外部副作用；仍由领域层校验 page/action/fixture/consent。[m
+[32m+[m[32m  ExecuteTestExperienceAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  ExecuteFamilyPageObjectAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 商城商品→订单意向→权益回执：仅本地 DEV/TEST 数据与 no-op adapter，不能触发支付或生产权益。[m
+   SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 服务供给→预约请求→服务记录：仅本地 DEV/TEST 供给与 no-op 通知适配器，不确认真人服务。[m
+   SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 会员计划→订阅→权益授予/消耗/撤销：仅 DEV/TEST 事实与 no-op 支付/通知，不写生产会员权益。[m
+[32m+[m[32m  ManageMembershipEntitlement: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+ };[m
+ [m
+ /** 该角色能否执行该 NamedAction(DENY / 缺省 → 不能;ALLOW/LIMITED → 能过角色门)。 */[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/family-product-event.contract.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/family-product-event.contract.ts"[m
+[1mindex 67853fe..d636f08 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/family-product-event.contract.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/family-product-event.contract.ts"[m
+[36m@@ -8,6 +8,7 @@[m [mexport const FAMILY_PRODUCT_EVENT_TYPES = [[m
+   'publication_recorded', 'service_record_viewed', 'profile_viewed', 'record_withdrawn', 'asset_revoked',[m
+   'order_intent_submitted', 'order_intent_cancelled', 'entitlement_receipted',[m
+   'booking_request_submitted', 'booking_request_cancelled',[m
+[32m+[m[32m  'membership_subscribed', 'membership_benefit_consumed', 'membership_benefit_revoked',[m
+ ] as const;[m
+ export type FamilyProductEventType = (typeof FAMILY_PRODUCT_EVENT_TYPES)[number];[m
+ [m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[1mindex 6aa4139..a3aa674 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[36m@@ -8,10 +8,16 @@[m [mimport { randomUUID } from 'node:crypto';[m
+ import type { FamilyDecisionType } from '@family/contracts';[m
+ import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';[m
+ import { OrchestrationService } from './orchestration.service';[m
+[32m+[m[32mimport { TestExperienceService } from './test-experience.service';[m
+[32m+[m[32mimport { FamilyPageObjectsService } from './family-page-objects.service';[m
+ import { FamilyCommerceIntentService } from './family-commerce-intent.service';[m
+ import { FamilyServiceBookingService } from './family-service-booking.service';[m
+[32m+[m[32mimport { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';[m
+[32m+[m[32mimport type { ExecuteTestExperienceDto } from './test-experience.contract';[m
+[32m+[m[32mimport type { FamilyPageObjectActionDto } from './family-page-objects.contract';[m
+ import type { CancelOrderIntentDto, SubmitOrderIntentDto } from './family-commerce-intent.contract';[m
+ import type { CancelBookingDto, RequestBookingDto } from './family-service-booking.contract';[m
+[32m+[m[32mimport type { ConsumeMembershipBenefitDto, RevokeMembershipBenefitDto, SubscribeMembershipDto } from './family-membership-entitlement.contract';[m
+ import type { ConfirmSyntheticIntentDto, RecordSyntheticDecisionDto, StartSyntheticNeedDto } from './l0-l1-test-loop.dto';[m
+ import { assessmentIntakeStub, gatewayStub, humanGatePlaceholder } from './stubs/test-loop-governance-stubs';[m
+ [m
+[36m@@ -23,8 +29,11 @@[m [mfunction corr(c?: string): string { return c && c.trim() ? c : randomUUID(); }[m
+ export class OrchestrationController {[m
+   constructor([m
+     @Inject(OrchestrationService) private readonly svc: OrchestrationService,[m
+[32m+[m[32m    @Inject(TestExperienceService) private readonly testExperience: TestExperienceService,[m
+[32m+[m[32m    @Inject(FamilyPageObjectsService) private readonly pageObjects: FamilyPageObjectsService,[m
+     @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,[m
+     @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,[m
+[32m+[m[32m    @Inject(FamilyMembershipEntitlementService) private readonly membershipEntitlements: FamilyMembershipEntitlementService,[m
+   ) {}[m
+ [m
+   @Get('home')[m
+[36m@@ -190,40 +199,60 @@[m [mexport class OrchestrationController {[m
+     return { entries: await this.svc.replayFamilyLlm(familyId, correlationId) };[m
+   }[m
+ [m
+[31m-  @Post('orchestration/test-loop/stubs/gateway')[m
+[31m-  @RequireOrchestrationAction('ReadFamily')[m
+[31m-  async testLoopGatewayStub() {[m
+[31m-    await this.svc.testLoopCapability();[m
+[31m-    return gatewayStub();[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * 正式 DEV/TEST 体验动作入口。请求只能引用固定 fixture，页面和动作组合由服务端策略复验；[m
+[32m+[m[32m   * 绝不接收金额、联系人、自由文本、provider 参数或任何生产副作用参数。[m
+[32m+[m[32m   */[m
+[32m+[m[32m  @Post('orchestration/test-loop/experience/operations')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteTestExperienceAction')[m
+[32m+[m[32m  async executeTestExperience([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: ExecuteTestExperienceDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.testExperience.execute(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+   }[m
+ [m
+[31m-  @Post('orchestration/test-loop/stubs/intake')[m
+[31m-  @RequireOrchestrationAction('ReadFamily')[m
+[31m-  async testLoopIntakeStub(@Body() body: { category?: 'L2_STANDARDIZED_TOOL' | 'L3_SAFETY_TOOL' | 'ADT_OR_BIOMETRIC' }) {[m
+[31m-    await this.svc.testLoopCapability();[m
+[31m-    return assessmentIntakeStub(body?.category ?? 'L2_STANDARDIZED_TOOL');[m
+[32m+[m[32m  @Post('orchestration/test-loop/experience/operations/:operationId/cancel')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteTestExperienceAction')[m
+[32m+[m[32m  async cancelTestExperience(@Param('familyId') familyId: string, @Param('operationId') operationId: string) {[m
+[32m+[m[32m    return this.testExperience.cancel(familyId, operationId);[m
+   }[m
+ [m
+[31m-  @Post('orchestration/test-loop/stubs/human-gate')[m
+[32m+[m[32m  @Get('orchestration/test-loop/experience/customer-projection')[m
+   @RequireOrchestrationAction('ReadFamily')[m
+[31m-  async testLoopHumanGateStub() {[m
+[31m-    await this.svc.testLoopCapability();[m
+[31m-    return humanGatePlaceholder();[m
+[32m+[m[32m  async testExperienceCustomerProjection(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.testExperience.customerProjection(familyId);[m
+   }[m
+ [m
+[31m-  @Get('orchestration/context-reuse')[m
+[32m+[m[32m  @Get('orchestration/test-loop/page-objects')[m
+   @RequireOrchestrationAction('ReadFamily')[m
+[31m-  async contextReuse(@Param('familyId') familyId: string, @Query('subject_person_id') subject?: string) {[m
+[31m-    if (!subject) throw new BadRequestException('subject_person_id required');[m
+[31m-    return this.svc.contextReuse(familyId, subject);[m
+[32m+[m[32m  async familyPageObjects(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.pageObjects.projection(familyId);[m
+   }[m
+ [m
+[32m+[m[32m  @Post('orchestration/test-loop/page-objects/actions')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteFamilyPageObjectAction')[m
+[32m+[m[32m  async familyPageObjectAction([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: FamilyPageObjectActionDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.pageObjects.act(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Versioned admitted products available to this trusted family's DEV/TEST commerce slice. */[m
+   @Get('orchestration/test-loop/commerce/products')[m
+   @RequireOrchestrationAction('ReadFamily')[m
+   async commerceProducts(@Param('familyId') familyId: string) {[m
+     return this.commerceIntents.products(familyId);[m
+   }[m
+ [m
+[32m+[m[32m  /** Records a no-payment commercial intent and an internal DEV/TEST entitlement receipt. */[m
+   @Post('orchestration/test-loop/commerce/order-intents')[m
+   @RequireOrchestrationAction('SubmitCommerceIntent')[m
+   async submitCommerceIntent([m
+[36m@@ -253,6 +282,7 @@[m [mexport class OrchestrationController {[m
+     return this.commerceIntents.customerProjection(familyId);[m
+   }[m
+ [m
+[32m+[m[32m  /** Admitted DEV/TEST service supply, including qualified providers and future no-op availability slots. */[m
+   @Get('orchestration/test-loop/services/offerings')[m
+   @RequireOrchestrationAction('ReadFamily')[m
+   async serviceOfferings(@Param('familyId') familyId: string) {[m
+[36m@@ -261,7 +291,11 @@[m [mexport class OrchestrationController {[m
+ [m
+   @Get('orchestration/test-loop/services/slots')[m
+   @RequireOrchestrationAction('ReadFamily')[m
+[31m-  async serviceSlots(@Param('familyId') familyId: string, @Query('service_offering_ref') serviceOfferingRef?: string, @Query('service_offering_version') serviceOfferingVersion?: string) {[m
+[32m+[m[32m  async serviceSlots([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Query('service_offering_ref') serviceOfferingRef?: string,[m
+[32m+[m[32m    @Query('service_offering_version') serviceOfferingVersion?: string,[m
+[32m+[m[32m  ) {[m
+     const version = Number(serviceOfferingVersion);[m
+     if (!serviceOfferingRef || !Number.isInteger(version) || version <= 0) {[m
+       throw new BadRequestException('service_offering_ref and service_offering_version required');[m
+[36m@@ -269,6 +303,7 @@[m [mexport class OrchestrationController {[m
+     return this.serviceBookings.slots(familyId, serviceOfferingRef, version);[m
+   }[m
+ [m
+[32m+[m[32m  /** Records a family booking request and a no-op DEV/TEST service-record receipt. No calendar or notification is sent. */[m
+   @Post('orchestration/test-loop/services/booking-requests')[m
+   @RequireOrchestrationAction('SubmitServiceBooking')[m
+   async requestServiceBooking([m
+[36m@@ -298,4 +333,80 @@[m [mexport class OrchestrationController {[m
+     return this.serviceBookings.customerProjection(familyId);[m
+   }[m
+ [m
+[32m+[m[32m  /** Versioned fixture-only membership plans; no payment or renewal channel is exposed. */[m
+[32m+[m[32m  @Get('orchestration/test-loop/membership/plans')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async membershipPlans(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.membershipEntitlements.plans(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Creates a DEV/TEST family membership subscription and internal benefit grants only. */[m
+[32m+[m[32m  @Post('orchestration/test-loop/membership/subscriptions')[m
+[32m+[m[32m  @RequireOrchestrationAction('ManageMembershipEntitlement')[m
+[32m+[m[32m  async subscribeMembership([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: SubscribeMembershipDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.membershipEntitlements.subscribe(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/membership/benefits/consume')[m
+[32m+[m[32m  @RequireOrchestrationAction('ManageMembershipEntitlement')[m
+[32m+[m[32m  async consumeMembershipBenefit([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: ConsumeMembershipBenefitDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.membershipEntitlements.consume(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/membership/benefits/revoke')[m
+[32m+[m[32m  @RequireOrchestrationAction('ManageMembershipEntitlement')[m
+[32m+[m[32m  async revokeMembershipBenefit([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: RevokeMembershipBenefitDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.membershipEntitlements.revoke(familyId, actor.personId, body ?? {}, corr(correlationId));[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/membership/customer-projection')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async membershipCustomerProjection(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.membershipEntitlements.customerProjection(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/stubs/gateway')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async testLoopGatewayStub() {[m
+[32m+[m[32m    await this.svc.testLoopCapability();[m
+[32m+[m[32m    return gatewayStub();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/stubs/intake')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async testLoopIntakeStub(@Body() body: { category?: 'L2_STANDARDIZED_TOOL' | 'L3_SAFETY_TOOL' | 'ADT_OR_BIOMETRIC' }) {[m
+[32m+[m[32m    await this.svc.testLoopCapability();[m
+[32m+[m[32m    return assessmentIntakeStub(body?.category ?? 'L2_STANDARDIZED_TOOL');[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/stubs/human-gate')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async testLoopHumanGateStub() {[m
+[32m+[m[32m    await this.svc.testLoopCapability();[m
+[32m+[m[32m    return humanGatePlaceholder();[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/context-reuse')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async contextReuse(@Param('familyId') familyId: string, @Query('subject_person_id') subject?: string) {[m
+[32m+[m[32m    if (!subject) throw new BadRequestException('subject_person_id required');[m
+[32m+[m[32m    return this.svc.contextReuse(familyId, subject);[m
+[32m+[m[32m  }[m
+ }[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[1mindex 927a6b1..fd62b7e 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[36m@@ -14,9 +14,12 @@[m [mimport { AuditReplayService } from './llm-gateway/audit-replay.service';[m
+ import { ContextAssemblerService } from './llm-gateway/context-assembler.service';[m
+ import { FamilyLlmGatewayService } from './llm-gateway/family-llm-gateway.service';[m
+ import { FamilyLlmOutputValidator } from './llm-gateway/output-validator';[m
+[32m+[m[32mimport { TestExperienceService } from './test-experience.service';[m
+[32m+[m[32mimport { FamilyPageObjectsService } from './family-page-objects.service';[m
+ import { FamilyProductEventService } from './family-product-event.service';[m
+ import { FamilyCommerceIntentService } from './family-commerce-intent.service';[m
+ import { FamilyServiceBookingService } from './family-service-booking.service';[m
+[32m+[m[32mimport { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';[m
+ [m
+ @Module({[m
+   imports: [AuthModule, PrincipalModule],[m
+[36m@@ -29,9 +32,12 @@[m [mimport { FamilyServiceBookingService } from './family-service-booking.service';[m
+     FamilyLlmOutputValidator,[m
+     AuditReplayService,[m
+     FamilyLlmGatewayService,[m
+[32m+[m[32m    TestExperienceService,[m
+[32m+[m[32m    FamilyPageObjectsService,[m
+     FamilyProductEventService,[m
+     FamilyCommerceIntentService,[m
+     FamilyServiceBookingService,[m
+[32m+[m[32m    FamilyMembershipEntitlementService,[m
+   ],[m
+ })[m
+ export class OrchestrationModule {}[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[1mindex d440331..c9a8ea5 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[36m@@ -75,11 +75,18 @@[m [mexport async function seedAiConsentSubject([m
+ /** 清编排域表(FAMILY-GROWTH-VERTICAL-SLICE-001;children-first FK 序);to_regclass 守卫兼容未迁移 0020 的库。 */[m
+ export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<void> {[m
+   const tables = [[m
+[32m+[m[32m    // Event and membership/booking/commerce facts must clear before Tenant/Family bases; supply masters remain fixture-only.[m
+[32m+[m[32m    'family_membership_benefit_ledger', 'family_membership_benefit_grants', 'family_membership_subscriptions',[m
+[32m+[m[32m    'family_membership_benefit_definitions', 'family_membership_plans',[m
+     'family_product_events',[m
+     'family_booking_service_records', 'family_booking_requests', 'family_service_availability_slots', 'family_service_offerings', 'family_service_providers',[m
+     'family_entitlements', 'family_order_intent_lines', 'family_order_intents', 'family_product_offerings',[m
+[31m-    'tenant_family_bindings', 'tenant_policy_profiles', 'tenant_catalog_bindings', 'tenant_account_memberships', 'tenants',[m
+[32m+[m[32m    'family_service_records', 'family_page_task_items', 'family_support_report_snapshots', 'family_profile_snapshots',[m
+[32m+[m[32m    'test_experience_operations',[m
+     'family_llm_gateway_audits',[m
+[32m+[m[32m    'multimodal_audit_events', 'multimodal_derived_artifacts', 'multimodal_processing_runs', 'multimodal_assets', 'multimodal_consents',[m
+[32m+[m[32m    'multimodal_output_schemas', 'multimodal_processing_policies', 'multimodal_capability_profiles',[m
+[32m+[m[32m    'tenant_catalog_bindings', 'tenant_policy_profiles', 'tenant_family_bindings', 'tenant_account_memberships', 'tenants',[m
+     'service_followup_responses', 'service_contributions', 'service_cases',[m
+     'orchestration_plans', 'family_service_decisions', 'resource_recommendations',[m
+     'eligibility_evaluations', 'growth_intents', 'growth_need_signals', 'growth_need_inputs',[m

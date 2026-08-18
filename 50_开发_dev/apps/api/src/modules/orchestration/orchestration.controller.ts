@@ -6,8 +6,6 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { FamilyDecisionType } from '@family/contracts';
-import type { ExecuteTestExperienceDto } from './test-experience.contract';
-import type { FamilyPageObjectActionDto } from './family-page-objects.contract';
 import { OrchestrationAuthGuard, OrchestrationActor, RequireOrchestrationAction } from './orchestration-auth.guard';
 import { OrchestrationService } from './orchestration.service';
 import { TestExperienceService } from './test-experience.service';
@@ -15,8 +13,10 @@ import { FamilyPageObjectsService } from './family-page-objects.service';
 import { FamilyCommerceIntentService } from './family-commerce-intent.service';
 import { FamilyServiceBookingService } from './family-service-booking.service';
 import { FamilyMembershipEntitlementService } from './family-membership-entitlement.service';
+import type { ExecuteTestExperienceDto } from './test-experience.contract';
+import type { FamilyPageObjectActionDto } from './family-page-objects.contract';
 import type { CancelOrderIntentDto, SubmitOrderIntentDto } from './family-commerce-intent.contract';
-import type { CancelBookingDto, RequestBookingDto } from './family-service-booking.contract';
+import type { CancelBookingDto, RequestBookingDto, ServiceSupplyListQueryDto } from './family-service-booking.contract';
 import type { ConsumeMembershipBenefitDto, RevokeMembershipBenefitDto, SubscribeMembershipDto } from './family-membership-entitlement.contract';
 import type { ConfirmSyntheticIntentDto, RecordSyntheticDecisionDto, StartSyntheticNeedDto } from './l0-l1-test-loop.dto';
 import { assessmentIntakeStub, gatewayStub, humanGatePlaceholder } from './stubs/test-loop-governance-stubs';
@@ -199,35 +199,6 @@ export class OrchestrationController {
     return { entries: await this.svc.replayFamilyLlm(familyId, correlationId) };
   }
 
-  @Post('orchestration/test-loop/stubs/gateway')
-  @RequireOrchestrationAction('ReadFamily')
-  async testLoopGatewayStub() {
-    await this.svc.testLoopCapability();
-    return gatewayStub();
-  }
-
-  @Post('orchestration/test-loop/stubs/intake')
-  @RequireOrchestrationAction('ReadFamily')
-  async testLoopIntakeStub(@Body() body: { category?: 'L2_STANDARDIZED_TOOL' | 'L3_SAFETY_TOOL' | 'ADT_OR_BIOMETRIC' }) {
-    await this.svc.testLoopCapability();
-    return assessmentIntakeStub(body?.category ?? 'L2_STANDARDIZED_TOOL');
-  }
-
-  @Post('orchestration/test-loop/stubs/human-gate')
-  @RequireOrchestrationAction('ReadFamily')
-  async testLoopHumanGateStub() {
-    await this.svc.testLoopCapability();
-    return humanGatePlaceholder();
-  }
-
-  @Get('orchestration/context-reuse')
-  @RequireOrchestrationAction('ReadFamily')
-  async contextReuse(@Param('familyId') familyId: string, @Query('subject_person_id') subject?: string) {
-    if (!subject) throw new BadRequestException('subject_person_id required');
-    return this.svc.contextReuse(familyId, subject);
-  }
-
-
   /**
    * 正式 DEV/TEST 体验动作入口。请求只能引用固定 fixture，页面和动作组合由服务端策略复验；
    * 绝不接收金额、联系人、自由文本、provider 参数或任何生产副作用参数。
@@ -274,12 +245,14 @@ export class OrchestrationController {
     return this.pageObjects.act(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);
   }
 
+  /** Versioned admitted products available to this trusted family's DEV/TEST commerce slice. */
   @Get('orchestration/test-loop/commerce/products')
   @RequireOrchestrationAction('ReadFamily')
   async commerceProducts(@Param('familyId') familyId: string) {
     return this.commerceIntents.products(familyId);
   }
 
+  /** Records a no-payment commercial intent and an internal DEV/TEST entitlement receipt. */
   @Post('orchestration/test-loop/commerce/order-intents')
   @RequireOrchestrationAction('SubmitCommerceIntent')
   async submitCommerceIntent(
@@ -309,15 +282,23 @@ export class OrchestrationController {
     return this.commerceIntents.customerProjection(familyId);
   }
 
+  /** Admitted DEV/TEST service supply, including qualified providers and future no-op availability slots. */
   @Get('orchestration/test-loop/services/offerings')
   @RequireOrchestrationAction('ReadFamily')
-  async serviceOfferings(@Param('familyId') familyId: string) {
-    return this.serviceBookings.offerings(familyId);
+  async serviceOfferings(
+    @Param('familyId') familyId: string,
+    @Query() query: ServiceSupplyListQueryDto,
+  ) {
+    return this.serviceBookings.offerings(familyId, query ?? {});
   }
 
   @Get('orchestration/test-loop/services/slots')
   @RequireOrchestrationAction('ReadFamily')
-  async serviceSlots(@Param('familyId') familyId: string, @Query('service_offering_ref') serviceOfferingRef?: string, @Query('service_offering_version') serviceOfferingVersion?: string) {
+  async serviceSlots(
+    @Param('familyId') familyId: string,
+    @Query('service_offering_ref') serviceOfferingRef?: string,
+    @Query('service_offering_version') serviceOfferingVersion?: string,
+  ) {
     const version = Number(serviceOfferingVersion);
     if (!serviceOfferingRef || !Number.isInteger(version) || version <= 0) {
       throw new BadRequestException('service_offering_ref and service_offering_version required');
@@ -325,6 +306,7 @@ export class OrchestrationController {
     return this.serviceBookings.slots(familyId, serviceOfferingRef, version);
   }
 
+  /** Records a family booking request and a no-op DEV/TEST service-record receipt. No calendar or notification is sent. */
   @Post('orchestration/test-loop/services/booking-requests')
   @RequireOrchestrationAction('SubmitServiceBooking')
   async requestServiceBooking(
@@ -354,13 +336,14 @@ export class OrchestrationController {
     return this.serviceBookings.customerProjection(familyId);
   }
 
-
+  /** Versioned fixture-only membership plans; no payment or renewal channel is exposed. */
   @Get('orchestration/test-loop/membership/plans')
   @RequireOrchestrationAction('ReadFamily')
   async membershipPlans(@Param('familyId') familyId: string) {
     return this.membershipEntitlements.plans(familyId);
   }
 
+  /** Creates a DEV/TEST family membership subscription and internal benefit grants only. */
   @Post('orchestration/test-loop/membership/subscriptions')
   @RequireOrchestrationAction('ManageMembershipEntitlement')
   async subscribeMembership(
@@ -402,4 +385,31 @@ export class OrchestrationController {
     return this.membershipEntitlements.customerProjection(familyId);
   }
 
+  @Post('orchestration/test-loop/stubs/gateway')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopGatewayStub() {
+    await this.svc.testLoopCapability();
+    return gatewayStub();
+  }
+
+  @Post('orchestration/test-loop/stubs/intake')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopIntakeStub(@Body() body: { category?: 'L2_STANDARDIZED_TOOL' | 'L3_SAFETY_TOOL' | 'ADT_OR_BIOMETRIC' }) {
+    await this.svc.testLoopCapability();
+    return assessmentIntakeStub(body?.category ?? 'L2_STANDARDIZED_TOOL');
+  }
+
+  @Post('orchestration/test-loop/stubs/human-gate')
+  @RequireOrchestrationAction('ReadFamily')
+  async testLoopHumanGateStub() {
+    await this.svc.testLoopCapability();
+    return humanGatePlaceholder();
+  }
+
+  @Get('orchestration/context-reuse')
+  @RequireOrchestrationAction('ReadFamily')
+  async contextReuse(@Param('familyId') familyId: string, @Query('subject_person_id') subject?: string) {
+    if (!subject) throw new BadRequestException('subject_person_id required');
+    return this.svc.contextReuse(familyId, subject);
+  }
 }

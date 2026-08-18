@@ -35,10 +35,14 @@ const MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {
   ConfirmGrowthIntent:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   DecideGrowthService:   { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   SubmitServiceFollowUp: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  // 34 页商业流程的真实 DEV/TEST 状态机：仅测试 fixture、测试数据库和零外部副作用；仍由领域层校验 page/action/fixture/consent。
   ExecuteTestExperienceAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
   ExecuteFamilyPageObjectAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  // 商城商品→订单意向→权益回执：仅本地 DEV/TEST 数据与 no-op adapter，不能触发支付或生产权益。
   SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  // 服务供给→预约请求→服务记录：仅本地 DEV/TEST 供给与 no-op 通知适配器，不确认真人服务。
   SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
+  // 会员计划→订阅→权益授予/消耗/撤销：仅 DEV/TEST 事实与 no-op 支付/通知，不写生产会员权益。
   ManageMembershipEntitlement: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },
 };
 

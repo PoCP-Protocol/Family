@@ -10,8 +10,11 @@ import {
   type CancelBookingDto,
   type FamilyBookingProjection,
   type FamilyServiceRecordReceipt,
+  type FamilyServiceSupplyProjection,
   type RequestBookingDto,
   type ServiceOfferingReadModel,
+  type ServiceSupplyListQueryDto,
+  serviceSupplyListQueryAllowed,
 } from './family-service-booking.contract';
 import { requireDevSyntheticTestLoop } from './test-env.policy';
 
@@ -22,8 +25,15 @@ interface OfferingRow {
   title: string;
   provider_ref: string;
   provider_display_name: string;
+  provider_kind: 'TEACHER';
   qualification_status: 'ACTIVE';
   admission_status: 'ADMITTED';
+  offering_status: 'ACTIVE';
+  service_type: string | null;
+  age_band: string | null;
+  next_available_at: string | null;
+  next_available_channel: 'VIDEO' | 'TEXT' | 'OFFLINE' | null;
+  availability_status: 'AVAILABLE' | 'UNAVAILABLE';
   fixture_only: true;
   attributes_schema_version: number;
 }
@@ -129,26 +139,73 @@ export class FamilyServiceBookingService {
     return row;
   }
 
-  async offerings(familyId: string): Promise<{ tenant_id: string; offerings: ServiceOfferingReadModel[] }> {
+  async offerings(familyId: string, query: ServiceSupplyListQueryDto): Promise<FamilyServiceSupplyProjection> {
     requireDevSyntheticTestLoop();
+    if (!serviceSupplyListQueryAllowed(query)) throw new BadRequestException('service_supply_list_page_id_required');
+    if (query.service_type !== undefined && (!query.service_type.trim() || query.service_type.length > 80)) {
+      throw new BadRequestException('service_type_filter_invalid');
+    }
+    if (query.age_band !== undefined && (!query.age_band.trim() || query.age_band.length > 80)) {
+      throw new BadRequestException('age_band_filter_invalid');
+    }
+    if (query.available_only !== undefined && query.available_only !== 'true' && query.available_only !== 'false') {
+      throw new BadRequestException('available_only_filter_invalid');
+    }
+
+    await this.assertServiceConsent(familyId);
     const tenantId = await this.tenantForFamily(familyId);
+    const serviceType = query.service_type?.trim() || null;
+    const ageBand = query.age_band?.trim() || null;
+    const availableOnly = query.available_only === 'true';
     const result = await this.repo.query<OfferingRow>(
       `select o.service_offering_id, o.service_offering_ref, o.version_no, o.title,
-              p.provider_ref, p.display_name as provider_display_name,
-              p.qualification_status, o.admission_status, o.fixture_only, o.attributes_schema_version
+              p.provider_ref, p.display_name as provider_display_name, p.provider_kind,
+              p.qualification_status, o.admission_status, o.status::varchar as offering_status,
+              nullif(o.attributes->>'service_type','') as service_type,
+              nullif(o.attributes->>'age_band','') as age_band,
+              next_slot.starts_at as next_available_at,
+              next_slot.channel as next_available_channel,
+              case when next_slot.availability_slot_id is null then 'UNAVAILABLE' else 'AVAILABLE' end as availability_status,
+              o.fixture_only, o.attributes_schema_version
          from family_service_offerings o
          join family_service_providers p on p.provider_id=o.provider_id
-        where o.tenant_id=$1 and o.status='ACTIVE' and o.admission_status='ADMITTED'
-          and o.fixture_only=true and p.status='ACTIVE' and p.qualification_status='ACTIVE'
-          and p.admission_status='ADMITTED'
+         left join lateral (
+           select s.availability_slot_id, s.starts_at, s.channel
+             from family_service_availability_slots s
+            where s.tenant_id=o.tenant_id and s.provider_id=p.provider_id
+              and s.service_offering_id=o.service_offering_id and s.fixture_only=true
+              and s.status='AVAILABLE' and s.reserved_count<s.capacity and s.starts_at>now()
+            order by s.starts_at
+            limit 1
+         ) next_slot on true
+        where o.tenant_id=$1 and p.provider_kind='TEACHER'
+          and o.status='ACTIVE' and o.admission_status='ADMITTED' and o.fixture_only=true
+          and p.status='ACTIVE' and p.qualification_status='ACTIVE' and p.admission_status='ADMITTED'
           and o.effective_from <= now() and (o.effective_to is null or o.effective_to > now())
+          and ($2::varchar is null or o.attributes->>'service_type'=$2)
+          and ($3::varchar is null or o.attributes->>'age_band'=$3)
+          and ($4::boolean=false or next_slot.availability_slot_id is not null)
         order by o.service_offering_ref, o.version_no desc`,
-      [tenantId],
+      [tenantId, serviceType, ageBand, availableOnly],
     );
     const byRef = new Map<string, OfferingRow>();
     for (const row of result.rows) if (!byRef.has(row.service_offering_ref)) byRef.set(row.service_offering_ref, row);
+    const policy = await this.repo.query<{ policy_version: string }>(
+      `select policy_version from tenant_policy_profiles where tenant_id=$1 and status='ACTIVE' limit 1`,
+      [tenantId],
+    );
     return {
       tenant_id: tenantId,
+      family_id: familyId,
+      source_page_id: 'UI-19',
+      projection_version: 1,
+      as_of: new Date().toISOString(),
+      source_refs: ['family_service_providers', 'family_service_offerings', 'family_service_availability_slots'],
+      policy_version: policy.rows[0]?.policy_version ?? null,
+      visibility: 'FAMILY_SCOPED_ADMITTED_SUPPLY',
+      expires_at: null,
+      external_effect: false,
+      filters: { provider_kind: 'TEACHER', service_type: serviceType, age_band: ageBand, available_only: availableOnly },
       offerings: [...byRef.values()].map((row) => ({
         service_offering_id: row.service_offering_id,
         service_offering_ref: row.service_offering_ref,
@@ -156,11 +213,19 @@ export class FamilyServiceBookingService {
         title: row.title,
         provider_ref: row.provider_ref,
         provider_display_name: row.provider_display_name,
+        provider_kind: row.provider_kind,
         qualification_status: row.qualification_status,
         admission_status: row.admission_status,
+        offering_status: row.offering_status,
+        service_type: row.service_type,
+        age_band: row.age_band,
+        next_available_at: row.next_available_at,
+        next_available_channel: row.next_available_channel,
+        availability_status: row.availability_status,
         fixture_only: row.fixture_only,
         attributes_schema_version: row.attributes_schema_version,
       })),
+      text_equivalent: '以下显示当前家庭可见、已准入的教师服务供给。列表只读，不会预约、占座、通知或联系服务者。',
     };
   }
 

@@ -1,0 +1,241 @@
+           table_name
+---------------------------------
+ account_person_bindings
+ accounts
+ audit_logs
+ consents
+ eligibility_evaluations
+ evidence_records
+ families
+ family_llm_gateway_audits
+ family_memberships
+ family_page_task_items
+ family_profile_snapshots
+ family_relationships
+ family_service_decisions
+ family_service_records
+ family_support_report_snapshots
+ growth_actions
+ growth_events
+ growth_intents
+ growth_journeys
+ growth_need_inputs
+ growth_need_signals
+ growth_priorities
+ growth_profile_dimensions
+ growth_profile_drafts
+ growth_profiles
+ growth_reviews
+ idempotency_keys
+ identity_sessions
+ intervention_episodes
+ interventions
+ life_stage_assignments
+ milestones
+ multimodal_assets
+ multimodal_audit_events
+ multimodal_capability_profiles
+ multimodal_consents
+ multimodal_derived_artifacts
+ multimodal_output_schemas
+ multimodal_processing_policies
+ multimodal_processing_runs
+ next_step_decisions
+ orchestration_plans
+ otp_challenges
+ outbox_events
+ outcome_observations
+ outcomes
+ persons
+ perspectives
+ principal_action_proposals
+ principal_feedback
+ principal_human_handoffs
+ principal_messages
+ principal_model_attempts
+ principal_model_runs
+ principal_responses
+ principal_sessions
+ product_events
+ resource_recommendations
+ schema_migrations
+ service_cases
+ service_contributions
+ service_followup_responses
+ tenant_account_memberships
+ tenant_catalog_bindings
+ tenant_family_bindings
+ tenant_policy_profiles
+ tenants
+ test_experience_operations
+(68 rows)
+
+           table_name            |  column_name   |        data_type
+---------------------------------+----------------+--------------------------
+ account_person_bindings         | status         | USER-DEFINED
+ account_person_bindings         | created_at     | timestamp with time zone
+ accounts                        | status         | USER-DEFINED
+ accounts                        | created_at     | timestamp with time zone
+ accounts                        | updated_at     | timestamp with time zone
+ audit_logs                      | family_id      | uuid
+ audit_logs                      | created_at     | timestamp with time zone
+ consents                        | family_id      | uuid
+ consents                        | status         | USER-DEFINED
+ consents                        | created_at     | timestamp with time zone
+ eligibility_evaluations         | family_id      | uuid
+ evidence_records                | family_id      | uuid
+ evidence_records                | created_at     | timestamp with time zone
+ families                        | family_id      | uuid
+ families                        | status         | USER-DEFINED
+ families                        | created_at     | timestamp with time zone
+ families                        | updated_at     | timestamp with time zone
+ family_llm_gateway_audits       | family_id      | uuid
+ family_llm_gateway_audits       | created_at     | timestamp with time zone
+ family_memberships              | family_id      | uuid
+ family_memberships              | status         | USER-DEFINED
+ family_memberships              | created_at     | timestamp with time zone
+ family_memberships              | updated_at     | timestamp with time zone
+ family_page_task_items          | family_id      | uuid
+ family_page_task_items          | status         | USER-DEFINED
+ family_page_task_items          | created_at     | timestamp with time zone
+ family_profile_snapshots        | family_id      | uuid
+ family_profile_snapshots        | created_at     | timestamp with time zone
+ family_relationships            | family_id      | uuid
+ family_relationships            | created_at     | timestamp with time zone
+ family_service_decisions        | family_id      | uuid
+ family_service_records          | family_id      | uuid
+ family_service_records          | status         | USER-DEFINED
+ family_support_report_snapshots | family_id      | uuid
+ family_support_report_snapshots | status         | USER-DEFINED
+ family_support_report_snapshots | created_at     | timestamp with time zone
+ growth_actions                  | family_id      | uuid
+ growth_actions                  | status         | character varying
+ growth_actions                  | created_at     | timestamp with time zone
+ growth_events                   | family_id      | uuid
+ growth_events                   | created_at     | timestamp with time zone
+ growth_intents                  | family_id      | uuid
+ growth_intents                  | status         | USER-DEFINED
+ growth_journeys                 | family_id      | uuid
+ growth_journeys                 | status         | character varying
+ growth_journeys                 | created_at     | timestamp with time zone
+ growth_need_inputs              | family_id      | uuid
+ growth_need_inputs              | created_at     | timestamp with time zone
+ growth_need_signals             | family_id      | uuid
+ growth_need_signals             | created_at     | timestamp with time zone
+ growth_priorities               | family_id      | uuid
+ growth_priorities               | created_at     | timestamp with time zone
+ growth_priorities               | status         | character varying
+ growth_profile_drafts           | family_id      | uuid
+ growth_profile_drafts           | status         | character varying
+ growth_profile_drafts           | created_at     | timestamp with time zone
+ growth_profiles                 | family_id      | uuid
+ growth_profiles                 | effective_from | timestamp with time zone
+ growth_profiles                 | effective_to   | timestamp with time zone
+ growth_profiles                 | created_at     | timestamp with time zone
+ growth_profiles                 | status         | character varying
+ growth_reviews                  | family_id      | uuid
+ growth_reviews                  | status         | character varying
+ growth_reviews                  | created_at     | timestamp with time zone
+ idempotency_keys                | created_at     | timestamp with time zone
+ identity_sessions               | family_id      | uuid
+ identity_sessions               | created_at     | timestamp with time zone
+ intervention_episodes           | family_id      | uuid
+ intervention_episodes           | status         | character varying
+ intervention_episodes           | created_at     | timestamp with time zone
+ interventions                   | status         | character varying
+ interventions                   | created_at     | timestamp with time zone
+ life_stage_assignments          | family_id      | uuid
+ life_stage_assignments          | effective_from | timestamp with time zone
+ life_stage_assignments          | effective_to   | timestamp with time zone
+ life_stage_assignments          | created_at     | timestamp with time zone
+ milestones                      | family_id      | uuid
+ multimodal_assets               | tenant_id      | uuid
+ multimodal_assets               | family_id      | uuid
+ multimodal_assets               | status         | USER-DEFINED
+ multimodal_assets               | created_at     | timestamp with time zone
+ multimodal_audit_events         | tenant_id      | uuid
+ multimodal_audit_events         | family_id      | uuid
+ multimodal_audit_events         | created_at     | timestamp with time zone
+ multimodal_capability_profiles  | status         | character varying
+ multimodal_capability_profiles  | created_at     | timestamp with time zone
+ multimodal_capability_profiles  | updated_at     | timestamp with time zone
+ multimodal_consents             | tenant_id      | uuid
+ multimodal_consents             | family_id      | uuid
+ multimodal_consents             | status         | USER-DEFINED
+ multimodal_derived_artifacts    | tenant_id      | uuid
+ multimodal_derived_artifacts    | family_id      | uuid
+ multimodal_derived_artifacts    | created_at     | timestamp with time zone
+ multimodal_output_schemas       | status         | character varying
+ multimodal_output_schemas       | created_at     | timestamp with time zone
+ multimodal_processing_policies  | status         | character varying
+ multimodal_processing_policies  | created_at     | timestamp with time zone
+ multimodal_processing_runs      | tenant_id      | uuid
+ multimodal_processing_runs      | family_id      | uuid
+ multimodal_processing_runs      | status         | USER-DEFINED
+ multimodal_processing_runs      | created_at     | timestamp with time zone
+ next_step_decisions             | family_id      | uuid
+ next_step_decisions             | created_at     | timestamp with time zone
+ orchestration_plans             | family_id      | uuid
+ orchestration_plans             | status         | USER-DEFINED
+ orchestration_plans             | created_at     | timestamp with time zone
+ otp_challenges                  | created_at     | timestamp with time zone
+ outbox_events                   | created_at     | timestamp with time zone
+ outcome_observations            | family_id      | uuid
+ outcome_observations            | created_at     | timestamp with time zone
+ outcomes                        | family_id      | uuid
+ outcomes                        | created_at     | timestamp with time zone
+ persons                         | family_id      | uuid
+ persons                         | created_at     | timestamp with time zone
+ persons                         | updated_at     | timestamp with time zone
+ perspectives                    | family_id      | uuid
+ perspectives                    | created_at     | timestamp with time zone
+ principal_action_proposals      | family_id      | uuid
+ principal_action_proposals      | status         | character varying
+ principal_action_proposals      | created_at     | timestamp with time zone
+ principal_feedback              | family_id      | uuid
+ principal_feedback              | created_at     | timestamp with time zone
+ principal_human_handoffs        | family_id      | uuid
+ principal_human_handoffs        | status         | character varying
+ principal_human_handoffs        | created_at     | timestamp with time zone
+ principal_messages              | family_id      | uuid
+ principal_messages              | created_at     | timestamp with time zone
+ principal_model_attempts        | status         | character varying
+ principal_model_attempts        | created_at     | timestamp with time zone
+ principal_model_runs            | created_at     | timestamp with time zone
+ principal_responses             | family_id      | uuid
+ principal_responses             | created_at     | timestamp with time zone
+ principal_sessions              | family_id      | uuid
+ principal_sessions              | status         | character varying
+ principal_sessions              | created_at     | timestamp with time zone
+ product_events                  | family_id      | uuid
+ product_events                  | created_at     | timestamp with time zone
+ resource_recommendations        | family_id      | uuid
+ resource_recommendations        | status         | USER-DEFINED
+ resource_recommendations        | created_at     | timestamp with time zone
+ service_cases                   | family_id      | uuid
+ service_cases                   | status         | USER-DEFINED
+ tenant_account_memberships      | tenant_id      | uuid
+ tenant_account_memberships      | status         | USER-DEFINED
+ tenant_account_memberships      | created_at     | timestamp with time zone
+ tenant_account_memberships      | updated_at     | timestamp with time zone
+ tenant_catalog_bindings         | tenant_id      | uuid
+ tenant_catalog_bindings         | status         | character varying
+ tenant_catalog_bindings         | created_at     | timestamp with time zone
+ tenant_family_bindings          | tenant_id      | uuid
+ tenant_family_bindings          | family_id      | uuid
+ tenant_family_bindings          | status         | USER-DEFINED
+ tenant_family_bindings          | effective_from | timestamp with time zone
+ tenant_family_bindings          | effective_to   | timestamp with time zone
+ tenant_family_bindings          | created_at     | timestamp with time zone
+ tenant_family_bindings          | updated_at     | timestamp with time zone
+ tenant_policy_profiles          | tenant_id      | uuid
+ tenant_policy_profiles          | status         | character varying
+ tenant_policy_profiles          | created_at     | timestamp with time zone
+ tenants                         | tenant_id      | uuid
+ tenants                         | status         | USER-DEFINED
+ tenants                         | created_at     | timestamp with time zone
+ tenants                         | updated_at     | timestamp with time zone
+ test_experience_operations      | family_id      | uuid
+ test_experience_operations      | status         | USER-DEFINED
+ test_experience_operations      | created_at     | timestamp with time zone
+(166 rows)

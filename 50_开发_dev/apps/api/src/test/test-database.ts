@@ -75,15 +75,18 @@ export async function seedAiConsentSubject(
 /** 清编排域表(FAMILY-GROWTH-VERTICAL-SLICE-001;children-first FK 序);to_regclass 守卫兼容未迁移 0020 的库。 */
 export async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<void> {
   const tables = [
+    // Event and membership/booking/commerce facts must clear before Tenant/Family bases; supply masters remain fixture-only.
     'family_membership_benefit_ledger', 'family_membership_benefit_grants', 'family_membership_subscriptions',
     'family_membership_benefit_definitions', 'family_membership_plans',
     'family_product_events',
     'family_booking_service_records', 'family_booking_requests', 'family_service_availability_slots', 'family_service_offerings', 'family_service_providers',
     'family_entitlements', 'family_order_intent_lines', 'family_order_intents', 'family_product_offerings',
-    'test_experience_operations',
     'family_service_records', 'family_page_task_items', 'family_support_report_snapshots', 'family_profile_snapshots',
-    'tenant_family_bindings', 'tenant_policy_profiles', 'tenant_catalog_bindings', 'tenant_account_memberships', 'tenants',
+    'test_experience_operations',
     'family_llm_gateway_audits',
+    'multimodal_audit_events', 'multimodal_derived_artifacts', 'multimodal_processing_runs', 'multimodal_assets', 'multimodal_consents',
+    'multimodal_output_schemas', 'multimodal_processing_policies', 'multimodal_capability_profiles',
+    'tenant_catalog_bindings', 'tenant_policy_profiles', 'tenant_family_bindings', 'tenant_account_memberships', 'tenants',
     'service_followup_responses', 'service_contributions', 'service_cases',
     'orchestration_plans', 'family_service_decisions', 'resource_recommendations',
     'eligibility_evaluations', 'growth_intents', 'growth_need_signals', 'growth_need_inputs',

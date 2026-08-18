@@ -112,7 +112,7 @@ describe('Family service offering -> booking request -> service record DEV/TEST 
     const seed = await seedGuardian();
     const supply = await seedBookingSupply(seed.tenantId);
 
-    const offerings = await request(`/families/${seed.familyId}/orchestration/test-loop/services/offerings`, 'GET', seed.token);
+    const offerings = await request(`/families/${seed.familyId}/orchestration/test-loop/services/offerings?page_id=UI-19`, 'GET', seed.token);
     expect(offerings.status).toBe(200);
     expect((await offerings.json()).offerings).toMatchObject([{ service_offering_ref: supply.offeringRef, qualification_status: 'ACTIVE', fixture_only: true }]);
 
