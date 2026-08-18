@@ -37,7 +37,11 @@ function controller(overrides: Record<string, unknown> = {}) {
       ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED', evidence_boundary: 'ACTION_CHECKIN_IS_NOT_OUTCOME_OR_CAUSAL_EFFECT' },
     }),
   };
-  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any);
+  const devCoreGrowthService = {
+    getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [] }),
+    acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false }),
+  };
+  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any);
 }
 
 describe('UI-01/UI-09 first slice controller contract', () => {
@@ -50,6 +54,14 @@ describe('UI-01/UI-09 first slice controller contract', () => {
     });
     expect(result).not.toHaveProperty('outcome');
     expect(result).not.toHaveProperty('family_total_score');
+  });
+
+  it('returns the family-scoped DEV Core Growth projection and acknowledges no-op command without persistence', async () => {
+    const instance = controller();
+    await expect(instance.devCoreGrowth(familyId, actorId)).resolves.toMatchObject({ family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY' });
+    await expect(instance.devCoreGrowthCommand(familyId, actorId, { surface: 'UI-05', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT' })).resolves.toMatchObject({
+      family_id: familyId, surface: 'UI-05', status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false,
+    });
   });
 
   it('wraps the existing CompleteGrowthAction readback in TaskCheckinResultProjection', async () => {

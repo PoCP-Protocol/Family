@@ -186,3 +186,111 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('未展示任何本地替代数据');
   });
 });
+
+
+describe('UI-02~UI-10 DEV Core Growth projection', () => {
+  const familyId = '22222222-2222-4222-8222-222222222222';
+  const projection = {
+    projection_version: 'DEV_CORE_GROWTH_V1',
+    family_id: familyId,
+    data_source: 'SYNTHETIC_DEV_ONLY',
+    model_gateway: { status: 'NOOP_NOT_INVOKED' },
+    cards: [
+      {
+        surface: 'UI-02', title: '家庭成长测评入口', state: 'READY', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: 'DEV 演示从家庭场景进入成长 Onboarding。', next_hint: '可进入测评草稿。',
+        command: { name: 'START_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'CONTROLLED_DRAFT' },
+      },
+      {
+        surface: 'UI-03', title: '家庭测评草稿', state: 'DRAFT', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '关注维度为 DEV 示例。', next_hint: '草稿可被安全读取。',
+        command: { name: 'SAVE_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'NOOP_NOT_PERSISTED' },
+      },
+      {
+        surface: 'UI-04', title: '成长说明', state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '报告只解释草稿与限制。', next_hint: '下一步受控确认。',
+        command: { name: 'READ_SYNTHETIC_REPORT_EXPLANATION', mode: 'READ_ONLY' },
+      },
+      {
+        surface: 'UI-05', title: '90 天成长方案', state: 'DRAFT', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '四阶段计划结构。', next_hint: '衔接任务链路。',
+        command: { name: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', mode: 'CONTROLLED_DRAFT' },
+      },
+      {
+        surface: 'UI-06', title: '90 天陪跑', state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '任务节奏与回顾入口。', next_hint: '今日行动由受控 check-in 完成。',
+        command: { name: 'READ_SYNTHETIC_COMPANION_PROGRESS', mode: 'READ_ONLY' },
+      },
+      {
+        surface: 'UI-07', title: '我的成长服务', state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '只读计划与任务入口。', next_hint: '返回计划或任务。',
+        command: { name: 'READ_SYNTHETIC_GROWTH_SERVICE', mode: 'READ_ONLY' },
+      },
+      {
+        surface: 'UI-08', title: '成长报告', state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '解释性报告与限制。', next_hint: '不直接创建 Journey。',
+        command: { name: 'READ_SYNTHETIC_GROWTH_REPORT', mode: 'READ_ONLY' },
+      },
+      {
+        surface: 'UI-10', title: '成长小助手', state: 'NOOP', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '规则化任务入口。', next_hint: '后续受控切片实现孩子自主。',
+        command: { name: 'READ_SYNTHETIC_CHILD_ASSISTANT', mode: 'READ_ONLY' },
+      },
+    ],
+  };
+
+  it('binds every core growth reference surface to the same DEV projection and keeps baseline containers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test', familyId, authToken: 'synthetic-dev-token',
+      coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-assessment',
+    });
+    await tick(); await tick();
+    expect(root.dataset.familyCoreGrowthStatus).toBe('READY');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    expect(root.querySelector('.by-clear-reference')).not.toBeNull();
+
+    const pages: Array<[string, string]> = [
+      ['assessment', 'UI-03'], ['core-report', 'UI-04'], ['core-plan', 'UI-05'],
+      ['core-community', 'UI-06'], ['core-mine', 'UI-07'], ['growth-report', 'UI-08'], ['growth-child', 'UI-10'],
+    ];
+    for (const [page, surface] of pages) {
+      app.navigate(page);
+      expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('submits a DEV no-op acknowledgement without external effect or persistence', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => projection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'NOOP_ACKNOWLEDGED', external_effect: false, persistence: 'NONE' }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-assessment' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="dev-core-noop"]')?.click();
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [url, request] = fetchMock.mock.calls[1];
+    expect(url).toBe(`http://family-api.test/families/${familyId}/dev/core-growth/commands`);
+    expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(request.body))).toMatchObject({ surface: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT' });
+    expect(root.dataset.familyCoreGrowthNoop).toBe('NOOP_ACKNOWLEDGED');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('未持久化、未触发外部效果');
+  });
+
+  it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ code: 'FAMILY_FORBIDDEN' }) }));
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-plan' });
+    await tick(); await tick();
+    expect(root.dataset.familyCoreGrowthStatus).toBe('ERROR');
+    expect(root.querySelector('[data-core-growth-surface="UI-05"]')?.textContent).toContain('未展示本地替代数据');
+  });
+});

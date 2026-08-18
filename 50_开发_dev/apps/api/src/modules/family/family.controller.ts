@@ -25,6 +25,7 @@ import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
+import { DevCoreGrowthService } from './dev-core-growth.service';
 
 @Controller('families')
 @UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
@@ -37,6 +38,7 @@ export class FamilyController {
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
     @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
     @Inject(TodayService) private readonly todayService: TodayService,
+    @Inject(DevCoreGrowthService) private readonly devCoreGrowthService: DevCoreGrowthService,
   ) {}
 
   // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
@@ -63,6 +65,39 @@ export class FamilyController {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
     return this.todayService.getFamilyTodayProjection(familyId, actorId);
+  }
+
+  /**
+   * UI-02..UI-10 DEV-only Family Growth OS projection.
+   * It returns explicitly synthetic/read-only data to wire the visual pages without creating
+   * assessment facts, profiles, plans, outcomes, external effects or model calls.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/core-growth')
+  async devCoreGrowth(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return this.devCoreGrowthService.getProjection(familyId);
+  }
+
+  /** DEV-only trace acknowledgement: intentionally no DB write, audit persistence, outbox consumer or external effect. */
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/core-growth/commands')
+  async devCoreGrowthCommand(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { surface?: unknown; command?: unknown };
+    if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
+      throw new BadRequestException('surface_and_command_required');
+    }
+    return this.devCoreGrowthService.acknowledgeNoop(familyId, candidate.surface as any, candidate.command.trim());
   }
 
   @RequireFamilyAction('ReadFamily')
