@@ -2873,3 +2873,29 @@ h3 {
 /* UI-02 assessment entry: DEV-only transparent dimension hit areas and state readback. */
 .clear-assessment-dimension-1{left:7%;top:48%;width:86%;height:5.8%}.clear-assessment-dimension-2{left:7%;top:54%;width:86%;height:5.8%}.clear-assessment-dimension-3{left:7%;top:60%;width:86%;height:5.8%}.clear-assessment-dimension-4{left:7%;top:66%;width:86%;height:5.8%}.clear-assessment-dimension-5{left:7%;top:72%;width:86%;height:5.8%}
 .by-assessment-live-overlay{position:absolute;z-index:3;left:7%;right:7%;top:43%;padding:3px 6px;border-radius:8px;background:rgba(243,251,247,.96);color:#237657;font:600 10px/1.3 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;box-shadow:0 1px 3px rgba(16,91,61,.12);pointer-events:none}.by-assessment-live-overlay.is-blocked{background:rgba(255,248,238,.98);color:#8a5a20}
+
+/* UI-03 AI成长诊断报告：仅在 explicit synthetic API 模式显示解释边界，默认保持 core-03-ai-report 基线。 */
+.ref-ai-back { left: 2%; top: 1%; width: 14%; height: 8%; }
+.ref-ai-more { right: 4%; top: 1%; width: 18%; height: 8%; }
+.ref-ai-plan { left: 6%; right: 6%; bottom: 2%; width: 88%; height: 9%; }
+.by-ui03-live-overlay {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 12%;
+  z-index: 5;
+  display: block;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(28, 127, 255, 0.34);
+  border-radius: 0.5rem;
+  background: rgba(244, 250, 255, 0.94);
+  color: #24527e;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  text-align: left;
+}
+.by-ui03-live-overlay.is-blocked {
+  border-color: rgba(190, 84, 84, 0.38);
+  background: rgba(255, 247, 247, 0.95);
+  color: #8a3c3c;
+}

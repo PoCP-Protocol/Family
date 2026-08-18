@@ -207,9 +207,9 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
         command: { name: 'START_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'CONTROLLED_DRAFT' },
       },
       {
-        surface: 'UI-03', title: '家庭测评草稿', state: 'DRAFT', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: '关注维度为 DEV 示例。', next_hint: '草稿可被安全读取。',
-        command: { name: 'SAVE_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'NOOP_NOT_PERSISTED' },
+        surface: 'UI-03', title: 'AI成长解释草稿', state: 'DRAFT', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '仅解释 DEV 家长关注方向与不确定性。', next_hint: '可预览方案草稿，不形成诊断。',
+        command: { name: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', mode: 'CONTROLLED_DRAFT' },
       },
       {
         surface: 'UI-04', title: '成长说明', state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
@@ -309,7 +309,27 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     root.querySelector<HTMLButtonElement>('[data-by="ui02-start-assessment"]')?.click();
     await tick(); await tick(); await tick();
     expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection: 'EMOTION_REGULATION' });
-    expect(root.querySelector('.by-reference-assessment')).not.toBeNull();
+    expect(root.querySelector('.by-ui-reference')).not.toBeNull();
+    expect(root.querySelector('[data-ui03-parent-focus="EMOTION_REGULATION"]')?.textContent).toContain('不是诊断');
+  });
+
+  it('records an AI explanation preview as a bounded synthetic receipt and hands off only to the plan-draft view', async () => {
+    const selectedProjection = { ...projection, recent_flow_events: [{ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'assessment' });
+    await tick(); await tick();
+    expect(root.querySelector('[data-ui03-explanation-state="READY"]')?.textContent).toContain('NOOP_NOT_INVOKED');
+    root.querySelector<HTMLButtonElement>('[data-by="ui03-preview-plan"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
+    expect(root.querySelector('[data-core-growth-surface="UI-04"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {

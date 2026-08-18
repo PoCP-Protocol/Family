@@ -76,11 +76,11 @@ export class DevCoreGrowthService {
         command: { name: 'START_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'CONTROLLED_DRAFT' },
       },
       {
-        surface: 'UI-03', kind: 'ASSESSMENT_DRAFT', title: '家庭测评草稿', state: 'DRAFT',
+        surface: 'UI-03', kind: 'REPORT_EXPLANATION', title: 'AI成长解释草稿', state: 'DRAFT',
         fact_boundary: 'PERSPECTIVE_NOT_FACT', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: '已选择“亲子沟通”作为 DEV 示例关注维度；它不是儿童或家庭的真实判断。',
-        next_hint: '草稿可被安全读取；确认与持久化不在此 no-op adapter 执行。',
-        command: { name: 'SAVE_SYNTHETIC_ASSESSMENT_DRAFT', mode: 'NOOP_NOT_PERSISTED' },
+        summary: '仅解释家长已选择的关注维度、来源和不确定性；它不是儿童或家庭的真实判断、诊断或效果结论。',
+        next_hint: '可预览 rule-based 解释边界和方案草稿；模型网关保持 NOOP_NOT_INVOKED。',
+        command: { name: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', mode: 'CONTROLLED_DRAFT' },
       },
       {
         surface: 'UI-04', kind: 'REPORT_EXPLANATION', title: '成长说明', state: 'READ_ONLY',
