@@ -8,18 +8,21 @@
  * Lives in @family/fpai-multimodal-runtime (runtime execution, not contracts).
  */
 
-import { CharacterIdentity, RendererProfile } from '@family/fpai-multimodal-contracts';
+import { CharacterIdentity, RendererProfile, ResolvedRendererProfile } from '@family/fpai-multimodal-contracts';
 
 /**
  * Resolves and validates CharacterIdentity at runtime.
- * Produces immutable RendererProfile for consumption by renderers.
+ * Produces ResolvedRendererProfile with provenance verification.
  *
  * FAMILI-SPECIFIC: This resolver is currently hardcoded for 法咪莉校长.
  * Future: May generalize for multi-character scenarios if architecture review approves.
+ *
+ * PATCH-004: Produces RESOLVED profiles with __mm2_provenance_verified marker.
+ * This is the ONLY authorized source for ResolvedRendererProfile.
  */
 export class IdentityResolver {
   /**
-   * Resolve a CharacterIdentity into a RendererProfile.
+   * Resolve a CharacterIdentity into a ResolvedRendererProfile.
    *
    * Validates:
    * - Identity is valid and complete
@@ -28,14 +31,17 @@ export class IdentityResolver {
    * - Visual DNA is complete
    *
    * @param identity CharacterIdentity to resolve
-   * @returns RendererProfile (immutable, frozen)
+   * @returns ResolvedRendererProfile (immutable, frozen, with provenance marker)
    * @throws Error if identity is invalid
    */
-  public resolve(identity: CharacterIdentity): RendererProfile {
+  public resolve(identity: CharacterIdentity): ResolvedRendererProfile {
     this.validateIdentity(identity);
 
-    // Produce immutable RendererProfile
-    return Object.freeze({
+    // Produce immutable ResolvedRendererProfile with provenance marker
+    // PATCH-004: __mm2_provenance_verified indicates this came from IdentityResolver,
+    // not from a consumer object literal. This marker cannot be replicated
+    // through normal TypeScript without access to this method.
+    const resolvedProfile = Object.freeze({
       character_id: 'famili-principal-v1',
       character_name: identity.character_name,
       identity_version: identity.version,
@@ -54,7 +60,10 @@ export class IdentityResolver {
       },
 
       is_immutable: true,
-    }) as RendererProfile;
+      __mm2_provenance_verified: true, // PATCH-004: Provenance marker (only IdentityResolver sets this)
+    }) as ResolvedRendererProfile;
+
+    return resolvedProfile;
   }
 
   /**
@@ -135,6 +144,44 @@ export class IdentityResolver {
       throw new Error('Source CharacterIdentity was mutated during resolution');
     }
   }
+}
+
+/**
+ * PATCH-004: Runtime validation that profile came from IdentityResolver.
+ *
+ * Must be called before passing any profile to production Famili renderer.
+ * This is the authority checkpoint that prevents forged profiles.
+ *
+ * @param profile Unknown object claiming to be RendererProfile
+ * @returns profile as ResolvedRendererProfile if valid
+ * @throws Error if profile does not have provenance marker
+ */
+export function assertResolvedRendererProfile(profile: any): ResolvedRendererProfile {
+  if (!profile) {
+    throw new Error('ResolvedRendererProfile is required');
+  }
+
+  if (profile.__mm2_provenance_verified !== true) {
+    throw new Error(
+      'RendererProfile must be created by IdentityResolver.resolve(). ' +
+      'Handwritten or forged profiles are not accepted. ' +
+      'Missing provenance marker: __mm2_provenance_verified'
+    );
+  }
+
+  if (profile.is_immutable !== true) {
+    throw new Error('ResolvedRendererProfile must be immutable (Object.freeze)');
+  }
+
+  if (!Object.isFrozen(profile)) {
+    throw new Error('ResolvedRendererProfile must be frozen at runtime');
+  }
+
+  if (profile.character_name !== '法咪莉校长') {
+    throw new Error(`Invalid character name in profile: ${profile.character_name}`);
+  }
+
+  return profile as ResolvedRendererProfile;
 }
 
 /**

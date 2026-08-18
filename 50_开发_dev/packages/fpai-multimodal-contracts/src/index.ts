@@ -10,8 +10,10 @@ export {
   CharacterScene,
   CharacterState,
   RendererProfile,
+  ResolvedRendererProfile,
   AvatarRendererContract,
   isCharacterIdentity,
+  isResolvedRendererProfile,
   isCharacterStateValid,
 } from './characterIdentity';
 

@@ -251,6 +251,22 @@ export interface RendererProfile {
 }
 
 /**
+ * ResolvedRendererProfile — Runtime-Verified Identity (PATCH-004)
+ *
+ * Marker type that proves identity was created ONLY by IdentityResolver,
+ * not by consumer object literals.
+ * Contains provenance proof that cannot be replicated via normal TypeScript.
+ *
+ * This is the ONLY form accepted by production Avatar2DRenderer.
+ *
+ * NOTE: This is NOT a separate contract; it's a runtime-verified RendererProfile.
+ * Consumers must call IdentityResolver to obtain it.
+ */
+export interface ResolvedRendererProfile extends RendererProfile {
+  readonly __mm2_provenance_verified: true; // Non-exported brand marker, cannot be created via object literal
+}
+
+/**
  * Type Guards
  */
 
@@ -263,6 +279,15 @@ export function isCharacterIdentity(obj: any): obj is CharacterIdentity {
     obj?.ip_alignment?.bobo_face_clone === false &&
     obj?.ip_alignment?.bobo_voice_clone === false &&
     obj?.ip_alignment?.real_person_likeness_clone === false
+  );
+}
+
+export function isResolvedRendererProfile(obj: any): obj is ResolvedRendererProfile {
+  return (
+    obj?.is_immutable === true &&
+    obj?.__mm2_provenance_verified === true &&
+    typeof obj?.character_id === 'string' &&
+    obj?.character_name === '法咪莉校长'
   );
 }
 

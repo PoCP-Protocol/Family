@@ -21,6 +21,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { assertResolvedRendererProfile } from '@family/fpai-multimodal-runtime';
+
 export type FamilyMouthShape =
   | 'REST'
   | 'OPEN_SMALL'
@@ -87,7 +89,7 @@ export interface CanvasLike {
 export interface Avatar2DRendererOptions {
   canvas: CanvasLike;
   now?: () => number;
-  profile: { character_id?: string; identity_version?: string }; // MM2: Required authoritative identity binding (FAMILI-SPECIFIC)
+  profile: any; // PATCH-004: Must be ResolvedRendererProfile from IdentityResolver; validated at runtime
 }
 
 export interface Avatar2DFrameSnapshot {
@@ -99,6 +101,33 @@ export interface Avatar2DFrameSnapshot {
   nod_phase: number;      // 0..1
   frame_index: number;
 }
+
+/**
+ * PATCH-004: Visual style configuration keyed by identity version.
+ * Demonstrates real identity derivation: identity → style selection → pixels.
+ */
+interface VisualStyleConfig {
+  readonly headColor: string;
+  readonly eyeColor: string;
+  readonly mouthColor: string;
+  readonly stateColors: Record<FamilyAvatarState, string>;
+}
+
+const VISUAL_STYLE_CONFIGS: Record<string, VisualStyleConfig> = {
+  'visual_identity_v1.0': {
+    headColor: '#f6f4ff',
+    eyeColor: '#221c3a',
+    mouthColor: '#2a1f4d',
+    stateColors: {
+      RESTING: '#a89cf5',
+      LISTENING: '#6c4df6',
+      THINKING: '#8f7bec',
+      SPEAKING: '#5a37e3',
+      INTERRUPTED: '#d0333a',
+      HUMAN_GATE: '#f6a723',
+    },
+  },
+};
 
 /**
  * 状态色板 (基于 --accent 6c4df6 与 --risk-* 系列)。
@@ -142,8 +171,10 @@ export class Avatar2DRenderer {
   public constructor(opts: Avatar2DRendererOptions) {
     this.canvas = opts.canvas;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
-    this.profile = opts.profile; // MM2: Store immutable identity reference. Consumed by renderer to validate WHO is rendering.
-    // Future MM3+: profile will drive asset selection, visual constraints, style validation.
+
+    // PATCH-004: Runtime validation that profile came from IdentityResolver
+    // This prevents handwritten, forged, or `as any` profiles from entering production rendering
+    this.profile = assertResolvedRendererProfile(opts.profile);
   }
 
   public setState(s: FamilyAvatarState): void { this.state = s; }
@@ -167,6 +198,19 @@ export class Avatar2DRenderer {
     return this.profile;
   }
 
+  /** PATCH-004: Get identity-driven visual style. Proves identity affects rendering. */
+  private getVisualStyle(): VisualStyleConfig {
+    const styleKey = (this.profile as any)?.visual_identity_version ?? 'visual_identity_v1.0';
+    const config = VISUAL_STYLE_CONFIGS[styleKey];
+    if (!config) {
+      throw new Error(
+        `Unsupported visual identity version: ${styleKey}. ` +
+        `Approved versions: ${Object.keys(VISUAL_STYLE_CONFIGS).join(', ')}`
+      );
+    }
+    return config;
+  }
+
   public snapshot(): Avatar2DFrameSnapshot {
     return {
       state: this.state,
@@ -186,6 +230,9 @@ export class Avatar2DRenderer {
     const W = this.canvas.width;
     const H = this.canvas.height;
 
+    // PATCH-004: Get identity-driven visual style
+    const visualStyle = this.getVisualStyle();
+
     // 自动 blink: 每 ~3s 触发一次(此实现简单化, 供 demo 用)
     const now = this.nowFn();
     if (!this.blinkActive && now - this.lastBlinkTriggerMs > 3000) {
@@ -204,8 +251,8 @@ export class Avatar2DRenderer {
 
     ctx.clearRect(0, 0, W, H);
 
-    // 底色
-    ctx.fillStyle = '#f6f4ff';
+    // 底色 (from identity-driven style)
+    ctx.fillStyle = visualStyle.headColor;
     ctx.fillRect(0, 0, W, H);
 
     const cx = W / 2;
@@ -218,7 +265,7 @@ export class Avatar2DRenderer {
     // 头
     ctx.save();
     ctx.translate(cx, cy + nodOffset);
-    ctx.fillStyle = STATE_COLORS[this.state];
+    ctx.fillStyle = visualStyle.stateColors[this.state]; // PATCH-004: Identity-driven state color
     ctx.beginPath();
     ctx.arc(0, 0, headR, 0, Math.PI * 2);
     ctx.fill();
@@ -230,7 +277,7 @@ export class Avatar2DRenderer {
     const eyeRx = headR * 0.11;
     const blinkPhase = this.computeBlinkPhase();
     const eyeRy = eyeRx * eyeMeta.openY * (1 - blinkPhase);
-    ctx.fillStyle = '#221c3a';
+    ctx.fillStyle = visualStyle.eyeColor; // PATCH-004: Identity-driven eye color
     for (const sx of [-eyeDx, eyeDx]) {
       ctx.beginPath();
       if (ctx.ellipse) {
@@ -242,7 +289,7 @@ export class Avatar2DRenderer {
     }
 
     // 嘴巴 (根据 MouthShape)
-    this.drawMouth(ctx, 0, headR * 0.30, headR);
+    this.drawMouth(ctx, 0, headR * 0.30, headR, visualStyle);
 
     ctx.restore();
 
@@ -250,7 +297,7 @@ export class Avatar2DRenderer {
     if (this.gesture === 'SMALL_OPEN_HAND') {
       ctx.save();
       ctx.translate(cx + headR * 1.1, cy + headR * 0.30);
-      ctx.fillStyle = STATE_COLORS[this.state];
+      ctx.fillStyle = visualStyle.stateColors[this.state]; // PATCH-004: Identity-driven state color
       ctx.beginPath();
       ctx.arc(0, 0, headR * 0.18, 0, Math.PI * 2);
       ctx.fill();
@@ -268,9 +315,9 @@ export class Avatar2DRenderer {
     return this.snapshot();
   }
 
-  private drawMouth(ctx: CanvasLikeContext, x: number, y: number, headR: number): void {
-    ctx.fillStyle = '#2a1f4d';
-    ctx.strokeStyle = '#2a1f4d';
+  private drawMouth(ctx: CanvasLikeContext, x: number, y: number, headR: number, visualStyle: VisualStyleConfig): void {
+    ctx.fillStyle = visualStyle.mouthColor; // PATCH-004: Identity-driven mouth color
+    ctx.strokeStyle = visualStyle.mouthColor;
     ctx.lineWidth = 2;
     switch (this.mouthShape) {
       case 'REST':

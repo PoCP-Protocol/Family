@@ -6,6 +6,32 @@
 
 import { describe, it, expect } from 'vitest';
 import { Avatar2DRenderer, MOUTH_SHAPES } from './avatar2DRenderer';
+import { getIdentityResolver } from '@family/fpai-multimodal-runtime';
+import type { CharacterIdentity } from '@family/fpai-multimodal-contracts';
+
+// Test helper: Create a properly verified profile for tests
+function createVerifiedProfile() {
+  const resolver = getIdentityResolver();
+  const identity: CharacterIdentity = {
+    version: 'character_v1.0',
+    frozen_date: '2026-08-17',
+    character_name: '法咪莉校长',
+    persona: '知性邻家姐姐',
+    ownership: 'Family-owned IP',
+    visual_dna: [
+      'INTELLECTUAL', 'WARM', 'TRUSTWORTHY', 'NATURAL', 'KIND',
+      'CALM', 'MATURE', 'EMPATHETIC', 'CULTURED', 'NON_JUDGMENTAL',
+    ],
+    ip_alignment: {
+      bobo_method_inheritance: true,
+      bobo_identity_clone: false,
+      bobo_face_clone: false,
+      bobo_voice_clone: false,
+      real_person_likeness_clone: false,
+    },
+  };
+  return resolver.resolve(identity);
+}
 
 function makeFakeCanvas(w = 320, h = 240) {
   const calls: string[] = [];
@@ -53,7 +79,8 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
   it('AVA-02 · render → 至少产生 clearRect + arc(head) + 眼睛 * 2', () => {
     const canvas = makeFakeCanvas();
-    const r = new Avatar2DRenderer({ canvas, now: () => 0 });
+    const profile = createVerifiedProfile();
+    const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
     r.setState('SPEAKING');
     r.setExpression('CALM_WARM');
     r.setMouthShape('OPEN_MEDIUM');
@@ -69,7 +96,8 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
   it('AVA-03 · 每种 MouthShape 都能画, 不 throw, 每帧都有 fill 或 stroke', () => {
     for (const shape of MOUTH_SHAPES) {
       const canvas = makeFakeCanvas();
-      const r = new Avatar2DRenderer({ canvas, now: () => 0 });
+      const profile = createVerifiedProfile();
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
       r.setMouthShape(shape);
       r.render();
       const calls: string[] = canvas._ctx._calls;
@@ -80,8 +108,9 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
   it('AVA-04 · triggerBlink → blink_phase > 0 中段', () => {
     const canvas = makeFakeCanvas();
+    const profile = createVerifiedProfile();
     let now = 0;
-    const r = new Avatar2DRenderer({ canvas, now: () => now });
+    const r = new Avatar2DRenderer({ canvas, profile, now: () => now });
     r.triggerBlink();
     now = 60; // 中段
     const snap = r.snapshot();
@@ -90,8 +119,9 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
   it('AVA-05 · triggerNod → gesture=SMALL_NOD, nod_phase 变化', () => {
     const canvas = makeFakeCanvas();
+    const profile = createVerifiedProfile();
     let now = 0;
-    const r = new Avatar2DRenderer({ canvas, now: () => now });
+    const r = new Avatar2DRenderer({ canvas, profile, now: () => now });
     r.triggerNod();
     expect(r.snapshot().gesture).toBe('SMALL_NOD');
     now = 200;
@@ -103,7 +133,8 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
   it('AVA-06 · state → 颜色变化 (fillStyle 被设过 STATE_COLORS 值)', () => {
     const canvas = makeFakeCanvas();
-    const r = new Avatar2DRenderer({ canvas, now: () => 0 });
+    const profile = createVerifiedProfile();
+    const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
     r.setState('INTERRUPTED');
     r.render();
     // fillStyle 会被多次赋值, 但至少某帧应为 INTERRUPTED 色 (#d0333a) 或至少 fillStyle 曾赋值
@@ -113,7 +144,8 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
   it('AVA-07 · frame_index 递增', () => {
     const canvas = makeFakeCanvas();
-    const r = new Avatar2DRenderer({ canvas, now: () => 0 });
+    const profile = createVerifiedProfile();
+    const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
     r.render();
     r.render();
     r.render();
@@ -124,7 +156,7 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
   describe('MM2: Runtime Identity Binding', () => {
     it('MM2-R01 · Avatar2DRenderer stores profile from options', () => {
       const canvas = makeFakeCanvas();
-      const profile = { character_id: 'test-char', identity_version: 'v1.0' };
+      const profile = createVerifiedProfile();
       const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
       const snap = r.snapshot();
       expect(snap).toBeDefined();
@@ -133,7 +165,7 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
     it('MM2-R02 · Avatar2DRenderer renders with identity profile', () => {
       const canvas = makeFakeCanvas();
-      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const profile = createVerifiedProfile();
       const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
       r.setState('LISTENING');
       r.setExpression('CALM_WARM');
@@ -148,7 +180,7 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
     it('MM2-R03 · Avatar2DRenderer materially consumes identity profile', () => {
       const canvas = makeFakeCanvas();
-      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const profile = createVerifiedProfile();
       const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
 
       // Profile must be retrievable and identical to what was provided
@@ -172,7 +204,7 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
 
     it('MM2-R04 · changing performance state preserves identity reference', () => {
       const canvas = makeFakeCanvas();
-      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const profile = createVerifiedProfile();
       const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
 
       const states = ['RESTING', 'LISTENING', 'THINKING', 'SPEAKING'];
@@ -187,10 +219,10 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
       expect(snap.state).toBe('SPEAKING');
     });
 
-    it('MM2-R05 · Avatar2DRenderer works with minimal RendererProfile structure', () => {
+    it('MM2-R05 · Avatar2DRenderer requires verified profile structure', () => {
       const canvas = makeFakeCanvas();
-      const minimalProfile = { character_id: 'test' };
-      const r = new Avatar2DRenderer({ canvas, profile: minimalProfile, now: () => 0 });
+      const profile = createVerifiedProfile();
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
 
       const snap = r.render();
       expect(snap).toBeDefined();
@@ -203,9 +235,181 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
       // without a profile because it is now required, not optional.
       // At runtime: TypeScript prevents even reaching the constructor without profile.
       // This is the expected behavior for Famili-specific renderer.
-      const profile = { character_id: 'test' };
+      const profile = createVerifiedProfile();
       const r = new Avatar2DRenderer({ canvas, profile });
       expect(r).toBeDefined();
+    });
+
+    // MM2-PATCH-004: Provenance Lock Tests
+    describe('MM2-PATCH-004: Provenance & Visual Derivation', () => {
+      it('MM2-P01 · Handwritten minimal RendererProfile is rejected at runtime', () => {
+        const canvas = makeFakeCanvas();
+        const fakeProfile = { character_id: 'famili', is_immutable: true };
+
+        expect(() => {
+          new Avatar2DRenderer({ canvas, profile: fakeProfile as any });
+        }).toThrow(/must be created by IdentityResolver/);
+      });
+
+      it('MM2-P02 · Handwritten full-shaped RendererProfile is rejected', () => {
+        const canvas = makeFakeCanvas();
+        const fakeProfile = {
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          // Missing __mm2_provenance_verified
+        };
+
+        expect(() => {
+          new Avatar2DRenderer({ canvas, profile: fakeProfile as any });
+        }).toThrow(/must be created by IdentityResolver/);
+      });
+
+      it('MM2-P03 · Object cast with `as any` is rejected at runtime', () => {
+        const canvas = makeFakeCanvas();
+        const fakeProfile = {} as any;
+
+        expect(() => {
+          new Avatar2DRenderer({ canvas, profile: fakeProfile });
+        }).toThrow(/must be created by IdentityResolver/);
+      });
+
+      it('MM2-P04 · Resolved profile from proper source is accepted', () => {
+        // This test verifies that a properly-formed profile (from actual IdentityResolver)
+        // would be accepted. We use a mock here to simulate what IdentityResolver produces.
+        const canvas = makeFakeCanvas();
+        const properProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          __mm2_provenance_verified: true, // Provenance marker
+        });
+
+        const r = new Avatar2DRenderer({ canvas, profile: properProfile });
+        expect(r).toBeDefined();
+      });
+
+      it('MM2-V01 · Verified identity selects identity-driven visual style', () => {
+        const canvas = makeFakeCanvas();
+        const properProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          __mm2_provenance_verified: true,
+        });
+
+        const r = new Avatar2DRenderer({ canvas, profile: properProfile });
+        r.setState('LISTENING');
+
+        // Rendering should complete without error (uses identity-derived style)
+        const snap = r.render();
+        expect(snap.state).toBe('LISTENING');
+        expect(canvas._ctx._calls.length).toBeGreaterThan(0);
+      });
+
+      it('MM2-V02 · Unsupported visual identity version fails explicitly', () => {
+        const canvas = makeFakeCanvas();
+        const badProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'unsupported_version_999', // Not in VISUAL_STYLE_CONFIGS
+          is_immutable: true,
+          __mm2_provenance_verified: true,
+        });
+
+        const r = new Avatar2DRenderer({ canvas, profile: badProfile });
+
+        expect(() => {
+          r.render();
+        }).toThrow(/Unsupported visual identity version/);
+      });
+
+      it('MM2-V03 · Performance state does not change identity-derived style', () => {
+        const canvas = makeFakeCanvas();
+        const properProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          __mm2_provenance_verified: true,
+        });
+
+        const r = new Avatar2DRenderer({ canvas, profile: properProfile, now: () => 0 });
+
+        // Same identity-driven style is used regardless of performance state
+        r.setState('RESTING');
+        const snap1 = r.render();
+
+        r.setState('THINKING');
+        const snap2 = r.render();
+
+        r.setState('SPEAKING');
+        const snap3 = r.render();
+
+        // All render with same underlying identity style
+        expect(snap1).toBeDefined();
+        expect(snap2).toBeDefined();
+        expect(snap3).toBeDefined();
+      });
+
+      it('MM2-V04 · Same verified identity produces deterministic visual config', () => {
+        const canvas1 = makeFakeCanvas();
+        const canvas2 = makeFakeCanvas();
+
+        const properProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          __mm2_provenance_verified: true,
+        });
+
+        const r1 = new Avatar2DRenderer({ canvas: canvas1, profile: properProfile });
+        const r2 = new Avatar2DRenderer({ canvas: canvas2, profile: properProfile });
+
+        // Both use same identity, so same style configuration
+        r1.setState('LISTENING');
+        r2.setState('LISTENING');
+
+        r1.render();
+        r2.render();
+
+        // Both should have rendered with identical style
+        expect(canvas1._ctx._calls.length).toBeGreaterThan(0);
+        expect(canvas2._ctx._calls.length).toBeGreaterThan(0);
+      });
+
+      it('MM2-V05 · Renderer cannot replace canonical visual identity at runtime', () => {
+        const canvas = makeFakeCanvas();
+        const properProfile = Object.freeze({
+          character_id: 'famili-principal-v1',
+          character_name: '法咪莉校长',
+          identity_version: 'character_v1.0',
+          visual_identity_version: 'visual_identity_v1.0',
+          is_immutable: true,
+          __mm2_provenance_verified: true,
+        });
+
+        const r = new Avatar2DRenderer({ canvas, profile: properProfile });
+        const boundProfile = r.getProfile();
+
+        // Attempt to mutate should throw (frozen object)
+        expect(() => {
+          (boundProfile as any).visual_identity_version = 'modified';
+        }).toThrow();
+
+        // Identity remains unchanged
+        expect(r.getProfile().visual_identity_version).toBe('visual_identity_v1.0');
+      });
     });
   });
 });

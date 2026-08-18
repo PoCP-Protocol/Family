@@ -4,4 +4,5 @@ export {
   getIdentityResolver,
   setIdentityResolver,
   resetIdentityResolver,
+  assertResolvedRendererProfile,
 } from './identityResolver';
