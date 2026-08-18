@@ -157,6 +157,10 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     await tick();
 
     expect(root.querySelector('.by-reference-home')).not.toBeNull();
+    expect(root.querySelectorAll('[data-ui01-feature]').length).toBeGreaterThanOrEqual(16);
+    expect(root.querySelector('[data-ui01-feature~="task_reading"]')?.getAttribute('data-by')).toBe('growth-daily-task');
+    expect(root.querySelector('[data-ui01-feature~="assessment_cta"]')?.getAttribute('data-by')).toBe('growth-assessment');
+    expect(root.querySelector('[data-ui01-live-state="NOT_STARTED"]')?.textContent).toContain('先听完再回应');
     expect(root.dataset.familyTodayProjectionStatus).toBe('READY');
     expect(root.querySelector('[data-first-slice-surface="UI-01"]')?.textContent).toContain('先听完再回应');
     expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不代表教育效果');
