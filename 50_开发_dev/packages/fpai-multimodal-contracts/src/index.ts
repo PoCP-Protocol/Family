@@ -8,10 +8,19 @@ export {
   CharacterWardrobe,
   CharacterScene,
   CharacterState,
+  RendererProfile,
   AvatarRendererContract,
   isCharacterIdentity,
   isCharacterStateValid,
 } from './characterIdentity';
+
+// Identity Resolution Runtime
+export {
+  IdentityResolver,
+  getIdentityResolver,
+  setIdentityResolver,
+  resetIdentityResolver,
+} from './identityResolver';
 
 export type PrincipalSceneMode = 'INTERACTIVE_CHAT' | 'MICRO_LESSON' | 'FAMILY_DIALOGUE';
 

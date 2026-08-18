@@ -221,6 +221,36 @@ export interface AvatarRendererContract {
 }
 
 /**
+ * RendererProfile — Immutable Renderer-Safe Identity Projection
+ *
+ * Derived from ResolvedCharacterIdentity.
+ * NOT a separate SSOT — only a renderer-safe view.
+ * Contains ONLY information needed for rendering canonical identity.
+ * Does NOT contain performance state (expression, gesture, mouth shape).
+ */
+export interface RendererProfile {
+  readonly character_id: string;
+  readonly character_name: '法咪莉校长';
+  readonly identity_version: string;
+  readonly visual_identity_version: string;
+
+  // Canonical asset references
+  readonly canonical_face_asset_id?: string;
+  readonly canonical_body_asset_id?: string;
+  readonly canonical_portrait_asset_id?: string;
+
+  // Identity constraints
+  readonly approved_visual_variants?: readonly string[];
+  readonly visual_constraints?: {
+    readonly age_impression_min: number;
+    readonly age_impression_max: number;
+  };
+
+  // Immutability marker
+  readonly is_immutable: true;
+}
+
+/**
  * Type Guards
  */
 

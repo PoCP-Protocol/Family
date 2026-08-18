@@ -44,7 +44,7 @@ export class PrincipalPerformancePlanner {
           emphasis: ['先慢一点'],
         },
         avatar: {
-          expression: 'ATTENTIVE',
+          expression: 'LISTENING',
           gaze: 'USER',
           gesture: 'SMALL_NOD',
           posture: 'STEADY',
@@ -64,7 +64,7 @@ export class PrincipalPerformancePlanner {
         emphasis: this.pickNormalEmphasis(output),
       },
       avatar: {
-        expression: 'ATTENTIVE',
+        expression: 'LISTENING',
         gaze: 'USER',
         gesture: 'SMALL_OPEN_HAND',
         posture: 'RELAXED',
