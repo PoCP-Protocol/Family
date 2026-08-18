@@ -355,3 +355,26 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(root.querySelector('[data-platform-surface="UI-13"]')?.textContent).toContain('未展示本地替代数据');
   });
 });
+
+
+describe('Family 34 UI route coverage', () => {
+  it('renders every manifest route in baseline mode without implicit API calls', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: '22222222-2222-4222-8222-222222222222', initialPage: 'home' });
+    const routes = [
+      'home','growth-assessment','assessment','core-report','core-plan','core-community','core-mine','growth-report','growth-daily-task','growth-child',
+      'growth-ranking','growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine','teacher-zone','teacher-detail',
+      'consultation-booking','salon-list','activity-detail','service-mine','parent-community','publish-dynamic','dynamic-detail','my-community','growth-outcomes','annual-member-mine',
+      'my-services','orders-assets','family-profile','service-records',
+    ];
+    for (const route of routes) {
+      app.navigate(route);
+      expect(root.children.length).toBeGreaterThan(0);
+    }
+    // UI-19 is the pre-existing read-only Service Supply slice. Every other default baseline route remains API-silent.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/orchestration/test-loop/services/offerings?page_id=UI-19&available_only=true');
+  });
+});
