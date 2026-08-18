@@ -2,7 +2,7 @@
 // Family / 伐木累 visual shell. Historical `bangyang-reference` paths preserve the supplied source evidence.
 import { mountTeacherSupplyView } from './teacher-supply-view.js';
 /**
- * @typedef {{ apiBaseUrl: string, familyId: string, initialPage?: string, firstSliceApiMode?: 'disabled'|'synthetic-api', coreGrowthApiMode?: 'disabled'|'synthetic-api', authToken?: string }} TestLoopConfig
+ * @typedef {{ apiBaseUrl: string, familyId: string, initialPage?: string, firstSliceApiMode?: 'disabled'|'synthetic-api', coreGrowthApiMode?: 'disabled'|'synthetic-api', platformSurfacesApiMode?: 'disabled'|'synthetic-api', authToken?: string }} TestLoopConfig
  */
 /** @type {TestLoopConfig} */
 export const defaultTestLoopConfig = {
@@ -13,6 +13,8 @@ export const defaultTestLoopConfig = {
   firstSliceApiMode: 'disabled',
   // UI-02..UI-10 only load synthetic Family Growth OS data when a DEV harness opts in.
   coreGrowthApiMode: 'disabled',
+  // UI-11..UI-34 share a separate opt-in DEV-only platform projection.
+  platformSurfacesApiMode: 'disabled',
 };
 
 const ICONS = { assessment: '🛡', task: '✓', child: '🎮', rank: '🏆', report: '📘', assistant: '🤖', invite: '🎁', group: '👥', points: '🪙', goods: '👜', member: '👤', plan: '📋', class: '📖', activity: '🎪' };
@@ -33,6 +35,7 @@ export const FAMILY_UI_34_ROUTE_MANIFEST = Object.freeze([
   ['UI-33', 'family-profile'], ['UI-34', 'service-records'],
 ]);
 const FAMILY_UI_34_ROUTE_SET = new Set(FAMILY_UI_34_ROUTE_MANIFEST.map(([, route]) => route));
+const FAMILY_UI_ID_BY_ROUTE = Object.freeze(Object.fromEntries(FAMILY_UI_34_ROUTE_MANIFEST.map(([uiId, route]) => [route, uiId])));
 
 /** @param {HTMLElement} root @param {TestLoopConfig} config */
 export function createTestLoopApp(root, config = defaultTestLoopConfig) {
@@ -49,6 +52,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   let coreGrowthProjection = null;
   let coreGrowthLoadState = 'IDLE';
   let coreGrowthNoopReceipt = '';
+  /** @type {any | null} */
+  let platformSurfacesProjection = null;
+  let platformSurfacesLoadState = 'IDLE';
+  let platformSurfacesNoopReceipt = '';
   const llmActionRoutes = {
     'llm-growth-assessment': ['UI-02', 'assessment'],
     'llm-core-report': ['UI-04', 'core-plan'],
@@ -77,6 +84,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   };
   const firstSliceApiEnabled = () => config.firstSliceApiMode === 'synthetic-api';
   const coreGrowthApiEnabled = () => config.coreGrowthApiMode === 'synthetic-api';
+  const platformSurfacesApiEnabled = () => config.platformSurfacesApiMode === 'synthetic-api';
   const firstSliceHeaders = (correlationId, write = false) => ({
     ...(write ? { 'content-type': 'application/json' } : {}),
     'x-correlation-id': correlationId,
@@ -146,6 +154,43 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       coreGrowthNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。';
       root.dataset.familyCoreGrowthNoop = 'CLIENT_FAILURE';
       return null;
+    }
+  }
+  const platformSurfacePanel = (surface) => {
+    if (!platformSurfacesApiEnabled() || !surface || !/^UI-(1[1-9]|2[0-9]|3[0-4])$/.test(surface)) return '';
+    if (platformSurfacesLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-platform-surface="${surface}">正在读取 DEV 平台投影…</output>`;
+    if (platformSurfacesLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-platform-surface="${surface}">DEV 平台投影暂不可读取；未展示本地替代数据。</output>`;
+    const card = platformSurfacesProjection?.cards?.find((item) => item.surface === surface);
+    if (!card) return '';
+    const receipt = platformSurfacesNoopReceipt ? ` ${platformSurfacesNoopReceipt}` : '';
+    return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；外部效果=${platformSurfacesProjection.external_effect_adapter}）${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新 DEV 投影</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">确认 DEV 回执</button>`;
+  };
+  async function requestPlatformSurfacesProjection() {
+    if (!platformSurfacesApiEnabled() || platformSurfacesLoadState === 'LOADING') return platformSurfacesProjection;
+    const correlationId = `family-dev-platform-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    platformSurfacesLoadState = 'LOADING'; root.dataset.familyPlatformSurfacesStatus = 'LOADING';
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/platform-surfaces`, { method: 'GET', credentials: 'include', headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) } });
+      const payload = await response.json();
+      if (!response.ok || payload?.family_id !== config.familyId || payload?.data_source !== 'SYNTHETIC_DEV_ONLY' || payload?.external_effect_adapter !== 'NOOP_NOT_INVOKED' || !Array.isArray(payload?.cards)) throw new Error('dev_platform_surfaces_unavailable');
+      platformSurfacesProjection = payload; platformSurfacesLoadState = 'READY'; root.dataset.familyPlatformSurfacesStatus = 'READY';
+      llmTextEquivalent = 'DEV 平台投影已读取：内容为 synthetic，支付、预约、通知、分享、发布、导出和模型调用均为 no-op。';
+      return payload;
+    } catch (_error) {
+      platformSurfacesProjection = null; platformSurfacesLoadState = 'ERROR'; root.dataset.familyPlatformSurfacesStatus = 'ERROR';
+      llmTextEquivalent = 'DEV 平台投影暂不可读取；未展示本地替代数据。'; return null;
+    }
+  }
+  async function submitPlatformSurfaceNoop(surface, command) {
+    if (!platformSurfacesApiEnabled()) return null;
+    const correlationId = `family-dev-platform-noop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/platform-surfaces/commands`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ surface, command }) });
+      const payload = await response.json();
+      if (!response.ok || payload?.status !== 'NOOP_ACKNOWLEDGED' || payload?.external_effect !== false || payload?.persistence !== 'NONE') throw new Error('dev_platform_noop_failed');
+      platformSurfacesNoopReceipt = 'DEV 回执已确认：未持久化、未触发真实外部效果。'; root.dataset.familyPlatformSurfaceNoop = payload.status; return payload;
+    } catch (_error) {
+      platformSurfacesNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。'; root.dataset.familyPlatformSurfaceNoop = 'CLIENT_FAILURE'; return null;
     }
   }
   async function requestFamilyToday() {
@@ -422,8 +467,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010'); }
   function familyProfile() { return clearReference('family-profile-reference-542x1002.png', '家庭档案：孩子资料、关注问题、诊断方案、记录与时间线，仅作静态视觉展示', [['clear-profile-services', 'my-services', '查看服务']], '542/1002'); }
   function serviceRecords() { return clearReference('service-records-reference-566x1008.png', '服务记录：咨询、活动和客服支持，仅作静态视觉展示', [['clear-records-mine', 'service-mine', '我的预约和活动']], '566/1008'); }
-  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); if (firstSliceApiEnabled() && (page === 'home' || page === 'growth-daily-task') && firstSliceLoadState === 'IDLE') { void requestFamilyToday().then(() => render()); } if (coreGrowthApiEnabled() && ['growth-assessment', 'assessment', 'core-report', 'core-plan', 'core-community', 'core-mine', 'growth-report', 'growth-child'].includes(page) && coreGrowthLoadState === 'IDLE') { void requestCoreGrowthProjection().then(() => render()); } }
-  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a === 'dev-core-refresh') { coreGrowthLoadState = 'IDLE'; coreGrowthNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-noop') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop(el.dataset.coreGrowthSurface || '', el.dataset.coreGrowthCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'page-objects-complete-daily-task') { root.setAttribute('aria-busy', 'true'); await requestUi09TaskCompletion(); root.removeAttribute('aria-busy'); render(); return; } if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
+  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); if (platformSurfacesApiEnabled()) { root.insertAdjacentHTML('beforeend', `${platformSurfacePanel('UI-19')}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`); bind(); if (platformSurfacesLoadState === 'IDLE') void requestPlatformSurfacesProjection().then(() => render()); } return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}${platformSurfacePanel(FAMILY_UI_ID_BY_ROUTE[page])}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); if (firstSliceApiEnabled() && (page === 'home' || page === 'growth-daily-task') && firstSliceLoadState === 'IDLE') { void requestFamilyToday().then(() => render()); } if (coreGrowthApiEnabled() && ['growth-assessment', 'assessment', 'core-report', 'core-plan', 'core-community', 'core-mine', 'growth-report', 'growth-child'].includes(page) && coreGrowthLoadState === 'IDLE') { void requestCoreGrowthProjection().then(() => render()); } if (platformSurfacesApiEnabled() && /^UI-(1[1-9]|2[0-9]|3[0-4])$/.test(FAMILY_UI_ID_BY_ROUTE[page] || '') && platformSurfacesLoadState === 'IDLE') { void requestPlatformSurfacesProjection().then(() => render()); } }
+  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a === 'platform-surface-refresh') { platformSurfacesLoadState = 'IDLE'; platformSurfacesNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestPlatformSurfacesProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'platform-surface-noop') { root.setAttribute('aria-busy', 'true'); await submitPlatformSurfaceNoop(el.dataset.platformSurface || '', el.dataset.platformCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-refresh') { coreGrowthLoadState = 'IDLE'; coreGrowthNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-noop') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop(el.dataset.coreGrowthSurface || '', el.dataset.coreGrowthCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'page-objects-complete-daily-task') { root.setAttribute('aria-busy', 'true'); await requestUi09TaskCompletion(); root.removeAttribute('aria-busy'); render(); return; } if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
   render();
   return {
     navigate: (nextPage) => {

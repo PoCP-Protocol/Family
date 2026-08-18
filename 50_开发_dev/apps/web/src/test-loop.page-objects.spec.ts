@@ -294,3 +294,64 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(root.querySelector('[data-core-growth-surface="UI-05"]')?.textContent).toContain('未展示本地替代数据');
   });
 });
+
+
+describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
+  const familyId = '22222222-2222-4222-8222-222222222222';
+  const uiIds = Array.from({ length: 24 }, (_, index) => `UI-${String(index + 11).padStart(2, '0')}`);
+  const cards = uiIds.map((surface) => ({
+    surface, title: `DEV ${surface}`, state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
+    summary: '共享平台投影。', next_hint: '外部效果保持 no-op。', command: { name: `READ_${surface}`, mode: 'READ_ONLY' },
+  }));
+  const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
+
+  it('binds every UI-11~UI-34 route to the shared DEV platform projection without replacing baseline containers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
+    await tick(); await tick();
+    expect(root.dataset.familyPlatformSurfacesStatus).toBe('READY');
+    expect(root.querySelector('[data-platform-surface="UI-11"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+
+    const pages = [
+      'growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine',
+      'teacher-detail','consultation-booking','salon-list','activity-detail','service-mine','parent-community','publish-dynamic',
+      'dynamic-detail','my-community','growth-outcomes','annual-member-mine','my-services','orders-assets','family-profile','service-records',
+    ];
+    for (const page of pages) {
+      app.navigate(page); const uiId = ({
+        'growth-poster':'UI-12','commerce-mall':'UI-13','commerce-product':'UI-14','commerce-invite':'UI-15','commerce-group':'UI-16','commerce-points':'UI-17','commerce-mine':'UI-18',
+        'teacher-detail':'UI-20','consultation-booking':'UI-21','salon-list':'UI-22','activity-detail':'UI-23','service-mine':'UI-24','parent-community':'UI-25','publish-dynamic':'UI-26',
+        'dynamic-detail':'UI-27','my-community':'UI-28','growth-outcomes':'UI-29','annual-member-mine':'UI-30','my-services':'UI-31','orders-assets':'UI-32','family-profile':'UI-33','service-records':'UI-34',
+      } as Record<string, string>)[page];
+      expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns an explicit no-op receipt for DEV booking-style action instead of creating an external effect', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => projection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'consultation-booking' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="platform-surface-noop"]')?.click(); await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(`http://family-api.test/families/${familyId}/dev/platform-surfaces/commands`);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ surface: 'UI-21' });
+    expect(root.dataset.familyPlatformSurfaceNoop).toBe('NOOP_ACKNOWLEDGED');
+    expect(root.querySelector('[data-platform-surface="UI-21"]')?.textContent).toContain('未持久化、未触发真实外部效果');
+  });
+
+  it('fails closed when platform synthetic projection cannot be read', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ code: 'FAMILY_FORBIDDEN' }) }));
+    const root = document.createElement('div'); document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'commerce-mall' });
+    await tick(); await tick();
+    expect(root.dataset.familyPlatformSurfacesStatus).toBe('ERROR');
+    expect(root.querySelector('[data-platform-surface="UI-13"]')?.textContent).toContain('未展示本地替代数据');
+  });
+});

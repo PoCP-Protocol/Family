@@ -26,6 +26,7 @@ import { InterventionService } from './intervention.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
 import { DevCoreGrowthService } from './dev-core-growth.service';
+import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
 
 @Controller('families')
 @UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
@@ -39,6 +40,7 @@ export class FamilyController {
     @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
     @Inject(TodayService) private readonly todayService: TodayService,
     @Inject(DevCoreGrowthService) private readonly devCoreGrowthService: DevCoreGrowthService,
+    @Inject(DevPlatformSurfacesService) private readonly devPlatformSurfacesService: DevPlatformSurfacesService,
   ) {}
 
   // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
@@ -98,6 +100,34 @@ export class FamilyController {
       throw new BadRequestException('surface_and_command_required');
     }
     return this.devCoreGrowthService.acknowledgeNoop(familyId, candidate.surface as any, candidate.command.trim());
+  }
+
+  /** UI-11..UI-34 DEV-only read projection/no-op adapter. No payment, notification, booking, share, export, publication or model call is executed. */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/platform-surfaces')
+  async devPlatformSurfaces(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return this.devPlatformSurfacesService.getProjection(familyId);
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/platform-surfaces/commands')
+  async devPlatformSurfacesCommand(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { surface?: unknown; command?: unknown };
+    if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
+      throw new BadRequestException('surface_and_command_required');
+    }
+    return this.devPlatformSurfacesService.acknowledgeNoop(familyId, candidate.surface as any, candidate.command.trim());
   }
 
   @RequireFamilyAction('ReadFamily')

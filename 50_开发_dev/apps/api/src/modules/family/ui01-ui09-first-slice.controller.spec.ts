@@ -41,7 +41,11 @@ function controller(overrides: Record<string, unknown> = {}) {
     getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [] }),
     acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false }),
   };
-  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any);
+  const devPlatformSurfacesService = {
+    getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', cards: [] }),
+    acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED' }),
+  };
+  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any, devPlatformSurfacesService as any);
 }
 
 describe('UI-01/UI-09 first slice controller contract', () => {
@@ -61,6 +65,14 @@ describe('UI-01/UI-09 first slice controller contract', () => {
     await expect(instance.devCoreGrowth(familyId, actorId)).resolves.toMatchObject({ family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY' });
     await expect(instance.devCoreGrowthCommand(familyId, actorId, { surface: 'UI-05', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT' })).resolves.toMatchObject({
       family_id: familyId, surface: 'UI-05', status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false,
+    });
+  });
+
+  it('returns the family-scoped DEV Platform Surfaces projection and no-op receipt without external effect', async () => {
+    const instance = controller();
+    await expect(instance.devPlatformSurfaces(familyId, actorId)).resolves.toMatchObject({ family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED' });
+    await expect(instance.devPlatformSurfacesCommand(familyId, actorId, { surface: 'UI-21', command: 'PREVIEW_SYNTHETIC_BOOKING' })).resolves.toMatchObject({
+      family_id: familyId, surface: 'UI-21', status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false,
     });
   });
 
