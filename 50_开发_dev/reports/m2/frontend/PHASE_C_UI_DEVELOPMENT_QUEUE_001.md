@@ -21,8 +21,8 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 | Batch 3 | UI-11~UI-15 | Ranking/Poster/Commerce 研究和 Human Gate/External Effect gate；已完成 pre-API gate。 |
 | Batch 4 | UI-16~UI-20 | Commerce/Points/Membership/Service Supply 研究和 External Effect/Human Gate；已完成 pre-API gate。 |
 | Batch 5 | UI-21~UI-25 | Consultation/Salon/Activity/Service Mine/Parent Community；已完成 pre-API gate，预约、报名、真人服务、通知、日历、视频、支付、分享和社区治理保持 HOLD。 |
-| Batch 6 | UI-26~UI-29 | Community Publish/Dynamic/Evidence/Share 研究和 Human Gate。 |
-| Batch 7 | UI-30~UI-34 | Membership/Admin/Records 研究和数据权限 gate。 |
+| Batch 6 | UI-26~UI-30 | Publish/Dynamic/My Community/Growth Outcomes/Membership 研究和 Human Gate/External Effect gate；已完成 pre-API gate。 |
+| Batch 7 | UI-31~UI-34 | Services/Orders/Profile/Records 研究和数据权限 gate。 |
 
 ## 3. 34 UI queue
 
@@ -55,11 +55,11 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 | UI-23 | Activity Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 5 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | 报名/名额、Consent、通知、日历、视频、支付、分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-24 | Service Mine | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 5 pre-API gate prepared | `NEEDS_RESEARCH_REVIEW / NO_GO_WITH_BLOCKERS` | Booking/Registration/ServiceCase/Record/Outcome provenance、纠错、真人服务 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-25 | Parent Community | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 5 pre-API gate prepared | `NEEDS_RESEARCH_REVIEW / NO_GO_WITH_BLOCKERS` | Community scope、Consent、Moderation/Human Gate、儿童风险、互动/分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-26 | Publish Dynamic | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_HUMAN_GATE` | Publish Action、Moderation、Media、外发 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-27 | Dynamic Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | Post/Comment/Evidence、互动权限 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-28 | My Community | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | Private visibility、撤回、删除 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-29 | Growth Outcomes | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | OutcomeCase、Evidence、不得因果化 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-30 | Annual Member Mine | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | Membership、续费、退款、权益 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-26 | Publish Dynamic | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 6 pre-API gate prepared | `HOLD_HUMAN_GATE / HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | PostDraft/Media/Visibility、审核、儿童内容、发布、通知、分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-27 | Dynamic Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 6 pre-API gate prepared | `HOLD_HUMAN_GATE / HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Post/Evidence/Comment/Reaction、互动、举报、分享、儿童内容 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-28 | My Community | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 6 pre-API gate prepared | `HOLD_HUMAN_GATE / HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Private visibility、Consent、撤回、删除、审核、通知 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-29 | Growth Outcomes | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 6 pre-API gate prepared | `HOLD_HUMAN_GATE / NO_GO_WITH_BLOCKERS` | Outcome/Evidence provenance、纠错、禁止诊断/因果/总分/排名、导出分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-30 | Annual Member Mine | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 6 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Membership/Entitlement provenance、续费、支付、退款、客服、通知 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-31 | My Services | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | ServiceCase/Record、真人服务、通知 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-32 | Orders Assets | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | Payment、Refund、Download、Share | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-33 | Family Profile | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_HUMAN_GATE` | 儿童敏感数据、成员权限、Consent | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
@@ -80,7 +80,7 @@ Batch 1 已创建 UI-02~UI-05 pre-API gate 文档，并引用 UI-01 既有文档
 
 ## 6. Batch 3, Batch 4 and Batch 5 acceptance
 
-Batch 3 已创建 UI-11~UI-15 pre-API gate 文档；Batch 4 已创建 UI-16~UI-20 pre-API gate 文档；Batch 5 已创建 UI-21~UI-25 pre-API gate 文档。各批次均只完成 Research/Needs、BA、Visual Fidelity、Architect/Blocking 级准备，不产生 API Contract 或代码许可。UI-19 的既有只读 projection/client/view 仅作为现状输入，不改变其整体 NO_GO 状态。Batch 5 的五个页面均无运行截图或 pixel diff。
+Batch 3 已创建 UI-11~UI-15 pre-API gate 文档；Batch 4 已创建 UI-16~UI-20 pre-API gate 文档；Batch 5 已创建 UI-21~UI-25 pre-API gate 文档；Batch 6 已创建 UI-26~UI-30 pre-API gate 文档。各批次均只完成 Research/Needs、BA、Visual Fidelity、Architect/Blocking 级准备，不产生 API Contract 或代码许可。UI-19 的既有只读 projection/client/view 仅作为现状输入，不改变其整体 NO_GO 状态。Batch 6 的五个页面均无运行截图或 pixel diff。
 
 ## 7. Global consistency review
 
@@ -100,10 +100,10 @@ Batch 3 已创建 UI-11~UI-15 pre-API gate 文档；Batch 4 已创建 UI-16~UI-2
 
 ### Blocker summary by class
 
-1. **Research and provenance blockers**：UI-21~UI-25 仍需确认供给、活动、预约、服务记录、社区内容、作者身份、资质、时间、状态和证据来源；不得把 E1 材料或页面文案当作业务事实。
-2. **Domain and object blockers**：BookingDraft 与正式 Booking、RegistrationDraft 与报名、ServiceCase 与 ServiceRecord、OutcomeEvidence 与效果事实、Community projection 与用户互动动作的边界尚未由逐页 Architect Review 闭合。
+1. **Research and provenance blockers**：UI-21~UI-30 仍需确认供给、活动、预约、服务记录、社区内容、作者身份、资质、时间、状态、会员/权益和成果证据来源；不得把 E1 材料或页面文案当作业务事实。
+2. **Domain and object blockers**：BookingDraft 与正式 Booking、RegistrationDraft 与报名、ServiceCase 与 ServiceRecord、OutcomeEvidence 与效果事实、Community projection 与用户互动动作、MembershipProjection 与正式订单/权益状态的边界尚未由逐页 Architect Review 闭合。
 3. **Consent and Human Gate blockers**：儿童参与、家庭成员可见范围、SERVICE/COMMUNITY consent、直播/录制、敏感内容、真人联系、社区举报与审核仍需明确 purpose、授权主体、撤回、升级和审计。
-4. **External Effect blockers**：占座、报名、支付、退款、通知、日历、视频会议、分享、真人服务和外部联系均必须由 Adapter、Named Action、幂等、Audit 和 Human Gate 控制；DEV 只允许 no-op/stub。
+4. **External Effect blockers**：占座、报名、支付、退款、通知、日历、视频会议、分享、真人服务、发布、评论/点赞/举报、内容删除/撤回、客服、权益变更和数据导出均必须由 Adapter、Named Action、幂等、Audit 和 Human Gate 控制；DEV 只允许 no-op/stub。
 5. **Visual and test blockers**：所有批次尚无可用于成对 pixel diff 的开发后运行截图；需先完成基线尺寸/文案/布局核对、运行截图保存、Playwright 状态覆盖和 diff 报告。
 
 ## 8. Shared subsystem rule
