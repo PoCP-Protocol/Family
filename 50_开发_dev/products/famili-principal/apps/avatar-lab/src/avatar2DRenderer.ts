@@ -22,6 +22,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { assertResolvedRendererProfile } from '@family/fpai-multimodal-runtime';
+import type { ResolvedRendererProfile } from '@family/fpai-multimodal-contracts';
 
 export type FamilyMouthShape =
   | 'REST'
@@ -89,7 +90,7 @@ export interface CanvasLike {
 export interface Avatar2DRendererOptions {
   canvas: CanvasLike;
   now?: () => number;
-  profile: any; // PATCH-004: Must be ResolvedRendererProfile from IdentityResolver; validated at runtime
+  profile: ResolvedRendererProfile; // PATCH-005: Compile-time verified type + runtime authority check
 }
 
 export interface Avatar2DFrameSnapshot {

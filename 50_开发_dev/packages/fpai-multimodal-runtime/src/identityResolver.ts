@@ -11,14 +11,22 @@
 import { CharacterIdentity, RendererProfile, ResolvedRendererProfile } from '@family/fpai-multimodal-contracts';
 
 /**
+ * PATCH-005: Private runtime provenance authority.
+ * WeakSet tracks resolved profile instances.
+ * No consumer can forge membership without calling IdentityResolver.resolve().
+ * Not exported; only used by assertResolvedRendererProfile().
+ */
+const verifiedProfileInstances = new WeakSet<object>();
+
+/**
  * Resolves and validates CharacterIdentity at runtime.
- * Produces ResolvedRendererProfile with provenance verification.
+ * Produces ResolvedRendererProfile with runtime provenance registration.
  *
  * FAMILI-SPECIFIC: This resolver is currently hardcoded for 法咪莉校长.
  * Future: May generalize for multi-character scenarios if architecture review approves.
  *
  * PATCH-004: Produces RESOLVED profiles with __mm2_provenance_verified marker.
- * This is the ONLY authorized source for ResolvedRendererProfile.
+ * PATCH-005: Registers profile instance in private WeakSet for runtime authority.
  */
 export class IdentityResolver {
   /**
@@ -38,9 +46,8 @@ export class IdentityResolver {
     this.validateIdentity(identity);
 
     // Produce immutable ResolvedRendererProfile with provenance marker
-    // PATCH-004: __mm2_provenance_verified indicates this came from IdentityResolver,
-    // not from a consumer object literal. This marker cannot be replicated
-    // through normal TypeScript without access to this method.
+    // PATCH-004: __mm2_provenance_verified indicates this came from IdentityResolver.
+    // PATCH-005: Also register in private WeakSet for runtime authority.
     const resolvedProfile = Object.freeze({
       character_id: 'famili-principal-v1',
       character_name: identity.character_name,
@@ -62,6 +69,10 @@ export class IdentityResolver {
       is_immutable: true,
       __mm2_provenance_verified: true, // PATCH-004: Provenance marker (only IdentityResolver sets this)
     }) as ResolvedRendererProfile;
+
+    // PATCH-005: Register the exact runtime instance in private authority
+    // This proves the profile came from IdentityResolver, not from forged object literal
+    verifiedProfileInstances.add(resolvedProfile);
 
     return resolvedProfile;
   }
@@ -147,26 +158,36 @@ export class IdentityResolver {
 }
 
 /**
- * PATCH-004: Runtime validation that profile came from IdentityResolver.
+ * PATCH-005: Runtime validation that profile came from IdentityResolver.
+ *
+ * Checks both:
+ * 1. Metadata shape (compile-time / defensive)
+ * 2. Private WeakSet membership (runtime authority / non-forgeable)
  *
  * Must be called before passing any profile to production Famili renderer.
  * This is the authority checkpoint that prevents forged profiles.
  *
  * @param profile Unknown object claiming to be RendererProfile
  * @returns profile as ResolvedRendererProfile if valid
- * @throws Error if profile does not have provenance marker
+ * @throws Error if profile does not have runtime provenance
  */
 export function assertResolvedRendererProfile(profile: any): ResolvedRendererProfile {
   if (!profile) {
     throw new Error('ResolvedRendererProfile is required');
   }
 
-  if (profile.__mm2_provenance_verified !== true) {
+  // PATCH-005: Check private WeakSet membership (non-forgeable runtime authority)
+  if (!verifiedProfileInstances.has(profile)) {
     throw new Error(
       'RendererProfile must be created by IdentityResolver.resolve(). ' +
-      'Handwritten or forged profiles are not accepted. ' +
-      'Missing provenance marker: __mm2_provenance_verified'
+      'Handwritten, cloned, or forged profiles are not accepted. ' +
+      'Only the exact runtime instance from IdentityResolver has authority.'
     );
+  }
+
+  // Defensive shape checks (in case WeakSet fails unexpectedly)
+  if (profile.__mm2_provenance_verified !== true) {
+    throw new Error('Profile missing provenance marker (internal error)');
   }
 
   if (profile.is_immutable !== true) {
