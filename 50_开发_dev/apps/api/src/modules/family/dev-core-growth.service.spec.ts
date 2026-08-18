@@ -20,6 +20,11 @@ describe('DevCoreGrowthService', () => {
     expect(JSON.stringify(projection)).not.toContain('diagnosis');
   });
 
+  it('exposes a controller-safe allow-list for supported DEV surfaces', () => {
+    expect(service.supportsSurface('UI-05')).toBe(true);
+    expect(service.supportsSurface('UI-11')).toBe(false);
+  });
+
   it('acknowledges supported DEV commands without persistence or external effect', () => {
     expect(service.acknowledgeNoop(familyId, 'UI-05', 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT')).toEqual({
       family_id: familyId,

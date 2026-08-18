@@ -38,10 +38,12 @@ function controller(overrides: Record<string, unknown> = {}) {
     }),
   };
   const devCoreGrowthService = {
+    supportsSurface: (surface: string) => surface === 'UI-05',
     getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [] }),
     acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false }),
   };
   const devPlatformSurfacesService = {
+    supportsSurface: (surface: string) => surface === 'UI-21',
     getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', cards: [] }),
     acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED' }),
   };
@@ -74,6 +76,11 @@ describe('UI-01/UI-09 first slice controller contract', () => {
     await expect(instance.devPlatformSurfacesCommand(familyId, actorId, { surface: 'UI-21', command: 'PREVIEW_SYNTHETIC_BOOKING' })).resolves.toMatchObject({
       family_id: familyId, surface: 'UI-21', status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false,
     });
+  });
+
+  it('rejects an unrecognized DEV platform surface before service execution', async () => {
+    const instance = controller();
+    await expect(instance.devPlatformSurfacesCommand(familyId, actorId, { surface: 'UI-99', command: 'UNKNOWN' })).rejects.toMatchObject({ response: { message: 'unsupported_dev_platform_surface' } });
   });
 
   it('wraps the existing CompleteGrowthAction readback in TaskCheckinResultProjection', async () => {

@@ -28,8 +28,12 @@ export class DevPlatformSurfacesService {
     };
   }
 
+  supportsSurface(surface: string): surface is DevPlatformSurface {
+    return DEV_PLATFORM_SURFACES.includes(surface as DevPlatformSurface);
+  }
+
   acknowledgeNoop(familyId: string, surface: DevPlatformSurface, command: string): DevPlatformNoopCommandResult {
-    if (!DEV_PLATFORM_SURFACES.includes(surface)) throw new Error('unsupported_dev_platform_surface');
+    if (!this.supportsSurface(surface)) throw new Error('unsupported_dev_platform_surface');
     return { family_id: familyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED' };
   }
 

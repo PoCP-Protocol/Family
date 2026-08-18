@@ -23,7 +23,12 @@ describe('DevPlatformSurfacesService', () => {
     expect(text).not.toContain('diagnosis');
   });
 
-  it('returns explicit no-op receipt for an external-effect shaped UI command', () => {
+  it('exposes a controller-safe allow-list for UI-11~UI-34', () => {
+    expect(service.supportsSurface('UI-21')).toBe(true);
+    expect(service.supportsSurface('UI-10')).toBe(false);
+  });
+
+  it('returns an explicit no-op receipt for an external-effect shaped UI command', () => {
     expect(service.acknowledgeNoop(familyId, 'UI-21', 'PREVIEW_SYNTHETIC_BOOKING')).toEqual({
       family_id: familyId, surface: 'UI-21', command: 'PREVIEW_SYNTHETIC_BOOKING',
       status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED',

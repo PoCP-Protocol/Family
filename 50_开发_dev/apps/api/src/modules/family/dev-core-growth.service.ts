@@ -37,8 +37,12 @@ export class DevCoreGrowthService {
     };
   }
 
+  supportsSurface(surface: string): surface is DevCoreGrowthSurface {
+    return DEV_CORE_GROWTH_SURFACES.includes(surface as DevCoreGrowthSurface);
+  }
+
   acknowledgeNoop(familyId: string, surface: DevCoreGrowthSurface, command: string): DevCoreGrowthNoopCommandResult {
-    if (!DEV_CORE_GROWTH_SURFACES.includes(surface)) {
+    if (!this.supportsSurface(surface)) {
       throw new Error('unsupported_dev_core_growth_surface');
     }
     return {

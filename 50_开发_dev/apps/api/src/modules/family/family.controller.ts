@@ -99,7 +99,8 @@ export class FamilyController {
     if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
       throw new BadRequestException('surface_and_command_required');
     }
-    return this.devCoreGrowthService.acknowledgeNoop(familyId, candidate.surface as any, candidate.command.trim());
+    if (!this.devCoreGrowthService.supportsSurface(candidate.surface)) throw new BadRequestException('unsupported_dev_core_growth_surface');
+    return this.devCoreGrowthService.acknowledgeNoop(familyId, candidate.surface, candidate.command.trim());
   }
 
   /** UI-11..UI-34 DEV-only read projection/no-op adapter. No payment, notification, booking, share, export, publication or model call is executed. */
@@ -127,7 +128,8 @@ export class FamilyController {
     if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
       throw new BadRequestException('surface_and_command_required');
     }
-    return this.devPlatformSurfacesService.acknowledgeNoop(familyId, candidate.surface as any, candidate.command.trim());
+    if (!this.devPlatformSurfacesService.supportsSurface(candidate.surface)) throw new BadRequestException('unsupported_dev_platform_surface');
+    return this.devPlatformSurfacesService.acknowledgeNoop(familyId, candidate.surface, candidate.command.trim());
   }
 
   @RequireFamilyAction('ReadFamily')
