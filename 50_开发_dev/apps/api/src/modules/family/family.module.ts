@@ -14,6 +14,7 @@ import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
 import { DevCoreGrowthService } from './dev-core-growth.service';
 import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
+import { DevFlowReceiptService } from './dev-flow-receipt.service';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -38,8 +39,9 @@ import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
 		    TodayService,
     DevCoreGrowthService,
     DevPlatformSurfacesService,
+    DevFlowReceiptService,
 
-	],
+		],
 	// M3-101A-C:导出 InterventionService,供 Principal Action Bridge 调用既有 StartIntervention Named Action(不复制其 canonical 门)。
 	exports: [InterventionService],
 })

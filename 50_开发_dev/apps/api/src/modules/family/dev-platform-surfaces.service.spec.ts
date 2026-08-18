@@ -17,6 +17,14 @@ describe('DevPlatformSurfacesService', () => {
       'UI-19','UI-20','UI-21','UI-22','UI-23','UI-24','UI-25','UI-26',
       'UI-27','UI-28','UI-29','UI-30','UI-31','UI-32','UI-33','UI-34',
     ]);
+    expect(projection.cards.find((card) => card.surface === 'UI-13')).toMatchObject({
+      loop: 'COMMERCE_LOOP', business_capability: 'Catalog projection', state_boundary: 'READ_ONLY',
+    });
+    expect(projection.cards.find((card) => card.surface === 'UI-21')).toMatchObject({
+      loop: 'TEACHER_SALON_LOOP', primary_objects: ['ServiceOffering', 'BookingDraft'], state_boundary: 'NOOP_ADAPTER',
+    });
+    expect(projection.cards.find((card) => card.surface === 'UI-25')).toMatchObject({ loop: 'COMMUNITY_LOOP' });
+    expect(projection.cards.find((card) => card.surface === 'UI-33')).toMatchObject({ loop: 'CUSTOMER_BACKEND_LOOP' });
     const text = JSON.stringify(projection);
     expect(text).not.toContain('family_total_score');
     expect(text).not.toContain('external_effect:true');

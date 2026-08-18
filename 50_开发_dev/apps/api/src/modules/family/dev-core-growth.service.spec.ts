@@ -15,6 +15,10 @@ describe('DevCoreGrowthService', () => {
     });
     expect(projection.cards.map((card) => card.surface)).toEqual(['UI-02', 'UI-03', 'UI-04', 'UI-05', 'UI-06', 'UI-07', 'UI-08', 'UI-10']);
     expect(projection.cards.every((card) => card.data_source === 'SYNTHETIC_DEV_ONLY')).toBe(true);
+    expect(projection.cards.every((card) => card.loop === 'GROWTH_LOOP' && card.primary_objects.length > 0)).toBe(true);
+    expect(projection.cards.find((card) => card.surface === 'UI-05')).toMatchObject({
+      business_capability: '90-day plan draft', state_boundary: 'CONTROLLED_DRAFT',
+    });
     expect(JSON.stringify(projection)).not.toContain('family_ranking');
     expect(JSON.stringify(projection)).not.toContain('family_total_score');
     expect(JSON.stringify(projection)).not.toContain('diagnosis');

@@ -264,10 +264,10 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('submits a DEV no-op acknowledgement without external effect or persistence', async () => {
+  it('persists a DEV synthetic flow receipt without external effect', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => projection })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'NOOP_ACKNOWLEDGED', external_effect: false, persistence: 'NONE' }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
@@ -277,11 +277,11 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     await tick();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [url, request] = fetchMock.mock.calls[1];
-    expect(url).toBe(`http://family-api.test/families/${familyId}/dev/core-growth/commands`);
+    expect(url).toBe(`http://family-api.test/families/${familyId}/dev/flow-events`);
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
-    expect(JSON.parse(String(request.body))).toMatchObject({ surface: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT' });
-    expect(root.dataset.familyCoreGrowthNoop).toBe('NOOP_ACKNOWLEDGED');
-    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('未持久化、未触发外部效果');
+    expect(JSON.parse(String(request.body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT' });
+    expect(root.dataset.familyCoreGrowthNoop).toBe('DEV_CONFIRMED');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('DEV 场景回执已记录');
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
@@ -330,20 +330,20 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('returns an explicit no-op receipt for DEV booking-style action instead of creating an external effect', async () => {
+  it('persists a DEV synthetic receipt for booking-style interaction without an external effect', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => projection })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div'); document.body.append(root);
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'consultation-booking' });
     await tick(); await tick();
     root.querySelector<HTMLButtonElement>('[data-by="platform-surface-noop"]')?.click(); await tick();
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][0]).toBe(`http://family-api.test/families/${familyId}/dev/platform-surfaces/commands`);
-    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ surface: 'UI-21' });
-    expect(root.dataset.familyPlatformSurfaceNoop).toBe('NOOP_ACKNOWLEDGED');
-    expect(root.querySelector('[data-platform-surface="UI-21"]')?.textContent).toContain('未持久化、未触发真实外部效果');
+    expect(fetchMock.mock.calls[1][0]).toBe(`http://family-api.test/families/${familyId}/dev/flow-events`);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-21', command: 'READ_UI-21' });
+    expect(root.dataset.familyPlatformSurfaceNoop).toBe('DEV_CONFIRMED');
+    expect(root.querySelector('[data-platform-surface="UI-21"]')?.textContent).toContain('DEV 场景回执已记录');
   });
 
   it('fails closed when platform synthetic projection cannot be read', async () => {

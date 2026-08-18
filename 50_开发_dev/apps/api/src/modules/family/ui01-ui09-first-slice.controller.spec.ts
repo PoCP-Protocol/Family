@@ -47,7 +47,16 @@ function controller(overrides: Record<string, unknown> = {}) {
     getProjection: (scopeFamilyId: string) => ({ family_id: scopeFamilyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', cards: [] }),
     acknowledgeNoop: (scopeFamilyId: string, surface: string, command: string) => ({ family_id: scopeFamilyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED' }),
   };
-  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any, devPlatformSurfacesService as any);
+  const devFlowReceiptService = {
+    record: async (scopeFamilyId: string, scopeActorId: string, input: { ui_id: string; command: string; correlation_id: string; idempotency_key?: string }) => ({
+      event_id: '88888888-8888-4888-8888-888888888888', family_id: scopeFamilyId, ui_id: input.ui_id,
+      business_loop: 'GROWTH_LOOP', command: input.command, event_state: 'DEV_CONFIRMED',
+      data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, model_gateway_status: 'NOOP_NOT_INVOKED', replayed: false,
+      created_at: '2026-08-19T00:00:00.000Z', actor_id: scopeActorId,
+    }),
+    list: async (scopeFamilyId: string) => [],
+  };
+  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any, devPlatformSurfacesService as any, devFlowReceiptService as any);
 }
 
 describe('UI-01/UI-09 first slice controller contract', () => {
@@ -81,6 +90,20 @@ describe('UI-01/UI-09 first slice controller contract', () => {
   it('rejects an unrecognized DEV platform surface before service execution', async () => {
     const instance = controller();
     await expect(instance.devPlatformSurfacesCommand(familyId, actorId, { surface: 'UI-99', command: 'UNKNOWN' })).rejects.toMatchObject({ response: { message: 'unsupported_dev_platform_surface' } });
+  });
+
+  it('records a persistent DEV synthetic flow receipt with no external effect', async () => {
+    const result = await controller().recordDevFlowEvent(
+      familyId,
+      actorId,
+      { ui_id: 'UI-05', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT' },
+      'corr-dev-flow',
+      'idem-dev-flow',
+    );
+    expect(result).toMatchObject({
+      family_id: familyId, ui_id: 'UI-05', business_loop: 'GROWTH_LOOP',
+      event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false,
+    });
   });
 
   it('wraps the existing CompleteGrowthAction readback in TaskCheckinResultProjection', async () => {

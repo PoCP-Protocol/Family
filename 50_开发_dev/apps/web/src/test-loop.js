@@ -110,7 +110,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const card = coreGrowthProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
     const receipt = coreGrowthNoopReceipt ? ` ${coreGrowthNoopReceipt}` : '';
-    return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}" data-core-growth-state="${card.state}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；Model Gateway=${coreGrowthProjection.model_gateway?.status || 'NOOP_NOT_INVOKED'}）${receipt}</output><button class="by-btn ghost by-core-growth-refresh" data-by="dev-core-refresh" aria-label="刷新 DEV 成长投影">刷新 DEV 投影</button><button class="by-btn ghost by-core-growth-noop" data-by="dev-core-noop" data-core-growth-command="${card.command.name}" data-core-growth-surface="${surface}" aria-label="提交 DEV 无持久化回执">确认 DEV 回执</button>`;
+    return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}" data-core-growth-state="${card.state}" data-growth-loop="${card.loop || 'GROWTH_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'GROWTH_LOOP'}；Model Gateway=${coreGrowthProjection.model_gateway?.status || 'NOOP_NOT_INVOKED'}）${receipt}</output><button class="by-btn ghost by-core-growth-refresh" data-by="dev-core-refresh" aria-label="刷新 DEV 成长投影">刷新 DEV 投影</button><button class="by-btn ghost by-core-growth-noop" data-by="dev-core-noop" data-core-growth-command="${card.command.name}" data-core-growth-surface="${surface}" aria-label="提交 DEV 无持久化回执">确认 DEV 回执</button>`;
   };
   async function requestCoreGrowthProjection() {
     if (!coreGrowthApiEnabled() || coreGrowthLoadState === 'LOADING') return coreGrowthProjection;
@@ -140,15 +140,15 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const correlationId = `family-dev-core-noop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     if (!coreGrowthApiEnabled()) return null;
     try {
-      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/core-growth/commands`, {
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, {
         method: 'POST', credentials: 'include',
         headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
-        body: JSON.stringify({ surface, command }),
+        body: JSON.stringify({ ui_id: surface, command }),
       });
       const payload = await response.json();
-      if (!response.ok || payload?.status !== 'NOOP_ACKNOWLEDGED' || payload?.external_effect !== false) throw new Error('dev_core_growth_noop_failed');
-      coreGrowthNoopReceipt = 'DEV 回执已确认：未持久化、未触发外部效果。';
-      root.dataset.familyCoreGrowthNoop = payload.status;
+      if (!response.ok || payload?.event_state !== 'DEV_CONFIRMED' || payload?.external_effect !== false || payload?.data_source !== 'SYNTHETIC_DEV_ONLY') throw new Error('dev_core_growth_receipt_failed');
+      coreGrowthNoopReceipt = 'DEV 场景回执已记录：仅测试数据、未触发外部效果。';
+      root.dataset.familyCoreGrowthNoop = payload.event_state;
       return payload;
     } catch (_error) {
       coreGrowthNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。';
@@ -163,7 +163,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const card = platformSurfacesProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
     const receipt = platformSurfacesNoopReceipt ? ` ${platformSurfacesNoopReceipt}` : '';
-    return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；外部效果=${platformSurfacesProjection.external_effect_adapter}）${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新 DEV 投影</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">确认 DEV 回执</button>`;
+    return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}" data-growth-loop="${card.loop || 'CUSTOMER_BACKEND_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'CUSTOMER_BACKEND_LOOP'}；外部效果=${platformSurfacesProjection.external_effect_adapter}）${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新 DEV 投影</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">确认 DEV 回执</button>`;
   };
   async function requestPlatformSurfacesProjection() {
     if (!platformSurfacesApiEnabled() || platformSurfacesLoadState === 'LOADING') return platformSurfacesProjection;
@@ -185,10 +185,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     if (!platformSurfacesApiEnabled()) return null;
     const correlationId = `family-dev-platform-noop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
-      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/platform-surfaces/commands`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ surface, command }) });
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ ui_id: surface, command }) });
       const payload = await response.json();
-      if (!response.ok || payload?.status !== 'NOOP_ACKNOWLEDGED' || payload?.external_effect !== false || payload?.persistence !== 'NONE') throw new Error('dev_platform_noop_failed');
-      platformSurfacesNoopReceipt = 'DEV 回执已确认：未持久化、未触发真实外部效果。'; root.dataset.familyPlatformSurfaceNoop = payload.status; return payload;
+      if (!response.ok || payload?.event_state !== 'DEV_CONFIRMED' || payload?.external_effect !== false || payload?.data_source !== 'SYNTHETIC_DEV_ONLY') throw new Error('dev_platform_receipt_failed');
+      platformSurfacesNoopReceipt = 'DEV 场景回执已记录：仅测试数据、未触发真实外部效果。'; root.dataset.familyPlatformSurfaceNoop = payload.event_state; return payload;
     } catch (_error) {
       platformSurfacesNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。'; root.dataset.familyPlatformSurfaceNoop = 'CLIENT_FAILURE'; return null;
     }

@@ -27,6 +27,7 @@ import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
 import { DevCoreGrowthService } from './dev-core-growth.service';
 import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
+import { DevFlowReceiptService } from './dev-flow-receipt.service';
 
 @Controller('families')
 @UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
@@ -41,6 +42,7 @@ export class FamilyController {
     @Inject(TodayService) private readonly todayService: TodayService,
     @Inject(DevCoreGrowthService) private readonly devCoreGrowthService: DevCoreGrowthService,
     @Inject(DevPlatformSurfacesService) private readonly devPlatformSurfacesService: DevPlatformSurfacesService,
+    @Inject(DevFlowReceiptService) private readonly devFlowReceiptService: DevFlowReceiptService,
   ) {}
 
   // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
@@ -130,6 +132,45 @@ export class FamilyController {
     }
     if (!this.devPlatformSurfacesService.supportsSurface(candidate.surface)) throw new BadRequestException('unsupported_dev_platform_surface');
     return this.devPlatformSurfacesService.acknowledgeNoop(familyId, candidate.surface, candidate.command.trim());
+  }
+
+  /**
+   * DEV-only persistent interaction receipt shared by all six business loops.
+   * It stores synthetic test-flow state only and never creates an order,
+   * booking, entitlement, public post, outcome, notification, export or model call.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/flow-events')
+  async recordDevFlowEvent(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { ui_id?: unknown; command?: unknown };
+    if (typeof candidate?.ui_id !== 'string' || typeof candidate?.command !== 'string') {
+      throw new BadRequestException('ui_id_and_command_required');
+    }
+    return this.devFlowReceiptService.record(familyId, actorId, {
+      ui_id: candidate.ui_id,
+      command: candidate.command,
+      correlation_id: correlationId?.trim() || crypto.randomUUID(),
+      idempotency_key: idempotencyKey?.trim() || undefined,
+    });
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/flow-events')
+  async listDevFlowEvents(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return { family_id: familyId, events: await this.devFlowReceiptService.list(familyId, actorId) };
   }
 
   @RequireFamilyAction('ReadFamily')

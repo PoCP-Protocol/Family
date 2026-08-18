@@ -1,3 +1,5 @@
+import type { ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
+
 export type DevPlatformSurface =
   | 'UI-11' | 'UI-12' | 'UI-13' | 'UI-14' | 'UI-15' | 'UI-16' | 'UI-17' | 'UI-18'
   | 'UI-19' | 'UI-20' | 'UI-21' | 'UI-22' | 'UI-23' | 'UI-24'
@@ -5,6 +7,11 @@ export type DevPlatformSurface =
 
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
+  /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
+  loop: FamilyBusinessLoop;
+  business_capability: string;
+  primary_objects: readonly string[];
+  state_boundary: ExternalEffectBoundary;
   domain: 'PERSONAL_HISTORY' | 'EVIDENCE' | 'COMMERCE' | 'ENTITLEMENT' | 'SERVICE' | 'ACTIVITY' | 'COMMUNITY' | 'PROFILE' | 'RECORD';
   title: string;
   state: 'READ_ONLY' | 'DRAFT' | 'NOOP';

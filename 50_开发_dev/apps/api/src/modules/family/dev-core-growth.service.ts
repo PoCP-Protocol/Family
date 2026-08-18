@@ -5,6 +5,7 @@ import {
   type DevCoreGrowthNoopCommandResult,
   type DevCoreGrowthProjection,
   type DevCoreGrowthSurface,
+  getFamilyUiArchitectureBinding,
 } from '@family/contracts';
 
 /**
@@ -33,7 +34,16 @@ export class DevCoreGrowthService {
         status: 'NOOP_NOT_INVOKED',
         rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY',
       },
-      cards: this.cards(),
+      cards: this.cards().map((item) => {
+        const architecture = getFamilyUiArchitectureBinding(item.surface);
+        return {
+          ...item,
+          loop: architecture.loop,
+          business_capability: architecture.business_capability,
+          primary_objects: architecture.primary_objects,
+          state_boundary: architecture.state_boundary,
+        };
+      }),
     };
   }
 
@@ -56,7 +66,7 @@ export class DevCoreGrowthService {
     };
   }
 
-  private cards(): DevCoreGrowthCard[] {
+  private cards(): Array<Omit<DevCoreGrowthCard, 'loop' | 'business_capability' | 'primary_objects' | 'state_boundary'>> {
     return [
       {
         surface: 'UI-02', kind: 'ASSESSMENT_ENTRY', title: '家庭成长测评入口', state: 'READY',

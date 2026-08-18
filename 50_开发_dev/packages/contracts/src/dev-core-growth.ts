@@ -3,6 +3,7 @@ import type {
   GrowthPriorityBoundary,
   ReflectionBoundary,
 } from './index';
+import type { ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
 
 /** UI-02..UI-10 的 DEV-only 读投影。禁止用于生产决策、诊断或外部效果。 */
 export type DevCoreGrowthSurface =
@@ -26,6 +27,11 @@ export type DevCoreGrowthCardKind =
 
 export interface DevCoreGrowthCard {
   surface: DevCoreGrowthSurface;
+  /** Architecture metadata sourced from the shared six-loop UI mapping. */
+  loop: FamilyBusinessLoop;
+  business_capability: string;
+  primary_objects: readonly string[];
+  state_boundary: ExternalEffectBoundary;
   kind: DevCoreGrowthCardKind;
   title: string;
   state: 'READY' | 'DRAFT' | 'READ_ONLY' | 'NOOP';

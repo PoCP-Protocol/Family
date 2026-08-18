@@ -5,9 +5,10 @@ import {
   type DevPlatformSurface,
   type DevPlatformSurfaceCard,
   type DevPlatformSurfacesProjection,
+  getFamilyUiArchitectureBinding,
 } from '@family/contracts';
 
-type Template = Omit<DevPlatformSurfaceCard, 'surface' | 'data_source'> & { surface: DevPlatformSurface };
+type Template = Omit<DevPlatformSurfaceCard, 'surface' | 'data_source' | 'loop' | 'business_capability' | 'primary_objects' | 'state_boundary'> & { surface: DevPlatformSurface };
 
 /**
  * Single DEV-only adapter for the platform UI surfaces after UI-10.
@@ -24,7 +25,17 @@ export class DevPlatformSurfacesService {
       data_source: 'SYNTHETIC_DEV_ONLY',
       external_effect_adapter: 'NOOP_NOT_INVOKED',
       model_gateway: 'NOOP_NOT_INVOKED',
-      cards: this.templates().map((item) => ({ ...item, data_source: 'SYNTHETIC_DEV_ONLY' })),
+      cards: this.templates().map((item) => {
+        const architecture = getFamilyUiArchitectureBinding(item.surface);
+        return {
+          ...item,
+          data_source: 'SYNTHETIC_DEV_ONLY',
+          loop: architecture.loop,
+          business_capability: architecture.business_capability,
+          primary_objects: architecture.primary_objects,
+          state_boundary: architecture.state_boundary,
+        };
+      }),
     };
   }
 
