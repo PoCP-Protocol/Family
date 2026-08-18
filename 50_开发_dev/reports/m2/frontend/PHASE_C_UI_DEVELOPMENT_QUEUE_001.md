@@ -19,7 +19,7 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 | Batch 1 | UI-01~UI-05 | UI-01 既有门禁引用；UI-02~UI-05 pre-API gate。 |
 | Batch 2 | UI-06~UI-12 | UI-06~UI-10 pre-API gate 已准备；UI-11~UI-12 待后续补齐研究、BA、视觉和 Architect/Blocking 文档。 |
 | Batch 3 | UI-11~UI-15 | Ranking/Poster/Commerce 研究和 Human Gate/External Effect gate；UI-16~UI-18 待后续批次。 |
-| Batch 4 | UI-19~UI-24 | Service Supply/Booking/Activity 研究和真人服务 gate。 |
+| Batch 4 | UI-16~UI-20 | Commerce/Points/Membership/Service Supply 研究和 External Effect/Human Gate；UI-21~UI-24 待后续批次。 |
 | Batch 5 | UI-25~UI-29 | Community/Evidence/Share 研究和 Human Gate。 |
 | Batch 6 | UI-30~UI-34 | Membership/Admin/Records 研究和数据权限 gate。 |
 
@@ -44,11 +44,11 @@ Broad Research → Needs Analysis → BA Design → Visual Baseline → Architec
 | UI-13 | Mall Home | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Product/Offering、成长服务与商业化边界、推荐/购买、支付/权益 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-14 | Product Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Payment、Order、Entitlement、退款、价格/权益 provenance | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-15 | Invite Rewards | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 3 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | Invite、通知、Reward、反滥用、Consent、外发分享 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
-| UI-16 | Group Buy | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 库存、订单、支付、通知 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-17 | Points Task | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | 积分规则、任务事件、权益事实 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-18 | Membership Center | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 续费、退款、权益变更 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-19 | Teacher Supply | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `READ_PROJECTION_REVIEW` | provider/of­fering/availability、筛选证据、视觉闭环 | NO | NO | Runtime NONE；diff NOT_READY |
-| UI-20 | Teacher Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | 资质来源、评分边界、Booking draft | NO | NO | Runtime NONE；diff NOT_READY |
+| UI-16 | Group Buy | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 4 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | 库存、订单、支付、通知、价格和反滥用 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-17 | Points Task | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 4 pre-API gate prepared | `NO_GO_WITH_BLOCKERS` | 积分规则、任务事件、权益事实、禁止总分/排名 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-18 | Membership Center | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 4 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | 续费、退款、权益变更、通知和客服 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-19 | Teacher Supply | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 4 pre-API gate prepared；已有只读 projection/client/view 仅作现状输入 | `NO_GO_WITH_BLOCKERS` | provider/offering/availability、SERVICE consent、筛选证据、禁止排序/推荐和真人外部效应 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
+| UI-20 | Teacher Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking；Batch 4 pre-API gate prepared | `HOLD_EXTERNAL_EFFECT / NO_GO_WITH_BLOCKERS` | 资质来源、评分边界、Booking draft、预约/通知/视频/支付和真人服务 | NO | NO | `RUNTIME_SCREENSHOT_READY=NO`; `PIXEL_DIFF_READY=NO` |
 | UI-21 | Consultation Booking | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 占座、通知、支付、真人联系 | NO | NO | Runtime NONE；diff NOT_READY |
 | UI-22 | Salon List | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `NEEDS_RESEARCH_REVIEW` | Activity、Calendar/Video adapter | NO | NO | Runtime NONE；diff NOT_READY |
 | UI-23 | Activity Detail | Research/Needs、BA、Visual Brief、Architect Review、Blocking | `HOLD_EXTERNAL_EFFECT` | 报名、通知、日历、视频 | NO | NO | Runtime NONE；diff NOT_READY |
