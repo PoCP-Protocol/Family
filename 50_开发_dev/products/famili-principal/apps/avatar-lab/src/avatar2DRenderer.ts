@@ -87,6 +87,7 @@ export interface CanvasLike {
 export interface Avatar2DRendererOptions {
   canvas: CanvasLike;
   now?: () => number;
+  profile?: { character_id?: string; identity_version?: string }; // MM2: Immutable identity reference
 }
 
 export interface Avatar2DFrameSnapshot {
@@ -122,6 +123,7 @@ const EXPRESSION_EYE: Record<FamilyExpression, { openY: number }> = {
 export class Avatar2DRenderer {
   private readonly canvas: CanvasLike;
   private readonly nowFn: () => number;
+  private readonly profile?: { character_id?: string; identity_version?: string }; // MM2: Immutable identity
   private state: FamilyAvatarState = 'RESTING';
   private expression: FamilyExpression = 'CALM_WARM';
   private mouthShape: FamilyMouthShape = 'REST';
@@ -140,6 +142,7 @@ export class Avatar2DRenderer {
   public constructor(opts: Avatar2DRendererOptions) {
     this.canvas = opts.canvas;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
+    this.profile = opts.profile; // MM2: Store immutable identity reference
   }
 
   public setState(s: FamilyAvatarState): void { this.state = s; }

@@ -20,6 +20,7 @@ import { StreamingAudioPlayer } from './streamingAudioPlayer';
 import { SpeechPlaybackClock } from './speechPlaybackClock';
 import { VisemeScheduler } from './visemeScheduler';
 import { RealMicUi } from './realMicUi';
+import { getIdentityResolver, type CharacterIdentity } from '@family/fpai-multimodal-contracts'; // MM2: Runtime identity binding
 
 interface AddonQueryFlags {
   real_speech: 'YES' | 'NO';
@@ -55,7 +56,29 @@ function mountAddon(): void {
     return;
   }
 
-  const renderer = new Avatar2DRenderer({ canvas });
+  // MM2: Establish runtime identity binding
+  const resolver = getIdentityResolver();
+  const authorizedIdentity: CharacterIdentity = {
+    version: 'character_v1.0',
+    frozen_date: '2026-08-17',
+    character_name: '法咪莉校长',
+    persona: '知性邻家姐姐',
+    ownership: 'Family-owned IP',
+    visual_dna: [
+      'INTELLECTUAL', 'WARM', 'TRUSTWORTHY', 'NATURAL', 'KIND',
+      'CALM', 'MATURE', 'EMPATHETIC', 'CULTURED', 'NON_JUDGMENTAL',
+    ],
+    ip_alignment: {
+      bobo_method_inheritance: true,
+      bobo_identity_clone: false,
+      bobo_face_clone: false,
+      bobo_voice_clone: false,
+      real_person_likeness_clone: false,
+    },
+  };
+  const profile = resolver.resolve(authorizedIdentity); // Runtime validation → RendererProfile
+
+  const renderer = new Avatar2DRenderer({ canvas, profile });
   const player = new StreamingAudioPlayer();
   const clock = new SpeechPlaybackClock({ provider: player });
   const scheduler = new VisemeScheduler({ clock });

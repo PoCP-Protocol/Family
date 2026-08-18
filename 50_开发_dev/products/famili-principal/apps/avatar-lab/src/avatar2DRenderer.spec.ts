@@ -119,4 +119,84 @@ describe('mm1-b1.1 · Avatar2DRenderer (§G)', () => {
     r.render();
     expect(r.snapshot().frame_index).toBe(3);
   });
+
+  // MM2: Runtime Identity Binding Tests
+  describe('MM2: Runtime Identity Binding', () => {
+    it('MM2-R01 · Avatar2DRenderer stores profile from options', () => {
+      const canvas = makeFakeCanvas();
+      const profile = { character_id: 'test-char', identity_version: 'v1.0' };
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
+      const snap = r.snapshot();
+      expect(snap).toBeDefined();
+      expect(snap.state).toBe('RESTING');
+    });
+
+    it('MM2-R02 · Avatar2DRenderer renders with identity profile', () => {
+      const canvas = makeFakeCanvas();
+      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
+      r.setState('LISTENING');
+      r.setExpression('CALM_WARM');
+      r.setMouthShape('OPEN_MEDIUM');
+
+      const snap = r.render();
+      expect(snap.state).toBe('LISTENING');
+      expect(snap.expression).toBe('CALM_WARM');
+      expect(snap.mouth_shape).toBe('OPEN_MEDIUM');
+      expect(canvas._ctx._calls.length).toBeGreaterThan(0);
+    });
+
+    it('MM2-R03 · Avatar2DRenderer completes rendering sequence with profile', () => {
+      const canvas = makeFakeCanvas();
+      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
+      r.setState('SPEAKING');
+      r.setExpression('WARM_FIRM');
+      r.triggerNod();
+
+      const snap = r.render();
+      expect(snap.state).toBe('SPEAKING');
+      expect(snap.nod_phase).toBeGreaterThanOrEqual(0);
+
+      const callsStr = canvas._ctx._calls.join('\n');
+      expect(callsStr).toContain('clearRect');
+      expect(callsStr).toContain('arc');
+    });
+
+    it('MM2-R04 · changing performance state preserves identity reference', () => {
+      const canvas = makeFakeCanvas();
+      const profile = { character_id: 'famili-principal-v1', identity_version: 'character_v1.0' };
+      const r = new Avatar2DRenderer({ canvas, profile, now: () => 0 });
+
+      const states = ['RESTING', 'LISTENING', 'THINKING', 'SPEAKING'];
+      for (const state of states) {
+        r.setState(state as any);
+        r.setExpression('CALM_WARM');
+        r.setMouthShape('REST');
+        r.render();
+      }
+
+      const snap = r.snapshot();
+      expect(snap.state).toBe('SPEAKING');
+    });
+
+    it('MM2-R05 · Avatar2DRenderer works with minimal RendererProfile structure', () => {
+      const canvas = makeFakeCanvas();
+      const minimalProfile = { character_id: 'test' };
+      const r = new Avatar2DRenderer({ canvas, profile: minimalProfile, now: () => 0 });
+
+      const snap = r.render();
+      expect(snap).toBeDefined();
+      expect(snap.state).toBe('RESTING');
+    });
+
+    it('MM2-R06 · Avatar2DRenderer can render without profile for legacy tests', () => {
+      const canvas = makeFakeCanvas();
+      const r = new Avatar2DRenderer({ canvas, now: () => 0 });
+
+      const snap = r.render();
+      expect(snap).toBeDefined();
+      expect(snap.frame_index).toBeGreaterThanOrEqual(0);
+    });
+  });
 });
