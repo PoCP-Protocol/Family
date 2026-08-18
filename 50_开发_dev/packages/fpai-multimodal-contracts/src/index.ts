@@ -1,5 +1,7 @@
 // Character Identity Contracts (FPAI-MM Visual IP Machine Contract Authority)
 // Defines WHO (character identity, visual DNA, IP constraints)
+import type { PerformanceFrame } from './characterIdentity';
+
 export {
   CharacterIdentity,
   CharacterPose,
@@ -9,6 +11,7 @@ export {
   CharacterWardrobe,
   CharacterScene,
   CharacterState,
+  PerformanceFrame,
   RendererProfile,
   ResolvedRendererProfile,
   AvatarRendererContract,
@@ -16,6 +19,9 @@ export {
   isResolvedRendererProfile,
   isCharacterStateValid,
 } from './characterIdentity';
+
+// Performance Intent (MM3: Semantic expression layer)
+export { PerformanceIntent, PerformanceIntentContext, derivePerformanceIntent } from './performanceIntent';
 
 export type PrincipalSceneMode = 'INTERACTIVE_CHAT' | 'MICRO_LESSON' | 'FAMILY_DIALOGUE';
 
@@ -146,21 +152,20 @@ export interface SpeechPlan {
   emphasis: string[];
 }
 
-export interface AvatarPerformancePlan {
-  expression: string;
-  gesture: string;
-  gaze: 'USER' | 'SOFT_DOWN_THINKING' | 'RETURN_USER' | 'AWAY' | 'STABLE';
-  posture: 'RELAXED' | 'STEADY' | 'FORWARD';
-}
-
 export interface VisualAidPlan {
   subtitle_mode: 'NORMAL' | 'SERIOUS' | 'HIGHLIGHT';
   action_card?: string;
 }
 
+/**
+ * @deprecated Use PerformanceFrame directly.
+ * Alias for backwards compatibility during orchestrator migration.
+ */
+export type AvatarPerformancePlan = PerformanceFrame;
+
 export interface PrincipalPerformancePlan {
   speech: SpeechPlan;
-  avatar: AvatarPerformancePlan;
+  avatar: PerformanceFrame;  // Changed from AvatarPerformancePlan to PerformanceFrame
   visual?: VisualAidPlan;
 }
 

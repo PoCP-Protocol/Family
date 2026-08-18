@@ -66,6 +66,10 @@ export interface CharacterPose {
 /**
  * Character Expression — selected from frozen expression identity map
  * Cannot be mutated by avatar renderer or arbitrary sources.
+ *
+ * Semantic layer (renderer-neutral). Can be implemented by 2D, 3D, video,
+ * robot, or future renderers. Primary purpose: what semantic state does
+ * Famili want to express?
  */
 export interface CharacterExpression {
   readonly expression_id:
@@ -194,10 +198,36 @@ export interface CharacterState {
 }
 
 /**
+ * PerformanceFrame — Immutable performance snapshot (MM3)
+ *
+ * Complete rendering target combining:
+ * - Semantic expression (what Famili wants to express)
+ * - Intended gesture (body language)
+ * - Gaze direction (where looking)
+ * - Posture (seated/standing/leaned)
+ * - Speech activity (silent or speaking)
+ *
+ * Immutable per snapshot (but successive frames may differ).
+ * Renderer-neutral (can be implemented by 2D, 3D, video, or other renderers).
+ * Identity-free (identity is separate concern, determined at composition layer).
+ *
+ * NOT a complete character state (missing pose detail, wardrobe, scene, etc).
+ * NOT a CharacterState (different abstraction level).
+ * Pure performance semantics, nothing renderer-specific.
+ */
+export interface PerformanceFrame {
+  readonly expression: CharacterExpression['expression_id'];
+  readonly gesture: CharacterGesture['gesture_id'];
+  readonly gaze: 'USER' | 'SOFT_DOWN_THINKING' | 'RETURN_USER' | 'AWAY' | 'STABLE';
+  readonly posture: 'RELAXED' | 'STEADY' | 'FORWARD';
+  readonly speech_activity: 'SILENT' | 'SPEAKING';
+}
+
+/**
  * Avatar Renderer Contract
  *
  * WHAT AVATAR RENDERER MAY DO:
- * - Read CharacterState
+ * - Read CharacterState / PerformanceFrame
  * - Render 2D mouth shapes based on viseme
  * - Apply expression blending
  * - Draw eyes, blinks, gaze
