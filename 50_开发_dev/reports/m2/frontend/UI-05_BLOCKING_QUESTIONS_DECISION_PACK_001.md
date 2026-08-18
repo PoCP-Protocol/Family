@@ -2,22 +2,21 @@
 
 > **阶段：** Stage A — UI-05 Architect Review BQ closure
 >
-> **Human Decision Authority：** 用户已明确授权采用本文先前列出的人工决策建议，并要求将原 `NEEDS_HUMAN_DECISION` 项固化为 `CLOSED_BY_HUMAN_DECISION`。
+> **Decision authority：** 本文不记录用户对 BQ 的逐条人工裁决。此前的设计建议不等于人工决定；需要人工决定的项目继续保持 `NEEDS_HUMAN_DECISION`。
 >
-> **总体结论：** `STAGE_A_GO_FOR_API_CONTRACT_ONLY`。
+> **总体结论：** `A_STAGE_VERDICT=NO_GO`。
 >
-> **代码门禁：** `NO_GO_FOR_CODE_IMPLEMENTATION_UNTIL_STAGE_B_API_CONTRACT_APPROVED`。
+> **代码门禁：** `NO_GO_FOR_CODE_IMPLEMENTATION`。
 
 ## Decision Method
 
-本决策包使用对象级契约、34 UI master mapping、0020 migration、orchestration service、LLM page policy、家庭授权策略、Web route/page-object 测试和 UI-05 BA/Architect Review 作为 SSOT/工程来源。对原 SSOT 未能唯一决定的对象语义、Consent purpose、Named Action 和视觉替换边界，由用户授权的人工裁决补足。
+本决策包使用对象级契约、34 UI master mapping、0020 migration、orchestration service、LLM page policy、家庭授权策略、Web route/page-object 测试和 UI-05 BA/Architect Review 作为 SSOT/工程来源。对原 SSOT 未能唯一决定的对象语义、Consent purpose、Named Action 和视觉替换边界，不得用设计建议冒充已决策；只有获得明确的逐条人工裁决后才能补足，本轮未获得该裁决。
 
 `30_素材_materials` 及自家材料继续按 E1 使用，只作为业务假设和设计来源，不自证效果、诊断、资质或生产事实。所有裁决继续遵守：`Perspective != Fact`、`Hypothesis != Fact`、`Recommendation != Decision != Action`。
 
 | Status | 含义 |
 |---|---|
 | `CLOSED_BY_EXISTING_SSOT` | 现有 SSOT/工程实现给出足够明确且可直接复用的决定。 |
-| `CLOSED_BY_HUMAN_DECISION` | 现有 SSOT 给出约束但不足以唯一裁决；本次已由用户授权的人工决定确定实现边界。 |
 | `NEEDS_HUMAN_DECISION` | 未获得人工决定，不得进入下一阶段。 |
 | `DEFERRED` | 明确不进入本纵切，保持 HOLD。 |
 
@@ -45,11 +44,11 @@ Stage B API Contract 必须声明 `decision_context`、`source_page_id=UI-05`、
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许进入 Stage B API Contract；不等于允许创建 Plan/Case 或进入代码实现。
+否；需获得该 BQ 的明确逐条人工决策，且研究需求分析门禁闭合后，才能重新评估 Stage B。
 
 ## BQ-02 — PlanDraft 与 orchestration_plans 的关系
 
@@ -75,11 +74,11 @@ adapter 若泄露为可执行真相，会越过家庭决定边界。
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，仅允许 Stage B 定义只读 projection，不允许写 `orchestration_plans`。
+否；需先获得该 BQ 的明确逐条人工决策。
 
 ## BQ-03 — Growth Plan Consent purpose
 
@@ -105,11 +104,11 @@ Stage B 必须定义每个 endpoint/action 所需 purpose、actor、subject、po
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许 Stage B 定义 Consent contract；Stage C 仍须实现 fail-closed 验证。
+否；需先获得该 BQ 的明确逐条人工决策，并完成 Consent 需求分析。
 
 ## BQ-04 — ConfirmGrowthPlan 与 DecideGrowthService
 
@@ -135,11 +134,11 @@ Stage B 必须定义该 action 的注册位置、guardian authorization、payloa
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许定义 API/Named Action contract；不允许在 Stage A 直接实现或调用。
+否；需先获得该 BQ 的明确逐条人工决策，不得进入 API Contract。
 
 ## BQ-05 — FAMILY_DECISION_PENDING 的升级条件
 
@@ -165,11 +164,11 @@ Stage B 必须定义 candidate envelope、confirm action、重复提交幂等、
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许 Stage B 定义 L2/L3 DTO 和状态机；Stage C 需用测试证明不自动执行。
+否；需先获得该 BQ 的明确逐条人工决策。
 
 ## BQ-06 — UI-04 report snapshot provenance
 
@@ -195,11 +194,11 @@ provenance 不完整会把报告解释、模型文本或模板说明误升级为
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许 Stage B 定义必填 provenance；不能保证 Stage C，除非 fixture/DTO 可实际提供。
+否；需先获得该 BQ 的明确逐条人工决策，并完成 provenance 需求分析。
 
 ## BQ-07 — guardian actor 与 subject visibility
 
@@ -225,11 +224,11 @@ Stage B/API tests 必须包含 guardian 正例、adult/child 拒绝、跨家庭�
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许 Stage B 固化 policy/negative-test requirements。
+否；需先获得该 BQ 的明确逐条人工决策。
 
 ## BQ-08 — 90 天阶段/周/任务模板生命周期
 
@@ -255,11 +254,11 @@ Stage B/Stage C 只能返回 plan template projection 与状态说明；不得�
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，仅允许 Stage B 的 projection/contract；runtime 延后且需要独立 Gate。
+否；需先获得该 BQ 的明确逐条人工决策，runtime 继续 HOLD。
 
 ## BQ-09 — DEV/TEST no-op/stub 边界
 
@@ -289,7 +288,7 @@ UI-05 第一轮仅允许与现有 synthetic decision-only 语义等价的 no-op/
 
 **是否允许进入下一阶段**
 
-是，作为 Stage B/Stage C 的硬约束。
+否；当前 A_STAGE_VERDICT=NO_GO；该 SSOT 仅作为未来阶段的硬约束。
 
 ## BQ-10 — 原图文案与 projection 替换边界
 
@@ -315,35 +314,35 @@ Stage B 必须输出 DOM text manifest、field-to-region mapping 和 screenshot 
 
 **Status**
 
-`CLOSED_BY_HUMAN_DECISION`
+`NEEDS_HUMAN_DECISION`
 
 **是否允许进入下一阶段**
 
-是，允许 Stage B 定义 visual contract；Stage C 需截图验收通过才可声明完成。
+否；需先获得该 BQ 的明确逐条人工决策和视觉需求确认。
 
 ## Stage A Decision
 
 | BQ | Status | 闭合来源 | 是否允许进入 Stage B |
 |---|---|---|---|
-| BQ-01 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：共享 FamilyDecision + GROWTH_PLAN context | 是 |
-| BQ-02 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：只读 PlanDraft Projection Adapter | 是 |
-| BQ-03 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：PLAN_READ / PLAN_DECISION / CHILD_DATA / SERVICE_FOLLOWUP 分层 | 是 |
-| BQ-04 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：decision-only Named Action，不复用执行型决定路径 | 是 |
-| BQ-05 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：L2 pending → 显式确认 → L3 readback | 是 |
-| BQ-06 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：最小 PlanDraftProvenance | 是 |
-| BQ-07 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：guardian-only、服务端派生范围、儿童敏感 Gate | 是 |
-| BQ-08 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：PlanDraft only，runtime 独立后续纵切 | 是 |
-| BQ-09 | `CLOSED_BY_EXISTING_SSOT` | 现有 synthetic decision-only 实现 | 是 |
-| BQ-10 | `CLOSED_BY_HUMAN_DECISION` | 人工架构裁决：Visual Copy Allowlist | 是 |
+| BQ-01 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 不足以唯一确定 GROWTH_PLAN context | 否 |
+| BQ-02 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 不足以确定 PlanDraft projection 与 orchestration_plans 的边界 | 否 |
+| BQ-03 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未形成已批准的 UI-05 Consent purpose registry | 否 |
+| BQ-04 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未注册 UI-05 decision-only Named Action | 否 |
+| BQ-05 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未定义 UI-05 pending→readback 的正式状态机 | 否 |
+| BQ-06 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未提供 UI-05 PlanDraftProvenance 的完整决定 | 否 |
+| BQ-07 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未完成 UI-05 guardian/subject visibility 的业务裁决 | 否 |
+| BQ-08 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未批准 UI-05 90 天模板的 runtime 生命周期 | 否 |
+| BQ-09 | `CLOSED_BY_EXISTING_SSOT` | 现有 synthetic decision-only 实现 | 否：A_STAGE_VERDICT=NO_GO |
+| BQ-10 | `NEEDS_HUMAN_DECISION` | 现有 SSOT 未批准 UI-05 Visual Copy Allowlist | 否 |
 
 ```text
-STAGE_A=GO_FOR_STAGE_B_API_CONTRACT_ONLY
-STAGE_B=AUTHORIZED_TO_START
-STAGE_C=NO_GO_UNTIL_API_CONTRACT_APPROVED
+STAGE_A=NO_GO
+STAGE_B=NO_GO
+STAGE_C=NO_GO
 NO_EXTERNAL_EFFECT_GUARANTEE=REQUIRED
 ```
 
-Stage A 已由现有 SSOT 与用户授权的人工裁决闭合。**这只批准进入 Stage B API Contract；不批准 API/DB/Web 业务代码实现。** 若 Stage B 无法表达上述 DTO、Consent、provenance、Named Action、audit 或视觉 allowlist，必须输出 `NO_GO_FOR_CODE_IMPLEMENTATION` 并停止。
+Stage A 未闭合。现有 SSOT 仅能关闭 BQ-09；BQ-01~BQ-08、BQ-10 仍需要用户或架构师逐条明确裁决。全局研究与需求分析门禁也未闭合，因此不得进入 Stage B API Contract，不得以设计建议、研究门禁或此前聊天内容替代逐条业务裁决。
 
 ## Acceptance Conditions for Stage B
 
@@ -393,7 +392,7 @@ Broad Research
 → Git Commit/Push
 ```
 
-不得因为 BQ-01~BQ-10 已有 SSOT/人工裁决，就跳过研究与需求分析门禁。BQ closure 只能关闭对象/动作/权限等架构问题，不能替代业务需求研究，也不能把研究假设直接升级为事实。
+不得因为 BQ-01~BQ-10 中存在部分 SSOT 或设计建议，就跳过研究与需求分析门禁；全局研究门禁不等于业务事实，也不等于人工批准对象语义、Consent purpose、Named Action 或视觉替换边界。BQ closure 只能关闭对象/动作/权限等架构问题，不能替代业务需求研究，也不能把研究假设直接升级为事实。
 
 ### Required Research Coverage
 
@@ -449,13 +448,16 @@ UI-05 还必须建立需求矩阵，至少区分以下六类需求，不得用�
 
 ### A Stage Verdict
 
-BQ-01~BQ-10 的对象与动作裁决状态仍保持：
+BQ-01~BQ-10 的真实状态为：
 
 ```text
-CLOSED_BY_HUMAN_DECISION=9
 CLOSED_BY_EXISTING_SSOT=1
-NEEDS_HUMAN_DECISION=0
+NEEDS_HUMAN_DECISION=9
+DEFERRED=0
+FORBIDDEN_HUMAN_DECISION_STATUS=ABSENT
 ```
+
+本轮没有获得用户对任何 BQ 的逐条人工裁决；全局“广泛研究 + 需求分析”要求只是前置门禁，不构成 BQ 的人工决定。
 
 但是，**研究与需求分析门禁尚未闭合**：家庭教育真实场景、六类需求矩阵、跨 UI 需求承接、完整 data lineage、Model Gateway schema、前后端一致性证据和截图状态 manifest 尚未形成一份可审计的 UI-05 Research/Needs Analysis Pack。因此本轮下一阶段许可必须被研究门禁覆盖：
 
@@ -463,13 +465,14 @@ NEEDS_HUMAN_DECISION=0
 RESEARCH_NEEDS_ANALYSIS_GATE=REQUIRED_BEFORE_BA_API_OR_CODE
 RESEARCH_NEEDS_ANALYSIS_GATE=NOT_CLOSED
 A_STAGE_VERDICT=NO_GO
+BQ_GATE=NO_GO_UNTIL_ALL_NON_SSOT_BQ_HAVE_EXPLICIT_HUMAN_DECISION_OR_EXISTING_SSOT_CLOSURE
 STAGE_B_API_CONTRACT=NO_GO
 STAGE_C_CODE_IMPLEMENTATION=NO_GO
 UI06_SCOPE=STOPPED
 CODE_STATUS=0
 ```
 
-BQ closure 不被撤销，但其“允许进入 Stage B”只在研究门禁闭合后生效。当前不得创建 `UI-05_API_CONTRACT_001.md`，不得修改业务代码、迁移、测试或 Web route。下一步只能补齐 UI-05 Research/Needs Analysis Pack，并再次经过架构/业务确认。
+BQ-09 的既有 SSOT 闭合不改变其它 BQ 的未决状态。当前不得创建 `UI-05_API_CONTRACT_001.md`，不得修改业务代码、迁移、测试或 Web route；只有 BQ-01~BQ-10 全部由现有 SSOT 关闭，且研究与需求分析门禁闭合后，才可重新评估 Stage B。下一步只能补齐 UI-05 Research/Needs Analysis Pack，并再次经过架构/业务确认。
 
 ## Research Needs Analysis Acceptance Checklist
 
