@@ -1,3 +1,18 @@
+// Character Identity Contracts (FPAI-MM Visual IP Machine Contract Authority)
+export {
+  CharacterIdentity,
+  CharacterPose,
+  CharacterExpression,
+  CharacterGaze,
+  CharacterGesture,
+  CharacterWardrobe,
+  CharacterScene,
+  CharacterState,
+  AvatarRendererContract,
+  isCharacterIdentity,
+  isCharacterStateValid,
+} from './characterIdentity';
+
 export type PrincipalSceneMode = 'INTERACTIVE_CHAT' | 'MICRO_LESSON' | 'FAMILY_DIALOGUE';
 
 export type PrincipalSafetyRoute = 'NORMAL' | 'REVIEW' | 'HIGH_RISK';
