@@ -104,6 +104,23 @@ describe('DEV flow receipt integration', () => {
     });
   });
 
+  it('persists a bounded UI-02 assessment focus as a synthetic Perspective and returns it in Core Growth readback', async () => {
+    const seed = await seedGuardian();
+    const receipt = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui02-focus'),
+      body: JSON.stringify({ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(receipt.status).toBe(201);
+    expect(await receipt.json()).toMatchObject({ ui_id: 'UI-02', selection: 'EMOTION_REGULATION', external_effect: false, model_gateway_status: 'NOOP_NOT_INVOKED' });
+    const coreProjection = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui02-focus-read') });
+    expect(coreProjection.status).toBe(200);
+    expect(await coreProjection.json()).toMatchObject({
+      recent_flow_events: [expect.objectContaining({ ui_id: 'UI-02', selection: 'EMOTION_REGULATION', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION' })],
+    });
+    const stored = await pool.query(`select payload from family_dev_flow_events where family_id=$1`, [seed.familyId]);
+    expect(stored.rows[0].payload).toMatchObject({ selection: 'EMOTION_REGULATION', synthetic_only: true, evidence_boundary: 'PERSPECTIVE' });
+  });
+
   it('fails closed for an unknown UI and cross-family actor', async () => {
     const owner = await seedGuardian('Owner');
     const other = await seedGuardian('Other');

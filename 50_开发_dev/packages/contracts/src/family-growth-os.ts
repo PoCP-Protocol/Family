@@ -91,6 +91,8 @@ export interface DevFlowReceiptSummary {
   event_state: 'DEV_CONFIRMED';
   created_at: string;
   replayed: boolean;
+  /** Bounded synthetic parent/guardian Perspective selection, not a diagnosis or fact. */
+  selection?: string;
 }
 
 export interface FamilyBusinessScenario {
@@ -200,7 +202,7 @@ export const UI01_HOME_FEATURES: readonly Ui01HomeFeature[] = [
   { feature_id: 'notification', visual_label: '提醒', mode: 'DEV_NOOP_ROUTE', target_route: 'core-mine', source_objects: ['AuditEvent'], state_boundary: 'NOOP_ADAPTER', evidence_boundary: 'FACT' },
   { feature_id: 'assessment_campaign', visual_label: '免费家庭测评', mode: 'CONTROLLED_DRAFT_ROUTE', target_route: 'growth-assessment', source_objects: ['AssessmentDraft', 'Perspective'], state_boundary: 'CONTROLLED_DRAFT', evidence_boundary: 'PERSPECTIVE' },
   { feature_id: 'assessment_cta', visual_label: '立即测评', mode: 'CONTROLLED_DRAFT_ROUTE', target_route: 'growth-assessment', source_objects: ['AssessmentDraft'], state_boundary: 'CONTROLLED_DRAFT', evidence_boundary: 'PERSPECTIVE' },
-  { feature_id: 'ai_diagnostic', visual_label: 'AI诊断', mode: 'NAVIGATION', target_route: 'core-report', source_objects: ['ReportProjection'], state_boundary: 'READ_ONLY', evidence_boundary: 'RECOMMENDATION' },
+  { feature_id: 'ai_diagnostic', visual_label: 'AI诊断', mode: 'NAVIGATION', target_route: 'assessment', source_objects: ['AssessmentDraft', 'EvidenceRef'], state_boundary: 'CONTROLLED_DRAFT', evidence_boundary: 'PERSPECTIVE' },
   { feature_id: 'challenge_21', visual_label: '21天挑战营', mode: 'NAVIGATION', target_route: 'core-plan', source_objects: ['GrowthPlanDraft', 'GrowthTask'], state_boundary: 'CONTROLLED_DRAFT', evidence_boundary: 'RECOMMENDATION' },
   { feature_id: 'plan_90', visual_label: '90天成长计划', mode: 'NAVIGATION', target_route: 'core-plan', source_objects: ['GrowthPlanDraft', 'GrowthTask'], state_boundary: 'CONTROLLED_DRAFT', evidence_boundary: 'RECOMMENDATION' },
   { feature_id: 'growth_cases', visual_label: '成长案例', mode: 'NAVIGATION', target_route: 'growth-poster', source_objects: ['GrowthMilestone', 'PosterProjection'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
@@ -224,4 +226,74 @@ export function assertUi01HomeFeatureCoverage(): void {
   if (UI01_HOME_FEATURES.length < 16) throw new Error('ui01_home_feature_catalog_must_include_at_least_16_features');
   const identifiers = new Set(UI01_HOME_FEATURES.map((feature) => feature.feature_id));
   if (identifiers.size !== UI01_HOME_FEATURES.length) throw new Error('ui01_home_feature_catalog_must_be_unique');
+}
+
+
+export interface Ui09DailyTaskFeature {
+  feature_id: string;
+  visual_label: string;
+  mode: Ui01FeatureMode;
+  source_objects: readonly string[];
+  state_boundary: ExternalEffectBoundary;
+  evidence_boundary: FactPerspectiveRecommendationAction;
+}
+
+/** UI-09 visual task features are descendants of UI-01's daily-task entry. */
+export const UI09_DAILY_TASK_FEATURES: readonly Ui09DailyTaskFeature[] = [
+  { feature_id: 'back', visual_label: '返回', mode: 'NAVIGATION', source_objects: ['FamilyTodayProjection'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
+  { feature_id: 'more', visual_label: '更多', mode: 'DEV_NOOP_ROUTE', source_objects: ['AuditEvent'], state_boundary: 'NOOP_ADAPTER', evidence_boundary: 'FACT' },
+  { feature_id: 'ai_reminder', visual_label: 'AI家庭管家提醒', mode: 'READ_PROJECTION', source_objects: ['FamilyTodayProjection'], state_boundary: 'READ_ONLY', evidence_boundary: 'RECOMMENDATION' },
+  { feature_id: 'task_communication', visual_label: '亲子沟通', mode: 'NAMED_ACTION_ROUTE', source_objects: ['GrowthTask', 'GrowthActionCompletion'], state_boundary: 'NAMED_ACTION', evidence_boundary: 'NAMED_ACTION' },
+  { feature_id: 'task_emotion', visual_label: '记录孩子情绪变化', mode: 'NAMED_ACTION_ROUTE', source_objects: ['Reflection'], state_boundary: 'NAMED_ACTION', evidence_boundary: 'PERSPECTIVE' },
+  { feature_id: 'task_focus', visual_label: '完成专注力小游戏', mode: 'NAMED_ACTION_ROUTE', source_objects: ['GrowthTask'], state_boundary: 'NAMED_ACTION', evidence_boundary: 'NAMED_ACTION' },
+  { feature_id: 'task_reward', visual_label: '成长积分', mode: 'READ_PROJECTION', source_objects: ['GrowthActionCompletion'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
+  { feature_id: 'task_duration', visual_label: '任务时长', mode: 'READ_PROJECTION', source_objects: ['GrowthTask'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
+  { feature_id: 'weekly_progress', visual_label: '本周完成度', mode: 'READ_PROJECTION', source_objects: ['GrowthProgressProjection'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
+  { feature_id: 'streak', visual_label: '连续打卡', mode: 'READ_PROJECTION', source_objects: ['GrowthActionCompletion'], state_boundary: 'READ_ONLY', evidence_boundary: 'FACT' },
+  { feature_id: 'complete_today', visual_label: '完成今日任务', mode: 'NAMED_ACTION_ROUTE', source_objects: ['GrowthTask', 'GrowthActionCompletion', 'AuditEvent'], state_boundary: 'NAMED_ACTION', evidence_boundary: 'NAMED_ACTION' },
+] as const;
+
+export function assertUi09DailyTaskFeatureCoverage(): void {
+  if (UI09_DAILY_TASK_FEATURES.length < 11) throw new Error('ui09_daily_task_feature_catalog_must_include_all_visible_regions');
+  const identifiers = new Set(UI09_DAILY_TASK_FEATURES.map((feature) => feature.feature_id));
+  if (identifiers.size !== UI09_DAILY_TASK_FEATURES.length) throw new Error('ui09_daily_task_feature_catalog_must_be_unique');
+}
+
+
+export interface UiEntryExecutionStep {
+  source_ui_id: FamilyUiId;
+  source_feature_id: string;
+  target_ui_id: FamilyUiId;
+  target_route: string;
+  required_before_implementation: readonly ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'];
+}
+
+/**
+ * UI-01 is the root of the first functional lineage. Each target page must be
+ * researched and designed at feature granularity before it is implemented.
+ */
+export const UI01_ENTRY_EXECUTION_QUEUE: readonly UiEntryExecutionStep[] = [
+  { source_ui_id: 'UI-01', source_feature_id: 'assessment_campaign', target_ui_id: 'UI-02', target_route: 'growth-assessment', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'assessment_cta', target_ui_id: 'UI-02', target_route: 'growth-assessment', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'ai_diagnostic', target_ui_id: 'UI-03', target_route: 'assessment', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'challenge_21', target_ui_id: 'UI-05', target_route: 'core-plan', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'plan_90', target_ui_id: 'UI-05', target_route: 'core-plan', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'growth_cases', target_ui_id: 'UI-12', target_route: 'growth-poster', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'expert_live', target_ui_id: 'UI-19', target_route: 'teacher-zone', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'family_advisor', target_ui_id: 'UI-19', target_route: 'teacher-zone', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'today_tasks', target_ui_id: 'UI-09', target_route: 'growth-daily-task', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'recommended_content', target_ui_id: 'UI-13', target_route: 'commerce-mall', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'nav_community', target_ui_id: 'UI-06', target_route: 'core-community', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+  { source_ui_id: 'UI-01', source_feature_id: 'nav_mine', target_ui_id: 'UI-07', target_route: 'core-mine', required_before_implementation: ['WIDE_RESEARCH', 'NEEDS_ANALYSIS', 'FUNCTION_DESIGN', 'CONTRACT_ALIGNMENT'] },
+] as const;
+
+export function assertUi01EntryExecutionQueue(): void {
+  for (const step of UI01_ENTRY_EXECUTION_QUEUE) {
+    if (!UI01_HOME_FEATURES.some((feature) => feature.feature_id === step.source_feature_id)) {
+      throw new Error(`ui01_entry_queue_unknown_feature:${step.source_feature_id}`);
+    }
+    if (!FAMILY_UI_ARCHITECTURE_BINDINGS.some((binding) => binding.ui_id === step.target_ui_id && binding.route === step.target_route)) {
+      throw new Error(`ui01_entry_queue_unknown_target:${step.target_ui_id}`);
+    }
+  }
 }

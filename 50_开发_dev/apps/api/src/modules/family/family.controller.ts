@@ -152,7 +152,7 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    const candidate = body as { ui_id?: unknown; command?: unknown };
+    const candidate = body as { ui_id?: unknown; command?: unknown; selection?: unknown };
     if (typeof candidate?.ui_id !== 'string' || typeof candidate?.command !== 'string') {
       throw new BadRequestException('ui_id_and_command_required');
     }
@@ -161,6 +161,7 @@ export class FamilyController {
       command: candidate.command,
       correlation_id: correlationId?.trim() || crypto.randomUUID(),
       idempotency_key: idempotencyKey?.trim() || undefined,
+      ...(typeof candidate.selection === 'string' ? { selection: candidate.selection } : {}),
     });
   }
 

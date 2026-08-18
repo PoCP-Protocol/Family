@@ -18,6 +18,8 @@ export interface DevFlowReceipt {
   external_effect: false;
   model_gateway_status: 'NOOP_NOT_INVOKED';
   replayed: boolean;
+  /** Optional bounded synthetic DEV selection; it is a Perspective, not a fact or diagnosis. */
+  selection?: string;
   created_at: string;
 }
 
@@ -33,7 +35,7 @@ export class DevFlowReceiptService {
   async record(
     familyId: string,
     actorId: string,
-    input: { ui_id: string; command: string; correlation_id: string; idempotency_key?: string },
+    input: { ui_id: string; command: string; correlation_id: string; idempotency_key?: string; selection?: string },
   ): Promise<DevFlowReceipt> {
     const uiId = input.ui_id as FamilyUiId;
     let architecture;
@@ -45,6 +47,9 @@ export class DevFlowReceiptService {
     if (!input.command?.trim() || !input.correlation_id?.trim()) {
       throw new BadRequestException('dev_flow_command_and_correlation_required');
     }
+    if (input.selection && (!/^[A-Z_]{3,64}$/.test(input.selection))) {
+      throw new BadRequestException('invalid_dev_flow_selection');
+    }
 
     return this.repository.withTransaction(async (client) => {
       const family = await client.query('select family_id from families where family_id=$1 for share', [familyId]);
@@ -54,7 +59,7 @@ export class DevFlowReceiptService {
       if (input.idempotency_key) {
         const replay = await client.query<DevFlowReceipt>(
           `select event_id, family_id, ui_id, business_loop, command, event_state,
-                  data_source, external_effect, model_gateway_status, created_at
+                  data_source, external_effect, model_gateway_status, payload->>'selection' as selection, created_at
              from family_dev_flow_events
             where family_id=$1 and idempotency_key=$2
             for share`,
@@ -68,7 +73,7 @@ export class DevFlowReceiptService {
            family_id, actor_person_id, ui_id, business_loop, command, correlation_id, idempotency_key, payload
          ) values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)
          returning event_id, family_id, ui_id, business_loop, command, event_state,
-                   data_source, external_effect, model_gateway_status, created_at`,
+                   data_source, external_effect, model_gateway_status, payload->>'selection' as selection, created_at`,
         [
           familyId,
           actorId,
@@ -83,6 +88,7 @@ export class DevFlowReceiptService {
             state_boundary: architecture.state_boundary,
             evidence_boundary: architecture.evidence_boundary,
             synthetic_only: true,
+            ...(input.selection ? { selection: input.selection } : {}),
           }),
         ],
       );
@@ -97,7 +103,7 @@ export class DevFlowReceiptService {
       await assertFamilyManagePermission(client, familyId, actorId);
       const rows = await client.query<DevFlowReceipt>(
         `select event_id, family_id, ui_id, business_loop, command, event_state,
-                data_source, external_effect, model_gateway_status, created_at
+                data_source, external_effect, model_gateway_status, payload->>'selection' as selection, created_at
            from family_dev_flow_events
           where family_id=$1
           order by created_at desc, event_id desc`,

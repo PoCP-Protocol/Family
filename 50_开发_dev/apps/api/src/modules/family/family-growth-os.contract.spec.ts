@@ -4,7 +4,9 @@ import {
   FAMILY_BUSINESS_SCENARIOS,
   FAMILY_UI_ARCHITECTURE_BINDINGS,
   UI01_HOME_FEATURES,
+  UI01_ENTRY_EXECUTION_QUEUE,
   assertFamilyBusinessScenarioCoverage,
+  assertUi01EntryExecutionQueue,
   assertUi01HomeFeatureCoverage,
   assertFamilyUiArchitectureCoverage,
   getFamilyUiArchitectureBinding,
@@ -37,6 +39,14 @@ describe('Family Growth OS six-loop UI architecture', () => {
     expect(UI01_HOME_FEATURES.find((feature) => feature.feature_id === 'task_emotion')).toMatchObject({
       target_route: 'growth-daily-task', evidence_boundary: 'PERSPECTIVE',
     });
+  });
+
+  it('defines a UI-01 entry execution queue that reaches researched target pages', () => {
+    expect(() => assertUi01EntryExecutionQueue()).not.toThrow();
+    expect(UI01_ENTRY_EXECUTION_QUEUE).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source_feature_id: 'assessment_campaign', target_ui_id: 'UI-02', target_route: 'growth-assessment' }),
+      expect.objectContaining({ source_feature_id: 'ai_diagnostic', target_ui_id: 'UI-03', target_route: 'assessment' }),
+    ]));
   });
 
   it('preserves the first real slice and no-external-effect boundary', () => {

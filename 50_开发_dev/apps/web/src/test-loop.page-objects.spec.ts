@@ -160,6 +160,7 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     expect(root.querySelectorAll('[data-ui01-feature]').length).toBeGreaterThanOrEqual(16);
     expect(root.querySelector('[data-ui01-feature~="task_reading"]')?.getAttribute('data-by')).toBe('growth-daily-task');
     expect(root.querySelector('[data-ui01-feature~="assessment_cta"]')?.getAttribute('data-by')).toBe('growth-assessment');
+    expect(root.querySelector('[data-ui01-feature="ai_diagnostic"]')?.getAttribute('data-by')).toBe('assessment');
     expect(root.querySelector('[data-ui01-live-state="NOT_STARTED"]')?.textContent).toContain('先听完再回应');
     expect(root.dataset.familyTodayProjectionStatus).toBe('READY');
     expect(root.querySelector('[data-first-slice-surface="UI-01"]')?.textContent).toContain('先听完再回应');
@@ -286,6 +287,29 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(JSON.parse(String(request.body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT' });
     expect(root.dataset.familyCoreGrowthNoop).toBe('DEV_CONFIRMED');
     expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('DEV 场景回执已记录');
+  });
+
+  it('records a bounded UI-02 focus selection as a synthetic Perspective and hands off to UI-03', async () => {
+    const selectedProjection = { ...projection, recent_flow_events: [{ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }] };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => projection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => selectedProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-assessment' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-ui02-selection="EMOTION_REGULATION"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('[data-ui02-selected-dimension="EMOTION_REGULATION"]')?.textContent).toContain('草稿已记录');
+    root.querySelector<HTMLButtonElement>('[data-by="ui02-start-assessment"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('.by-reference-assessment')).not.toBeNull();
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
