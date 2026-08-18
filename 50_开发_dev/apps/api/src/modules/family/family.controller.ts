@@ -84,7 +84,8 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    return this.devCoreGrowthService.getProjection(familyId);
+    const [projection, events] = [this.devCoreGrowthService.getProjection(familyId), await this.devFlowReceiptService.list(familyId, actorId)];
+    return { ...projection, recent_flow_events: events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id)) };
   }
 
   /** DEV-only trace acknowledgement: intentionally no DB write, audit persistence, outbox consumer or external effect. */
@@ -114,7 +115,8 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    return this.devPlatformSurfacesService.getProjection(familyId);
+    const [projection, events] = [this.devPlatformSurfacesService.getProjection(familyId), await this.devFlowReceiptService.list(familyId, actorId)];
+    return { ...projection, recent_flow_events: events.filter((event) => this.devPlatformSurfacesService.supportsSurface(event.ui_id)) };
   }
 
   @RequireFamilyAction('ReadFamily')

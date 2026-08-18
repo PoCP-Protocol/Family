@@ -18,7 +18,7 @@ create table if not exists family_dev_flow_events (
   correlation_id varchar(160) not null,
   idempotency_key varchar(160),
   created_at timestamptz not null default now(),
-  constraint family_dev_flow_events_ui_id_check check (ui_id ~ '^UI-([0-9]|[1-2][0-9]|3[0-4])$'),
+  constraint family_dev_flow_events_ui_id_check check (ui_id ~ '^UI-(0[1-9]|[1-2][0-9]|3[0-4])$'),
   constraint family_dev_flow_events_external_effect_check check (external_effect = false),
   constraint family_dev_flow_events_model_gateway_check check (model_gateway_status = 'NOOP_NOT_INVOKED')
 );

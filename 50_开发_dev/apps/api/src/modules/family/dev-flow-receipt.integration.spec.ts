@@ -79,9 +79,29 @@ describe('DEV flow receipt integration', () => {
     expect(projection.status).toBe(200);
     expect(await projection.json()).toMatchObject({ family_id: seed.familyId, events: [expect.objectContaining({ event_id: firstBody.event_id })] });
 
+    const platformProjection = await fetch(`${baseUrl}/families/${seed.familyId}/dev/platform-surfaces`, { headers: headers(seed.actorId, 'corr-dev-flow-platform-read') });
+    expect(platformProjection.status).toBe(200);
+    expect(await platformProjection.json()).toMatchObject({
+      recent_flow_events: [expect.objectContaining({ event_id: firstBody.event_id, ui_id: 'UI-21', business_loop: 'TEACHER_SALON_LOOP' })],
+    });
+
     const stored = await pool.query(`select external_effect, model_gateway_status, payload from family_dev_flow_events where event_id=$1`, [firstBody.event_id]);
     expect(stored.rows[0]).toMatchObject({ external_effect: false, model_gateway_status: 'NOOP_NOT_INVOKED' });
     expect(stored.rows[0].payload).toMatchObject({ synthetic_only: true, state_boundary: 'NOOP_ADAPTER' });
+  });
+
+  it('returns growth-loop receipts only in the Core Growth projection', async () => {
+    const seed = await seedGuardian();
+    const receipt = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-dev-flow-growth'), body: JSON.stringify({ ui_id: 'UI-05', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT' }),
+    });
+    expect(receipt.status).toBe(201);
+    const body = await receipt.json() as Record<string, unknown>;
+    const coreProjection = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-dev-flow-core-read') });
+    expect(coreProjection.status).toBe(200);
+    expect(await coreProjection.json()).toMatchObject({
+      recent_flow_events: [expect.objectContaining({ event_id: body.event_id, ui_id: 'UI-05', business_loop: 'GROWTH_LOOP' })],
+    });
   });
 
   it('fails closed for an unknown UI and cross-family actor', async () => {

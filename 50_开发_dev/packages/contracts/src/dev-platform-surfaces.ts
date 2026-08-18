@@ -1,4 +1,4 @@
-import type { ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
+import type { DevFlowReceiptSummary, ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
 
 export type DevPlatformSurface =
   | 'UI-11' | 'UI-12' | 'UI-13' | 'UI-14' | 'UI-15' | 'UI-16' | 'UI-17' | 'UI-18'
@@ -30,6 +30,8 @@ export interface DevPlatformSurfacesProjection {
   external_effect_adapter: 'NOOP_NOT_INVOKED';
   model_gateway: 'NOOP_NOT_INVOKED';
   cards: DevPlatformSurfaceCard[];
+  /** Populated by the Family API facade when authenticated DEV flow receipts exist. */
+  recent_flow_events?: readonly DevFlowReceiptSummary[];
 }
 
 export interface DevPlatformNoopCommandResult {

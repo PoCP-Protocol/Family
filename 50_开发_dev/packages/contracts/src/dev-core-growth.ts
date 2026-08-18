@@ -3,7 +3,7 @@ import type {
   GrowthPriorityBoundary,
   ReflectionBoundary,
 } from './index';
-import type { ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
+import type { DevFlowReceiptSummary, ExternalEffectBoundary, FamilyBusinessLoop } from './family-growth-os';
 
 /** UI-02..UI-10 的 DEV-only 读投影。禁止用于生产决策、诊断或外部效果。 */
 export type DevCoreGrowthSurface =
@@ -69,6 +69,8 @@ export interface DevCoreGrowthProjection {
     rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY';
   };
   cards: DevCoreGrowthCard[];
+  /** Populated by the Family API facade when authenticated DEV flow receipts exist. */
+  recent_flow_events?: readonly DevFlowReceiptSummary[];
 }
 
 export interface DevCoreGrowthNoopCommandResult {

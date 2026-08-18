@@ -83,6 +83,16 @@ export function assertFamilyUiArchitectureCoverage(): void {
 }
 
 
+export interface DevFlowReceiptSummary {
+  event_id: string;
+  ui_id: FamilyUiId;
+  business_loop: FamilyBusinessLoop;
+  command: string;
+  event_state: 'DEV_CONFIRMED';
+  created_at: string;
+  replayed: boolean;
+}
+
 export interface FamilyBusinessScenario {
   scenario_id: string;
   loop: FamilyBusinessLoop;

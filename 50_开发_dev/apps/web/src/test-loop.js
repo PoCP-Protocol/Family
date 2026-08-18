@@ -109,7 +109,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     if (coreGrowthLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-core-growth-surface="${surface}">DEV 成长投影暂不可读取；未展示本地替代数据。</output>`;
     const card = coreGrowthProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
-    const receipt = coreGrowthNoopReceipt ? ` ${coreGrowthNoopReceipt}` : '';
+    const persistedReceipt = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === surface);
+    const receipt = coreGrowthNoopReceipt
+      ? ` ${coreGrowthNoopReceipt}`
+      : persistedReceipt ? ` 已回读 DEV 场景回执：${persistedReceipt.command}（${persistedReceipt.event_state}）。` : '';
     return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}" data-core-growth-state="${card.state}" data-growth-loop="${card.loop || 'GROWTH_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'GROWTH_LOOP'}；Model Gateway=${coreGrowthProjection.model_gateway?.status || 'NOOP_NOT_INVOKED'}）${receipt}</output><button class="by-btn ghost by-core-growth-refresh" data-by="dev-core-refresh" aria-label="刷新 DEV 成长投影">刷新 DEV 投影</button><button class="by-btn ghost by-core-growth-noop" data-by="dev-core-noop" data-core-growth-command="${card.command.name}" data-core-growth-surface="${surface}" aria-label="提交 DEV 无持久化回执">确认 DEV 回执</button>`;
   };
   async function requestCoreGrowthProjection() {
@@ -162,7 +165,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     if (platformSurfacesLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-platform-surface="${surface}">DEV 平台投影暂不可读取；未展示本地替代数据。</output>`;
     const card = platformSurfacesProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
-    const receipt = platformSurfacesNoopReceipt ? ` ${platformSurfacesNoopReceipt}` : '';
+    const persistedReceipt = platformSurfacesProjection?.recent_flow_events?.find((event) => event.ui_id === surface);
+    const receipt = platformSurfacesNoopReceipt
+      ? ` ${platformSurfacesNoopReceipt}`
+      : persistedReceipt ? ` 已回读 DEV 场景回执：${persistedReceipt.command}（${persistedReceipt.event_state}）。` : '';
     return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}" data-growth-loop="${card.loop || 'CUSTOMER_BACKEND_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'CUSTOMER_BACKEND_LOOP'}；外部效果=${platformSurfacesProjection.external_effect_adapter}）${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新 DEV 投影</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">确认 DEV 回执</button>`;
   };
   async function requestPlatformSurfacesProjection() {
