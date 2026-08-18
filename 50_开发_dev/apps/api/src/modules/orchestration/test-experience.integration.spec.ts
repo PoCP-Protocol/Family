@@ -179,8 +179,8 @@ describe('Family page object projections and actions', () => {
       [seed.familyId, ['fixture:e1'], JSON.stringify({ support_summary: [{ key: 'focus', value: '亲子沟通', source: 'FAMILY_EXPRESSION' }] }), seed.guardianId],
     )).rows[0].report_snapshot_id;
     const taskId = (await pool!.query(
-      `insert into family_page_task_items(family_id, source, title, task_payload, created_by_person_id)
-       values ($1,'TEST_FIXTURE','亲子沟通小练习',$2::jsonb,$3) returning task_id`,
+      `insert into family_page_task_items(family_id, source_page_id, source, title, task_payload, created_by_person_id)
+       values ($1,'UI-09','TEST_FIXTURE','亲子沟通小练习',$2::jsonb,$3) returning task_id`,
       [seed.familyId, JSON.stringify({ duration_minutes: 15 }), seed.guardianId],
     )).rows[0].task_id;
     const recordId = (await pool!.query(
@@ -218,7 +218,7 @@ describe('Family page object projections and actions', () => {
     const seed = await seedGuardian();
     const other = await seedGuardian();
     const taskId = (await pool!.query(
-      `insert into family_page_task_items(family_id, source, title) values ($1,'TEST_FIXTURE','private task') returning task_id`, [other.familyId],
+      `insert into family_page_task_items(family_id, source_page_id, source, title) values ($1,'UI-09','TEST_FIXTURE','private task') returning task_id`, [other.familyId],
     )).rows[0].task_id;
     const crossFamily = await request(`/families/${seed.familyId}/orchestration/test-loop/page-objects/actions`, 'POST', seed.token, {
       page_id: 'UI-09', action: 'COMPLETE_TASK', object_id: taskId,
