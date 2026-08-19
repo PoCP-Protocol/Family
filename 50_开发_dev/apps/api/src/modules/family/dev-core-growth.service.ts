@@ -5,7 +5,7 @@ import {
   type DevCoreGrowthNoopCommandResult,
   type DevCoreGrowthProjection,
   type DevCoreGrowthSurface,
-  getFamilyUiArchitectureBinding,
+  getFamilyGrowthSurfaceArchitectureBinding,
 } from '@family/contracts';
 
 /**
@@ -35,7 +35,7 @@ export class DevCoreGrowthService {
         rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY',
       },
       cards: this.cards().map((item) => {
-        const architecture = getFamilyUiArchitectureBinding(item.surface);
+        const architecture = getFamilyGrowthSurfaceArchitectureBinding(item.surface);
         return {
           ...item,
           loop: architecture.loop,
@@ -123,6 +123,35 @@ export class DevCoreGrowthService {
         summary: '仅展示规则化的任务入口与系统状态；没有 Child-facing 模型调用、监控或诊断。',
         next_hint: '孩子自主能力与监护 Consent 需在后续受控切片中实现。',
         command: { name: 'READ_SYNTHETIC_CHILD_ASSISTANT', mode: 'READ_ONLY' },
+      },
+      {
+        surface: 'UI-35', kind: 'GROWTH_CAMP_21', title: '21天智慧父母成长营（DEV课程草稿）', state: 'DRAFT',
+        fact_boundary: 'ACTION_IS_NOT_OUTCOME', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: 'AI 辅助课程体系草稿：课程结构依据体验层“21 天行动/每日任务”与公开训练营交付线索生成；不等同官方课表，须经课程专家审核后方可发布或分配。',
+        next_hint: '当前日单元可记录家长行动和 Perspective；阶段回顾只形成课程草稿建议，后续可推荐衔接 90 天计划但不会自动创建计划。',
+        command: { name: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', mode: 'CONTROLLED_DRAFT' },
+        curriculum_draft: {
+          draft_id: 'CURR-UI35-DEV-21D-V1',
+          status: 'SYNTHETIC_RULE_BASED_DRAFT',
+          source_boundary: 'E1_PRODUCT_STRUCTURE_PLUS_PUBLIC_DESIGN_RESEARCH',
+          model_gateway_status: 'NOOP_NOT_INVOKED',
+          human_review: 'REQUIRED_BEFORE_PUBLISH_OR_ASSIGN',
+          course_boundary: 'NOT_OFFICIAL_SYLLABUS_NOT_OUTCOME_NOT_DIAGNOSIS',
+          day_count: 21,
+          stages: [
+            { stage_id: 'FOUNDATION', label: '阶段一：观察与连接', day_range: 'Day 1-7', intent: '以家长自我觉察和稳定回应作为练习起点。' },
+            { stage_id: 'PRACTICE', label: '阶段二：沟通与习惯实践', day_range: 'Day 8-14', intent: '将已选择的家庭互动工具转化为可记录的小行动。' },
+            { stage_id: 'REVIEW', label: '阶段三：复盘与延续设计', day_range: 'Day 15-21', intent: '回顾行动记录和家长 Perspective，形成后续计划草稿建议。' },
+          ],
+          current_day: {
+            day_number: 1,
+            theme: '观察一次完整的亲子互动',
+            parent_action: '选择一个日常情境，先记录自己听到和看到的内容，再决定是否回应。',
+            reflection_prompt: '这次互动中，我注意到了什么？这只是我的感受和观察，不是对孩子的结论。',
+            evidence_boundary: 'PERSPECTIVE_NOT_FACT',
+          },
+          next_transition: 'GROWTH_PLAN_DRAFT_RECOMMENDATION_ONLY',
+        },
       },
     ];
   }

@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
-  getFamilyUiArchitectureBinding,
+  getFamilyGrowthSurfaceArchitectureBinding,
   type FamilyBusinessLoop,
   type FamilyUiId,
 } from '@family/contracts';
@@ -40,7 +40,7 @@ export class DevFlowReceiptService {
     const uiId = input.ui_id as FamilyUiId;
     let architecture;
     try {
-      architecture = getFamilyUiArchitectureBinding(uiId);
+      architecture = getFamilyGrowthSurfaceArchitectureBinding(uiId);
     } catch {
       throw new BadRequestException('unknown_dev_flow_ui');
     }

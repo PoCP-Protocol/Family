@@ -164,7 +164,7 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     expect(root.querySelector('[data-ui01-live-state="NOT_STARTED"]')?.textContent).toContain('先听完再回应');
     expect(root.dataset.familyTodayProjectionStatus).toBe('READY');
     expect(root.querySelector('[data-first-slice-surface="UI-01"]')?.textContent).toContain('先听完再回应');
-    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不代表教育效果');
+    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('今日任务');
 
     app.navigate('growth-daily-task');
     expect(root.querySelector('.by-clear-reference')).not.toBeNull();
@@ -175,8 +175,8 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(root.dataset.familyPageObjectsAction).toBe('CompleteGrowthAction');
     expect(root.dataset.familyPageObjectsStatus).toBe('SUCCESS');
-    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('不代表教育效果');
-    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('rule-based 系统提示');
+    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('今天的行动已记录，明天继续。');
+    expect(root.querySelector('[data-first-slice-state="CHECKED_IN"]')?.textContent).toContain('稍后刷新，即可查看下一步安排。');
   });
 
   it('shows a blocked state instead of falling back to static local task data when the projection read fails', async () => {
@@ -188,7 +188,7 @@ describe('UI-01/UI-09 first real slice synthetic-api contract', () => {
     await tick();
 
     expect(root.dataset.familyTodayProjectionStatus).toBe('ERROR');
-    expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('未展示任何本地替代数据');
+    expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('今日任务暂时无法加载，请稍后再试。');
   });
 });
 
@@ -241,6 +241,24 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
         summary: '规则化任务入口。', next_hint: '后续受控切片实现孩子自主。',
         command: { name: 'READ_SYNTHETIC_CHILD_ASSISTANT', mode: 'READ_ONLY' },
       },
+      {
+        surface: 'UI-35', title: '21天智慧父母成长营（DEV课程草稿）', state: 'DRAFT', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: 'AI 辅助课程体系草稿；不等同官方课表，须经课程专家审核。', next_hint: '记录参与行动并形成 recommendation-only 的后续计划草稿。',
+        command: { name: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', mode: 'CONTROLLED_DRAFT' },
+        curriculum_draft: {
+          draft_id: 'CURR-UI35-DEV-21D-V1', status: 'SYNTHETIC_RULE_BASED_DRAFT',
+          source_boundary: 'E1_PRODUCT_STRUCTURE_PLUS_PUBLIC_DESIGN_RESEARCH', model_gateway_status: 'NOOP_NOT_INVOKED',
+          human_review: 'REQUIRED_BEFORE_PUBLISH_OR_ASSIGN', course_boundary: 'NOT_OFFICIAL_SYLLABUS_NOT_OUTCOME_NOT_DIAGNOSIS',
+          day_count: 21,
+          stages: [
+            { stage_id: 'FOUNDATION', label: '阶段一：观察与连接', day_range: 'Day 1-7', intent: '建立家长行动观察。' },
+            { stage_id: 'PRACTICE', label: '阶段二：沟通与习惯实践', day_range: 'Day 8-14', intent: '练习可记录的小行动。' },
+            { stage_id: 'REVIEW', label: '阶段三：复盘与延续设计', day_range: 'Day 15-21', intent: '形成后续推荐草稿。' },
+          ],
+          current_day: { day_number: 1, theme: '观察一次完整的亲子互动', parent_action: '先记录听到和看到的内容，再决定是否回应。', reflection_prompt: '记录自己的感受和观察，不对孩子下结论。', evidence_boundary: 'PERSPECTIVE_NOT_FACT' },
+          next_transition: 'GROWTH_PLAN_DRAFT_RECOMMENDATION_ONLY',
+        },
+      },
     ],
   };
 
@@ -255,7 +273,8 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     });
     await tick(); await tick();
     expect(root.dataset.familyCoreGrowthStatus).toBe('READY');
-    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('家庭成长测评');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     expect(root.querySelector('.by-clear-reference')).not.toBeNull();
 
     const pages: Array<[string, string]> = [
@@ -264,9 +283,33 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     ];
     for (const [page, surface] of pages) {
       app.navigate(page);
-      expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+      expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
+    app.navigate('growth-camp-21');
+    expect(root.querySelector('[data-core-growth-surface="UI-35"]')?.textContent).toContain('21 天智慧父母成长营');
+    expect(root.querySelector('[data-core-growth-surface="UI-35"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes UI-01 21-day camp entry to UI-35 and persists a bounded check-in', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => projection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'home' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-ui01-feature~="challenge_21"]')?.click();
+    await tick(); await tick();
+    expect(root.querySelector('h1')?.textContent).toContain('观察一次完整的亲子互动');
+    expect(root.querySelector('[data-ui35-curriculum-state="SYNTHETIC_RULE_BASED_DRAFT"]')?.textContent).toContain('21 天陪伴课程');
+    expect(root.querySelector('[data-ui35-curriculum-state="SYNTHETIC_RULE_BASED_DRAFT"]')?.textContent).not.toContain('REQUIRED_BEFORE_PUBLISH_OR_ASSIGN');
+    root.querySelector<HTMLButtonElement>('[data-by="camp21-checkin"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' });
+    expect(root.querySelector('[data-core-growth-surface="UI-35"]')?.textContent).toContain('本次成长行动已记录');
   });
 
   it('persists a DEV synthetic flow receipt without external effect', async () => {
@@ -286,7 +329,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
     expect(JSON.parse(String(request.body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT' });
     expect(root.dataset.familyCoreGrowthNoop).toBe('DEV_CONFIRMED');
-    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('DEV 场景回执已记录');
+    expect(root.querySelector('[data-core-growth-surface="UI-02"]')?.textContent).toContain('本次成长行动已记录');
   });
 
   it('records a bounded UI-02 focus selection as a synthetic Perspective and hands off to UI-03', async () => {
@@ -310,7 +353,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     await tick(); await tick(); await tick();
     expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection: 'EMOTION_REGULATION' });
     expect(root.querySelector('.by-ui-reference')).not.toBeNull();
-    expect(root.querySelector('[data-ui03-parent-focus="EMOTION_REGULATION"]')?.textContent).toContain('不是诊断');
+    expect(root.querySelector('[data-ui03-parent-focus="EMOTION_REGULATION"]')?.textContent).toContain('可以结合实际情况慢慢尝试');
   });
 
   it('records an AI explanation preview as a bounded synthetic receipt and hands off only to the plan-draft view', async () => {
@@ -324,12 +367,12 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     document.body.append(root);
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'assessment' });
     await tick(); await tick();
-    expect(root.querySelector('[data-ui03-explanation-state="READY"]')?.textContent).toContain('NOOP_NOT_INVOKED');
+    expect(root.querySelector('[data-ui03-explanation-state="READY"]')?.textContent).toContain('你当前更关注：EMOTION_REGULATION');
     root.querySelector<HTMLButtonElement>('[data-by="ui03-preview-plan"]')?.click();
     await tick(); await tick(); await tick();
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION' });
     expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
-    expect(root.querySelector('[data-core-growth-surface="UI-04"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    expect(root.querySelector('[data-core-growth-surface="UI-04"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
@@ -339,7 +382,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-plan' });
     await tick(); await tick();
     expect(root.dataset.familyCoreGrowthStatus).toBe('ERROR');
-    expect(root.querySelector('[data-core-growth-surface="UI-05"]')?.textContent).toContain('未展示本地替代数据');
+    expect(root.querySelector('[data-core-growth-surface="UI-05"]')?.textContent).toContain('内容暂时无法加载，请稍后再试。');
   });
 });
 
@@ -360,7 +403,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
     await tick(); await tick();
     expect(root.dataset.familyPlatformSurfacesStatus).toBe('READY');
-    expect(root.querySelector('[data-platform-surface="UI-11"]')?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+    expect(root.querySelector('[data-platform-surface="UI-11"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
 
     const pages = [
       'growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine',
@@ -373,7 +416,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
         'teacher-detail':'UI-20','consultation-booking':'UI-21','salon-list':'UI-22','activity-detail':'UI-23','service-mine':'UI-24','parent-community':'UI-25','publish-dynamic':'UI-26',
         'dynamic-detail':'UI-27','my-community':'UI-28','growth-outcomes':'UI-29','annual-member-mine':'UI-30','my-services':'UI-31','orders-assets':'UI-32','family-profile':'UI-33','service-records':'UI-34',
       } as Record<string, string>)[page];
-      expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent).toContain('SYNTHETIC_DEV_ONLY');
+      expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -391,7 +434,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock.mock.calls[1][0]).toBe(`http://family-api.test/families/${familyId}/dev/flow-events`);
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-21', command: 'READ_UI-21' });
     expect(root.dataset.familyPlatformSurfaceNoop).toBe('DEV_CONFIRMED');
-    expect(root.querySelector('[data-platform-surface="UI-21"]')?.textContent).toContain('DEV 场景回执已记录');
+    expect(root.querySelector('[data-platform-surface="UI-21"]')?.textContent).toContain('本次选择已记录');
   });
 
   it('fails closed when platform synthetic projection cannot be read', async () => {
@@ -400,7 +443,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'commerce-mall' });
     await tick(); await tick();
     expect(root.dataset.familyPlatformSurfacesStatus).toBe('ERROR');
-    expect(root.querySelector('[data-platform-surface="UI-13"]')?.textContent).toContain('未展示本地替代数据');
+    expect(root.querySelector('[data-platform-surface="UI-13"]')?.textContent).toContain('页面内容暂时无法加载，请稍后再试。');
   });
 });
 

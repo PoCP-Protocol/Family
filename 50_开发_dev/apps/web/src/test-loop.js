@@ -35,11 +35,13 @@ export const FAMILY_UI_34_ROUTE_MANIFEST = Object.freeze([
   ['UI-33', 'family-profile'], ['UI-34', 'service-records'],
 ]);
 const FAMILY_UI_34_ROUTE_SET = new Set(FAMILY_UI_34_ROUTE_MANIFEST.map(([, route]) => route));
-const FAMILY_UI_ID_BY_ROUTE = Object.freeze(Object.fromEntries(FAMILY_UI_34_ROUTE_MANIFEST.map(([uiId, route]) => [route, uiId])));
+/** Researched support experience; intentionally outside the immutable supplied 34-screen manifest. */
+const FAMILY_SUPPORT_ROUTE_SET = new Set(['growth-camp-21']);
+const FAMILY_UI_ID_BY_ROUTE = Object.freeze({ ...Object.fromEntries(FAMILY_UI_34_ROUTE_MANIFEST.map(([uiId, route]) => [route, uiId])), 'growth-camp-21': 'UI-35' });
 
 /** @param {HTMLElement} root @param {TestLoopConfig} config */
 export function createTestLoopApp(root, config = defaultTestLoopConfig) {
-  let page = FAMILY_UI_34_ROUTE_SET.has(config.initialPage) ? config.initialPage : 'home';
+  let page = (FAMILY_UI_34_ROUTE_SET.has(config.initialPage) || FAMILY_SUPPORT_ROUTE_SET.has(config.initialPage)) ? config.initialPage : 'home';
   let checked = [false, false, false];
   let currentNeed = '亲子沟通';
   let llmTextEquivalent = '';
@@ -92,29 +94,59 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}),
     ...(config.authActorId ? { 'x-actor-id': config.authActorId } : {}),
   });
+  const productCopy = (value) => String(value || '')
+    .replace(/\bDEV\b\s*/gi, '')
+    .replace(/\bSYNTHETIC(?:_[A-Z_]+)?\b\s*/gi, '')
+    .replace(/\bNOOP(?:_NOT_INVOKED)?\b\s*/gi, '')
+    .replace(/\bno-op\b\s*/gi, '')
+    .replace(/外部效果(?:保持)?/g, '')
+    .replace(/测试数据/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/：\s*[。；]/g, '。')
+    .trim();
+  const coreGrowthProductContent = {
+    'UI-02': { title: '家庭成长测评', summary: '从一次测评开始，了解你当下更关注的成长方向。', next: '开始家庭测评' },
+    'UI-03': { title: '成长说明', summary: '根据你的选择，整理家庭互动的参考内容。', next: '查看成长说明' },
+    'UI-04': { title: '家庭成长报告', summary: '回顾关键时刻，找到可以慢慢练习的地方。', next: '查看 90 天成长计划' },
+    'UI-05': { title: '90 天成长计划', summary: '把关注的方向拆成容易开始、可以坚持的小行动。', next: '查看今天的行动' },
+    'UI-06': { title: '成长陪伴', summary: '跟随每周的节奏，给家庭多一点稳定的陪伴。', next: '继续今天的行动' },
+    'UI-07': { title: '我的成长服务', summary: '在这里查看正在进行的计划和陪伴内容。', next: '继续成长计划' },
+    'UI-08': { title: '成长回顾', summary: '留存过程中的小发现，为下一步提供参考。', next: '继续成长计划' },
+    'UI-10': { title: '成长小助手', summary: '为孩子准备轻松、有趣的成长小练习。', next: '挑选一个小练习' },
+    'UI-35': { title: '21 天智慧父母成长营', summary: '每天一个小行动，让亲子沟通从温和的陪伴开始。', next: '记录今天的行动' },
+  };
+  const platformProductContent = {
+    'UI-11': '成长旅程', 'UI-12': '成长故事', 'UI-13': '成长好物', 'UI-14': '课程与工具',
+    'UI-15': '邀请同行', 'UI-16': '一起参与', 'UI-17': '成长积分', 'UI-18': '我的服务',
+    'UI-19': '专家陪伴', 'UI-20': '专家介绍', 'UI-21': '咨询预约', 'UI-22': '主题活动',
+    'UI-23': '亲子活动', 'UI-24': '服务进度', 'UI-25': '家长社群', 'UI-26': '分享此刻',
+    'UI-27': '成长动态', 'UI-28': '我的分享', 'UI-29': '成长回顾', 'UI-30': '会员服务',
+    'UI-31': '我的服务', 'UI-32': '已购内容', 'UI-33': '家庭资料', 'UI-34': '服务记录',
+  };
   const firstSlicePanel = (surface) => {
     if (!firstSliceApiEnabled()) return '';
     if (firstSliceLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}">正在读取今日家庭任务…</output>`;
-    if (firstSliceLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-first-slice-surface="${surface}">今日任务暂不可读取；未展示任何本地替代数据。</output>`;
+    if (firstSliceLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-first-slice-surface="${surface}">今日任务暂时无法加载，请稍后再试。</output>`;
     if (!familyTodayProjection) return '';
     if (!familyTodayProjection.today_task) return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}">当前没有可打卡的今日任务。</output>`;
     const task = familyTodayProjection.today_task;
     const status = firstSliceResultState === 'SUCCESS' || firstSliceResultState === 'REPLAYED'
-      ? `本次家庭行动已记录；不代表教育效果，也不会触发外部通知。${firstSliceNextHint ? ` 下一步提示：${firstSliceNextHint}` : ''}`
-      : task.task_state === 'CHECKED_IN' ? '今日任务已记录；仅表示 check-in 状态。' : `当前任务：${task.assignment_text}`;
+      ? `今天的行动已记录，明天继续。${firstSliceNextHint ? ` ${firstSliceNextHint}` : ''}`
+      : task.task_state === 'CHECKED_IN' ? '今天的任务已经完成，做得很好。' : `当前任务：${task.assignment_text}`;
     return `<output class="by-first-slice-panel" data-first-slice-surface="${surface}" data-first-slice-task="${task.task_id}" data-first-slice-state="${task.task_state}">${status}</output>`;
   };
   const coreGrowthPanel = (surface) => {
     if (!coreGrowthApiEnabled()) return '';
-    if (coreGrowthLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}">正在读取 DEV 成长系统投影…</output>`;
-    if (coreGrowthLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-core-growth-surface="${surface}">DEV 成长投影暂不可读取；未展示本地替代数据。</output>`;
+    if (coreGrowthLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}">正在准备你的成长内容…</output>`;
+    if (coreGrowthLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-core-growth-surface="${surface}">内容暂时无法加载，请稍后再试。</output>`;
     const card = coreGrowthProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
     const persistedReceipt = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === surface);
     const receipt = coreGrowthNoopReceipt
       ? ` ${coreGrowthNoopReceipt}`
-      : persistedReceipt ? ` 已回读 DEV 场景回执：${persistedReceipt.command}（${persistedReceipt.event_state}）。` : '';
-    return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}" data-core-growth-state="${card.state}" data-growth-loop="${card.loop || 'GROWTH_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'GROWTH_LOOP'}；Model Gateway=${coreGrowthProjection.model_gateway?.status || 'NOOP_NOT_INVOKED'}）${receipt}</output><button class="by-btn ghost by-core-growth-refresh" data-by="dev-core-refresh" aria-label="刷新 DEV 成长投影">刷新 DEV 投影</button><button class="by-btn ghost by-core-growth-noop" data-by="dev-core-noop" data-core-growth-command="${card.command.name}" data-core-growth-surface="${surface}" aria-label="提交 DEV 无持久化回执">确认 DEV 回执</button>`;
+      : persistedReceipt ? ' 已记录本次成长行动。' : '';
+    const content = coreGrowthProductContent[surface] || { title: productCopy(card.title), summary: productCopy(card.summary), next: productCopy(card.next_hint) };
+    return `<output class="by-first-slice-panel" data-core-growth-surface="${surface}" data-core-growth-state="${card.state}" data-growth-loop="${card.loop || 'GROWTH_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${content.title}</b>：${content.summary} 下一步：${content.next}${receipt}</output><button class="by-btn ghost by-core-growth-refresh" data-by="dev-core-refresh" aria-label="刷新成长内容">刷新内容</button><button class="by-btn ghost by-core-growth-noop" data-by="dev-core-noop" data-core-growth-command="${card.command.name}" data-core-growth-surface="${surface}" aria-label="记录本次成长行动">记录行动</button>`;
   };
   async function requestCoreGrowthProjection() {
     if (!coreGrowthApiEnabled() || coreGrowthLoadState === 'LOADING') return coreGrowthProjection;
@@ -130,13 +162,13 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       coreGrowthProjection = payload;
       coreGrowthLoadState = 'READY';
       root.dataset.familyCoreGrowthStatus = 'READY';
-      llmTextEquivalent = 'DEV 成长系统投影已读取：所有内容为 synthetic、rule-based，非诊断、非 Outcome、无模型调用。';
+      llmTextEquivalent = '成长内容已更新。你可以根据当前情况选择下一步行动。';
       return payload;
     } catch (_error) {
       coreGrowthProjection = null;
       coreGrowthLoadState = 'ERROR';
       root.dataset.familyCoreGrowthStatus = 'ERROR';
-      llmTextEquivalent = 'DEV 成长投影暂不可读取；未展示本地替代数据。';
+      llmTextEquivalent = '成长内容暂时无法加载，请稍后再试。';
       return null;
     }
   }
@@ -151,26 +183,27 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       });
       const payload = await response.json();
       if (!response.ok || payload?.event_state !== 'DEV_CONFIRMED' || payload?.external_effect !== false || payload?.data_source !== 'SYNTHETIC_DEV_ONLY') throw new Error('dev_core_growth_receipt_failed');
-      coreGrowthNoopReceipt = 'DEV 场景回执已记录：仅测试数据、未触发外部效果。';
+      coreGrowthNoopReceipt = '本次成长行动已记录。';
       root.dataset.familyCoreGrowthNoop = payload.event_state;
       return payload;
     } catch (_error) {
-      coreGrowthNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。';
+      coreGrowthNoopReceipt = '本次行动暂时无法记录，请稍后再试。';
       root.dataset.familyCoreGrowthNoop = 'CLIENT_FAILURE';
       return null;
     }
   }
   const platformSurfacePanel = (surface) => {
     if (!platformSurfacesApiEnabled() || !surface || !/^UI-(1[1-9]|2[0-9]|3[0-4])$/.test(surface)) return '';
-    if (platformSurfacesLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-platform-surface="${surface}">正在读取 DEV 平台投影…</output>`;
-    if (platformSurfacesLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-platform-surface="${surface}">DEV 平台投影暂不可读取；未展示本地替代数据。</output>`;
+    if (platformSurfacesLoadState === 'LOADING') return `<output class="by-first-slice-panel" data-platform-surface="${surface}">正在准备页面内容…</output>`;
+    if (platformSurfacesLoadState === 'ERROR') return `<output class="by-first-slice-panel is-blocked" data-platform-surface="${surface}">页面内容暂时无法加载，请稍后再试。</output>`;
     const card = platformSurfacesProjection?.cards?.find((item) => item.surface === surface);
     if (!card) return '';
     const persistedReceipt = platformSurfacesProjection?.recent_flow_events?.find((event) => event.ui_id === surface);
     const receipt = platformSurfacesNoopReceipt
       ? ` ${platformSurfacesNoopReceipt}`
-      : persistedReceipt ? ` 已回读 DEV 场景回执：${persistedReceipt.command}（${persistedReceipt.event_state}）。` : '';
-    return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}" data-growth-loop="${card.loop || 'CUSTOMER_BACKEND_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${card.title}</b>：${card.summary} 下一步：${card.next_hint}（${card.data_source}；${card.command.mode}；循环=${card.loop || 'CUSTOMER_BACKEND_LOOP'}；外部效果=${platformSurfacesProjection.external_effect_adapter}）${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新 DEV 投影</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">确认 DEV 回执</button>`;
+      : persistedReceipt ? ' 已记录本次选择。' : '';
+    const title = platformProductContent[surface] || productCopy(card.title);
+    return `<output class="by-first-slice-panel" data-platform-surface="${surface}" data-platform-state="${card.state}" data-growth-loop="${card.loop || 'CUSTOMER_BACKEND_LOOP'}" data-business-capability="${card.business_capability || ''}" data-primary-objects="${(card.primary_objects || []).join(',')}"><b>${title}</b>：为家庭成长提供适合的内容与支持。下一步：按自己的节奏继续探索。${receipt}</output><button class="by-btn ghost" data-by="platform-surface-refresh">刷新内容</button><button class="by-btn ghost" data-by="platform-surface-noop" data-platform-surface="${surface}" data-platform-command="${card.command.name}">记录选择</button>`;
   };
   async function requestPlatformSurfacesProjection() {
     if (!platformSurfacesApiEnabled() || platformSurfacesLoadState === 'LOADING') return platformSurfacesProjection;
@@ -181,11 +214,11 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       const payload = await response.json();
       if (!response.ok || payload?.family_id !== config.familyId || payload?.data_source !== 'SYNTHETIC_DEV_ONLY' || payload?.external_effect_adapter !== 'NOOP_NOT_INVOKED' || !Array.isArray(payload?.cards)) throw new Error('dev_platform_surfaces_unavailable');
       platformSurfacesProjection = payload; platformSurfacesLoadState = 'READY'; root.dataset.familyPlatformSurfacesStatus = 'READY';
-      llmTextEquivalent = 'DEV 平台投影已读取：内容为 synthetic，支付、预约、通知、分享、发布、导出和模型调用均为 no-op。';
+      llmTextEquivalent = '页面内容已更新。你可以继续了解和选择适合的服务。';
       return payload;
     } catch (_error) {
       platformSurfacesProjection = null; platformSurfacesLoadState = 'ERROR'; root.dataset.familyPlatformSurfacesStatus = 'ERROR';
-      llmTextEquivalent = 'DEV 平台投影暂不可读取；未展示本地替代数据。'; return null;
+      llmTextEquivalent = '页面内容暂时无法加载，请稍后再试。'; return null;
     }
   }
   async function submitPlatformSurfaceNoop(surface, command) {
@@ -195,9 +228,9 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ ui_id: surface, command }) });
       const payload = await response.json();
       if (!response.ok || payload?.event_state !== 'DEV_CONFIRMED' || payload?.external_effect !== false || payload?.data_source !== 'SYNTHETIC_DEV_ONLY') throw new Error('dev_platform_receipt_failed');
-      platformSurfacesNoopReceipt = 'DEV 场景回执已记录：仅测试数据、未触发真实外部效果。'; root.dataset.familyPlatformSurfaceNoop = payload.event_state; return payload;
+      platformSurfacesNoopReceipt = '本次选择已记录。'; root.dataset.familyPlatformSurfaceNoop = payload.event_state; return payload;
     } catch (_error) {
-      platformSurfacesNoopReceipt = 'DEV 回执不可用：未创建任何本地或外部状态。'; root.dataset.familyPlatformSurfaceNoop = 'CLIENT_FAILURE'; return null;
+      platformSurfacesNoopReceipt = '本次选择暂时无法记录，请稍后再试。'; root.dataset.familyPlatformSurfaceNoop = 'CLIENT_FAILURE'; return null;
     }
   }
   async function requestFamilyToday() {
@@ -226,7 +259,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
       firstSliceLoadState = 'ERROR';
       root.dataset.familyTodayProjectionStatus = 'ERROR';
       root.dataset.familyTodayTaskId = '';
-      llmTextEquivalent = '今日任务暂不可读取；未展示任何本地替代数据。';
+      llmTextEquivalent = '今日任务暂时无法加载，请稍后再试。';
       return null;
     }
   }
@@ -253,17 +286,17 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
         }
         firstSliceResultState = payload.result_state || 'SUCCESS';
         firstSliceNextHint = payload?.next_hint?.text_key === 'REFRESH_TODAY_AFTER_CHECKIN'
-          ? '稍后可刷新今日任务；这是 rule-based 系统提示，不是模型建议。'
+          ? '稍后刷新，即可查看下一步安排。'
           : '';
         familyTodayProjection = { ...projection, today_task: payload.action, entry_state: 'READY' };
         root.dataset.familyPageObjectsStatus = firstSliceResultState;
         root.dataset.familyPageObjectsObject = payload.action.task_id || task.task_id;
-        llmTextEquivalent = '这项家庭行动已记录；不代表教育效果，不会发送通知、支付、发布或履约。';
+        llmTextEquivalent = '今天的家庭行动已记录。';
         return payload;
       } catch (_error) {
         root.dataset.familyPageObjectsStatus = 'CLIENT_FAILURE';
         root.dataset.familyPageObjectsObject = '';
-        llmTextEquivalent = '当前任务暂不可完成；未创建任何外部效果。';
+        llmTextEquivalent = '当前任务暂时无法完成，请稍后再试。';
         return null;
       }
     }
@@ -409,10 +442,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function home() { return shell('', `<header class="home-spec-head"><strong>家庭成长平台</strong><span><button data-by="home">···</button><button data-by="home">◉</button></span></header><section class="home-spec-welcome"><div><h1>早上好，</h1><h2>今天也一起陪孩子成长 ☀</h2></div><button data-by="home">♧</button></section><section class="home-spec-banner"><div><h1>免费家庭测评</h1><p>3 分钟了解孩子成长状况</p><small>获取更科学的成长建议</small>${tap('assessment','立即测评 →','home-spec-cta')}</div><figure aria-label="一家四口的家庭插画"><span>👨</span><span>👩</span><span>🧒</span><span>👧</span></figure></section><section class="home-spec-grid">${mini('report','⌁','AI诊断')}${mini('plan','♙','21天挑战营')}${mini('plan','▣','90天成长计划')}${mini('poster','▤','成长案例')}${mini('home','▧','专家直播')}${mini('home','♧','家庭顾问')}</section><section class="home-spec-section"><div class="home-spec-title"><strong>今日成长任务</strong><button data-by="task">查看全部 ›</button></div><div class="home-spec-tasks"><button data-by="task"><i class="task-mint">▣</i><span>亲子沟通小练习</span><b class="complete">✓</b></button><button data-by="task"><i class="task-orange">▣</i><span>完成今日阅读打卡</span><b>去完成</b></button><button data-by="task"><i class="task-orange">▣</i><span>情绪记录</span><b>去完成</b></button></div></section><section class="home-spec-section"><div class="home-spec-title"><strong>推荐内容/服务</strong><button data-by="mall">更多 ›</button></div><div class="home-spec-recommend">${card('妈妈总问我：为什么？','今天 20:00 开播','product','home-r1')}${card('高效学习习惯养成课','限时 12 课 · 1268 人学习','product','home-r2')}${card('从紧张冲突到亲子和谐','真实案例分享','product','home-r3')}</div></section>` , true); }
   function reportExplanationLiveOverlay() {
     if (!coreGrowthApiEnabled()) return '';
-    if (coreGrowthLoadState === 'LOADING') return `<output class="by-ui03-live-overlay" data-ui03-explanation-state="LOADING">正在读取家庭选择与解释边界…</output>`;
-    if (coreGrowthLoadState === 'ERROR') return `<output class="by-ui03-live-overlay is-blocked" data-ui03-explanation-state="ERROR">解释草稿暂不可读取；未展示本地替代数据</output>`;
+    if (coreGrowthLoadState === 'LOADING') return `<output class="by-ui03-live-overlay" data-ui03-explanation-state="LOADING">正在准备你的成长内容…</output>`;
+    if (coreGrowthLoadState === 'ERROR') return `<output class="by-ui03-live-overlay is-blocked" data-ui03-explanation-state="ERROR">内容暂时无法加载，请稍后再试。</output>`;
     const focus = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02')?.selection || '未选择';
-    return `<output class="by-ui03-live-overlay" data-ui03-explanation-state="READY" data-ui03-parent-focus="${focus}">家长关注方向：${focus}；仅 synthetic Perspective，不是诊断或成长结论。Model Gateway：NOOP_NOT_INVOKED</output>`;
+    return `<output class="by-ui03-live-overlay" data-ui03-explanation-state="READY" data-ui03-parent-focus="${focus}">你当前更关注：${focus}。这里整理的是帮助你了解家庭互动的参考内容，可以结合实际情况慢慢尝试。</output>`;
   }
   function assessment() {
     const hotspots = [
@@ -432,11 +465,26 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const state = task.task_state === 'CHECKED_IN' ? '已完成' : '待完成';
     return `<output class="by-home-live-overlay" data-ui01-live-state="${task.task_state}" data-ui01-task-id="${task.task_id}">${state}：${task.assignment_text}</output>`;
   }
-  function home() { return `<section class="by-app by-reference-home"><div class="by-reference-screen" role="img" aria-label="家庭成长平台首页：免费家庭测评、六项成长服务、今日成长任务、推荐内容服务和首页计划社群我的导航"><button class="by-hotspot hs-header-more" data-by="core-mine" data-ui01-feature="header_more" aria-label="更多与家庭档案"></button><button class="by-hotspot hs-header-context" data-by="home" data-ui01-feature="header_context" aria-label="家庭上下文"></button><button class="by-hotspot hs-notification" data-by="core-mine" data-ui01-feature="notification" aria-label="提醒"></button><button class="by-hotspot hs-assessment" data-by="growth-assessment" data-ui01-feature="assessment_campaign assessment_cta" aria-label="立即开始测评"></button><button class="by-hotspot hs-ai" data-by="assessment" data-ui01-feature="ai_diagnostic" aria-label="AI成长说明"></button><button class="by-hotspot hs-challenge" data-by="core-plan" data-ui01-feature="challenge_21" aria-label="21天挑战营"></button><button class="by-hotspot hs-plan" data-by="core-plan" data-ui01-feature="plan_90" aria-label="90天成长计划"></button><button class="by-hotspot hs-case" data-by="poster" data-ui01-feature="growth_cases" aria-label="成长案例"></button><button class="by-hotspot hs-live" data-by="teacher-zone" data-ui01-feature="expert_live" aria-label="专家直播"></button><button class="by-hotspot hs-advisor" data-by="teacher-zone" data-ui01-feature="family_advisor" aria-label="家庭顾问"></button><button class="by-hotspot hs-tasks" data-by="growth-daily-task" data-ui01-feature="today_tasks" aria-label="今日成长任务"></button><button class="by-hotspot hs-task-communication" data-by="growth-daily-task" data-ui01-feature="task_communication" aria-label="亲子沟通小练习"></button><button class="by-hotspot hs-task-reading" data-by="growth-daily-task" data-ui01-feature="task_reading" aria-label="完成今日阅读打卡"></button><button class="by-hotspot hs-task-emotion" data-by="growth-daily-task" data-ui01-feature="task_emotion" aria-label="情绪记录"></button><button class="by-hotspot hs-card1" data-by="product" data-ui01-feature="recommended_card_1" aria-label="妈妈总问我为什么"></button><button class="by-hotspot hs-card2" data-by="product" data-ui01-feature="recommended_card_2" aria-label="高效学习习惯养成课"></button><button class="by-hotspot hs-card3" data-by="product" data-ui01-feature="recommended_card_3" aria-label="从紧张冲突到亲子和谐"></button><button class="by-hotspot hs-nav-home" data-by="home" data-ui01-feature="nav_home" aria-label="首页"></button><button class="by-hotspot hs-nav-plan" data-by="plan" data-ui01-feature="nav_plan" aria-label="计划"></button><button class="by-hotspot hs-nav-community" data-by="core-community" data-ui01-feature="nav_community" aria-label="社群"></button><button class="by-hotspot hs-nav-mine" data-by="core-mine" data-ui01-feature="nav_mine" aria-label="我的"></button>${homeLiveOverlay()}</div>${firstSlicePanel('UI-01')}</section>`; }
+  function home() { return `<section class="by-app by-reference-home"><div class="by-reference-screen" role="img" aria-label="家庭成长平台首页：免费家庭测评、六项成长服务、今日成长任务、推荐内容服务和首页计划社群我的导航"><button class="by-hotspot hs-header-more" data-by="core-mine" data-ui01-feature="header_more" aria-label="更多与家庭档案"></button><button class="by-hotspot hs-header-context" data-by="home" data-ui01-feature="header_context" aria-label="家庭上下文"></button><button class="by-hotspot hs-notification" data-by="core-mine" data-ui01-feature="notification" aria-label="提醒"></button><button class="by-hotspot hs-assessment" data-by="growth-assessment" data-ui01-feature="assessment_campaign assessment_cta" aria-label="立即开始测评"></button><button class="by-hotspot hs-ai" data-by="assessment" data-ui01-feature="ai_diagnostic" aria-label="AI成长说明"></button><button class="by-hotspot hs-challenge" data-by="growth-camp-21" data-ui01-feature="challenge_21" aria-label="21天挑战营"></button><button class="by-hotspot hs-plan" data-by="core-plan" data-ui01-feature="plan_90" aria-label="90天成长计划"></button><button class="by-hotspot hs-case" data-by="poster" data-ui01-feature="growth_cases" aria-label="成长案例"></button><button class="by-hotspot hs-live" data-by="teacher-zone" data-ui01-feature="expert_live" aria-label="专家直播"></button><button class="by-hotspot hs-advisor" data-by="teacher-zone" data-ui01-feature="family_advisor" aria-label="家庭顾问"></button><button class="by-hotspot hs-tasks" data-by="growth-daily-task" data-ui01-feature="today_tasks" aria-label="今日成长任务"></button><button class="by-hotspot hs-task-communication" data-by="growth-daily-task" data-ui01-feature="task_communication" aria-label="亲子沟通小练习"></button><button class="by-hotspot hs-task-reading" data-by="growth-daily-task" data-ui01-feature="task_reading" aria-label="完成今日阅读打卡"></button><button class="by-hotspot hs-task-emotion" data-by="growth-daily-task" data-ui01-feature="task_emotion" aria-label="情绪记录"></button><button class="by-hotspot hs-card1" data-by="product" data-ui01-feature="recommended_card_1" aria-label="妈妈总问我为什么"></button><button class="by-hotspot hs-card2" data-by="product" data-ui01-feature="recommended_card_2" aria-label="高效学习习惯养成课"></button><button class="by-hotspot hs-card3" data-by="product" data-ui01-feature="recommended_card_3" aria-label="从紧张冲突到亲子和谐"></button><button class="by-hotspot hs-nav-home" data-by="home" data-ui01-feature="nav_home" aria-label="首页"></button><button class="by-hotspot hs-nav-plan" data-by="plan" data-ui01-feature="nav_plan" aria-label="计划"></button><button class="by-hotspot hs-nav-community" data-by="core-community" data-ui01-feature="nav_community" aria-label="社群"></button><button class="by-hotspot hs-nav-mine" data-by="core-mine" data-ui01-feature="nav_mine" aria-label="我的"></button>${homeLiveOverlay()}</div>${firstSlicePanel('UI-01')}</section>`; }
   const visualReference = (file, label, hotspots = []) => `<section class="by-app by-ui-reference"><div class="by-ui-reference-screen" role="img" aria-label="${label}" style="background-image:url('/public/bangyang-reference/ui18/${file}.png')">${hotspots.map((x) => `<button class="by-hotspot ${x[0]}" data-by="${x[1]}" aria-label="${x[2]}"></button>`).join('')}</div></section>`;
   const clearReference = (file, label, hotspots = [], ratio = '434/1124') => `<section class="by-app by-clear-reference"><div class="by-clear-reference-screen" role="img" aria-label="${label}" style="background-image:url('/public/bangyang-reference/${file}');aspect-ratio:${ratio}">${hotspots.map((x) => `<button class="by-hotspot ${x[0]}" data-by="${x[1]}" aria-label="${x[2]}"></button>`).join('')}</div></section>`;
   function coreReport() { return `${clearReference('ai-growth-diagnosis-reference-436x1118.png', '家庭成长说明：儿童信息蓝卡、五维成长评估、核心问题、成长建议和生成个性化方案', [['clear-bottom-cta', 'llm-core-report', '生成个性化方案']], '436/1118')}${coreGrowthPanel('UI-04')}`; }
   function corePlan() { return `${clearReference('growth-plan-90day-reference-434x1130.png', '90天成长方案：阶段信息、3/12/36/90统计、四周时间线、任务状态和开始执行计划', [['clear-bottom-cta', 'core-community', '开始执行计划']], '434/1130')}${coreGrowthPanel('UI-05')}`; }
+  function growthCamp21() {
+    const card = coreGrowthProjection?.cards?.find((item) => item.surface === 'UI-35');
+    const draft = card?.curriculum_draft;
+    const current = draft?.current_day || {
+      day_number: 1,
+      theme: '从一次认真倾听开始',
+      parent_action: '选择一个日常情境，先完整听完孩子的表达，再决定怎样回应。',
+      reflection_prompt: '写下你留意到的一个细节和当下的感受。',
+    };
+    const receipt = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-35');
+    const stages = (draft?.stages || []).map((stage) => `<li data-ui35-stage="${stage.stage_id}"><b>${stage.label.replace(/^阶段[一二三]：/, '')}</b><span>${stage.day_range}</span><small>${stage.intent}</small></li>`).join('') || '<li data-ui35-stage="PENDING"><b>观察与连接</b><span>Day 1-7</span><small>从每天一次温和的陪伴行动开始。</small></li><li data-ui35-stage="PRACTICE"><b>沟通与练习</b><span>Day 8-14</span><small>把小行动带进熟悉的家庭时刻。</small></li><li data-ui35-stage="REVIEW"><b>回顾与延续</b><span>Day 15-21</span><small>回顾自己的行动，准备下一阶段。</small></li>';
+    const receiptText = receipt ? '今天的行动已记录，明天继续。' : '完成后记得为自己点个赞。';
+    const state = draft ? draft.status : 'NOT_LOADED';
+    return shell('21天智慧父母成长营', `<section class="by-growth-camp-head" data-ui35-curriculum-state="${state}"><small>21 天陪伴课程 · 温和开始</small><h1>${current.theme}</h1><p>${current.parent_action}</p><span><i style="width:${Math.round((current.day_number / (draft?.day_count || 21)) * 100)}%"></i></span><b>第 ${current.day_number} / ${draft?.day_count || 21} 天</b></section><section class="by-growth-camp-stages" aria-label="课程阶段"><h2>成长路径</h2><ul>${stages}</ul></section><section class="by-growth-camp-task"><div><strong>今天的小行动</strong><small>给自己和孩子一点从容的时间</small></div><p>${current.reflection_prompt}</p><button class="by-btn full-primary" data-by="camp21-checkin" data-ui35-day="${current.day_number}">记录今天的行动</button><output data-ui35-receipt="${receipt ? 'RECORDED' : 'EMPTY'}">${receiptText}</output></section><section class="by-growth-camp-support"><b>温和提醒</b><p>每个家庭都有自己的节奏。记录下你的感受和观察，下一次可以从一个更小、更容易开始的行动继续。</p></section>${coreGrowthPanel('UI-35')}`);
+  }
   function coreCommunity() { return `${clearReference('delivery-community-reference-458x1128.png', '陪跑服务：四张服务卡、本周完成度、成长打卡、家长交流、直播和社群导航', [['clear-fab', 'growth-daily-task', '打卡']], '458/1128')}${coreGrowthPanel('UI-06')}`; }
   function coreMine() { return `${clearReference('mine-member-reference-434x1124.png', '我的会员中心：深蓝会员信息、邀请权益、功能列表、年度会员服务和四栏导航', [['clear-bottom-nav-home', 'home', '首页']], '434/1124')}${coreGrowthPanel('UI-07')}`; }
   function assessmentEntryLiveOverlay() {
@@ -446,7 +494,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const saved = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02');
     const selected = saved?.selection || '未选择';
     const status = saved ? '草稿已记录' : '可开始测评';
-    return `<output class="by-assessment-live-overlay" data-ui02-assessment-state="${saved ? 'DRAFT_SAVED' : 'NOT_STARTED'}" data-ui02-selected-dimension="${selected}">${status}：${selected}（仅 synthetic 家长视角，非诊断）</output>`;
+    return `<output class="by-assessment-live-overlay" data-ui02-assessment-state="${saved ? 'DRAFT_SAVED' : 'NOT_STARTED'}" data-ui02-selected-dimension="${selected}">${status}：${selected}。从你最想改善的地方开始就好。</output>`;
   }
   function growthAssessment() {
     const hotspots = [
@@ -516,12 +564,12 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010'); }
   function familyProfile() { return clearReference('family-profile-reference-542x1002.png', '家庭档案：孩子资料、关注问题、诊断方案、记录与时间线，仅作静态视觉展示', [['clear-profile-services', 'my-services', '查看服务']], '542/1002'); }
   function serviceRecords() { return clearReference('service-records-reference-566x1008.png', '服务记录：咨询、活动和客服支持，仅作静态视觉展示', [['clear-records-mine', 'service-mine', '我的预约和活动']], '566/1008'); }
-  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); if (platformSurfacesApiEnabled()) { root.insertAdjacentHTML('beforeend', `${platformSurfacePanel('UI-19')}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`); bind(); if (platformSurfacesLoadState === 'IDLE') void requestPlatformSurfacesProjection().then(() => render()); } return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}${platformSurfacePanel(FAMILY_UI_ID_BY_ROUTE[page])}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); if (firstSliceApiEnabled() && (page === 'home' || page === 'growth-daily-task') && firstSliceLoadState === 'IDLE') { void requestFamilyToday().then(() => render()); } if (coreGrowthApiEnabled() && ['growth-assessment', 'assessment', 'core-report', 'core-plan', 'core-community', 'core-mine', 'growth-report', 'growth-child'].includes(page) && coreGrowthLoadState === 'IDLE') { void requestCoreGrowthProjection().then(() => render()); } if (platformSurfacesApiEnabled() && /^UI-(1[1-9]|2[0-9]|3[0-4])$/.test(FAMILY_UI_ID_BY_ROUTE[page] || '') && platformSurfacesLoadState === 'IDLE') { void requestPlatformSurfacesProjection().then(() => render()); } }
-  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a === 'platform-surface-refresh') { platformSurfacesLoadState = 'IDLE'; platformSurfacesNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestPlatformSurfacesProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'platform-surface-noop') { root.setAttribute('aria-busy', 'true'); await submitPlatformSurfaceNoop(el.dataset.platformSurface || '', el.dataset.platformCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-refresh') { coreGrowthLoadState = 'IDLE'; coreGrowthNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-noop') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop(el.dataset.coreGrowthSurface || '', el.dataset.coreGrowthCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'ui02-start-assessment' && !coreGrowthApiEnabled()) { root.setAttribute('aria-busy', 'true'); await requestPageExplanation('UI-02'); root.removeAttribute('aria-busy'); page = 'assessment'; render(); return; } if (a === 'ui02-select-dimension') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop('UI-02', 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', el.dataset.ui02Selection || ''); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'ui02-start-assessment') { root.setAttribute('aria-busy', 'true'); const selection = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02')?.selection || 'PARENT_CHILD_COMMUNICATION'; await submitCoreGrowthNoop('UI-02', 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); page = 'assessment'; render(); return; } if (a === 'ui03-preview-plan') { root.setAttribute('aria-busy', 'true'); if (coreGrowthApiEnabled()) { const selection = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02')?.selection || 'UNSPECIFIED'; await submitCoreGrowthNoop('UI-03', 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); } else { await requestPageExplanation('UI-03'); } root.removeAttribute('aria-busy'); page = 'core-report'; render(); return; } if (a === 'page-objects-complete-daily-task') { root.setAttribute('aria-busy', 'true'); await requestUi09TaskCompletion(); root.removeAttribute('aria-busy'); render(); return; } if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
+  function render() { if (page === 'teacher-zone') { mountTeacherSupplyView(root, config); if (platformSurfacesApiEnabled()) { root.insertAdjacentHTML('beforeend', `${platformSurfacePanel('UI-19')}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`); bind(); if (platformSurfacesLoadState === 'IDLE') void requestPlatformSurfacesProjection().then(() => render()); } return; } const views = { home, assessment, report, task:taskPage, child, ranking, poster, plan, mall, product, invite, group, points, mine, member, 'core-report':coreReport, 'core-plan':corePlan, 'core-community':coreCommunity, 'core-mine':coreMine, 'growth-assessment':growthAssessment, 'growth-report':growthReport, 'growth-daily-task':growthDailyTask, 'growth-camp-21':growthCamp21, 'growth-child':growthChild, 'growth-ranking':growthRanking, 'growth-poster':growthPoster, 'commerce-mall':commerceMall, 'commerce-product':commerceProduct, 'commerce-invite':commerceInvite, 'commerce-group':commerceGroup, 'commerce-points':commercePoints, 'commerce-mine':commerceMine, 'teacher-zone':teacherZone, 'teacher-detail':teacherDetail, 'consultation-booking':consultationBooking, 'salon-list':salonList, 'activity-detail':activityDetail, 'service-mine':serviceMine, 'parent-community':parentCommunity, 'publish-dynamic':publishDynamic, 'dynamic-detail':dynamicDetail, 'my-community':myCommunity, 'growth-outcomes':growthOutcomes, 'annual-member-mine':annualMemberMine, 'my-services':myServices, 'orders-assets':ordersAssets, 'family-profile':familyProfile, 'service-records':serviceRecords }; root.innerHTML = `${(views[page] || home)()}${platformSurfacePanel(FAMILY_UI_ID_BY_ROUTE[page])}<p class="by-assistive-status" aria-live="polite">${llmTextEquivalent}</p>`; bind(); if (firstSliceApiEnabled() && (page === 'home' || page === 'growth-daily-task') && firstSliceLoadState === 'IDLE') { void requestFamilyToday().then(() => render()); } if (coreGrowthApiEnabled() && ['growth-assessment', 'assessment', 'core-report', 'core-plan', 'core-community', 'core-mine', 'growth-report', 'growth-child', 'growth-camp-21'].includes(page) && coreGrowthLoadState === 'IDLE') { void requestCoreGrowthProjection().then(() => render()); } if (platformSurfacesApiEnabled() && /^UI-(1[1-9]|2[0-9]|3[0-4])$/.test(FAMILY_UI_ID_BY_ROUTE[page] || '') && platformSurfacesLoadState === 'IDLE') { void requestPlatformSurfacesProjection().then(() => render()); } }
+  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a === 'platform-surface-refresh') { platformSurfacesLoadState = 'IDLE'; platformSurfacesNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestPlatformSurfacesProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'platform-surface-noop') { root.setAttribute('aria-busy', 'true'); await submitPlatformSurfaceNoop(el.dataset.platformSurface || '', el.dataset.platformCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-refresh') { coreGrowthLoadState = 'IDLE'; coreGrowthNoopReceipt = ''; root.setAttribute('aria-busy', 'true'); await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'dev-core-noop') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop(el.dataset.coreGrowthSurface || '', el.dataset.coreGrowthCommand || ''); root.removeAttribute('aria-busy'); render(); return; } if (a === 'ui02-start-assessment' && !coreGrowthApiEnabled()) { root.setAttribute('aria-busy', 'true'); await requestPageExplanation('UI-02'); root.removeAttribute('aria-busy'); page = 'assessment'; render(); return; } if (a === 'ui02-select-dimension') { root.setAttribute('aria-busy', 'true'); await submitCoreGrowthNoop('UI-02', 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', el.dataset.ui02Selection || ''); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'ui02-start-assessment') { root.setAttribute('aria-busy', 'true'); const selection = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02')?.selection || 'PARENT_CHILD_COMMUNICATION'; await submitCoreGrowthNoop('UI-02', 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); page = 'assessment'; render(); return; } if (a === 'ui03-preview-plan') { root.setAttribute('aria-busy', 'true'); if (coreGrowthApiEnabled()) { const selection = coreGrowthProjection?.recent_flow_events?.find((event) => event.ui_id === 'UI-02')?.selection || 'UNSPECIFIED'; await submitCoreGrowthNoop('UI-03', 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); } else { await requestPageExplanation('UI-03'); } root.removeAttribute('aria-busy'); page = 'core-report'; render(); return; } if (a === 'page-objects-complete-daily-task') { root.setAttribute('aria-busy', 'true'); await requestUi09TaskCompletion(); root.removeAttribute('aria-busy'); render(); return; } if (a === 'camp21-checkin') { root.setAttribute('aria-busy', 'true'); const day = el.dataset.ui35Day || '1'; await submitCoreGrowthNoop('UI-35', 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', `DAY_${day}_PARENT_ACTION`); coreGrowthLoadState = 'IDLE'; await requestCoreGrowthProjection(); root.removeAttribute('aria-busy'); render(); return; } if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-camp-21':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }
   render();
   return {
     navigate: (nextPage) => {
-      page = FAMILY_UI_34_ROUTE_SET.has(nextPage) ? nextPage : 'home';
+      page = (FAMILY_UI_34_ROUTE_SET.has(nextPage) || FAMILY_SUPPORT_ROUTE_SET.has(nextPage)) ? nextPage : 'home';
       render();
     },
   };

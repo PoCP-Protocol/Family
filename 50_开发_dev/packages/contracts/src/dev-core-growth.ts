@@ -14,7 +14,8 @@ export type DevCoreGrowthSurface =
   | 'UI-06'
   | 'UI-07'
   | 'UI-08'
-  | 'UI-10';
+  | 'UI-10'
+  | 'UI-35';
 
 export type DevCoreGrowthCardKind =
   | 'ASSESSMENT_ENTRY'
@@ -23,7 +24,38 @@ export type DevCoreGrowthCardKind =
   | 'PLAN_DRAFT'
   | 'COMPANION_PROGRESS'
   | 'MEMBERSHIP_READ'
-  | 'CHILD_ASSISTANT_READ';
+  | 'CHILD_ASSISTANT_READ'
+  | 'GROWTH_CAMP_21';
+
+export interface DevAiCurriculumDayDraft {
+  day_number: number;
+  theme: string;
+  parent_action: string;
+  reflection_prompt: string;
+  evidence_boundary: 'PERSPECTIVE_NOT_FACT';
+}
+
+/**
+ * AI-assisted curriculum structure for DEV only. It is a rule-based draft built
+ * from bounded product inputs and must be reviewed before becoming a real course.
+ */
+export interface DevAiCurriculumDraft {
+  draft_id: string;
+  status: 'SYNTHETIC_RULE_BASED_DRAFT';
+  source_boundary: 'E1_PRODUCT_STRUCTURE_PLUS_PUBLIC_DESIGN_RESEARCH';
+  model_gateway_status: 'NOOP_NOT_INVOKED';
+  human_review: 'REQUIRED_BEFORE_PUBLISH_OR_ASSIGN';
+  course_boundary: 'NOT_OFFICIAL_SYLLABUS_NOT_OUTCOME_NOT_DIAGNOSIS';
+  day_count: 21;
+  stages: readonly {
+    stage_id: string;
+    label: string;
+    day_range: string;
+    intent: string;
+  }[];
+  current_day: DevAiCurriculumDayDraft;
+  next_transition: 'GROWTH_PLAN_DRAFT_RECOMMENDATION_ONLY';
+}
 
 export interface DevCoreGrowthCard {
   surface: DevCoreGrowthSurface;
@@ -48,6 +80,8 @@ export interface DevCoreGrowthCard {
     name: string;
     mode: 'READ_ONLY' | 'CONTROLLED_DRAFT' | 'NOOP_NOT_PERSISTED';
   };
+  /** Present only on course-capability cards such as UI-35. */
+  curriculum_draft?: DevAiCurriculumDraft;
 }
 
 export interface DevCoreGrowthProjection {
@@ -84,5 +118,5 @@ export interface DevCoreGrowthNoopCommandResult {
 }
 
 export const DEV_CORE_GROWTH_SURFACES: readonly DevCoreGrowthSurface[] = [
-  'UI-02', 'UI-03', 'UI-04', 'UI-05', 'UI-06', 'UI-07', 'UI-08', 'UI-10',
+  'UI-02', 'UI-03', 'UI-04', 'UI-05', 'UI-06', 'UI-07', 'UI-08', 'UI-10', 'UI-35',
 ] as const;
