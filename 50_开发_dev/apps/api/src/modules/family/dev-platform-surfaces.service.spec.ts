@@ -61,6 +61,18 @@ describe('DevPlatformSurfacesService', () => {
     expect(userStoryContent).not.toMatch(/name|age|school|score|badge|reward|outcome|share|download|publish|media|qr|order|booking/i);
   });
 
+  it('builds UI-17 as a family self-record without points, rewards, or entitlements', () => {
+    const emptyRecord = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-17')?.family_self_record;
+    expect(emptyRecord).toMatchObject({ state: 'WAITING_FOR_ACTION', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME' });
+    const record = service.getProjection(familyId, [
+      { event_id: 'evt-09', ui_id: 'UI-09', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:03.000Z', replayed: false },
+      { event_id: 'evt-13', ui_id: 'UI-13', business_loop: 'COMMERCE_LOOP', command: 'READ_SYNTHETIC_CATALOG', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false },
+    ]).cards.find((card) => card.surface === 'UI-17')?.family_self_record;
+    expect(record).toMatchObject({ state: 'READY', headline: '我们已经为今天留下一条小记录', review_route: 'growth-report', action_route: 'growth-daily-task' });
+    const userRecordContent = JSON.stringify({ state: record?.state, headline: record?.headline, confirmation: record?.confirmation, pause_hint: record?.pause_hint, review_route: record?.review_route, action_route: record?.action_route });
+    expect(userRecordContent).not.toMatch(/point|score|reward|redeem|entitlement|outcome|rank|badge|order|payment/i);
+  });
+
   it('exposes a controller-safe allow-list for UI-11~UI-34', () => {
     expect(service.supportsSurface('UI-21')).toBe(true);
     expect(service.supportsSurface('UI-10')).toBe(false);

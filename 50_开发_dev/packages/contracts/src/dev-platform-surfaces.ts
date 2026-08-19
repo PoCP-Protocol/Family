@@ -29,6 +29,17 @@ export interface DevPrivateGrowthStory {
   fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE';
 }
 
+/** UI-17: a family-owned process note, not a points balance, reward, or entitlement. */
+export interface DevFamilySelfRecord {
+  state: 'WAITING_FOR_ACTION' | 'READY';
+  headline: string;
+  confirmation: string;
+  pause_hint: string;
+  review_route: 'growth-report';
+  action_route: 'growth-daily-task';
+  fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME';
+}
+
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
   /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
@@ -48,6 +59,8 @@ export interface DevPlatformSurfaceCard {
   personal_growth_journey?: DevPersonalGrowthJourney;
   /** Present only on UI-12; a private process narrative without media or external sharing. */
   private_growth_story?: DevPrivateGrowthStory;
+  /** Present only on UI-17; a self-referenced action note without points, rewards, or entitlements. */
+  family_self_record?: DevFamilySelfRecord;
 }
 
 export interface DevPlatformSurfacesProjection {

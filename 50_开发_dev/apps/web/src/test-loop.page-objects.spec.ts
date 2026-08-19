@@ -587,6 +587,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     ...(surface === 'UI-12' ? { private_growth_story: { state: 'READY', title: '我们一起走过的片段', summary: '这些是我们已经尝试过的过程，不急着下结论，只是留给家庭慢慢回看的片段。', moments: [
       '我们选择了一个想一起关注的方向。', '我们为今天留出了一个小行动。', '我们打开了家庭回顾，愿意再听听彼此的感受。',
     ], journey_route: 'growth-ranking', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE' } } : {}),
+    ...(surface === 'UI-17' ? { family_self_record: { state: 'READY', headline: '我们已经为今天留下一条小记录', confirmation: '这次行动已经被家庭记下。不急着证明什么，也可以慢慢回看。', pause_hint: '如果今天不想继续，也可以先停在这里；下一次从更容易的一步开始。', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME' } } : {}),
   }));
   const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
 
@@ -606,6 +607,11 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(ui12?.textContent).toContain('家庭私有回看');
     expect(ui12?.textContent).not.toMatch(/DEV|SYNTHETIC|姓名|年龄|学校|分数|勋章|二维码|分享|下载|发布/);
     expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭故事已准备好');
+    app.navigate('commerce-points');
+    const ui17 = root.querySelector('[data-platform-surface="UI-17"]');
+    expect(ui17?.textContent).toContain('家庭小记');
+    expect(ui17?.textContent).not.toMatch(/DEV|SYNTHETIC|积分|分值|奖励|兑换|权益|订单|支付|总分|排名|诊断/);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭小记已准备好');
 
     const pages = [
       'growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine',
@@ -640,6 +646,21 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     app.navigate('growth-ranking');
     root.querySelector<HTMLButtonElement>('[data-by="ui11-open-family-review"]')?.click();
     expect(root.querySelector('[aria-label^="家庭成长报告"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes the UI-17 family self-record only to family review or today action', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'commerce-points' });
+    await tick(); await tick();
+    expect(root.querySelector('[data-ui17-self-record-state="READY"]')?.textContent).toContain('这次行动已经被家庭记下');
+    root.querySelector<HTMLButtonElement>('[data-by="ui17-open-family-review"]')?.click();
+    expect(root.querySelector('[aria-label^="家庭成长报告"]')).not.toBeNull();
+    app.navigate('commerce-points');
+    root.querySelector<HTMLButtonElement>('[data-by="ui17-continue-daily-action"]')?.click();
+    expect(root.querySelector('[aria-label^="今日成长任务"]')).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

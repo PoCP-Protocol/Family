@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   DEV_PLATFORM_SURFACES,
   type DevFlowReceiptSummary,
+  type DevFamilySelfRecord,
   type DevPersonalGrowthJourney,
   type DevPrivateGrowthStory,
   type DevPlatformNoopCommandResult,
@@ -54,6 +55,7 @@ export class DevPlatformSurfacesService {
   private templates(flowEvents: readonly DevFlowReceiptSummary[]): Template[] {
     const personalGrowthJourney = buildPersonalGrowthJourney(flowEvents);
     const privateGrowthStory = buildPrivateGrowthStory(flowEvents);
+    const familySelfRecord = buildFamilySelfRecord(flowEvents);
     return [
       ['UI-11','PERSONAL_HISTORY','我的成长轨迹','READ_ONLY','TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING','DEV 用个人历史轨迹替代跨家庭排行；无家庭总分或同龄比较。','可查看自己的行动时间线。','READ_PERSONAL_HISTORY','READ_ONLY'],
       ['UI-12','EVIDENCE','成长故事海报','NOOP','EVIDENCE_STORY_IS_NOT_OUTCOME_OR_SHARE','DEV 展示成果故事占位；不生成海报、不外发分享。','分享适配器保持 no-op。','PREVIEW_SYNTHETIC_EVIDENCE_STORY','NOOP_NOT_PERSISTED'],
@@ -83,6 +85,7 @@ export class DevPlatformSurfacesService {
       surface: surface as DevPlatformSurface, domain: domain as DevPlatformSurfaceCard['domain'], title, state: state as DevPlatformSurfaceCard['state'], boundary, summary, next_hint, command: { name: command, mode: mode as DevPlatformSurfaceCard['command']['mode'] },
       ...(surface === 'UI-11' ? { personal_growth_journey: personalGrowthJourney } : {}),
       ...(surface === 'UI-12' ? { private_growth_story: privateGrowthStory } : {}),
+      ...(surface === 'UI-17' ? { family_self_record: familySelfRecord } : {}),
     }));
   }
 }
@@ -106,6 +109,23 @@ function buildPersonalGrowthJourney(flowEvents: readonly DevFlowReceiptSummary[]
     plan_route: 'core-plan',
     review_route: 'growth-report',
     fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING',
+  };
+}
+
+function buildFamilySelfRecord(flowEvents: readonly DevFlowReceiptSummary[]): DevFamilySelfRecord {
+  const hasRecordedAction = flowEvents.some((event) => event.ui_id === 'UI-09' && event.command === 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW');
+  return {
+    state: hasRecordedAction ? 'READY' : 'WAITING_FOR_ACTION',
+    headline: hasRecordedAction ? '我们已经为今天留下一条小记录' : '从一次愿意开始的小行动出发',
+    confirmation: hasRecordedAction
+      ? '这次行动已经被家庭记下。不急着证明什么，也可以慢慢回看。'
+      : '当我们完成一次今天的小行动，这里会留下属于家庭自己的过程小记。',
+    pause_hint: hasRecordedAction
+      ? '如果今天不想继续，也可以先停在这里；下一次从更容易的一步开始。'
+      : '可以先选一件你们觉得做得到的小事，再慢慢调整。',
+    review_route: 'growth-report',
+    action_route: 'growth-daily-task',
+    fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME',
   };
 }
 
