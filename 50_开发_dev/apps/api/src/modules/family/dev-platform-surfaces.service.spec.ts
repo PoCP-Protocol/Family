@@ -38,10 +38,12 @@ describe('DevPlatformSurfacesService', () => {
       { event_id: 'evt-02', ui_id: 'UI-02', business_loop: 'GROWTH_LOOP', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:01.000Z', replayed: false, selection: 'EMOTION_REGULATION' },
       { event_id: 'evt-05', ui_id: 'UI-05', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:02.000Z', replayed: false },
       { event_id: 'evt-09', ui_id: 'UI-09', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:03.000Z', replayed: false },
-      { event_id: 'evt-13', ui_id: 'UI-13', business_loop: 'COMMERCE_LOOP', command: 'READ_SYNTHETIC_CATALOG', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false },
+      { event_id: 'evt-35', ui_id: 'UI-35', business_loop: 'GROWTH_LOOP', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false, selection: 'DAY_1_PARENT_ACTION' },
+      { event_id: 'evt-13', ui_id: 'UI-13', business_loop: 'COMMERCE_LOOP', command: 'READ_SYNTHETIC_CATALOG', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:05.000Z', replayed: false },
     ]).cards.find((card) => card.surface === 'UI-11')?.personal_growth_journey;
     expect(journey).toMatchObject({ state: 'IN_PROGRESS', headline: '我们已经走过的几步', plan_route: 'core-plan', review_route: 'growth-report' });
-    expect(journey?.entries.map((entry) => entry.event_id)).toEqual(['evt-02', 'evt-05', 'evt-09']);
+    expect(journey?.entries.map((entry) => entry.event_id)).toEqual(['evt-02', 'evt-05', 'evt-09', 'evt-35']);
+    expect(journey?.entries.at(-1)).toMatchObject({ label: '记录了一次成长营小行动', detail: '把一次愿意尝试的家庭行动留在过程里。' });
     const userJourneyContent = JSON.stringify({ state: journey?.state, headline: journey?.headline, entries: journey?.entries, plan_route: journey?.plan_route, review_route: journey?.review_route });
     expect(userJourneyContent).not.toMatch(/rank|score|percentile|peer|city|class|streak|badge|reward/i);
   });
@@ -53,10 +55,12 @@ describe('DevPlatformSurfacesService', () => {
       { event_id: 'evt-02', ui_id: 'UI-02', business_loop: 'GROWTH_LOOP', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:01.000Z', replayed: false },
       { event_id: 'evt-05', ui_id: 'UI-05', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:02.000Z', replayed: false },
       { event_id: 'evt-09', ui_id: 'UI-09', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:03.000Z', replayed: false },
-      { event_id: 'evt-21', ui_id: 'UI-21', business_loop: 'TEACHER_SALON_LOOP', command: 'PREVIEW_SYNTHETIC_BOOKING', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false },
+      { event_id: 'evt-35', ui_id: 'UI-35', business_loop: 'GROWTH_LOOP', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false, selection: 'DAY_1_PARENT_ACTION' },
+      { event_id: 'evt-21', ui_id: 'UI-21', business_loop: 'TEACHER_SALON_LOOP', command: 'PREVIEW_SYNTHETIC_BOOKING', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:05.000Z', replayed: false },
     ]).cards.find((card) => card.surface === 'UI-12')?.private_growth_story;
     expect(story).toMatchObject({ state: 'READY', title: '我们一起走过的片段', journey_route: 'growth-ranking' });
-    expect(story?.moments).toHaveLength(3);
+    expect(story?.moments).toHaveLength(4);
+    expect(story?.moments).toContain('我们记录了一次成长营的小行动。');
     const userStoryContent = JSON.stringify({ state: story?.state, title: story?.title, summary: story?.summary, moments: story?.moments, journey_route: story?.journey_route });
     expect(userStoryContent).not.toMatch(/name|age|school|score|badge|reward|outcome|share|download|publish|media|qr|order|booking/i);
   });

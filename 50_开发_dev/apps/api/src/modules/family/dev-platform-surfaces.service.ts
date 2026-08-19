@@ -142,10 +142,11 @@ function buildPersonalGrowthJourney(flowEvents: readonly DevFlowReceiptSummary[]
     'UI-04': { label: '查看了 90 天成长计划', detail: '把长期想法拆成更容易开始的步骤。' },
     'UI-05': { label: '打开了本周行动', detail: '为今天留出一个可以尝试的小行动。' },
     'UI-09': { label: '打开了家庭回顾', detail: '回看一次陪伴，不急着判断效果。' },
+    'UI-35': { label: '记录了一次成长营小行动', detail: '把一次愿意尝试的家庭行动留在过程里。' },
   };
   const entries = flowEvents
     .filter((event) => labels[event.ui_id])
-    .sort((left, right) => left.created_at.localeCompare(right.created_at))
+    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
     .slice(-4)
     .map((event) => ({ event_id: event.event_id, ...labels[event.ui_id]! }));
   return {
@@ -177,8 +178,8 @@ function buildFamilySelfRecord(flowEvents: readonly DevFlowReceiptSummary[]): De
 
 function buildPrivateGrowthStory(flowEvents: readonly DevFlowReceiptSummary[]): DevPrivateGrowthStory {
   const moments = flowEvents
-    .filter((event) => ['UI-02', 'UI-04', 'UI-05', 'UI-09'].includes(event.ui_id))
-    .sort((left, right) => left.created_at.localeCompare(right.created_at))
+    .filter((event) => ['UI-02', 'UI-04', 'UI-05', 'UI-09', 'UI-35'].includes(event.ui_id))
+    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
     .slice(-4)
     .map((event) => {
       switch (event.ui_id) {
@@ -186,6 +187,7 @@ function buildPrivateGrowthStory(flowEvents: readonly DevFlowReceiptSummary[]): 
         case 'UI-04': return '我们查看了可以慢慢练习的 90 天计划。';
         case 'UI-05': return '我们为今天留出了一个小行动。';
         case 'UI-09': return '我们打开了家庭回顾，愿意再听听彼此的感受。';
+        case 'UI-35': return '我们记录了一次成长营的小行动。';
         default: return '我们留下一段家庭自己的过程片段。';
       }
     });
