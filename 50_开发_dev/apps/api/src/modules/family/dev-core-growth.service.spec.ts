@@ -82,6 +82,9 @@ describe('DevCoreGrowthService', () => {
     expect(reviewReady.cards.find((card) => card.surface === 'UI-06')?.companion_progress).toMatchObject({
       state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
     });
+    expect(reviewReady.cards.find((card) => card.surface === 'UI-10')?.child_action_prompt).toMatchObject({
+      state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME',
+    });
     expect(JSON.stringify(previewed)).not.toContain('GrowthTaskCreated');
     expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');
   });

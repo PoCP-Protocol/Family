@@ -180,6 +180,9 @@ describe('DEV flow receipt integration', () => {
     expect(reviewProjection.cards.find((card: any) => card.surface === 'UI-06')?.companion_progress).toMatchObject({
       state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
     });
+    expect(reviewProjection.cards.find((card: any) => card.surface === 'UI-10')?.child_action_prompt).toMatchObject({
+      state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME',
+    });
     expect(reviewProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', external_effect: false })]));
   });
 

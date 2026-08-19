@@ -287,6 +287,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
       else if (surface === 'UI-05') expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
       else if (surface === 'UI-06') expect(root.querySelector('[aria-label*="陪跑服务"]')).not.toBeNull();
       else if (surface === 'UI-08') expect(root.querySelector('[aria-label*="家庭成长报告"]')).not.toBeNull();
+      else if (surface === 'UI-10') expect(root.querySelector('[aria-label*="成长小助手"]')).not.toBeNull();
       else expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
     app.navigate('growth-camp-21');
@@ -506,6 +507,28 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-community' });
     await tick(); await tick();
     root.querySelector<HTMLButtonElement>('[data-by="ui06-continue-daily-action"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label*="今日成长任务"]')).not.toBeNull();
+  });
+
+  it('shows a family UI-10 choice prompt after a recorded action and returns only to today action', async () => {
+    const childProjection = {
+      ...projection,
+      recent_flow_events: [{ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }],
+      cards: projection.cards.map((card) => card.surface === 'UI-10'
+        ? { ...card, child_action_prompt: { state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', headline: '和孩子一起选一件小事', shared_action: '可以一起试试：先听孩子说完。让孩子选择一个觉得舒服的时刻开始。', pause_hint: '如果今天已经很累，先到这里也可以。下次再选一个轻松的时刻。', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME' } }
+        : card),
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => childProjection }));
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-child' });
+    await tick(); await tick();
+    const prompt = root.querySelector('[data-ui10-prompt-state="ACTION_RECORDED"]');
+    expect(prompt?.textContent).toContain('和孩子一起选一件小事');
+    expect(prompt?.textContent).toContain('先到这里也可以');
+    expect(prompt?.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执|完成度|评分|排名|诊断|奖励|能量/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui10-return-daily-action"]')?.click();
     await tick();
     expect(root.querySelector('[aria-label*="今日成长任务"]')).not.toBeNull();
   });

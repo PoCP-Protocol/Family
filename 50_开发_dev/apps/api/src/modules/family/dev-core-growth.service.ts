@@ -5,6 +5,7 @@ import {
   type DevCoreGrowthNoopCommandResult,
   type DevCoreGrowthProjection,
   type DevCoreGrowthSurface,
+  type DevChildActionPrompt,
   type DevFamilyActionReview,
   type DevFamilyCompanionProgress,
   type DevFamilyGrowthReportDraft,
@@ -95,6 +96,7 @@ export class DevCoreGrowthService {
     const planPreview = buildPlanPreview(focus, planPreviewed, weeklyActionOpened);
     const actionReview = actionReviewReady ? buildFamilyActionReview(focus) : undefined;
     const companionProgress = actionReviewReady ? buildFamilyCompanionProgress(focus) : undefined;
+    const childActionPrompt = actionReviewReady ? buildChildActionPrompt(focus) : undefined;
 
     return [
       {
@@ -151,11 +153,12 @@ export class DevCoreGrowthService {
         ...(actionReview ? { action_review: actionReview } : {}),
       },
       {
-        surface: 'UI-10', kind: 'CHILD_ASSISTANT_READ', title: '成长小助手', state: 'NOOP',
+        surface: 'UI-10', kind: 'CHILD_ASSISTANT_READ', title: '成长小助手', state: 'READ_ONLY',
         fact_boundary: 'PERSPECTIVE_NOT_FACT', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: '仅展示规则化的任务入口与系统状态；没有 Child-facing 模型调用、监控或诊断。',
-        next_hint: '孩子自主能力与监护 Consent 需在后续受控切片中实现。',
+        summary: '为家庭提供可选择的小行动提示；不评价孩子、不记录完成度，也不调用模型。',
+        next_hint: '可以和孩子一起选择是否尝试，或今天先到这里。',
         command: { name: 'READ_SYNTHETIC_CHILD_ASSISTANT', mode: 'READ_ONLY' },
+        ...(childActionPrompt ? { child_action_prompt: childActionPrompt } : {}),
       },
       {
         surface: 'UI-35', kind: 'GROWTH_CAMP_21', title: '21天智慧父母成长营（DEV课程草稿）', state: 'DRAFT',
@@ -262,6 +265,19 @@ function buildReportDraft(focus: DevGrowthFocus, planPreviewed: boolean): DevFam
       fallback: content.fallback,
     },
     plan_link_state: planPreviewed ? 'VIEWED' : 'READY_TO_VIEW',
+  };
+}
+
+function buildChildActionPrompt(focus: DevGrowthFocus): DevChildActionPrompt {
+  const content = GROWTH_FOCUS_CONTENT[focus];
+  return {
+    state: 'ACTION_RECORDED',
+    focus,
+    headline: '和孩子一起选一件小事',
+    shared_action: `可以一起试试：${content.action}。让孩子选择一个觉得舒服的时刻开始。`,
+    pause_hint: '如果今天已经很累，先到这里也可以。下次再选一个轻松的时刻。',
+    action_route: 'growth-daily-task',
+    fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME',
   };
 }
 
