@@ -333,7 +333,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     if (!coreGrowthApiEnabled()) return null;
     try {
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, {
-        method: 'POST', credentials: 'include',
+        method: 'POST', credentials: config.authToken ? 'omit' : 'include',
         headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
         body: JSON.stringify({ ui_id: surface, command, ...(selection ? { selection } : {}) }),
       });

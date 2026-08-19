@@ -47,7 +47,7 @@ export class DevFlowReceiptService {
     if (!input.command?.trim() || !input.correlation_id?.trim()) {
       throw new BadRequestException('dev_flow_command_and_correlation_required');
     }
-    if (input.selection && (!/^[A-Z_]{3,64}$/.test(input.selection))) {
+    if (input.selection && (!/^[A-Z0-9_]{3,64}$/.test(input.selection))) {
       throw new BadRequestException('invalid_dev_flow_selection');
     }
 

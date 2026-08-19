@@ -104,6 +104,33 @@ describe('DEV flow receipt integration', () => {
     });
   });
 
+  it('accepts a bounded UI-35 Day-numbered parent action, persists no external effect, and rejects unsafe selection syntax', async () => {
+    const seed = await seedGuardian();
+    const receipt = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui35-day-1', 'idem-ui35-day-1'),
+      body: JSON.stringify({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' }),
+    });
+    expect(receipt.status).toBe(201);
+    expect(await receipt.json()).toMatchObject({
+      ui_id: 'UI-35', selection: 'DAY_1_PARENT_ACTION', external_effect: false,
+      model_gateway_status: 'NOOP_NOT_INVOKED', replayed: false,
+    });
+
+    const replay = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui35-day-1', 'idem-ui35-day-1'),
+      body: JSON.stringify({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' }),
+    });
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toMatchObject({ replayed: true, external_effect: false });
+
+    const invalid = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui35-invalid'),
+      body: JSON.stringify({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'day 1' }),
+    });
+    expect(invalid.status).toBe(400);
+    expect(await invalid.json()).toMatchObject({ message: 'invalid_dev_flow_selection' });
+  });
+
   it('persists a bounded UI-02 assessment focus as a synthetic Perspective and returns it in Core Growth readback', async () => {
     const seed = await seedGuardian();
     const receipt = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
