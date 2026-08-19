@@ -147,3 +147,66 @@ describe('UI-30 authenticated annual companion readback', () => {
     expect(root.textContent).not.toMatch(/支付成功|已扣款|续费已生效|外部通知已发送/);
   });
 });
+
+describe('UI-17 to UI-18 authenticated family-private platform projections', () => {
+  it('reads the family self-record and records a generic choice with the account bearer only', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          family_id: 'family-platform-auth-scope',
+          data_source: 'SYNTHETIC_DEV_ONLY',
+          external_effect_adapter: 'NOOP_NOT_INVOKED',
+          cards: [{
+            surface: 'UI-18',
+            state: 'READY',
+            title: '家庭服务说明',
+            loop: 'CUSTOMER_BACKEND_LOOP',
+            business_capability: 'family_service_scope',
+            primary_objects: ['Family'],
+            command: { name: 'RECORD_SERVICE_SCOPE_INTEREST' },
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          event_state: 'DEV_CONFIRMED',
+          external_effect: false,
+          data_source: 'SYNTHETIC_DEV_ONLY',
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-platform-auth-scope',
+      authToken: 'family-platform-auth-bearer',
+      platformSurfacesApiMode: 'synthetic-api',
+      initialPage: 'commerce-mine',
+    });
+
+    await tick(); await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [projectionUrl, projectionRequest] = fetchMock.mock.calls[0];
+    expect(projectionUrl).toBe('http://family-api.test/families/family-platform-auth-scope/dev/platform-surfaces');
+    expect(projectionRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((projectionRequest.headers as Record<string, string>).authorization).toBe('Bearer family-platform-auth-bearer');
+    expect(root.querySelector('[data-platform-surface="UI-18"]')?.textContent).toContain('我的服务');
+
+    root.querySelector<HTMLButtonElement>('[data-by="platform-surface-noop"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [eventUrl, eventRequest] = fetchMock.mock.calls[1];
+    expect(eventUrl).toBe('http://family-api.test/families/family-platform-auth-scope/dev/flow-events');
+    expect(eventRequest).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((eventRequest.headers as Record<string, string>).authorization).toBe('Bearer family-platform-auth-bearer');
+    expect(JSON.parse(String(eventRequest.body))).toMatchObject({ ui_id: 'UI-18', command: 'RECORD_SERVICE_SCOPE_INTEREST' });
+    expect(root.dataset.familyPlatformSurfaceNoop).toBe('DEV_CONFIRMED');
+    expect(root.textContent).toContain('本次选择已记录。');
+    expect(root.textContent).not.toMatch(/支付成功|订单已生成|预约已确认|外部通知已发送/);
+  });
+});

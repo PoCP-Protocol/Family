@@ -447,7 +447,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const correlationId = `family-dev-platform-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     platformSurfacesLoadState = 'LOADING'; root.dataset.familyPlatformSurfacesStatus = 'LOADING';
     try {
-      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/platform-surfaces`, { method: 'GET', credentials: 'include', headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) } });
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/platform-surfaces`, { method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) } });
       const payload = await response.json();
       if (!response.ok || payload?.family_id !== config.familyId || payload?.data_source !== 'SYNTHETIC_DEV_ONLY' || payload?.external_effect_adapter !== 'NOOP_NOT_INVOKED' || !Array.isArray(payload?.cards)) throw new Error('dev_platform_surfaces_unavailable');
       platformSurfacesProjection = payload; platformSurfacesLoadState = 'READY'; root.dataset.familyPlatformSurfacesStatus = 'READY';
@@ -462,7 +462,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     if (!platformSurfacesApiEnabled()) return null;
     const correlationId = `family-dev-platform-noop-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
-      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ ui_id: surface, command }) });
+      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/dev/flow-events`, { method: 'POST', credentials: config.authToken ? 'omit' : 'include', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) }, body: JSON.stringify({ ui_id: surface, command }) });
       const payload = await response.json();
       if (!response.ok || payload?.event_state !== 'DEV_CONFIRMED' || payload?.external_effect !== false || payload?.data_source !== 'SYNTHETIC_DEV_ONLY') throw new Error('dev_platform_receipt_failed');
       platformSurfacesNoopReceipt = '本次选择已记录。'; root.dataset.familyPlatformSurfaceNoop = payload.event_state; return payload;
