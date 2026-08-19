@@ -598,3 +598,17 @@ describe('UI-01 authenticated expert live interest', () => {
     expect(root.textContent).not.toMatch(/音视频已连接|真人服务已建立|外部通知已发送|预约已确认/);
   });
 });
+
+
+describe('UI-01 to UI-02 family assessment entry', () => {
+  it('routes the free family assessment entry to the UI-02 growth start surface rather than the UI-03 static questionnaire', () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-ui01-ui02-route', initialPage: 'home' });
+
+    root.querySelector<HTMLButtonElement>('[data-by="growth-assessment"]')?.click();
+
+    expect(root.querySelector('[data-by="ui02-start-assessment"]')).not.toBeNull();
+    expect(root.querySelector('[data-ui-id="UI-03"]')).toBeNull();
+  });
+});
