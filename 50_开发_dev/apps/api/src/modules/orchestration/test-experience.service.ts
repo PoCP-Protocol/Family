@@ -142,20 +142,22 @@ export class TestExperienceService {
           ],
         );
         const row = result.rows[0];
-        if (action === 'ENTER_EXPERT_LIVE') {
+        if (action === 'ENTER_EXPERT_LIVE' || action === 'CREATE_EVENT') {
+          const isActivityInterest = action === 'CREATE_EVENT';
           await this.repo.query(
             `insert into family_service_records(
                family_id, operation_ref, record_kind, source, status, visibility, record_payload,
                external_effect, created_by_person_id, occurred_at
-             ) values ($1,$2,'EXPERT_LIVE_INTEREST','TEST_EXPERIENCE_OPERATION','RECORDED','FAMILY_PRIVATE',$3::jsonb,false,$4,now())
+             ) values ($1,$2,$3,'TEST_EXPERIENCE_OPERATION','RECORDED','FAMILY_PRIVATE',$4::jsonb,false,$5,now())
              on conflict do nothing`,
             [
               familyId,
               row.operation_id,
+              isActivityInterest ? 'EVENT_REGISTRATION_INTEREST' : 'EXPERT_LIVE_INTEREST',
               JSON.stringify({
-                session_ref: dto.fixture_ref,
+                ...(isActivityInterest ? { event_ref: dto.fixture_ref } : { session_ref: dto.fixture_ref }),
                 page_id: dto.page_id,
-                perspective_boundary: 'FAMILY_INTEREST_ONLY',
+                perspective_boundary: isActivityInterest ? 'REGISTRATION_DRAFT_NOT_ATTENDANCE' : 'FAMILY_INTEREST_ONLY',
                 service_effect: 'NOT_ESTABLISHED',
                 fixture_only: true,
               }),

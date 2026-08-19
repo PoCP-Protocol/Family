@@ -196,3 +196,34 @@ describe('Test Experience Operation → Cancel → Customer Projection', () => {
     expect(Number((await pool!.query('select count(*) n from test_experience_operations')).rows[0].n)).toBe(0);
   });
 });
+
+
+  it('projects a UI-23 activity interest into the same family-private service-record read model without treating it as attendance', async () => {
+    const seed = await seedGuardian();
+    const body = {
+      page_id: 'UI-23', action: 'CREATE_EVENT', fixture_ref: 'EVENT_PARENT_CHILD_SALON_2025_05_25', fixture_version: TEST_EXPERIENCE_FIXTURE_VERSION,
+    };
+    const key = `activity-interest-${randomUUID()}`;
+    const created = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/operations`, 'POST', seed.token, body, { 'idempotency-key': key });
+    expect(created.status).toBe(201);
+    const operation = await created.json();
+
+    const projection = await request(`/families/${seed.familyId}/orchestration/test-loop/page-objects`, 'GET', seed.token);
+    expect(projection.status).toBe(200);
+    const pageObjects = await projection.json();
+    expect(pageObjects.service_records).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operation_ref: operation.operation_id,
+        record_kind: 'EVENT_REGISTRATION_INTEREST',
+        source: 'TEST_EXPERIENCE_OPERATION',
+        status: 'RECORDED',
+        visibility: 'FAMILY_PRIVATE',
+        external_effect: false,
+      }),
+    ]));
+
+    const replay = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/operations`, 'POST', seed.token, body, { 'idempotency-key': key });
+    expect(replay.status).toBe(201);
+    expect((await replay.json()).operation_id).toBe(operation.operation_id);
+    expect(Number((await pool!.query(`select count(*) n from family_service_records where family_id=$1 and operation_ref=$2`, [seed.familyId, operation.operation_id])).rows[0].n)).toBe(1);
+  });
