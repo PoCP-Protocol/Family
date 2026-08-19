@@ -233,10 +233,19 @@ export class DevCoreGrowthService {
     const review = projection.cards.find((item) => item.surface === 'UI-08')?.action_review;
     const plan = this.getPlanPreview(familyId, onboardingId, insight, flowEvents);
     const recordedActions = flowEvents
-      .filter((event) => event.ui_id === 'UI-06' || event.ui_id === 'UI-09')
-      .sort((left, right) => left.created_at.localeCompare(right.created_at))
+      .filter((event) => event.ui_id === 'UI-06' || event.ui_id === 'UI-09' || event.ui_id === 'UI-35')
+      .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
       .slice(-12)
-      .map((event) => ({ receipt_id: event.event_id, source_ui: event.ui_id, kind: event.ui_id === 'UI-06' ? 'PRIVATE_CHECKIN_DRAFT' as const : 'ACTION_RECEIPT' as const, occurred_at: event.created_at }));
+      .map((event) => ({
+        receipt_id: event.event_id,
+        source_ui: event.ui_id,
+        kind: event.ui_id === 'UI-06'
+          ? 'PRIVATE_CHECKIN_DRAFT' as const
+          : event.ui_id === 'UI-35'
+            ? 'CAMP_DAILY_ACTION' as const
+            : 'ACTION_RECEIPT' as const,
+        occurred_at: event.created_at,
+      }));
     const evidenceRefs = [
       ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
       ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),

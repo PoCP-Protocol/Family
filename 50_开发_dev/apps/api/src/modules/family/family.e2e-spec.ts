@@ -517,15 +517,27 @@ describe('POST /families E2E', () => {
     });
     expect(profile.evidence_lineage.length).toBeGreaterThan(0);
 
+    const campHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-105-ui35-day-1' };
+    const campAction = await fetch(`${baseUrl}/families/${setup.familyId}/dev/flow-events`, {
+      method: 'POST', headers: campHeaders,
+      body: JSON.stringify({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' }),
+    });
+    expect(campAction.status).toBe(201);
+    expect(await campAction.json()).toMatchObject({ ui_id: 'UI-35', selection: 'DAY_1_PARENT_ACTION', external_effect: false });
+
     const reviewResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/family-review-readback`, { headers });
-    const review = await reviewResponse.json() as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; state: string; recorded_actions: { source_ui: string; kind: string }[]; fact_boundary: string; ai_ready: { reflection_boundary: string } };
-    expect(reviewResponse.status).toBe(200);
+    const reviewText = await reviewResponse.text();
+    const review = JSON.parse(reviewText) as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; state: string; recorded_actions: { source_ui: string; kind: string }[]; fact_boundary: string; ai_ready: { reflection_boundary: string } };
+    expect(reviewResponse.status, reviewText).toBe(200);
     expect(review).toMatchObject({
       projection_version: 'UI08_FAMILY_REVIEW_READBACK_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId,
       visibility: 'FAMILY_PRIVATE', state: 'ACTION_RECORDED', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
       ai_ready: { reflection_boundary: 'PERSPECTIVE_NOT_FACT' },
     });
-    expect(review.recorded_actions).toEqual(expect.arrayContaining([expect.objectContaining({ source_ui: 'UI-06', kind: 'PRIVATE_CHECKIN_DRAFT' })]));
+    expect(review.recorded_actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source_ui: 'UI-06', kind: 'PRIVATE_CHECKIN_DRAFT' }),
+      expect.objectContaining({ source_ui: 'UI-35', kind: 'CAMP_DAILY_ACTION' }),
+    ]));
   });
 
   async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {

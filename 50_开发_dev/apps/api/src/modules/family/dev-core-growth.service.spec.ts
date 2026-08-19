@@ -94,6 +94,22 @@ describe('DevCoreGrowthService', () => {
     expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');
   });
 
+  it('includes a bounded UI-35 daily camp action in UI-08 family-private review readback', () => {
+    const readback = service.getFamilyReviewReadback(
+      familyId,
+      '11111111-2222-4333-8444-555555555555',
+      { evidence: [{ evidence_id: 'evidence-ui35-day-1' }] },
+      [{ event_id: 'receipt-ui35-day-1', ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION', created_at: '2026-08-19T10:00:00.000Z' }],
+    );
+    expect(readback).toMatchObject({
+      visibility: 'FAMILY_PRIVATE',
+      state: 'ACTION_RECORDED',
+      fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
+      recorded_actions: [expect.objectContaining({ receipt_id: 'receipt-ui35-day-1', source_ui: 'UI-35', kind: 'CAMP_DAILY_ACTION' })],
+    });
+    expect(JSON.stringify(readback)).not.toContain('OutcomeEvidenceCreated');
+  });
+
   it('exposes a controller-safe allow-list for supported DEV surfaces', () => {
     expect(service.supportsSurface('UI-05')).toBe(true);
     expect(service.supportsSurface('UI-35')).toBe(true);
