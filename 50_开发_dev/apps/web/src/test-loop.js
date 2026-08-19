@@ -120,7 +120,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     'commerce-load-customer-assets': { pageId: null, productRef: null, productVersion: null, nextPage: 'orders-assets' },
   };
   const serviceBookingActionRoutes = {
-    'service-submit-booking': { pageId: 'UI-21', serviceOfferingRef: 'SERVICE_PARENT_CHILD_PRIMARY', serviceOfferingVersion: 1, availabilitySlotRef: 'SLOT_PRIMARY', nextPage: 'service-mine' },
+    'service-submit-booking': { pageId: 'UI-21', serviceOfferingRef: 'TEST_PARENT_CHILD_DIALOGUE', serviceOfferingVersion: 1, availabilitySlotRef: 'TEST_SLOT_001', nextPage: 'service-mine' },
     'service-load-customer-projection': { pageId: null, serviceOfferingRef: null, serviceOfferingVersion: null, availabilitySlotRef: null, nextPage: 'service-mine' },
   };
   const experienceActionRoutes = {
@@ -864,18 +864,18 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function growthRanking() { return clearReference('growth-ranking-reference-450x918.png', '成长排行榜：筛选栏、领奖台、排名列表、个人排名与成长行动家称号，仅作原图静态视觉展示', [], '450/918'); }
   function growthPoster() { return clearReference('growth-poster-reference-444x970.png', '成长成果海报：成长故事、成长前后、连续打卡、成长值、勋章、二维码与分享方式，仅作原图静态视觉展示', [['clear-poster-share', 'home', '返回首页']], '444/970'); }
   async function requestConsultationNeedDraft() {
-    const offeringRef = selectedSupportTopic?.service_offering_ref || 'SERVICE_PARENT_CHILD_PRIMARY';
+    const offeringRef = selectedSupportTopic?.service_offering_ref || 'TEST_PARENT_CHILD_DIALOGUE';
     const offeringVersion = 1;
     const correlationId = `family-ui21-need-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
       const slotsResponse = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/slots?service_offering_ref=${encodeURIComponent(offeringRef)}&service_offering_version=${offeringVersion}`, {
-        method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
+        method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: firstSliceHeaders(correlationId),
       });
       const slotsPayload = await slotsResponse.json();
       const slot = Array.isArray(slotsPayload?.slots) ? slotsPayload.slots.find((item) => item?.status === 'AVAILABLE') : null;
       if (!slotsResponse.ok || !slot?.availability_slot_ref) throw new Error('family_consultation_slot_unavailable');
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/booking-requests`, {
-        method: 'POST', credentials: 'include',
+        method: 'POST', credentials: config.authToken ? 'omit' : 'include',
         headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, 'idempotency-key': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
         body: JSON.stringify({ page_id: 'UI-21', service_offering_ref: offeringRef, service_offering_version: offeringVersion, availability_slot_ref: slot.availability_slot_ref, attributes: { entry: 'family_support_explanation' } }),
       });
@@ -898,10 +898,10 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     try {
       const [response, pageObjectsResponse] = await Promise.all([
         fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/customer-projection`, {
-          method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
+          method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: firstSliceHeaders(correlationId),
         }),
         fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/page-objects`, {
-          method: 'GET', credentials: 'include', headers: firstSliceHeaders(`${correlationId}-page-objects`),
+          method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: firstSliceHeaders(`${correlationId}-page-objects`),
         }),
       ]);
       const payload = await response.json();
@@ -953,8 +953,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
           : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/booking-requests`,
         {
           method: isProjection ? 'GET' : 'POST',
-          credentials: 'include',
-          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
+          credentials: config.authToken ? 'omit' : 'include',
+          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}), ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
           ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, service_offering_ref: route.serviceOfferingRef, service_offering_version: route.serviceOfferingVersion, availability_slot_ref: route.availabilitySlotRef }) }),
         },
       );

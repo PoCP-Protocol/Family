@@ -29,12 +29,12 @@ describe('Family commerce and service booking slice entrypoints', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [slotsUrl, slotsRequest] = fetchMock.mock.calls[0];
-    expect(slotsUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/slots?service_offering_ref=SERVICE_PARENT_CHILD_PRIMARY&service_offering_version=1');
+    expect(slotsUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/slots?service_offering_ref=TEST_PARENT_CHILD_DIALOGUE&service_offering_version=1');
     expect(slotsRequest).toMatchObject({ method: 'GET', credentials: 'include' });
     const [url, request] = fetchMock.mock.calls[1];
     expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/booking-requests');
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
-    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'SERVICE_PARENT_CHILD_PRIMARY', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY', attributes: { entry: 'family_support_explanation' } });
+    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'TEST_PARENT_CHILD_DIALOGUE', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY', attributes: { entry: 'family_support_explanation' } });
     expect(root.dataset.familyConsultationNeedStatus).toBe('REQUESTED');
     expect(root.dataset.familyConsultationNeedRequest).toBe('booking-fixture');
   });
@@ -380,5 +380,44 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(directory?.textContent).toContain('支持主题：亲子沟通');
     expect(directory?.textContent).not.toMatch(/推荐|排名|准入|资格|提供者姓名|预约|联系|支付|DEV|SYNTHETIC|contract/i);
     expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭支持主题已准备好');
+  });
+});
+
+
+describe('UI-21 authenticated consultation need draft', () => {
+  it('uses the account bearer without an inherited cookie for the slot read and no-op consultation request', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ slots: [{ availability_slot_ref: 'SLOT_AUTH', status: 'AVAILABLE', channel: 'VIDEO' }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        booking: { booking_request_id: 'booking-auth-fixture', status: 'REQUESTED', external_effect: false },
+        service_record: { service_record_id: 'record-auth-fixture', status: 'PENDING', external_effect: false },
+      }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-consultation-auth-scope',
+      authToken: 'family-consultation-auth-bearer',
+      initialPage: 'consultation-booking',
+    });
+    root.querySelector<HTMLButtonElement>('[aria-label="记下咨询需求"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [slotsUrl, slotsRequest] = fetchMock.mock.calls[0];
+    expect(slotsUrl).toBe('http://family-api.test/families/family-consultation-auth-scope/orchestration/test-loop/services/slots?service_offering_ref=TEST_PARENT_CHILD_DIALOGUE&service_offering_version=1');
+    expect(slotsRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((slotsRequest.headers as Record<string, string>).authorization).toBe('Bearer family-consultation-auth-bearer');
+
+    const [requestUrl, request] = fetchMock.mock.calls[1];
+    expect(requestUrl).toBe('http://family-api.test/families/family-consultation-auth-scope/orchestration/test-loop/services/booking-requests');
+    expect(request).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-consultation-auth-bearer');
+    expect((request.headers as Record<string, string>)['idempotency-key']).toBeTruthy();
+    expect(JSON.parse(String(request.body))).toMatchObject({ page_id: 'UI-21', availability_slot_ref: 'SLOT_AUTH' });
+    expect(root.dataset.familyConsultationNeedStatus).toBe('REQUESTED');
+    expect(root.textContent).not.toMatch(/预约已确认|真人已联系|外部通知已发送|支付成功/);
   });
 });

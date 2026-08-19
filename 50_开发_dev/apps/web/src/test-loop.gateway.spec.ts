@@ -150,12 +150,12 @@ describe('Family formal experience workflow entrypoints', () => {
     await tick();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [slotsUrl, slotsRequest] = fetchMock.mock.calls[0];
-    expect(slotsUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/slots?service_offering_ref=SERVICE_PARENT_CHILD_PRIMARY&service_offering_version=1');
+    expect(slotsUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/slots?service_offering_ref=TEST_PARENT_CHILD_DIALOGUE&service_offering_version=1');
     expect(slotsRequest).toMatchObject({ method: 'GET', credentials: 'include' });
     const [url, request] = fetchMock.mock.calls[1];
     expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/booking-requests');
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
-    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'SERVICE_PARENT_CHILD_PRIMARY', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY', attributes: { entry: 'family_support_explanation' } });
+    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'TEST_PARENT_CHILD_DIALOGUE', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY', attributes: { entry: 'family_support_explanation' } });
     expect(root.dataset.familyConsultationNeedStatus).toBe('REQUESTED');
     expect(root.dataset.familyConsultationNeedRequest).toBe('booking-fixture');
     expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('咨询需求已记下');
