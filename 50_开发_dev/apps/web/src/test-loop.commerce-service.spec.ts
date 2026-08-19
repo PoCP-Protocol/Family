@@ -64,7 +64,8 @@ describe('Family commerce and service booking slice entrypoints', () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => catalog })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ intent: { order_intent_id: 'interest-fixture', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的了解意向。' } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'group-draft-fixture', status: 'CREATED', external_effect: false, text_equivalent: '已记下共学想法。' }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'group-draft-fixture', status: 'CREATED', external_effect: false, text_equivalent: '已记下共学想法。' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'invitation-draft-fixture', status: 'CREATED', external_effect: false, text_equivalent: '已记下邀请说明。' }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
@@ -116,6 +117,23 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(root.querySelector('[data-ui16-group-draft-state="SAVED"]')?.textContent).toContain('共学想法已记下');
     expect(root.dataset.familyExperienceStatus).toBe('CREATED');
     expect(root.dataset.familyExperienceAction).toBe('CREATE_GROUP');
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui16-return-content-detail"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-by="ui14-open-invitation-draft"]')?.click();
+    const invitationDraft = root.querySelector('[data-ui15-invitation-draft-state="READY"]');
+    expect(invitationDraft?.getAttribute('data-ui15-product-ref')).toBe('PRODUCT_PARENT_CHILD_CAMP');
+    expect(invitationDraft?.textContent).toContain('亲子沟通小练习');
+    expect(invitationDraft?.textContent).not.toMatch(/联系人|邀请码|二维码|奖励|价格|优惠|订单|支付|外发|通知|分享|DEV|SYNTHETIC|contract/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui15-save-invitation-draft"]')?.click();
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const [inviteUrl, inviteRequest] = fetchMock.mock.calls[3];
+    expect(inviteUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');
+    expect(inviteRequest).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(inviteRequest.body))).toMatchObject({ page_id: 'UI-15', action: 'CREATE_INVITE' });
+    expect(root.querySelector('[data-ui15-invitation-draft-state="SAVED"]')?.textContent).toContain('邀请说明已记下');
+    expect(root.dataset.familyExperienceStatus).toBe('CREATED');
+    expect(root.dataset.familyExperienceAction).toBe('CREATE_INVITE');
     app.navigate('commerce-mall');
   });
 
