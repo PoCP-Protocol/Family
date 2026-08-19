@@ -61,7 +61,9 @@ describe('Family commerce and service booking slice entrypoints', () => {
       { product_id: 'product-a', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1, title: '亲子沟通小练习', admission_status: 'ADMITTED', source_ref: 'fixture:catalog-a', fixture_only: true, attributes_schema_version: 1 },
       { product_id: 'product-b', product_ref: 'PRODUCT_FAMILY_READING', product_version: 1, title: '家庭阅读工具', admission_status: 'ADMITTED', source_ref: 'fixture:catalog-b', fixture_only: true, attributes_schema_version: 1 },
     ] };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => catalog });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => catalog })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ intent: { order_intent_id: 'interest-fixture', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的了解意向。' } }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
@@ -83,7 +85,20 @@ describe('Family commerce and service booking slice entrypoints', () => {
 
     root.querySelector<HTMLButtonElement>('[data-by="ui13-open-catalog-item"]')?.click();
     expect(root.querySelector('[aria-label^="商品详情：21天亲子沟通挑战营"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const detail = root.querySelector('[data-ui14-detail-state="READY"]');
+    expect(detail?.getAttribute('data-ui14-product-ref')).toBe('PRODUCT_PARENT_CHILD_CAMP');
+    expect(detail?.textContent).toContain('亲子沟通小练习');
+    expect(detail?.textContent).not.toMatch(/价格|销量|购买|支付|订单|权益|DEV|SYNTHETIC|contract/i);
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui14-save-interest"]')?.click();
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [interestUrl, interestRequest] = fetchMock.mock.calls[1];
+    expect(interestUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/commerce/order-intents');
+    expect(interestRequest).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(interestRequest.body))).toEqual({ page_id: 'UI-14', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1 });
+    expect(root.querySelector('[data-ui14-detail-state="SAVED"]')?.textContent).toContain('你的了解意向已记下');
+    expect(root.dataset.familyCommerceStatus).toBe('SUBMITTED');
     app.navigate('commerce-mall');
   });
 
