@@ -288,6 +288,36 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(root.querySelector('[data-ui30-service-overview-state="READY"]')?.textContent).toContain('续费了解意向已记下');
   });
 
+  it('reads UI-31 family plan progress and routes to growth plan, daily action, or support records without writes', async () => {
+    const coreProjection = {
+      family_id: 'family-test-scope',
+      data_source: 'SYNTHETIC_DEV_ONLY',
+      cards: [
+        { surface: 'UI-05', plan_preview: { state: 'DRAFT', headline: '和孩子一起选一件小事', next_action: '今天可以先试试一次完整倾听。', stages: [{ label: '今天可以先试试', weeks: '第 1-3 周' }] } },
+        { surface: 'UI-06', companion_progress: { state: 'ACTION_RECORDED', confirmation: '今天的家庭行动已记录。' } },
+      ],
+      recent_flow_events: [],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => coreProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', coreGrowthApiMode: 'synthetic-api', initialPage: 'my-services' });
+    await tick(); await tick();
+    const panel = root.querySelector('[data-ui31-services-state="READY"]');
+    expect(panel?.textContent).toContain('今天已经留下一次家庭行动');
+    expect(root.textContent).not.toMatch(/DEV|SYNTHETIC|Model Gateway|回执|审计|诊断|排名|总分/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui31-open-growth-plan"]')?.click();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    app.navigate('my-services');
+    root.querySelector<HTMLButtonElement>('[data-by="ui31-open-daily-action"]')?.click();
+    expect(root.querySelector('[aria-label^="今日成长任务"]')).not.toBeNull();
+    app.navigate('my-services');
+    root.querySelector<HTMLButtonElement>('[data-by="ui31-open-support-records"]')?.click();
+    expect(root.querySelector('[aria-label^="我的咨询和活动"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
   it('moves from UI-18 family service scope to the UI-19 topic directory through read-only family-scoped projections', async () => {
     const membershipProjection = {
       subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],

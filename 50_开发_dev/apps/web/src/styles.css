@@ -3262,3 +3262,16 @@ h3 {
 .by-family-points-projection small { color: #745aa8; font-weight: 700; }
 .by-family-points-projection h2 { margin: 7px 0 4px; font-size: 28px; color: #5f4698; }
 .by-family-points-projection p { margin: 8px 0 12px; color: #655a76; line-height: 1.65; }
+.by-family-my-services {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d5e4f4;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f2f7ff);
+  box-shadow: 0 8px 22px rgba(34, 88, 146, .08);
+}
+.by-family-my-services small { color: #2770b5; font-weight: 700; }
+.by-family-my-services h2 { margin: 7px 0 8px; font-size: 20px; color: #234d7c; }
+.by-family-my-services p { margin: 7px 0; color: #526d8d; line-height: 1.65; }
+.by-family-my-services .by-my-services-next { padding: 10px 12px; border-radius: 12px; background: #edf5ff; color: #315f8e; }
+.by-family-my-services > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
