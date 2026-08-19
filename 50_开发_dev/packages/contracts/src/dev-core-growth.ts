@@ -80,6 +80,16 @@ export interface DevFamilyGrowthReportDraft {
   plan_link_state: 'READY_TO_VIEW' | 'VIEWED';
 }
 
+export interface DevGrowthProfileProgress {
+  state: 'FOCUS_SELECTED';
+  focus: DevGrowthFocus;
+  headline: string;
+  summary: string;
+  plan_route: 'core-plan';
+  review_route: 'growth-report';
+  fact_boundary: 'FOCUS_SELECTED_NOT_OUTCOME';
+}
+
 export interface DevChildActionPrompt {
   state: 'ACTION_RECORDED';
   focus: DevGrowthFocus;
@@ -168,6 +178,8 @@ export interface DevCoreGrowthCard {
   companion_progress?: DevFamilyCompanionProgress;
   /** Present on UI-10 after an authenticated UI-09 action has been recorded. */
   child_action_prompt?: DevChildActionPrompt;
+  /** Present on UI-07 after the family has explicitly selected a growth focus. */
+  growth_profile_progress?: DevGrowthProfileProgress;
 }
 
 export interface DevCoreGrowthProjection {

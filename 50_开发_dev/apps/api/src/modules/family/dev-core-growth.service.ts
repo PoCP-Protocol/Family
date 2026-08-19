@@ -10,6 +10,7 @@ import {
   type DevFamilyCompanionProgress,
   type DevFamilyGrowthReportDraft,
   type DevGrowthFocus,
+  type DevGrowthProfileProgress,
   type DevGrowthPlanPreview,
   getFamilyGrowthSurfaceArchitectureBinding,
 } from '@family/contracts';
@@ -26,6 +27,9 @@ export class DevCoreGrowthService {
     flowEvents: readonly { ui_id: string; command: string; selection?: string }[] = [],
   ): DevCoreGrowthProjection {
     const focus = selectedFocus(flowEvents);
+    const focusSelected = flowEvents.some(
+      (event) => event.ui_id === 'UI-02' && event.command === 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION' && Boolean(event.selection),
+    );
     const planPreviewed = flowEvents.some(
       (event) => event.ui_id === 'UI-04' && event.command === 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT',
     );
@@ -54,7 +58,7 @@ export class DevCoreGrowthService {
         status: 'NOOP_NOT_INVOKED',
         rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY',
       },
-      cards: this.cards(focus, planPreviewed, weeklyActionOpened, actionReviewReady).map((item) => {
+      cards: this.cards(focus, focusSelected, planPreviewed, weeklyActionOpened, actionReviewReady).map((item) => {
         const architecture = getFamilyGrowthSurfaceArchitectureBinding(item.surface);
         return {
           ...item,
@@ -88,6 +92,7 @@ export class DevCoreGrowthService {
 
   private cards(
     focus: DevGrowthFocus,
+    focusSelected: boolean,
     planPreviewed: boolean,
     weeklyActionOpened: boolean,
     actionReviewReady: boolean,
@@ -97,6 +102,7 @@ export class DevCoreGrowthService {
     const actionReview = actionReviewReady ? buildFamilyActionReview(focus) : undefined;
     const companionProgress = actionReviewReady ? buildFamilyCompanionProgress(focus) : undefined;
     const childActionPrompt = actionReviewReady ? buildChildActionPrompt(focus) : undefined;
+    const growthProfileProgress = focusSelected ? buildGrowthProfileProgress(focus) : undefined;
 
     return [
       {
@@ -138,11 +144,12 @@ export class DevCoreGrowthService {
         ...(companionProgress ? { companion_progress: companionProgress } : {}),
       },
       {
-        surface: 'UI-07', kind: 'MEMBERSHIP_READ', title: '我的成长服务', state: 'READ_ONLY',
+        surface: 'UI-07', kind: 'MEMBERSHIP_READ', title: '我的成长档案', state: 'READ_ONLY',
         fact_boundary: 'ACTION_IS_NOT_OUTCOME', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: 'DEV 只读展示当前计划和任务入口；不创建权益、订单、续费或真人服务。',
-        next_hint: '可返回计划或今日任务继续受控流程。',
-        command: { name: 'READ_SYNTHETIC_GROWTH_SERVICE', mode: 'READ_ONLY' },
+        summary: '查看家庭已选择的关注方向，以及计划和回顾的回看入口。',
+        next_hint: '从计划或家庭回顾中，选择下一步要看的内容。',
+        command: { name: 'READ_SYNTHETIC_GROWTH_PROFILE_PROGRESS', mode: 'READ_ONLY' },
+        ...(growthProfileProgress ? { growth_profile_progress: growthProfileProgress } : {}),
       },
       {
         surface: 'UI-08', kind: 'GROWTH_REVIEW', title: '家庭成长回顾', state: 'READ_ONLY',
@@ -265,6 +272,19 @@ function buildReportDraft(focus: DevGrowthFocus, planPreviewed: boolean): DevFam
       fallback: content.fallback,
     },
     plan_link_state: planPreviewed ? 'VIEWED' : 'READY_TO_VIEW',
+  };
+}
+
+function buildGrowthProfileProgress(focus: DevGrowthFocus): DevGrowthProfileProgress {
+  const content = GROWTH_FOCUS_CONTENT[focus];
+  return {
+    state: 'FOCUS_SELECTED',
+    focus,
+    headline: '我们的成长档案',
+    summary: `现在关注：${content.planHeadline}。可以回看计划，也可以看看最近的一次家庭回顾。`,
+    plan_route: 'core-plan',
+    review_route: 'growth-report',
+    fact_boundary: 'FOCUS_SELECTED_NOT_OUTCOME',
   };
 }
 

@@ -60,11 +60,13 @@ describe('DevCoreGrowthService', () => {
       weekly_action_handoff: expect.objectContaining({ state: 'READY_TO_OPEN', target_route: 'growth-daily-task', action: expect.stringContaining('我看到你现在很不容易') }),
     });
 
+    const withoutSelectedFocus = service.getProjection(familyId);
+    expect(withoutSelectedFocus.cards.find((card) => card.surface === 'UI-04')?.report_draft?.focus).toBe('PARENT_CHILD_COMMUNICATION');
+    expect(withoutSelectedFocus.cards.find((card) => card.surface === 'UI-07')?.growth_profile_progress).toBeUndefined();
     const previewed = service.getProjection(familyId, [
       { ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION' },
       { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
     ]);
-    expect(previewed.cards.find((card) => card.surface === 'UI-04')?.report_draft?.state).toBe('PLAN_PREVIEWED');
     expect(previewed.cards.find((card) => card.surface === 'UI-05')?.plan_preview?.state).toBe('VIEWED_FROM_REPORT');
     const actionOpened = service.getProjection(familyId, [
       { ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION' },
@@ -84,6 +86,9 @@ describe('DevCoreGrowthService', () => {
     });
     expect(reviewReady.cards.find((card) => card.surface === 'UI-10')?.child_action_prompt).toMatchObject({
       state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME',
+    });
+    expect(reviewReady.cards.find((card) => card.surface === 'UI-07')?.growth_profile_progress).toMatchObject({
+      state: 'FOCUS_SELECTED', focus: 'EMOTION_REGULATION', plan_route: 'core-plan', review_route: 'growth-report', fact_boundary: 'FOCUS_SELECTED_NOT_OUTCOME',
     });
     expect(JSON.stringify(previewed)).not.toContain('GrowthTaskCreated');
     expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');

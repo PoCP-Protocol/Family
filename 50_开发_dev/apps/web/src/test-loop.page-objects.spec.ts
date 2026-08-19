@@ -286,6 +286,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
       if (surface === 'UI-04') expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
       else if (surface === 'UI-05') expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
       else if (surface === 'UI-06') expect(root.querySelector('[aria-label*="陪跑服务"]')).not.toBeNull();
+      else if (surface === 'UI-07') expect(root.querySelector('[aria-label*="我的会员中心"]')).not.toBeNull();
       else if (surface === 'UI-08') expect(root.querySelector('[aria-label*="家庭成长报告"]')).not.toBeNull();
       else if (surface === 'UI-10') expect(root.querySelector('[aria-label*="成长小助手"]')).not.toBeNull();
       else expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
@@ -531,6 +532,34 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     root.querySelector<HTMLButtonElement>('[data-by="ui10-return-daily-action"]')?.click();
     await tick();
     expect(root.querySelector('[aria-label*="今日成长任务"]')).not.toBeNull();
+  });
+
+  it('shows a family UI-07 growth profile after a selected focus and routes only to plan or family review', async () => {
+    const profileProjection = {
+      ...projection,
+      recent_flow_events: [{ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }],
+      cards: projection.cards.map((card) => card.surface === 'UI-07'
+        ? { ...card, growth_profile_progress: { state: 'FOCUS_SELECTED', focus: 'EMOTION_REGULATION', headline: '我们的成长档案', summary: '现在关注：为情绪留出理解和恢复的空间。可以回看计划，也可以看看最近的一次家庭回顾。', plan_route: 'core-plan', review_route: 'growth-report', fact_boundary: 'FOCUS_SELECTED_NOT_OUTCOME' } }
+        : card.surface === 'UI-08'
+          ? { ...card, action_review: { state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', headline: '把这一次的陪伴留在心里', confirmation: '今天的家庭行动已记录。先不用急着判断效果。', reflection_prompt: '可以想想：在倾听时，你注意到了什么？', next_step: '下次可以再试一次。', plan_route: 'core-plan', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME' } }
+          : card),
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => profileProjection }));
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-mine' });
+    await tick(); await tick();
+    const profile = root.querySelector('[data-ui07-profile-state="FOCUS_SELECTED"]');
+    expect(profile?.textContent).toContain('现在关注');
+    expect(profile?.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执|积分|等级|亲子币|会员|订单|权益|评分|排名|诊断/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui07-open-plan"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-mine' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui07-open-family-review"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui08-review-state="ACTION_RECORDED"]')).not.toBeNull();
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
