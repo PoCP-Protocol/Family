@@ -194,6 +194,70 @@ export class DevCoreGrowthService {
     };
   }
 
+  getGrowthProfileReadback(
+    familyId: string,
+    onboardingId: string,
+    insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
+    flowEvents: readonly { ui_id: string; command: string; selection?: string }[] = [],
+  ) {
+    const projection = this.getProjection(familyId, flowEvents);
+    const profile = projection.cards.find((item) => item.surface === 'UI-07')?.growth_profile_progress;
+    const plan = this.getPlanPreview(familyId, onboardingId, insight, flowEvents);
+    const evidenceRefs = [
+      ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.evidence ?? []).map((evidence) => evidence.evidence_id),
+    ];
+    return {
+      projection_version: 'UI07_GROWTH_PROFILE_READBACK_V1',
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      visibility: 'FAMILY_PRIVATE',
+      state: profile ? 'READY' : 'REVIEW_REQUIRED',
+      focus: profile ? { dimension_id: profile.focus, label: profile.headline } : null,
+      plan_context: plan.focus ? { draft_id: plan.draft_id, state: plan.state, horizon_days: plan.structure.horizon_days } : null,
+      evidence_lineage: evidenceRefs.map((evidenceId) => ({ evidence_id: evidenceId, source_version: 'GROWTH_INSIGHT_V1' as const })),
+      fact_boundary: 'FOCUS_AND_PLAN_CONTEXT_ARE_NOT_OUTCOME_OR_DIAGNOSIS',
+      consent: { purpose: 'GROWTH_PROFILE_READ', state: 'GRANTED', policy_version: 'UI07_GROWTH_PROFILE_V1' },
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED', recommendation_boundary: 'READBACK_ONLY' },
+    };
+  }
+
+  getFamilyReviewReadback(
+    familyId: string,
+    onboardingId: string,
+    insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
+    flowEvents: readonly { event_id: string; ui_id: string; command: string; created_at: string; selection?: string }[] = [],
+  ) {
+    const projection = this.getProjection(familyId, flowEvents);
+    const review = projection.cards.find((item) => item.surface === 'UI-08')?.action_review;
+    const plan = this.getPlanPreview(familyId, onboardingId, insight, flowEvents);
+    const recordedActions = flowEvents
+      .filter((event) => event.ui_id === 'UI-06' || event.ui_id === 'UI-09')
+      .sort((left, right) => left.created_at.localeCompare(right.created_at))
+      .slice(-12)
+      .map((event) => ({ receipt_id: event.event_id, source_ui: event.ui_id, kind: event.ui_id === 'UI-06' ? 'PRIVATE_CHECKIN_DRAFT' as const : 'ACTION_RECEIPT' as const, occurred_at: event.created_at }));
+    const evidenceRefs = [
+      ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.evidence ?? []).map((evidence) => evidence.evidence_id),
+    ];
+    return {
+      projection_version: 'UI08_FAMILY_REVIEW_READBACK_V1',
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      visibility: 'FAMILY_PRIVATE',
+      state: recordedActions.length > 0 ? 'ACTION_RECORDED' : review ? 'ACTION_RECORDED' : 'NO_ACTION_RECORDED',
+      recorded_actions: recordedActions,
+      reflection_prompt: review?.reflection_prompt ?? null,
+      next_hint: plan.next_action ? { text: plan.next_action.text, source: 'RULE_BASED' as const, boundary: 'RECOMMENDATION_NOT_DECISION_OR_ACTION' as const } : null,
+      evidence_lineage: evidenceRefs.map((evidenceId) => ({ evidence_id: evidenceId, source_version: 'GROWTH_INSIGHT_V1' as const })),
+      fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
+      consent: { purpose: 'GROWTH_REVIEW_READ', state: 'GRANTED', policy_version: 'UI08_GROWTH_REVIEW_V1' },
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED', reflection_boundary: 'PERSPECTIVE_NOT_FACT' },
+    };
+  }
+
   supportsSurface(surface: string): surface is DevCoreGrowthSurface {
     return DEV_CORE_GROWTH_SURFACES.includes(surface as DevCoreGrowthSurface);
   }

@@ -506,6 +506,26 @@ describe('POST /families E2E', () => {
     const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id=$1 and command='CREATE_PRIVATE_CHECKIN_DRAFT'", [setup.familyId]);
     expect(receipts.rows).toHaveLength(1);
     expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-06', external_effect: false });
+
+    const profileResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/growth-profile-readback`, { headers });
+    const profile = await profileResponse.json() as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; evidence_lineage: unknown[]; fact_boundary: string; ai_ready: { model_gateway_status: string } };
+    expect(profileResponse.status).toBe(200);
+    expect(profile).toMatchObject({
+      projection_version: 'UI07_GROWTH_PROFILE_READBACK_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId,
+      visibility: 'FAMILY_PRIVATE', fact_boundary: 'FOCUS_AND_PLAN_CONTEXT_ARE_NOT_OUTCOME_OR_DIAGNOSIS',
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED' },
+    });
+    expect(profile.evidence_lineage.length).toBeGreaterThan(0);
+
+    const reviewResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/family-review-readback`, { headers });
+    const review = await reviewResponse.json() as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; state: string; recorded_actions: { source_ui: string; kind: string }[]; fact_boundary: string; ai_ready: { reflection_boundary: string } };
+    expect(reviewResponse.status).toBe(200);
+    expect(review).toMatchObject({
+      projection_version: 'UI08_FAMILY_REVIEW_READBACK_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId,
+      visibility: 'FAMILY_PRIVATE', state: 'ACTION_RECORDED', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
+      ai_ready: { reflection_boundary: 'PERSPECTIVE_NOT_FACT' },
+    });
+    expect(review.recorded_actions).toEqual(expect.arrayContaining([expect.objectContaining({ source_ui: 'UI-06', kind: 'PRIVATE_CHECKIN_DRAFT' })]));
   });
 
   async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {

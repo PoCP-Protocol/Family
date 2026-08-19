@@ -563,6 +563,32 @@ export class FamilyController {
     };
   }
 
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/growth-profile-readback')
+  async getGrowthProfileReadback(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getGrowthProfileReadback(familyId, onboardingId, insight, events);
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/family-review-readback')
+  async getFamilyReviewReadback(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getFamilyReviewReadback(familyId, onboardingId, insight, events);
+  }
+
   @Get(':familyId/growth/onboardings/:onboardingId/priority')
   async getGrowthPriorityInsight(
     @Param('familyId') familyId: string,
