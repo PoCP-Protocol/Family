@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
 import { projectTaskCheckinResult } from '@family/contracts';
@@ -162,7 +163,7 @@ export class FamilyController {
     return this.devFlowReceiptService.record(familyId, actorId, {
       ui_id: candidate.ui_id,
       command: candidate.command,
-      correlation_id: correlationId?.trim() || crypto.randomUUID(),
+      correlation_id: correlationId?.trim() || randomUUID(),
       idempotency_key: idempotencyKey?.trim() || undefined,
       ...(typeof candidate.selection === 'string' ? { selection: candidate.selection } : {}),
     });
@@ -459,6 +460,51 @@ export class FamilyController {
     }
 
     return this.familyService.getGrowthInsight(familyId, onboardingId, actorId);
+  }
+
+  @Get(':familyId/growth/onboardings/:onboardingId/report-explanation')
+  async getReportExplanation(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getReportExplanation(familyId, onboardingId, insight, events);
+  }
+
+  @Get(':familyId/growth/onboardings/:onboardingId/plan-preview')
+  async getPlanPreview(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getPlanPreview(familyId, onboardingId, insight, events);
+  }
+
+  @Post(':familyId/growth/onboardings/:onboardingId/plan-preview/refresh')
+  async refreshPlanPreview(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    if (!idempotencyKey?.trim()) throw new BadRequestException('idempotency_key_required');
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    await this.devFlowReceiptService.record(familyId, actorId!, {
+      ui_id: 'UI-04',
+      command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT',
+      correlation_id: correlationId?.trim() || randomUUID(),
+      idempotency_key: idempotencyKey.trim(),
+    });
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return { ...this.devCoreGrowthService.getPlanPreview(familyId, onboardingId, insight, events), refreshed: true, external_effect: false };
   }
 
   @Get(':familyId/growth/onboardings/:onboardingId/priority')

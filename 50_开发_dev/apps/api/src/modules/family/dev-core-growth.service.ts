@@ -71,6 +71,75 @@ export class DevCoreGrowthService {
     };
   }
 
+  getReportExplanation(
+    familyId: string,
+    onboardingId: string,
+    insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
+    flowEvents: readonly { ui_id: string; command: string; selection?: string }[] = [],
+  ) {
+    const projection = this.getProjection(familyId, flowEvents);
+    const card = projection.cards.find((item) => item.surface === 'UI-04');
+    const report = card?.report_draft;
+    const evidenceRefs = [
+      ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.evidence ?? []).map((evidence) => evidence.evidence_id),
+    ];
+    return {
+      projection_version: 'UI04_REPORT_EXPLANATION_V1',
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      report_snapshot_id: report?.report_id ?? null,
+      source_insight_version: 'GROWTH_INSIGHT_V1',
+      entry_state: report ? 'READY' : 'REVIEW_REQUIRED',
+      state: report ? 'EXPLANATION_READY' : 'REVIEW_REQUIRED',
+      title: report?.headline ?? '成长说明需要继续完善来源',
+      observations: report?.observations.map((item) => ({
+        label: item.label,
+        detail: item.detail,
+        kind: 'PERSPECTIVE' as const,
+        evidence_refs: evidenceRefs,
+      })) ?? [],
+      hypotheses: report ? [{ text: report.summary, uncertainty: 'MEDIUM' as const, source_refs: evidenceRefs }] : [],
+      recommendations: report ? [{ text: report.this_week_action.action, source: 'RULE_BASED' as const, status: 'DRAFT' as const, next_allowed_action: 'READ_ONLY' as const }] : [],
+      evidence_lineage: evidenceRefs.map((evidenceId) => ({ evidence_id: evidenceId, source_ref: evidenceId, source_version: 'GROWTH_INSIGHT_V1', provenance_kind: 'STRUCTURED_EVIDENCE' as const })),
+      consent_state: { required_purposes: ['PLAN_READ' as const, 'CHILD_DATA' as const], state: 'GRANTED' as const, policy_version: 'UI04_PLAN_READ_V1' },
+      ai_ready: { evidence_boundary: 'EXPLANATION_IS_NOT_FACT_DIAGNOSIS_OR_OUTCOME' as const, recommendation_source: 'RULE_BASED' as const, model_gateway_status: 'NOOP_NOT_INVOKED' as const, agent_hint: report ? 'OFFER_PLAN_PREVIEW_ONLY' as const : 'HUMAN_REVIEW_REQUIRED' as const },
+    };
+  }
+
+  getPlanPreview(
+    familyId: string,
+    onboardingId: string,
+    insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
+    flowEvents: readonly { ui_id: string; command: string; selection?: string }[] = [],
+  ) {
+    const projection = this.getProjection(familyId, flowEvents);
+    const card = projection.cards.find((item) => item.surface === 'UI-05');
+    const preview = card?.plan_preview;
+    const evidenceRefs = [
+      ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
+      ...(insight.evidence ?? []).map((evidence) => evidence.evidence_id),
+    ];
+    return {
+      projection_version: 'UI05_PLAN_PREVIEW_V1',
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      draft_id: preview?.plan_id ?? `PLAN-DRAFT-${onboardingId}`,
+      state: preview ? 'FAMILY_REVIEW' : 'REVIEW_REQUIRED',
+      source_report_snapshot_id: preview?.plan_id ?? null,
+      source_insight_version: 'GROWTH_INSIGHT_V1',
+      focus: preview ? { dimension_id: preview.focus, label: preview.headline } : null,
+      structure: { horizon_days: 90, checkpoints: ['3', '12', '36', '90'], stages: preview?.stages ?? [] },
+      next_action: preview ? { text: preview.next_action, boundary: 'ACTION_CANDIDATE_IS_NOT_GROWTH_TASK_OR_OUTCOME' as const } : null,
+      consent_state: { required_purposes: ['PLAN_READ' as const, 'PLAN_DECISION' as const, 'CHILD_DATA' as const], state: 'GRANTED' as const, policy_version: 'UI05_PLAN_PREVIEW_V1' },
+      provenance: { source_refs: ['GROWTH_INSIGHT_V1'], evidence_refs: evidenceRefs, uncertainty: 'MEDIUM' as const, as_of: new Date().toISOString() },
+      model_gateway_status: 'NOOP_NOT_INVOKED' as const,
+      next_allowed_action: preview ? 'REQUEST_FAMILY_DECISION' as const : 'HUMAN_REVIEW_REQUIRED' as const,
+    };
+  }
+
   supportsSurface(surface: string): surface is DevCoreGrowthSurface {
     return DEV_CORE_GROWTH_SURFACES.includes(surface as DevCoreGrowthSurface);
   }

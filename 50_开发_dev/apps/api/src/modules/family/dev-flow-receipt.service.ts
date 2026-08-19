@@ -55,6 +55,11 @@ export class DevFlowReceiptService {
       const family = await client.query('select family_id from families where family_id=$1 for share', [familyId]);
       if ((family.rowCount ?? 0) !== 1) throw new NotFoundException('family_not_found');
       await assertFamilyManagePermission(client, familyId, actorId);
+      const actorPerson = await client.query<{ person_id: string }>(
+        `select person_id from persons where family_id = $1 and (person_id::text = $2 or account_id = $2) order by person_id limit 1`,
+        [familyId, actorId],
+      );
+      const actorPersonId = actorPerson.rows[0]?.person_id || actorId;
 
       if (input.idempotency_key) {
         const replay = await client.query<DevFlowReceipt>(
@@ -76,7 +81,7 @@ export class DevFlowReceiptService {
                    data_source, external_effect, model_gateway_status, payload->>'selection' as selection, created_at`,
         [
           familyId,
-          actorId,
+          actorPersonId,
           uiId,
           architecture.loop,
           input.command.trim(),

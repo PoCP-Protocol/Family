@@ -419,6 +419,51 @@ describe('POST /families E2E', () => {
     return await response.json() as TBody;
   }
 
+  it('E2E-M2-104 exposes UI-04 report explanation and UI-05 plan preview with idempotent refresh', async () => {
+    const correlationId = 'corr-e2e-m2-104';
+    const setup = await seedM2Onboarding(correlationId);
+    await seedM2PerspectivePair(setup, correlationId);
+    const draftsResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/profile-drafts`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'idempotency-key': 'e2e-m2-104-build-drafts',
+      },
+      body: JSON.stringify({}),
+    });
+    expect(draftsResponse.status).toBe(201);
+
+    const headers = { authorization: 'Bearer test-token', 'x-actor-id': 'architect-1', 'x-correlation-id': correlationId };
+    const reportResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/report-explanation`, { headers });
+    const report = await reportResponse.json();
+    const planResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview`, { headers });
+    const plan = await planResponse.json();
+
+    expect(reportResponse.status).toBe(200);
+    expect(report).toMatchObject({ projection_version: 'UI04_REPORT_EXPLANATION_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED' } });
+    expect(report.evidence_lineage.length).toBeGreaterThan(0);
+    expect(planResponse.status).toBe(200);
+    expect(plan).toMatchObject({ projection_version: 'UI05_PLAN_PREVIEW_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, model_gateway_status: 'NOOP_NOT_INVOKED', structure: { horizon_days: 90 } });
+
+    const refreshHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-104-plan-refresh' };
+    const refresh = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
+    const replay = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
+    const refreshBody = await refresh.json();
+    const replayBody = await replay.json();
+    expect(refresh.status).toBe(201);
+    expect(replay.status).toBe(201);
+    expect(refreshBody.external_effect).toBe(false);
+    expect(replayBody.external_effect).toBe(false);
+    expect(replayBody.refreshed).toBe(true);
+
+    const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id = $1 and command = 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT'", [setup.familyId]);
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-04', external_effect: false });
+  });
+
   async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {
     const familyResponse = await postFamily({ display_name: '青春期沟通家庭', idempotency_key: `e2e-m2-family-${correlationId}` }, correlationId);
     const familyBody = await familyResponse.json() as CreateFamilyHttpResponse;

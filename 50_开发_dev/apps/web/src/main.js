@@ -18,6 +18,7 @@ if (searchParams.get('product') === 'test-loop' || window.location.hash === '#te
     apiBaseUrl: searchParams.get('apiBaseUrl') ?? defaultTestLoopConfig.apiBaseUrl,
     familyId: searchParams.get('familyId') ?? defaultTestLoopConfig.familyId,
     initialPage: searchParams.get('page') ?? undefined,
+    onboardingId: searchParams.get('onboardingId') ?? undefined,
     // Internal synthetic/dev demo only. The value is intentionally opt-in and
     // the Bearer is read from sessionStorage rather than embedded in a page.
     firstSliceApiMode: searchParams.get('firstSliceApi') === 'synthetic-api' ? 'synthetic-api' : 'disabled',
@@ -49,6 +50,7 @@ if (searchParams.get('product') === 'test-loop' || window.location.hash === '#te
     familyId: searchParams.get('familyId') ?? defaultConfig.familyId,
     childId: searchParams.get('childId') ?? defaultConfig.childId,
     guardianPersonId: searchParams.get('guardianPersonId') ?? defaultConfig.guardianPersonId,
+    authToken: window.sessionStorage.getItem('family-ui01-ui09-synthetic-bearer') ?? undefined,
     wave2ApiMode: searchParams.get('wave2ApiMode') === 'real-api' ? 'real-api' : defaultConfig.wave2ApiMode,
   };
 
