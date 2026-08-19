@@ -86,7 +86,7 @@ export async function loadTeacherSupply(config) {
     `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/offerings?${params.toString()}`,
     {
       method: 'GET',
-      credentials: 'include',
+      credentials: config.authToken ? 'omit' : 'include',
       headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
     },
   );

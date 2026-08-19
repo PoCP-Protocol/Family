@@ -142,3 +142,31 @@ describe('UI-19 teacher supply route', () => {
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'GET' });
   });
 });
+
+
+describe('UI-19 authenticated teacher supply projection', () => {
+  it('uses the account bearer without an inherited cookie when reading admitted family-scoped support topics', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-test-scope',
+      authToken: 'family-ui19-auth-bearer',
+      initialPage: 'teacher-zone',
+    });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(String(url)).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/offerings?page_id=UI-19&available_only=true');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-ui19-auth-bearer');
+    expect(root.dataset.ui19SupplyStatus).toBe('READ_ONLY_READY');
+    expect(root.dataset.ui19SupplyExternalEffect).toBe('false');
+    expect(root.textContent).toContain('家庭支持主题');
+    expect(root.textContent).not.toMatch(/预约已确认|真人已联系|外部通知已发送|支付成功/);
+  });
+});
