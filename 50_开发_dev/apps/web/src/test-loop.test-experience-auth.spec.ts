@@ -509,3 +509,34 @@ describe('authenticated controlled explanation gateway', () => {
     expect(root.textContent).not.toMatch(/模型已调用|自动诊断|核心状态已写入|外部通知已发送/);
   });
 });
+
+
+describe('UI-11 to UI-12 authenticated private growth readback', () => {
+  it('reads a family-private journey and story with the account bearer only without exposing ranking, score, diagnosis or publication', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        family_id: 'family-growth-story-auth-scope', data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED',
+        cards: [
+          { surface: 'UI-11', state: 'READ_ONLY', title: '我的成长轨迹', loop: 'PERSONAL_HISTORY_LOOP', business_capability: 'personal_history', primary_objects: ['Family'], command: { name: 'READ_PERSONAL_HISTORY' }, personal_growth_journey: { state: 'READY', headline: '已经留下一些家庭过程', entries: [{ event_id: 'journey-private-1', label: '一次家庭行动', detail: '仅作家庭过程回看。' }] } },
+          { surface: 'UI-12', state: 'NOOP', title: '成长故事海报', loop: 'EVIDENCE_LOOP', business_capability: 'private_story', primary_objects: ['Family'], command: { name: 'PREVIEW_SYNTHETIC_EVIDENCE_STORY' }, private_growth_story: { state: 'READY', title: '属于我们家的过程片段', summary: '只留给家庭回看。', moments: ['一次愿意慢慢倾听的时刻'] } },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-growth-story-auth-scope', authToken: 'family-growth-story-auth-bearer', platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-growth-story-auth-scope/dev/platform-surfaces');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-growth-story-auth-bearer');
+    expect(root.querySelector('[data-ui11-journey-state="READY"]')?.textContent).toContain('仅作家庭过程回看');
+    root.querySelector<HTMLButtonElement>('[data-by="ui11-open-private-story"]')?.click();
+    expect(root.querySelector('[data-ui12-story-state="READY"]')?.textContent).toContain('只留给家庭回看');
+    expect(root.textContent).not.toMatch(/排名|总分|成长值|诊断|公开发布|外部通知/);
+  });
+});
