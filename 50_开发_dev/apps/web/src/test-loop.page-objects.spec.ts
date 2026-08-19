@@ -592,6 +592,10 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
       { activity_ref: 'ACTIVITY_FAMILY_DIALOGUE', title: '亲子沟通小练习', summary: '一起练习倾听和表达的日常方法。', age_hint: '适合希望增进亲子交流的家庭', detail_route: 'activity-detail' },
       { activity_ref: 'ACTIVITY_FAMILY_ROUTINE', title: '家庭节奏整理', summary: '看看如何为一周留出更从容的相处时间。', age_hint: '适合想调整日常节奏的家庭', detail_route: 'activity-detail' },
     ], support_topics_route: 'teacher-zone', fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME' } } : {}),
+    ...(surface === 'UI-25' ? { family_learning_exchange_feed: { state: 'READY', headline: '看看其他家庭的日常小经验', introduction: '先读一读别人怎么把小行动放进日常，再决定哪些想法适合自己的家庭。', entries: [
+      { exchange_ref: 'EXCHANGE_DIALOGUE_PAUSE', title: '给一次对话留一点停顿', summary: '有家长会在情绪上来时先停一停，等彼此都愿意再继续说。', topic: '亲子沟通', detail_route: 'dynamic-detail' },
+      { exchange_ref: 'EXCHANGE_READING_ROUTINE', title: '把共读放进睡前的十分钟', summary: '有家庭从一小段喜欢的故事开始，不追求读完多少，只留一点相处时间。', topic: '家庭阅读', detail_route: 'dynamic-detail' },
+    ], activity_catalog_route: 'salon-list', fact_boundary: 'READING_EXPERIENCE_SUMMARIES_NOT_PUBLICATION_INTERACTION_OR_OUTCOME' } } : {}),
   }));
   const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
 
@@ -628,7 +632,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
         'teacher-detail':'UI-20','consultation-booking':'UI-21','salon-list':'UI-22','activity-detail':'UI-23','service-mine':'UI-24','parent-community':'UI-25','publish-dynamic':'UI-26',
         'dynamic-detail':'UI-27','my-community':'UI-28','growth-outcomes':'UI-29','annual-member-mine':'UI-30','my-services':'UI-31','orders-assets':'UI-32','family-profile':'UI-33','service-records':'UI-34',
       } as Record<string, string>)[page];
-      expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
+      expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent || '').not.toContain('SYNTHETIC_DEV_ONLY');
     }
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -674,6 +678,30 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     await tick();
     expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every(([, init]) => !init || String((init as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
+  it('routes the UI-25 family experience feed to a read-only explanation and back without community interaction', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'parent-community' });
+    await tick(); await tick();
+    const feed = root.querySelector('[data-ui25-exchange-feed-state="READY"]');
+    expect(feed?.textContent).toContain('给一次对话留一点停顿');
+    expect(feed?.textContent).not.toMatch(/作者|身份|发布|评论|回复|点赞|关注|分享|下载|举报|审核|儿童|分数|奖励|结果|支付|订单|DEV|SYNTHETIC/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui25-open-exchange-detail"]')?.click();
+    await tick();
+    const detail = root.querySelector('[data-ui27-exchange-detail-state="READY"]');
+    expect(detail?.textContent).toContain('给一次对话留一点停顿');
+    expect(detail?.textContent).not.toMatch(/发布|评论|回复|点赞|分享|下载|举报|审核|儿童|分数|奖励|结果|支付|订单/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui27-return-exchange-feed"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui25-exchange-feed-state="READY"]')).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-by="ui25-open-activity-catalog"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui22-activity-catalog-state="READY"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls.every(([, init]) => !init || String((init as RequestInit).method || 'GET') === 'GET')).toBe(true);
   });
 

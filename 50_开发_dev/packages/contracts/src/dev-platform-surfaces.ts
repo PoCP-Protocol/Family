@@ -58,6 +58,24 @@ export interface DevFamilyGrowthActivityCatalog {
   fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME';
 }
 
+/** UI-25: family-readable experience summaries, never community publication or interaction. */
+export interface DevFamilyLearningExchangeEntry {
+  exchange_ref: string;
+  title: string;
+  summary: string;
+  topic: string;
+  detail_route: 'dynamic-detail';
+}
+
+export interface DevFamilyLearningExchangeFeed {
+  state: 'READY';
+  headline: string;
+  introduction: string;
+  entries: readonly DevFamilyLearningExchangeEntry[];
+  activity_catalog_route: 'salon-list';
+  fact_boundary: 'READING_EXPERIENCE_SUMMARIES_NOT_PUBLICATION_INTERACTION_OR_OUTCOME';
+}
+
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
   /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
@@ -81,6 +99,8 @@ export interface DevPlatformSurfaceCard {
   family_self_record?: DevFamilySelfRecord;
   /** Present only on UI-22; a family-browsable activity directory without registration or external arrangements. */
   family_growth_activity_catalog?: DevFamilyGrowthActivityCatalog;
+  /** Present only on UI-25; family-readable experience summaries without community interaction. */
+  family_learning_exchange_feed?: DevFamilyLearningExchangeFeed;
 }
 
 export interface DevPlatformSurfacesProjection {

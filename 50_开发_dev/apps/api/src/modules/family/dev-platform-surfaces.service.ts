@@ -4,6 +4,7 @@ import {
   type DevFlowReceiptSummary,
   type DevFamilySelfRecord,
   type DevFamilyGrowthActivityCatalog,
+  type DevFamilyLearningExchangeFeed,
   type DevPersonalGrowthJourney,
   type DevPrivateGrowthStory,
   type DevPlatformNoopCommandResult,
@@ -58,6 +59,7 @@ export class DevPlatformSurfacesService {
     const privateGrowthStory = buildPrivateGrowthStory(flowEvents);
     const familySelfRecord = buildFamilySelfRecord(flowEvents);
     const familyGrowthActivityCatalog = buildFamilyGrowthActivityCatalog();
+    const familyLearningExchangeFeed = buildFamilyLearningExchangeFeed();
     return [
       ['UI-11','PERSONAL_HISTORY','我的成长轨迹','READ_ONLY','TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING','DEV 用个人历史轨迹替代跨家庭排行；无家庭总分或同龄比较。','可查看自己的行动时间线。','READ_PERSONAL_HISTORY','READ_ONLY'],
       ['UI-12','EVIDENCE','成长故事海报','NOOP','EVIDENCE_STORY_IS_NOT_OUTCOME_OR_SHARE','DEV 展示成果故事占位；不生成海报、不外发分享。','分享适配器保持 no-op。','PREVIEW_SYNTHETIC_EVIDENCE_STORY','NOOP_NOT_PERSISTED'],
@@ -89,6 +91,7 @@ export class DevPlatformSurfacesService {
       ...(surface === 'UI-12' ? { private_growth_story: privateGrowthStory } : {}),
       ...(surface === 'UI-17' ? { family_self_record: familySelfRecord } : {}),
       ...(surface === 'UI-22' ? { family_growth_activity_catalog: familyGrowthActivityCatalog } : {}),
+      ...(surface === 'UI-25' ? { family_learning_exchange_feed: familyLearningExchangeFeed } : {}),
     }));
   }
 }
@@ -104,6 +107,32 @@ function buildFamilyGrowthActivityCatalog(): DevFamilyGrowthActivityCatalog {
     ],
     support_topics_route: 'teacher-zone',
     fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME',
+  };
+}
+
+function buildFamilyLearningExchangeFeed(): DevFamilyLearningExchangeFeed {
+  return {
+    state: 'READY',
+    headline: '看看其他家庭的日常小经验',
+    introduction: '先读一读别人怎么把小行动放进日常，再决定哪些想法适合自己的家庭。',
+    entries: [
+      {
+        exchange_ref: 'EXCHANGE_DIALOGUE_PAUSE',
+        title: '给一次对话留一点停顿',
+        summary: '有家长会在情绪上来时先停一停，等彼此都愿意再继续说。',
+        topic: '亲子沟通',
+        detail_route: 'dynamic-detail',
+      },
+      {
+        exchange_ref: 'EXCHANGE_READING_ROUTINE',
+        title: '把共读放进睡前的十分钟',
+        summary: '有家庭从一小段喜欢的故事开始，不追求读完多少，只留一点相处时间。',
+        topic: '家庭阅读',
+        detail_route: 'dynamic-detail',
+      },
+    ],
+    activity_catalog_route: 'salon-list',
+    fact_boundary: 'READING_EXPERIENCE_SUMMARIES_NOT_PUBLICATION_INTERACTION_OR_OUTCOME',
   };
 }
 

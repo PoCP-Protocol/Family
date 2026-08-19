@@ -3137,3 +3137,58 @@ h3 {
 }
 .by-family-growth-activity-catalog .by-btn,
 .by-family-growth-activity-detail .by-btn { margin-top: 8px; }
+
+/* UI-25 / UI-27：只读家庭经验摘要与阅读说明，不展示社区互动或比较性信息。 */
+.by-family-learning-exchange-feed,
+.by-family-learning-exchange-detail {
+  margin: 16px 12px 24px;
+  padding: 18px;
+  border: 1px solid #d9e8ee;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f8fcfc 0%, #eff8f5 100%);
+  color: #25455d;
+}
+.by-family-learning-exchange-feed small,
+.by-family-learning-exchange-detail small {
+  color: #5d7f88;
+  font-size: 12px;
+}
+.by-family-learning-exchange-feed h2,
+.by-family-learning-exchange-detail h2 {
+  margin: 6px 0 8px;
+  color: #1a4a55;
+  font-size: 19px;
+}
+.by-family-learning-exchange-feed > p,
+.by-family-learning-exchange-detail > p {
+  margin: 8px 0;
+  color: #5a7882;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.by-family-learning-exchange-feed ol {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+.by-family-learning-exchange-feed li {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid #dcebe8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(45 103 92 / 7%);
+}
+.by-family-learning-exchange-feed li b { color: #205764; }
+.by-family-learning-exchange-feed li span,
+.by-family-learning-exchange-feed li em {
+  color: #68818a;
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.55;
+}
+.by-family-learning-exchange-feed .by-btn,
+.by-family-learning-exchange-detail .by-btn { margin-top: 8px; }

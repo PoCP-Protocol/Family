@@ -75,6 +75,20 @@ describe('DevPlatformSurfacesService', () => {
     expect(userCatalogContent).not.toMatch(/registration|register|attendance|attend|seat|capacity|price|payment|calendar|video|notification|booking|order|rank|score|reward|outcome/i);
   });
 
+  it('builds UI-25 as a family-readable exchange feed without publication or interaction', () => {
+    const feed = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-25')?.family_learning_exchange_feed;
+    expect(feed).toMatchObject({
+      state: 'READY',
+      headline: '看看其他家庭的日常小经验',
+      activity_catalog_route: 'salon-list',
+      fact_boundary: 'READING_EXPERIENCE_SUMMARIES_NOT_PUBLICATION_INTERACTION_OR_OUTCOME',
+    });
+    expect(feed?.entries).toHaveLength(2);
+    expect(feed?.entries.every((entry) => entry.detail_route === 'dynamic-detail')).toBe(true);
+    const userFeedContent = JSON.stringify({ headline: feed?.headline, introduction: feed?.introduction, entries: feed?.entries, activity_catalog_route: feed?.activity_catalog_route });
+    expect(userFeedContent).not.toMatch(/author|name|avatar|publish|post|comment|reply|like|follow|share|download|report|moderation|child|score|reward|outcome|payment|order/i);
+  });
+
   it('builds UI-17 as a family self-record without points, rewards, or entitlements', () => {
     const emptyRecord = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-17')?.family_self_record;
     expect(emptyRecord).toMatchObject({ state: 'WAITING_FOR_ACTION', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME' });
