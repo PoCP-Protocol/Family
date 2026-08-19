@@ -132,6 +132,36 @@ describe('Test Experience Operation → Cancel → Customer Projection', () => {
     expect(body.text_equivalent).toContain('家庭的体验回执');
   });
 
+  it('projects an expert live interest into the same family private service-record read model without duplicating on replay', async () => {
+    const seed = await seedGuardian();
+    const body = {
+      page_id: 'UI-01', action: 'ENTER_EXPERT_LIVE', fixture_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', fixture_version: TEST_EXPERIENCE_FIXTURE_VERSION,
+    };
+    const key = `expert-live-${randomUUID()}`;
+    const created = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/operations`, 'POST', seed.token, body, { 'idempotency-key': key });
+    expect(created.status).toBe(201);
+    const operation = await created.json();
+
+    const projection = await request(`/families/${seed.familyId}/orchestration/test-loop/page-objects`, 'GET', seed.token);
+    expect(projection.status).toBe(200);
+    const pageObjects = await projection.json();
+    expect(pageObjects.service_records).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        operation_ref: operation.operation_id,
+        record_kind: 'EXPERT_LIVE_INTEREST',
+        source: 'TEST_EXPERIENCE_OPERATION',
+        status: 'RECORDED',
+        visibility: 'FAMILY_PRIVATE',
+        external_effect: false,
+      }),
+    ]));
+
+    const replay = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/operations`, 'POST', seed.token, body, { 'idempotency-key': key });
+    expect(replay.status).toBe(201);
+    expect((await replay.json()).operation_id).toBe(operation.operation_id);
+    expect(Number((await pool!.query(`select count(*) n from family_service_records where family_id=$1 and operation_ref=$2`, [seed.familyId, operation.operation_id])).rows[0].n)).toBe(1);
+  });
+
   it('cancels only an operation belonging to the trusted family and keeps external effect false', async () => {
     const seed = await seedGuardian();
     const create = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/operations`, 'POST', seed.token, {

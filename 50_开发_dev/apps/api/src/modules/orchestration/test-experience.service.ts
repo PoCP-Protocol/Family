@@ -142,6 +142,27 @@ export class TestExperienceService {
           ],
         );
         const row = result.rows[0];
+        if (action === 'ENTER_EXPERT_LIVE') {
+          await this.repo.query(
+            `insert into family_service_records(
+               family_id, operation_ref, record_kind, source, status, visibility, record_payload,
+               external_effect, created_by_person_id, occurred_at
+             ) values ($1,$2,'EXPERT_LIVE_INTEREST','TEST_EXPERIENCE_OPERATION','RECORDED','FAMILY_PRIVATE',$3::jsonb,false,$4,now())
+             on conflict do nothing`,
+            [
+              familyId,
+              row.operation_id,
+              JSON.stringify({
+                session_ref: dto.fixture_ref,
+                page_id: dto.page_id,
+                perspective_boundary: 'FAMILY_INTEREST_ONLY',
+                service_effect: 'NOT_ESTABLISHED',
+                fixture_only: true,
+              }),
+              actorPersonId,
+            ],
+          );
+        }
         const tenantId = await this.tenantForFamily(familyId);
         await this.productEvents.record({
           tenantId,
