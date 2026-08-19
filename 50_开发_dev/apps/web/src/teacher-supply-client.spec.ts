@@ -20,6 +20,7 @@ const projection = {
     service_type: '亲子沟通', age_band: '小学阶段', next_available_at: '2026-08-20T10:00:00.000Z',
     next_available_channel: 'VIDEO', availability_status: 'AVAILABLE', fixture_only: true, attributes_schema_version: 1,
   }],
+  live_session: { session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', title: '家庭沟通主题直播', topic: '在日常互动里先听见彼此', starts_at: '2026-08-20T12:00:00.000Z', status: 'SCHEDULED', host_display_name: '家庭成长顾问', fixture_only: true, external_effect: false },
   text_equivalent: '以下显示当前家庭可见、已准入的教师服务供给。列表只读，不会预约、占座、通知或联系服务者。',
 };
 

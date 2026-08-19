@@ -354,6 +354,7 @@ describe('Family commerce and service booking slice entrypoints', () => {
       tenant_id: 'tenant-test', family_id: 'family-test-scope', source_page_id: 'UI-19', projection_version: 1, as_of: '2026-08-19T00:00:00.000Z', source_refs: ['fixture:ui19'], policy_version: 'test', visibility: 'FAMILY_SCOPED_ADMITTED_SUPPLY', expires_at: null, external_effect: false,
       filters: { provider_kind: 'TEACHER', service_type: null, age_band: null, available_only: true },
       offerings: [{ service_offering_id: 'offering-fixture', service_offering_ref: 'OFFERING_FAMILY_DIALOGUE', version_no: 1, title: '亲子沟通支持', provider_ref: 'provider-fixture', provider_display_name: '不应显示的提供者姓名', provider_kind: 'TEACHER', qualification_status: 'ACTIVE', admission_status: 'ADMITTED', offering_status: 'ACTIVE', service_type: '亲子沟通', age_band: '6-12岁', next_available_at: '2026-08-21T09:00:00.000Z', next_available_channel: 'VIDEO', availability_status: 'AVAILABLE', fixture_only: true, attributes_schema_version: 1 }],
+      live_session: { session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', title: '家庭沟通主题直播', topic: '在日常互动里先听见彼此', starts_at: '2026-08-20T12:00:00.000Z', status: 'SCHEDULED', host_display_name: '家庭成长顾问', fixture_only: true, external_effect: false },
       text_equivalent: 'internal supply text should not be rendered',
     };
     const fetchMock = vi.fn()

@@ -26,6 +26,8 @@
  * }} TeacherSupplyOffering
  */
 
+/** @typedef {{ session_ref: string, title: string, topic: string, starts_at: string, status: 'SCHEDULED'|'LIVE'|'ENDED', host_display_name: string, fixture_only: true, external_effect: false }} ExpertLiveSession */
+
 /** @typedef {{ serviceType?: string, ageBand?: string, availableOnly?: boolean }} TeacherSupplyFilters */
 
 /**
@@ -42,6 +44,7 @@
  *   external_effect: false,
  *   filters: { provider_kind: 'TEACHER', service_type: string | null, age_band: string | null, available_only: boolean },
  *   offerings: TeacherSupplyOffering[],
+ *   live_session: ExpertLiveSession | null,
  *   text_equivalent: string,
  * }} TeacherSupplyProjection
  */
@@ -61,6 +64,7 @@ function isTeacherSupplyProjection(value) {
     && payload.visibility === 'FAMILY_SCOPED_ADMITTED_SUPPLY'
     && payload.external_effect === false
     && Array.isArray(payload.offerings)
+    && (payload.live_session === null || (payload.live_session && payload.live_session.fixture_only === true && payload.live_session.external_effect === false && typeof payload.live_session.session_ref === 'string'))
     && typeof payload.tenant_id === 'string'
     && typeof payload.family_id === 'string';
 }

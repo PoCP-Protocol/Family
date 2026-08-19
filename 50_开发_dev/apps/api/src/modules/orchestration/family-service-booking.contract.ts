@@ -52,6 +52,17 @@ export interface ServiceOfferingReadModel {
   attributes_schema_version: number;
 }
 
+export interface ExpertLiveSessionReadModel {
+  session_ref: string;
+  title: string;
+  topic: string;
+  starts_at: string;
+  status: 'SCHEDULED' | 'LIVE' | 'ENDED';
+  host_display_name: string;
+  fixture_only: true;
+  external_effect: false;
+}
+
 export interface FamilyServiceSupplyProjection {
   tenant_id: string;
   family_id: string;
@@ -70,6 +81,7 @@ export interface FamilyServiceSupplyProjection {
     available_only: boolean;
   };
   offerings: ServiceOfferingReadModel[];
+  live_session: ExpertLiveSessionReadModel | null;
   text_equivalent: string;
 }
 

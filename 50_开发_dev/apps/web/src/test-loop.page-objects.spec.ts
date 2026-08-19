@@ -914,6 +914,7 @@ describe('UI-01 expert live controlled entry', () => {
             external_effect: false,
             filters: { provider_kind: 'TEACHER', service_type: null, age_band: null, available_only: true },
             offerings: [],
+            live_session: null,
             data_source: 'SYNTHETIC_DEV_ONLY',
           }),
         };

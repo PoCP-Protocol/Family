@@ -194,6 +194,20 @@ export class FamilyServiceBookingService {
       `select policy_version from tenant_policy_profiles where tenant_id=$1 and status='ACTIVE' limit 1`,
       [tenantId],
     );
+    const liveSessionStart = new Date('2026-08-20T20:00:00+08:00');
+    const liveSessionEnd = new Date(liveSessionStart.getTime() + 90 * 60 * 1000);
+    const now = new Date();
+    const liveSessionStatus: 'SCHEDULED' | 'LIVE' | 'ENDED' = now < liveSessionStart ? 'SCHEDULED' : now < liveSessionEnd ? 'LIVE' : 'ENDED';
+    const liveSession = {
+      session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE',
+      title: '家庭沟通主题直播',
+      topic: '在日常互动里先听见彼此',
+      starts_at: liveSessionStart.toISOString(),
+      status: liveSessionStatus,
+      host_display_name: '家庭成长顾问',
+      fixture_only: true as const,
+      external_effect: false as const,
+    };
     return {
       tenant_id: tenantId,
       family_id: familyId,
@@ -225,7 +239,8 @@ export class FamilyServiceBookingService {
         fixture_only: row.fixture_only,
         attributes_schema_version: row.attributes_schema_version,
       })),
-      text_equivalent: '以下显示当前家庭可见、已准入的教师服务供给。列表只读，不会预约、占座、通知或联系服务者。',
+      live_session: liveSession,
+      text_equivalent: '以下显示当前家庭可见、已准入的教师服务供给和一场可先了解的家庭主题直播。列表只读，不会预约、占座、通知、联系服务者或进入真实直播。',
     };
   }
 

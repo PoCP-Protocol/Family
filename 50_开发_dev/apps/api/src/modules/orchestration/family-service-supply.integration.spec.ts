@@ -132,6 +132,13 @@ describe('UI-19 teacher supply projection', () => {
       fixture_only: true,
     }]);
     expect(body.offerings).toHaveLength(1);
+    expect(body.live_session).toMatchObject({
+      session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE',
+      title: '家庭沟通主题直播',
+      status: expect.stringMatching(/SCHEDULED|LIVE|ENDED/),
+      fixture_only: true,
+      external_effect: false,
+    });
     expect(Number((await pool!.query('select count(*) n from family_booking_requests')).rows[0].n)).toBe(0);
     expect(Number((await pool!.query('select count(*) n from family_booking_service_records')).rows[0].n)).toBe(0);
     expect(Number((await pool!.query('select count(*) n from family_product_events')).rows[0].n)).toBe(0);
@@ -148,7 +155,9 @@ describe('UI-19 teacher supply projection', () => {
     await seedSupply(other.tenantId, { ref: 'OTHER_TENANT', serviceType: '亲子沟通', ageBand: '小学阶段' });
     const isolated = await request(`/families/${authorized.familyId}/orchestration/test-loop/services/offerings?page_id=UI-19`, authorized.token);
     expect(isolated.status).toBe(200);
-    expect((await isolated.json()).offerings).toEqual([]);
+    const isolatedBody = await isolated.json();
+    expect(isolatedBody.offerings).toEqual([]);
+    expect(isolatedBody.live_session).toMatchObject({ session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', external_effect: false });
 
     const unauthenticated = await request(`/families/${authorized.familyId}/orchestration/test-loop/services/offerings?page_id=UI-19`);
     expect(unauthenticated.status).toBe(401);
