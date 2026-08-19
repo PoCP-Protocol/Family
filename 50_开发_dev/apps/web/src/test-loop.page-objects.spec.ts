@@ -580,6 +580,10 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
   const cards = uiIds.map((surface) => ({
     surface, title: `DEV ${surface}`, state: 'READ_ONLY', data_source: 'SYNTHETIC_DEV_ONLY',
     summary: '共享平台投影。', next_hint: '外部效果保持 no-op。', command: { name: `READ_${surface}`, mode: 'READ_ONLY' },
+    ...(surface === 'UI-11' ? { personal_growth_journey: { state: 'IN_PROGRESS', headline: '我们已经走过的几步', entries: [
+      { event_id: 'evt-02', label: '选择了一个家庭关注方向', detail: '从最想照顾的一件事开始。' },
+      { event_id: 'evt-09', label: '打开了家庭回顾', detail: '回看一次陪伴，不急着判断效果。' },
+    ], plan_route: 'core-plan', review_route: 'growth-report', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING' } } : {}),
   }));
   const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
 
@@ -590,7 +594,10 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
     await tick(); await tick();
     expect(root.dataset.familyPlatformSurfacesStatus).toBe('READY');
-    expect(root.querySelector('[data-platform-surface="UI-11"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
+    const ui11 = root.querySelector('[data-platform-surface="UI-11"]');
+    expect(ui11?.textContent).toContain('我们的成长旅程');
+    expect(ui11?.textContent).not.toMatch(/DEV|SYNTHETIC|排名|积分|名次|称号|奖励/);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('成长旅程已更新');
 
     const pages = [
       'growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine',
@@ -605,6 +612,20 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
       } as Record<string, string>)[page];
       expect(root.querySelector(`[data-platform-surface="${uiId}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes the UI-11 private journey only to the existing plan or family review', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui11-open-plan"]')?.click();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    app.navigate('growth-ranking');
+    root.querySelector<HTMLButtonElement>('[data-by="ui11-open-family-review"]')?.click();
+    expect(root.querySelector('[aria-label^="家庭成长报告"]')).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

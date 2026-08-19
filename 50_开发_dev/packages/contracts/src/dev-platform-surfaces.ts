@@ -5,6 +5,21 @@ export type DevPlatformSurface =
   | 'UI-19' | 'UI-20' | 'UI-21' | 'UI-22' | 'UI-23' | 'UI-24'
   | 'UI-25' | 'UI-26' | 'UI-27' | 'UI-28' | 'UI-29' | 'UI-30' | 'UI-31' | 'UI-32' | 'UI-33' | 'UI-34';
 
+export interface DevPersonalGrowthJourneyEntry {
+  event_id: string;
+  label: string;
+  detail: string;
+}
+
+export interface DevPersonalGrowthJourney {
+  state: 'STARTING' | 'IN_PROGRESS';
+  headline: string;
+  entries: readonly DevPersonalGrowthJourneyEntry[];
+  plan_route: 'core-plan';
+  review_route: 'growth-report';
+  fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING';
+}
+
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
   /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
@@ -20,6 +35,8 @@ export interface DevPlatformSurfaceCard {
   summary: string;
   next_hint: string;
   command: { name: string; mode: 'READ_ONLY' | 'CONTROLLED_DRAFT' | 'NOOP_NOT_PERSISTED' };
+  /** Present only on UI-11; a same-family process history, never a comparative ranking. */
+  personal_growth_journey?: DevPersonalGrowthJourney;
 }
 
 export interface DevPlatformSurfacesProjection {

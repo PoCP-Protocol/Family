@@ -31,6 +31,21 @@ describe('DevPlatformSurfacesService', () => {
     expect(text).not.toContain('diagnosis');
   });
 
+  it('builds UI-11 as a same-family process journey instead of a ranking', () => {
+    const emptyJourney = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-11')?.personal_growth_journey;
+    expect(emptyJourney).toMatchObject({ state: 'STARTING', plan_route: 'core-plan', review_route: 'growth-report', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING' });
+    const journey = service.getProjection(familyId, [
+      { event_id: 'evt-02', ui_id: 'UI-02', business_loop: 'GROWTH_LOOP', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:01.000Z', replayed: false, selection: 'EMOTION_REGULATION' },
+      { event_id: 'evt-05', ui_id: 'UI-05', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:02.000Z', replayed: false },
+      { event_id: 'evt-09', ui_id: 'UI-09', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:03.000Z', replayed: false },
+      { event_id: 'evt-13', ui_id: 'UI-13', business_loop: 'COMMERCE_LOOP', command: 'READ_SYNTHETIC_CATALOG', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false },
+    ]).cards.find((card) => card.surface === 'UI-11')?.personal_growth_journey;
+    expect(journey).toMatchObject({ state: 'IN_PROGRESS', headline: '我们已经走过的几步', plan_route: 'core-plan', review_route: 'growth-report' });
+    expect(journey?.entries.map((entry) => entry.event_id)).toEqual(['evt-02', 'evt-05', 'evt-09']);
+    const userJourneyContent = JSON.stringify({ state: journey?.state, headline: journey?.headline, entries: journey?.entries, plan_route: journey?.plan_route, review_route: journey?.review_route });
+    expect(userJourneyContent).not.toMatch(/rank|score|percentile|peer|city|class|streak|badge|reward/i);
+  });
+
   it('exposes a controller-safe allow-list for UI-11~UI-34', () => {
     expect(service.supportsSurface('UI-21')).toBe(true);
     expect(service.supportsSurface('UI-10')).toBe(false);

@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   DEV_PLATFORM_SURFACES,
+  type DevFlowReceiptSummary,
+  type DevPersonalGrowthJourney,
   type DevPlatformNoopCommandResult,
   type DevPlatformSurface,
   type DevPlatformSurfaceCard,
@@ -17,7 +19,7 @@ type Template = Omit<DevPlatformSurfaceCard, 'surface' | 'data_source' | 'loop' 
  */
 @Injectable()
 export class DevPlatformSurfacesService {
-  getProjection(familyId: string): DevPlatformSurfacesProjection {
+  getProjection(familyId: string, flowEvents: readonly DevFlowReceiptSummary[] = []): DevPlatformSurfacesProjection {
     return {
       projection_version: 'DEV_PLATFORM_SURFACES_V1',
       family_id: familyId,
@@ -25,7 +27,7 @@ export class DevPlatformSurfacesService {
       data_source: 'SYNTHETIC_DEV_ONLY',
       external_effect_adapter: 'NOOP_NOT_INVOKED',
       model_gateway: 'NOOP_NOT_INVOKED',
-      cards: this.templates().map((item) => {
+      cards: this.templates(flowEvents).map((item) => {
         const architecture = getFamilyUiArchitectureBinding(item.surface);
         return {
           ...item,
@@ -48,7 +50,8 @@ export class DevPlatformSurfacesService {
     return { family_id: familyId, surface, command, status: 'NOOP_ACKNOWLEDGED', persistence: 'NONE', external_effect: false, model_gateway: 'NOOP_NOT_INVOKED' };
   }
 
-  private templates(): Template[] {
+  private templates(flowEvents: readonly DevFlowReceiptSummary[]): Template[] {
+    const personalGrowthJourney = buildPersonalGrowthJourney(flowEvents);
     return [
       ['UI-11','PERSONAL_HISTORY','我的成长轨迹','READ_ONLY','TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING','DEV 用个人历史轨迹替代跨家庭排行；无家庭总分或同龄比较。','可查看自己的行动时间线。','READ_PERSONAL_HISTORY','READ_ONLY'],
       ['UI-12','EVIDENCE','成长故事海报','NOOP','EVIDENCE_STORY_IS_NOT_OUTCOME_OR_SHARE','DEV 展示成果故事占位；不生成海报、不外发分享。','分享适配器保持 no-op。','PREVIEW_SYNTHETIC_EVIDENCE_STORY','NOOP_NOT_PERSISTED'],
@@ -76,6 +79,29 @@ export class DevPlatformSurfacesService {
       ['UI-34','RECORD','服务记录','READ_ONLY','RECORD_IS_PROVENANCE_NOT_OUTCOME','DEV 展示服务记录 fixture；过程记录不代表教育或服务效果。','导出与分享 adapter 保持 no-op。','READ_SYNTHETIC_SERVICE_RECORD_HISTORY','READ_ONLY'],
     ].map(([surface, domain, title, state, boundary, summary, next_hint, command, mode]) => ({
       surface: surface as DevPlatformSurface, domain: domain as DevPlatformSurfaceCard['domain'], title, state: state as DevPlatformSurfaceCard['state'], boundary, summary, next_hint, command: { name: command, mode: mode as DevPlatformSurfaceCard['command']['mode'] },
+      ...(surface === 'UI-11' ? { personal_growth_journey: personalGrowthJourney } : {}),
     }));
   }
+}
+
+function buildPersonalGrowthJourney(flowEvents: readonly DevFlowReceiptSummary[]): DevPersonalGrowthJourney {
+  const labels: Partial<Record<DevFlowReceiptSummary['ui_id'], { label: string; detail: string }>> = {
+    'UI-02': { label: '选择了一个家庭关注方向', detail: '从最想照顾的一件事开始。' },
+    'UI-04': { label: '查看了 90 天成长计划', detail: '把长期想法拆成更容易开始的步骤。' },
+    'UI-05': { label: '打开了本周行动', detail: '为今天留出一个可以尝试的小行动。' },
+    'UI-09': { label: '打开了家庭回顾', detail: '回看一次陪伴，不急着判断效果。' },
+  };
+  const entries = flowEvents
+    .filter((event) => labels[event.ui_id])
+    .sort((left, right) => left.created_at.localeCompare(right.created_at))
+    .slice(-4)
+    .map((event) => ({ event_id: event.event_id, ...labels[event.ui_id]! }));
+  return {
+    state: entries.length > 0 ? 'IN_PROGRESS' : 'STARTING',
+    headline: entries.length > 0 ? '我们已经走过的几步' : '从一件想关注的小事开始',
+    entries,
+    plan_route: 'core-plan',
+    review_route: 'growth-report',
+    fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING',
+  };
 }
