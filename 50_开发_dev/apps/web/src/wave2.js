@@ -21,6 +21,18 @@
  * @param {'pre-real-api' | 'real-api'} apiMode
  * @returns {Wave2State}
  */
+/**
+ * @param {AppConfig} config
+ * @returns {Record<string, string>}
+ */
+function authHeaders(config) {
+  return config.authToken ? { Authorization: `Bearer ${config.authToken}` } : {};
+}
+
+/**
+ * @param {'pre-real-api' | 'real-api'} apiMode
+ * @returns {Wave2State}
+ */
 export function createInitialWave2State(apiMode = 'pre-real-api') {
   return {
     apiMode,
@@ -195,6 +207,7 @@ export async function submitConfirmGrowthPriority(config, onboardingId, draftId,
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createWave2IdempotencyKey('m2-104-confirm-priority', config.familyId, draftId),
     },
     body: JSON.stringify({
@@ -224,6 +237,7 @@ export async function submitStartIntervention(config, onboardingId, priorityId) 
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createWave2IdempotencyKey('m2-105-start-intervention', config.familyId, priorityId),
     },
     body: JSON.stringify({
@@ -280,6 +294,7 @@ export async function submitCompleteGrowthAction(config, actionId, completionSta
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createWave2IdempotencyKey('m2-105-complete-action', config.familyId, completionResourceId),
     },
     body: JSON.stringify({

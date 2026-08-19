@@ -47,6 +47,7 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     await pool.query('delete from intervention_episodes where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_priorities where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_profiles where family_id = $1', [f.familyId]);
+    await pool.query('delete from life_stage_assignments where family_id = $1', [f.familyId]);
     await pool.query('delete from evidence_records where family_id = $1', [f.familyId]);
     await pool.query('delete from perspectives where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_events where family_id = $1', [f.familyId]);
@@ -78,8 +79,8 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
        values ($1, $2, 'ACTIVE', now(), 'TEST_FIXTURE')`, [f.tenantId, f.familyId]);
     await pool.query(
       `insert into persons(person_id, family_id, person_type, parent_role, display_name, account_id)
-       values ($1, $2, 'PARENT', 'GUARDIAN', '林女士（测试家长）', 'test-family-guardian')`,
-      [f.guardianId, f.familyId],
+       values ($1, $2, 'PARENT', 'GUARDIAN', '林女士（测试家长）', $3)`,
+      [f.guardianId, f.familyId, f.guardianId],
     );
     await pool.query(
       `insert into persons(person_id, family_id, person_type, display_name, birth_date)
@@ -98,6 +99,11 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
       `insert into family_relationships(relationship_id, family_id, person_a_id, person_b_id, relationship_type)
        values ($1, $2, $3, $4, 'PARENT_CHILD')`,
       [f.relationshipId, f.familyId, f.guardianId, f.childId],
+    );
+    await pool.query(
+      `insert into life_stage_assignments(family_id, child_id, life_stage_code, effective_from, source)
+       values ($1, $2, 'EARLY_ADOLESCENCE_12_15', '2026-01-01T00:00:00.000Z', 'TEST_FIXTURE')`,
+      [f.familyId, f.childId],
     );
     await pool.query(
       `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at)

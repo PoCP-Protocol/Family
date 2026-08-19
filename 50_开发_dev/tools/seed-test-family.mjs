@@ -44,6 +44,7 @@ try {
   await q('delete from intervention_episodes where family_id=$1', [ids.family]);
   await q('delete from growth_priorities where family_id=$1', [ids.family]);
   await q('delete from growth_profiles where family_id=$1', [ids.family]);
+  await q('delete from life_stage_assignments where family_id=$1', [ids.family]);
   await q('delete from evidence_records where family_id=$1', [ids.family]);
   await q('delete from perspectives where family_id=$1', [ids.family]);
   await q('delete from growth_events where family_id=$1', [ids.family]);
@@ -67,7 +68,7 @@ try {
   await q(`insert into tenant_family_bindings(tenant_id,family_id,status,effective_from,migration_ref)
     values($1,$2,'ACTIVE',now(),'TEST_FIXTURE')`, [ids.tenant, ids.family]);
   await q(`insert into persons(person_id,family_id,person_type,parent_role,display_name,account_id)
-    values($1,$2,'PARENT','GUARDIAN','林女士（测试家长）','test-family-guardian')`, [ids.guardian, ids.family]);
+    values($1,$2,'PARENT','GUARDIAN','林女士（测试家长）',$3)`, [ids.guardian, ids.family, ids.guardian]);
   await q(`insert into persons(person_id,family_id,person_type,display_name,birth_date)
     values($1,$2,'CHILD','小星（测试孩子）','2013-05-01')`, [ids.child, ids.family]);
   await q(`insert into account_person_bindings(account_id,person_id,status) values($1,$2,'ACTIVE')`, [ids.account, ids.guardian]);
@@ -76,6 +77,8 @@ try {
     values(gen_random_uuid(),$1,$2,'OWNER_GUARDIAN','ACTIVE',now()),(gen_random_uuid(),$1,$3,'CHILD_SUBJECT','ACTIVE',now())`, [ids.family, ids.guardian, ids.child]);
   await q(`insert into family_relationships(relationship_id,family_id,person_a_id,person_b_id,relationship_type)
     values($1,$2,$3,$4,'PARENT_CHILD')`, [ids.relationship, ids.family, ids.guardian, ids.child]);
+  await q(`insert into life_stage_assignments(family_id,child_id,life_stage_code,effective_from,source)
+    values($1,$2,'EARLY_ADOLESCENCE_12_15','2026-01-01T00:00:00.000Z','TEST_FIXTURE')`, [ids.family, ids.child]);
   await q(`insert into consents(family_id,subject_person_id,guardian_person_id,purpose,status,policy_version,granted_at)
     values($1,$2,$3,'SERVICE','GRANTED','service-v1',now()),
           ($1,$2,$3,'ASSESSMENT','GRANTED','assessment-v1',now()),

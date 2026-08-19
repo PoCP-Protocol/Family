@@ -337,6 +337,21 @@ export class FamilyController {
     return this.familyService.grantConsent(request, meta);
   }
 
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboarding/active')
+  async getActiveGrowthOnboarding(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ): Promise<StartGrowthOnboardingResponse | null> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+    if (!isUuid(familyId)) {
+      throw new BadRequestException('Invalid family_id');
+    }
+    return this.familyService.getActiveGrowthOnboarding(familyId, actorId);
+  }
+
   @Post(':familyId/growth/onboarding')
   async startGrowthOnboarding(
     @Param('familyId') familyId: string,
