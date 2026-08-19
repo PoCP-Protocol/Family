@@ -14,9 +14,14 @@ function text(value) {
 
 /** @param {string | null} value */
 function timeText(value) {
-  if (!value) return '当前无可用时间';
+  if (!value) return '目前暂无安排信息';
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? '当前无可用时间' : date.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' });
+  return Number.isNaN(date.valueOf()) ? '目前暂无安排信息' : date.toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+/** @param {string | null} value */
+function channelText(value) {
+  return ({ VIDEO: '线上交流', TEXT: '文字交流', OFFLINE: '线下交流' }[String(value)] || '可进一步了解');
 }
 
 /** @param {import('./teacher-supply-client.js').TeacherSupplyProjection} projection */
@@ -57,26 +62,26 @@ export function mountTeacherSupplyView(root, config) {
 
   function offeringsHtml() {
     if (!projection) return '';
-    if (!projection.offerings.length) return `<p style="${cardStyle}color:#4c6987" data-ui19-empty="true">当前筛选下没有可见服务。你可以调整筛选，或稍后再查看。</p>`;
+    if (!projection.offerings.length) return `<p style="${cardStyle}color:#4c6987" data-ui19-empty="true">暂时没有符合当前筛选的支持主题。可以调整筛选，或之后再来看看。</p>`;
     return projection.offerings.map((item) => `<article style="${cardStyle}" data-ui19-offering-ref="${text(item.service_offering_ref)}">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><div><strong style="font-size:16px">${text(item.provider_display_name)}</strong><p style="margin:4px 0;color:#315b84;font-size:14px">${text(item.title)}</p></div><span style="padding:4px 8px;border-radius:999px;background:#e7f4ea;color:#2f7a43;font-size:12px">已准入</span></div>
-      <p style="margin:8px 0 0;color:#4c6987;font-size:13px">${item.service_type ? `服务类型：${text(item.service_type)} · ` : ''}${item.age_band ? `适龄：${text(item.age_band)} · ` : ''}${item.next_available_channel ?? '暂无可用方式'}</p>
-      <p style="margin:6px 0 0;color:#315b84;font-size:13px">${item.availability_status === 'AVAILABLE' ? `可查看的时间：${text(timeText(item.next_available_at))}` : '当前没有可用时间'}</p>
+      <div><strong style="font-size:16px">${text(item.title)}</strong><p style="margin:4px 0;color:#315b84;font-size:14px">这是一个可以慢慢了解的家庭支持方向。</p></div>
+      <p style="margin:8px 0 0;color:#4c6987;font-size:13px">${item.service_type ? `支持主题：${text(item.service_type)} · ` : ''}${item.age_band ? `适龄参考：${text(item.age_band)}` : '可按家庭当前情境了解'}</p>
+      <p style="margin:6px 0 0;color:#315b84;font-size:13px">${item.availability_status === 'AVAILABLE' ? `可以了解的方式：${channelText(item.next_available_channel)} · ${text(timeText(item.next_available_at))}` : '目前暂无安排信息，仍可先了解这个支持方向。'}</p>
     </article>`).join('');
   }
 
   function renderLoading() {
-    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="${cardStyle}" aria-live="polite">正在读取可见服务供给…</div></section>`;
+    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="${cardStyle}" aria-live="polite">正在准备家庭支持主题…</div></section>`;
   }
 
   function renderReady() {
     if (!projection) return;
-    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="padding:14px 16px 2px"><h1 style="margin:0;color:#123d68;font-size:19px">推荐名师</h1><p style="margin:6px 0;color:#4c6987;font-size:13px">${text(projection.text_equivalent)}</p></div>${filtersHtml()}<section aria-live="polite" aria-label="服务供给列表">${offeringsHtml()}</section></section>`;
+    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="padding:14px 16px 2px"><h1 style="margin:0;color:#123d68;font-size:19px">家庭支持主题</h1><p style="margin:6px 0;color:#4c6987;font-size:13px">可以按家庭当前的情境慢慢了解。浏览不会替家庭作出安排。</p></div>${filtersHtml()}<section aria-live="polite" aria-label="家庭支持主题列表">${offeringsHtml()}</section><p class="by-assistive-status" aria-live="polite">家庭支持主题已准备好。可以按自己的节奏慢慢了解。</p></section>`;
     bindFilters();
   }
 
   function renderBlocked() {
-    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><p style="${cardStyle}" aria-live="polite" data-ui19-boundary="blocked">当前无法显示服务供给。请确认家庭服务授权后再查看。</p></section>`;
+    root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><p style="${cardStyle}" aria-live="polite" data-ui19-boundary="blocked">家庭支持主题暂时无法加载，请稍后再试。</p></section>`;
   }
 
   async function reload() {

@@ -33,7 +33,7 @@ afterEach(() => {
 });
 
 describe('UI-19 teacher supply route', () => {
-  it('keeps the supplied reference image and renders the admitted teacher list through a single protected GET', async () => {
+  it('keeps the supplied reference image and renders family support topics through a single protected GET', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
@@ -43,8 +43,10 @@ describe('UI-19 teacher supply route', () => {
     await tick();
 
     expect(root.querySelector('[data-ui-id="UI-19"] img')?.getAttribute('src')).toBe('/public/bangyang-reference/teacher-zone-reference-458x1008.png');
-    expect(root.textContent).toContain('法咪莉校长');
+    expect(root.textContent).toContain('家庭支持主题');
     expect(root.textContent).toContain('亲子沟通服务');
+    expect(root.textContent).toContain('支持主题：亲子沟通');
+    expect(root.textContent).not.toMatch(/法咪莉校长|推荐|排名|准入|资格|预约|联系|支付|DEV|SYNTHETIC|contract/i);
     expect(root.dataset.ui19SupplyStatus).toBe('READ_ONLY_READY');
     expect(root.dataset.ui19SupplyExternalEffect).toBe('false');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -70,7 +72,7 @@ describe('UI-19 teacher supply route', () => {
     await tick();
 
     expect(root.dataset.ui19SupplyStatus).toBe('BOUNDARY_BLOCKED');
-    expect(root.querySelector('[data-ui19-boundary="blocked"]')?.textContent).toContain('确认家庭服务授权');
+    expect(root.querySelector('[data-ui19-boundary="blocked"]')?.textContent).toContain('家庭支持主题暂时无法加载，请稍后再试。');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'GET' });
   });

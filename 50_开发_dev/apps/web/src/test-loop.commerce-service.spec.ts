@@ -208,4 +208,40 @@ describe('Family commerce and service booking slice entrypoints', () => {
     root.querySelector<HTMLButtonElement>('[data-by="ui18-open-growth-profile"]')?.click();
     expect(root.querySelector('[aria-label^="我的会员中心"]')).not.toBeNull();
   });
+
+  it('moves from UI-18 family service scope to the UI-19 topic directory through read-only family-scoped projections', async () => {
+    const membershipProjection = {
+      subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],
+      benefits: [{ benefit_grant_id: 'benefit-consult', benefit_ref: 'BENEFIT_CONSULT', status: 'AVAILABLE', allocated_units: 1, remaining_units: 1, row_version: 1 }],
+    };
+    const supplyProjection = {
+      tenant_id: 'tenant-test', family_id: 'family-test-scope', source_page_id: 'UI-19', projection_version: 1, as_of: '2026-08-19T00:00:00.000Z', source_refs: ['fixture:ui19'], policy_version: 'test', visibility: 'FAMILY_SCOPED_ADMITTED_SUPPLY', expires_at: null, external_effect: false,
+      filters: { provider_kind: 'TEACHER', service_type: null, age_band: null, available_only: true },
+      offerings: [{ service_offering_id: 'offering-fixture', service_offering_ref: 'OFFERING_FAMILY_DIALOGUE', version_no: 1, title: '亲子沟通支持', provider_ref: 'provider-fixture', provider_display_name: '不应显示的提供者姓名', provider_kind: 'TEACHER', qualification_status: 'ACTIVE', admission_status: 'ADMITTED', offering_status: 'ACTIVE', service_type: '亲子沟通', age_band: '6-12岁', next_available_at: '2026-08-21T09:00:00.000Z', next_available_channel: 'VIDEO', availability_status: 'AVAILABLE', fixture_only: true, attributes_schema_version: 1 }],
+      text_equivalent: 'internal supply text should not be rendered',
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => membershipProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => supplyProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'commerce-mine' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui18-open-support-topics"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/membership/customer-projection');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/families/family-test-scope/orchestration/test-loop/services/offerings?page_id=UI-19&available_only=true');
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'GET', credentials: 'include' });
+    expect(root.dataset.ui19SupplyStatus).toBe('READ_ONLY_READY');
+    expect(root.dataset.ui19SupplyExternalEffect).toBe('false');
+    const directory = root.querySelector('[aria-label="家庭支持主题列表"]');
+    expect(directory?.textContent).toContain('亲子沟通支持');
+    expect(directory?.textContent).toContain('支持主题：亲子沟通');
+    expect(directory?.textContent).not.toMatch(/推荐|排名|准入|资格|提供者姓名|预约|联系|支付|DEV|SYNTHETIC|contract/i);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭支持主题已准备好');
+  });
 });
