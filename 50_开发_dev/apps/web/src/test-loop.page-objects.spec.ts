@@ -377,7 +377,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执/i);
   });
 
-  it('passes the selected family focus from UI-03 through the UI-04 report into the UI-05 plan preview without exposing engineering text', async () => {
+  it('passes the selected family focus from UI-03 through the UI-04 report and UI-05 plan into a user-readable UI-09 weekly action context', async () => {
     const reportProjection = {
       ...projection,
       recent_flow_events: [
@@ -391,7 +391,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
           this_week_action: { when: '本周任选一个轻松的时刻', action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。', fallback: '如果当下不适合交谈，就约定稍后再回来继续。' }, plan_link_state: 'READY_TO_VIEW',
         } }
         : card.surface === 'UI-05'
-          ? { ...card, plan_preview: { plan_id: 'PLAN-EMOTION-V1', state: 'READY', focus: 'EMOTION_REGULATION', headline: '为情绪留出理解和恢复的空间', stages: [{ stage_id: 'SEE', label: '看见当下', weeks: '第 1-3 周', intent: '找到最适合开始的一件小事。', small_action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。' }, { stage_id: 'ADJUST', label: '温和调整', weeks: '第 4-6 周', intent: '根据家庭节奏微调做法。', small_action: '每周留出一次 10 分钟的小回顾。' }, { stage_id: 'CO_CREATE', label: '一起共创', weeks: '第 7-10 周', intent: '让孩子参与选择和安排。', small_action: '一起决定下一周想尝试的一件事。' }, { stage_id: 'STABILIZE', label: '延续习惯', weeks: '第 11-13 周', intent: '保留适合家庭的做法。', small_action: '选出最想延续的一项家庭约定。' }], next_action: '从本周的一件小行动开始。' } }
+          ? { ...card, plan_preview: { plan_id: 'PLAN-EMOTION-V1', state: 'READY', focus: 'EMOTION_REGULATION', headline: '为情绪留出理解和恢复的空间', stages: [{ stage_id: 'SEE', label: '看见当下', weeks: '第 1-3 周', intent: '找到最适合开始的一件小事。', small_action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。' }, { stage_id: 'ADJUST', label: '温和调整', weeks: '第 4-6 周', intent: '根据家庭节奏微调做法。', small_action: '每周留出一次 10 分钟的小回顾。' }, { stage_id: 'CO_CREATE', label: '一起共创', weeks: '第 7-10 周', intent: '让孩子参与选择和安排。', small_action: '一起决定下一周想尝试的一件事。' }, { stage_id: 'STABILIZE', label: '延续习惯', weeks: '第 11-13 周', intent: '保留适合家庭的做法。', small_action: '选出最想延续的一项家庭约定。' }], next_action: '从本周的一件小行动开始。', weekly_action_handoff: { state: 'READY_TO_OPEN', stage_id: 'SEE', label: '今天可以先试试', action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。', fallback: '如果当下不适合交谈，就约定稍后再回来继续。', target_route: 'growth-daily-task' } } }
           : card),
     };
     const planProjection = {
@@ -403,16 +403,30 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
           ? { ...card, plan_preview: { ...card.plan_preview, state: 'VIEWED_FROM_REPORT' } }
           : card),
     };
+    const actionProjection = {
+      ...planProjection,
+      recent_flow_events: [{ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }, ...planProjection.recent_flow_events],
+      cards: planProjection.cards.map((card) => card.surface === 'UI-05'
+        ? { ...card, plan_preview: { ...card.plan_preview, weekly_action_handoff: { ...card.plan_preview.weekly_action_handoff, state: 'OPENED' } } }
+        : card),
+    };
+    const todayProjection = {
+      projection_version: 'UI01_UI09_FAMILY_TODAY_V1', family_id: familyId, entry_state: 'READY',
+      today_task: { task_id: 'action-ui09-focus', assignment_text: '今天和孩子一起做一次 10 分钟倾听练习', task_state: 'NOT_STARTED', checkin_allowed: true },
+    };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => reportProjection })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
       .mockResolvedValueOnce({ ok: true, json: async () => reportProjection })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => planProjection });
+      .mockResolvedValueOnce({ ok: true, json: async () => planProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => actionProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => todayProjection });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
-    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'assessment' });
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', firstSliceApiMode: 'synthetic-api', initialPage: 'assessment' });
     await tick(); await tick();
     root.querySelector<HTMLButtonElement>('[data-by="ui03-preview-plan"]')?.click();
     await tick(); await tick(); await tick();
@@ -424,6 +438,12 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION' });
     expect(root.querySelector('[data-ui05-plan-state="VIEWED_FROM_REPORT"]')?.textContent).toContain('为情绪留出理解和恢复的空间');
     expect(root.querySelector('[data-ui05-focus="EMOTION_REGULATION"]')?.textContent).toContain('第 11-13 周');
+    root.querySelector<HTMLButtonElement>('[data-by="ui05-open-weekly-action"]')?.click();
+    await tick(); await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[5][1].body))).toMatchObject({ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('[data-ui05-weekly-action-state="OPENED"]')?.textContent).toContain('我看到你现在很不容易');
+    expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('今天和孩子一起做一次 10 分钟倾听练习');
+    expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执/i);
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {

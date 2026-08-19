@@ -57,6 +57,7 @@ describe('DevCoreGrowthService', () => {
         expect.objectContaining({ stage_id: 'SEE', weeks: '第 1-3 周' }),
         expect.objectContaining({ stage_id: 'STABILIZE', weeks: '第 11-13 周' }),
       ]),
+      weekly_action_handoff: expect.objectContaining({ state: 'READY_TO_OPEN', target_route: 'growth-daily-task', action: expect.stringContaining('我看到你现在很不容易') }),
     });
 
     const previewed = service.getProjection(familyId, [
@@ -65,6 +66,11 @@ describe('DevCoreGrowthService', () => {
     ]);
     expect(previewed.cards.find((card) => card.surface === 'UI-04')?.report_draft?.state).toBe('PLAN_PREVIEWED');
     expect(previewed.cards.find((card) => card.surface === 'UI-05')?.plan_preview?.state).toBe('VIEWED_FROM_REPORT');
+    const actionOpened = service.getProjection(familyId, [
+      { ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION' },
+      { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
+    ]);
+    expect(actionOpened.cards.find((card) => card.surface === 'UI-05')?.plan_preview?.weekly_action_handoff.state).toBe('OPENED');
     expect(JSON.stringify(previewed)).not.toContain('GrowthTaskCreated');
     expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');
   });

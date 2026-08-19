@@ -26,6 +26,9 @@ export class DevCoreGrowthService {
     const planPreviewed = flowEvents.some(
       (event) => event.ui_id === 'UI-04' && event.command === 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT',
     );
+    const weeklyActionOpened = flowEvents.some(
+      (event) => event.ui_id === 'UI-05' && event.command === 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION',
+    );
 
     return {
       projection_version: 'DEV_CORE_GROWTH_V1',
@@ -45,7 +48,7 @@ export class DevCoreGrowthService {
         status: 'NOOP_NOT_INVOKED',
         rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY',
       },
-      cards: this.cards(focus, planPreviewed).map((item) => {
+      cards: this.cards(focus, planPreviewed, weeklyActionOpened).map((item) => {
         const architecture = getFamilyGrowthSurfaceArchitectureBinding(item.surface);
         return {
           ...item,
@@ -80,9 +83,10 @@ export class DevCoreGrowthService {
   private cards(
     focus: DevGrowthFocus,
     planPreviewed: boolean,
+    weeklyActionOpened: boolean,
   ): Array<Omit<DevCoreGrowthCard, 'loop' | 'business_capability' | 'primary_objects' | 'state_boundary'>> {
     const reportDraft = buildReportDraft(focus, planPreviewed);
-    const planPreview = buildPlanPreview(focus, planPreviewed);
+    const planPreview = buildPlanPreview(focus, planPreviewed, weeklyActionOpened);
 
     return [
       {
@@ -111,8 +115,8 @@ export class DevCoreGrowthService {
         surface: 'UI-05', kind: 'PLAN_DRAFT', title: '90 天成长方案', state: 'DRAFT',
         fact_boundary: 'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS', data_source: 'SYNTHETIC_DEV_ONLY',
         summary: 'DEV 视图展示 SEE、PARENT_FIRST、CO_CREATE、STABILIZE 四阶段计划结构；不代表已确认计划。',
-        next_hint: '计划预览可衔接今天的成长行动。',
-        command: { name: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', mode: 'CONTROLLED_DRAFT' },
+        next_hint: '从本周的一件小行动开始。',
+        command: { name: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', mode: 'CONTROLLED_DRAFT' },
         plan_preview: planPreview,
       },
       {
@@ -251,7 +255,11 @@ function buildReportDraft(focus: DevGrowthFocus, planPreviewed: boolean): DevFam
   };
 }
 
-function buildPlanPreview(focus: DevGrowthFocus, planPreviewed: boolean): DevGrowthPlanPreview {
+function buildPlanPreview(
+  focus: DevGrowthFocus,
+  planPreviewed: boolean,
+  weeklyActionOpened: boolean,
+): DevGrowthPlanPreview {
   const content = GROWTH_FOCUS_CONTENT[focus];
   return {
     plan_id: `PLAN-${focus}-V1`,
@@ -265,5 +273,13 @@ function buildPlanPreview(focus: DevGrowthFocus, planPreviewed: boolean): DevGro
       { stage_id: 'STABILIZE', label: '延续习惯', weeks: '第 11-13 周', intent: '保留适合家庭的做法。', small_action: '选出最想延续的一项家庭约定。' },
     ],
     next_action: '从本周的一件小行动开始。',
+    weekly_action_handoff: {
+      state: weeklyActionOpened ? 'OPENED' : 'READY_TO_OPEN',
+      stage_id: 'SEE',
+      label: '今天可以先试试',
+      action: content.action,
+      fallback: content.fallback,
+      target_route: 'growth-daily-task',
+    },
   };
 }

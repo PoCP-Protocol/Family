@@ -152,8 +152,20 @@ describe('DEV flow receipt integration', () => {
     const afterHandoff = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui04-plan-read') });
     const afterProjection = await afterHandoff.json() as any;
     expect(afterProjection.cards.find((card: any) => card.surface === 'UI-04')?.report_draft).toMatchObject({ state: 'PLAN_PREVIEWED', plan_link_state: 'VIEWED' });
-    expect(afterProjection.cards.find((card: any) => card.surface === 'UI-05')?.plan_preview).toMatchObject({ state: 'VIEWED_FROM_REPORT' });
+    expect(afterProjection.cards.find((card: any) => card.surface === 'UI-05')?.plan_preview).toMatchObject({ state: 'VIEWED_FROM_REPORT', weekly_action_handoff: { state: 'READY_TO_OPEN', target_route: 'growth-daily-task' } });
     expect(afterProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', external_effect: false })]));
+
+    const openAction = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui05-action', 'idem-ui05-action'),
+      body: JSON.stringify({ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(openAction.status).toBe(201);
+    const actionReadback = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui05-action-read') });
+    const actionProjection = await actionReadback.json() as any;
+    expect(actionProjection.cards.find((card: any) => card.surface === 'UI-05')?.plan_preview?.weekly_action_handoff).toMatchObject({
+      state: 'OPENED', target_route: 'growth-daily-task', action: expect.any(String), fallback: expect.any(String),
+    });
+    expect(actionProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', external_effect: false })]));
   });
 
   it('fails closed for an unknown UI and cross-family actor', async () => {

@@ -79,6 +79,15 @@ export interface DevFamilyGrowthReportDraft {
   plan_link_state: 'READY_TO_VIEW' | 'VIEWED';
 }
 
+export interface DevWeeklyGrowthActionHandoff {
+  state: 'READY_TO_OPEN' | 'OPENED';
+  stage_id: 'SEE';
+  label: string;
+  action: string;
+  fallback: string;
+  target_route: 'growth-daily-task';
+}
+
 /** Read-only UI-05 preview; it never creates a formal GrowthPlan or task. */
 export interface DevGrowthPlanPreview {
   plan_id: string;
@@ -87,6 +96,8 @@ export interface DevGrowthPlanPreview {
   headline: string;
   stages: readonly { stage_id: string; label: string; weeks: string; intent: string; small_action: string }[];
   next_action: string;
+  /** A family-readable UI-05 → UI-09 navigation context, not a GrowthTask. */
+  weekly_action_handoff: DevWeeklyGrowthActionHandoff;
 }
 
 export interface DevCoreGrowthCard {
