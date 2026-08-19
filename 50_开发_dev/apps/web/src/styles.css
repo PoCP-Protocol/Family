@@ -2950,3 +2950,23 @@ h3 {
 
 /* UI-17 family self-record: process reflection rather than points, rewards, or redemption. */
 .by-family-self-record{max-width:472px;margin:.75rem auto;padding:1rem;border:1px solid #dcece4;border-radius:16px;background:linear-gradient(145deg,#fff,#f5fbf7);box-shadow:0 8px 20px rgba(52,119,88,.08);color:#345f49}.by-family-self-record small{display:block;color:#6a9c80;font-size:.76rem;font-weight:700;letter-spacing:.04em}.by-family-self-record h2{margin:.32rem 0;color:#317052;font-size:1.16rem}.by-family-self-record>p{margin:.4rem 0;color:#537664;line-height:1.6}.by-family-self-record article{margin:.75rem 0;padding:.75rem;border-radius:12px;background:#ecf8f1;color:#537664;font-size:.9rem;line-height:1.55}.by-family-self-record>div{display:grid;grid-template-columns:1fr 1fr;gap:.55rem}.by-family-self-record .full-primary,.by-family-self-record .by-btn-ghost{width:100%;min-height:2.6rem;font-size:.82rem}
+
+/* UI-18 family-private service scope: appended after the supplied membership visual baseline. */
+.by-family-service-scope {
+  margin: 16px 14px 12px;
+  padding: 18px;
+  border: 1px solid #d7e5fb;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f8fbff 0%, #edf6ff 100%);
+  color: #24334a;
+}
+.by-family-service-scope.is-blocked { border-color: #f0cfcb; background: #fff8f7; }
+.by-family-service-scope small { display: block; margin-bottom: 6px; color: #587394; font-size: 12px; }
+.by-family-service-scope h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.35; }
+.by-family-service-scope p { margin: 0; color: #53677f; font-size: 14px; line-height: 1.7; }
+.by-family-service-scope ul { display: grid; gap: 8px; margin: 13px 0 16px; padding: 0; list-style: none; }
+.by-family-service-scope li { padding: 10px 12px; border-radius: 10px; background: #fff; color: #365a80; font-size: 14px; }
+.by-family-service-scope li::before { content: '·'; padding-right: 7px; color: #4f95dc; font-weight: 800; }
+.by-family-service-scope > div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.by-family-service-scope .by-btn { min-height: 40px; padding: 8px 6px; font-size: 13px; }
+@media (max-width: 360px) { .by-family-service-scope > div { grid-template-columns: 1fr; } }

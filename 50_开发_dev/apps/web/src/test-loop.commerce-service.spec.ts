@@ -172,4 +172,40 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(root.dataset.familyCommerceStatus).toBe('READ_ONLY');
     expect(root.textContent).not.toMatch(/DEV|stub|Gate|policy|contract/i);
   });
+
+  it('reads a family-private UI-18 service scope without renewing, refunding, granting, or consuming benefits', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],
+        benefits: [
+          { benefit_grant_id: 'benefit-consult', benefit_ref: 'BENEFIT_CONSULT', status: 'AVAILABLE', allocated_units: 2, remaining_units: 2, row_version: 1 },
+          { benefit_grant_id: 'benefit-content', benefit_ref: 'BENEFIT_CONTENT', status: 'AVAILABLE', allocated_units: 1, remaining_units: 1, row_version: 1 },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'commerce-mine' });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/membership/customer-projection');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'include' });
+    expect(root.dataset.familyMembershipProjectionStatus).toBe('READY');
+    const scope = root.querySelector('[data-ui18-service-scope-state="READY"]');
+    expect(scope?.textContent).toContain('家庭交流支持');
+    expect(scope?.textContent).toContain('成长内容支持');
+    expect(scope?.textContent).not.toMatch(/等级|积分|额度|到期|续费|退款|支付|订单|DEV|SYNTHETIC|contract/i);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭服务说明已准备好');
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui18-open-growth-plan"]')?.click();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    app.navigate('commerce-mine');
+    root.querySelector<HTMLButtonElement>('[data-by="ui18-open-growth-profile"]')?.click();
+    expect(root.querySelector('[aria-label^="我的会员中心"]')).not.toBeNull();
+  });
 });
