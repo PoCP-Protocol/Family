@@ -104,7 +104,7 @@ describe('Family formal experience workflow entrypoints', () => {
     const cases = [
       ['commerce-invite', '记下邀请说明', 'CREATE_INVITE', 'CAMPAIGN_FAMILY_MOMENTS'],
       ['commerce-group', '记下共学想法', 'CREATE_GROUP', 'GROUP_PARENT_CHILD_CAMP'],
-      ['publish-dynamic', '确认发布', 'PUBLISH_TEMPLATE', 'POST_TEMPLATE_GROWTH_CARD'],
+      ['publish-dynamic', '记下分享草稿', 'PUBLISH_TEMPLATE', 'POST_TEMPLATE_GROWTH_CARD'],
     ] as const;
 
     for (const [initialPage, label, action, fixtureRef] of cases) {
@@ -129,7 +129,7 @@ describe('Family formal experience workflow entrypoints', () => {
       expect(root.dataset.familyExperienceAction).toBe(action);
       expect(root.dataset.familyExperienceStatus).toBe('CONFIRMED');
       expect(root.dataset.familyExperienceOperation).toBe(`operation-${action}`);
-      expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain(action === 'CREATE_GROUP' ? '共学想法已记下' : action === 'CREATE_INVITE' ? '邀请说明已记下' : '体验回执');
+      expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain(action === 'CREATE_GROUP' ? '共学想法已记下' : action === 'CREATE_INVITE' ? '邀请说明已记下' : '家庭分享草稿已记下');
       root.remove();
     }
   });

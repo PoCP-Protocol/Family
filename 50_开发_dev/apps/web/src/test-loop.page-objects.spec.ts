@@ -705,6 +705,31 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock.mock.calls.every(([, init]) => !init || String((init as RequestInit).method || 'GET') === 'GET')).toBe(true);
   });
 
+  it('routes the UI-25 family experience feed to a private UI-26 sharing draft without publishing or interaction', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => projection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'sharing-draft-fixture', status: 'CONFIRMED', external_effect: false, text_equivalent: '已记下家庭想法。' }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'parent-community' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui25-open-sharing-draft"]')?.click();
+    await tick();
+    const draft = root.querySelector('[data-ui26-sharing-draft-state="READY"]');
+    expect(draft?.textContent).toContain('先留给家庭，再慢慢决定');
+    expect(draft?.textContent).not.toMatch(/公开|作者|儿童|照片|媒体|话题|评论|回复|点赞|下载|通知|支付|订单|审核|DEV|SYNTHETIC/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui26-save-sharing-draft"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui26-sharing-draft-state="SAVED"]')?.textContent).toContain('家庭想法已记下');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, request] = fetchMock.mock.calls[1];
+    expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String((request as RequestInit).body))).toMatchObject({ page_id: 'UI-26', action: 'PUBLISH_TEMPLATE', fixture_ref: 'POST_TEMPLATE_GROWTH_CARD' });
+    root.querySelector<HTMLButtonElement>('[data-by="ui26-return-exchange-feed"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui25-exchange-feed-state="READY"]')).not.toBeNull();
+  });
+
   it('routes the UI-17 family self-record only to family review or today action', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
     vi.stubGlobal('fetch', fetchMock);

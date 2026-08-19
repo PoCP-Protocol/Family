@@ -3192,3 +3192,17 @@ h3 {
 }
 .by-family-learning-exchange-feed .by-btn,
 .by-family-learning-exchange-detail .by-btn { margin-top: 8px; }
+
+.by-family-sharing-draft {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d9e6ff;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f7faff, #ffffff);
+  box-shadow: 0 8px 22px rgba(36, 87, 170, .08);
+}
+.by-family-sharing-draft small { color: #5572a4; font-weight: 700; }
+.by-family-sharing-draft h2 { margin: 7px 0 10px; font-size: 19px; color: #203c70; }
+.by-family-sharing-draft p { margin: 8px 0; color: #4c5f7d; line-height: 1.65; }
+.by-family-sharing-draft .by-sharing-draft-status { padding: 10px 12px; border-radius: 12px; background: #eef5ff; color: #375988; }
+.by-family-sharing-draft > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
