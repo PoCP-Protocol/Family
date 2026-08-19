@@ -540,3 +540,29 @@ describe('UI-11 to UI-12 authenticated private growth readback', () => {
     expect(root.textContent).not.toMatch(/排名|总分|成长值|诊断|公开发布|外部通知/);
   });
 });
+
+
+describe('UI-35 authenticated camp action readback', () => {
+  it('shows a recorded camp action in the private UI-11 journey through a bearer-only projection without inferring an outcome', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        family_id: 'family-camp-readback-auth-scope', data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED',
+        recent_flow_events: [{ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_7_PARENT_ACTION' }],
+        cards: [{ surface: 'UI-11', state: 'READ_ONLY', title: '我的成长轨迹', loop: 'PERSONAL_HISTORY_LOOP', business_capability: 'personal_history', primary_objects: ['Family'], command: { name: 'READ_PERSONAL_HISTORY' }, personal_growth_journey: { state: 'ACTION_RECORDED', headline: '已经留下一段家庭过程', entries: [{ event_id: 'camp-action-private', label: '记录了一次成长营小行动', detail: '把一次愿意尝试的家庭行动留在过程里。' }] } }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-camp-readback-auth-scope', authToken: 'family-camp-readback-auth-bearer', platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-ranking' });
+    await tick(); await tick();
+
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-camp-readback-auth-scope/dev/platform-surfaces');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-camp-readback-auth-bearer');
+    expect(root.querySelector('[data-ui11-journey-state="ACTION_RECORDED"]')?.textContent).toContain('记录了一次成长营小行动');
+    expect(root.textContent).not.toMatch(/成长效果|结果已证实|儿童诊断|排名|总分|外部通知/);
+  });
+});
