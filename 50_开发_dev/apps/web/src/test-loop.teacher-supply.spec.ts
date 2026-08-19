@@ -41,13 +41,16 @@ describe('UI-19 teacher supply route', () => {
       if (request.method === 'POST' && String(url).includes('/services/booking-requests')) {
         return { ok: true, json: async () => ({ booking: { booking_request_id: 'need-1', status: 'REQUESTED', external_effect: false } }) };
       }
+      if (String(url).includes('/services/customer-projection')) {
+        return { ok: true, json: async () => ({ tenant_id: 'tenant-test', family_id: 'family-test-scope', projection_version: 1, visibility: 'FAMILY_PRIVATE', bookings: [{ booking_request_id: 'need-1', status: 'REQUESTED', service_offering_ref: 'SERVICE_COMMUNICATION' }], service_records: [{ service_record_id: 'record-1', source_booking_request_id: 'need-1', status: 'PENDING' }] }) };
+      }
       return { ok: true, json: async () => projection };
     });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
 
-    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'teacher-zone' });
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'teacher-zone', serviceRecordsApiMode: 'synthetic-api' });
     await tick();
 
     expect(root.querySelector('[data-ui-id="UI-19"] img')?.getAttribute('src')).toBe('/public/bangyang-reference/teacher-zone-reference-458x1008.png');
@@ -97,14 +100,23 @@ describe('UI-19 teacher supply route', () => {
     expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body || '{}')).toMatchObject({ page_id: 'UI-21', service_offering_ref: 'SERVICE_COMMUNICATION', availability_slot_ref: 'SLOT_COMMUNICATION' });
     expect(need?.textContent).not.toMatch(/提供者|资格|评价|价格|权益|通知|支付|DEV|SYNTHETIC|contract/i);
 
-    root.querySelector<HTMLButtonElement>('[data-by="ui21-return-support-explanation"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-by="ui21-open-support-records"]')?.click();
     await tick();
-    expect(root.querySelector('[data-ui20-support-explanation="READY"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    root.querySelector<HTMLButtonElement>('[data-by="ui20-return-support-topics"]')?.click();
+    await tick();
+    const records = root.querySelector('[data-ui24-support-records-state="READY"]');
+    expect(records?.textContent).toContain('已经记下的支持需求');
+    expect(records?.textContent).toContain('亲子沟通支持');
+    expect(records?.textContent).toContain('需求已记下');
+    expect(records?.textContent).not.toMatch(/提供者|资格|评价|价格|权益|时间|通知|支付|DEV|SYNTHETIC|contract/i);
+    expect(root.dataset.ui24SupportRecordsStatus).toBe('READ_ONLY_READY');
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(String(fetchMock.mock.calls[4]?.[0])).toContain('/services/customer-projection');
+    expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' });
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui24-open-support-topics"]')?.click();
     await tick();
     expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('renders a normal boundary message without posting when consent or authorization blocks the projection', async () => {

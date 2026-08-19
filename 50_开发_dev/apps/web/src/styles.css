@@ -3033,3 +3033,54 @@ h3 {
   gap: 8px;
   margin-top: 10px;
 }
+
+/* UI-24：家庭支持记录只回看已记下的需求，不把记录展示成真人服务结果。 */
+.by-family-support-records {
+  margin: 14px 16px 20px;
+  padding: 16px;
+  border: 1px solid #d8e8f8;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 5px 16px rgba(24, 92, 156, 0.09);
+  color: #173a5d;
+}
+.by-family-support-records small {
+  color: #4f7699;
+  font-size: 12px;
+}
+.by-family-support-records h2 {
+  margin: 6px 0 10px;
+  color: #123d68;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.by-family-support-records p,
+.by-family-support-records li {
+  color: #456a89;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.by-family-support-records ul {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+.by-family-support-records li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f5faff;
+}
+.by-family-support-records li b { color: #174f80; }
+.by-family-support-records li span { color: #5c82a2; white-space: nowrap; }
+.by-family-support-records > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.by-support-records-hint { color: #557a98; }
