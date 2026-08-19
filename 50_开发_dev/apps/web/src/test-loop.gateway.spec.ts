@@ -83,7 +83,7 @@ describe('Family 34-page visual experience and real Gateway entry', () => {
 
 
 describe('Family formal experience workflow entrypoints', () => {
-  it('sends the four remaining registered page actions only to the protected Test Experience endpoint with fixed fixtures', async () => {
+  it('sends the remaining registered page actions only to the protected Test Experience endpoint with fixed fixtures', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url: string, request: RequestInit) => {
       if (url.endsWith('/customer-projection')) {
         return { json: async () => ({ source: 'TEST_FIXTURE', operations: [], text_equivalent: '以下显示当前家庭的体验回执。' }) };
@@ -104,7 +104,6 @@ describe('Family formal experience workflow entrypoints', () => {
     const cases = [
       ['commerce-invite', '记下邀请说明', 'CREATE_INVITE', 'CAMPAIGN_FAMILY_MOMENTS'],
       ['commerce-group', '记下共学想法', 'CREATE_GROUP', 'GROUP_PARENT_CHILD_CAMP'],
-      ['activity-detail', '确认报名', 'CREATE_EVENT', 'EVENT_PARENT_CHILD_SALON_2025_05_25'],
       ['publish-dynamic', '确认发布', 'PUBLISH_TEMPLATE', 'POST_TEMPLATE_GROWTH_CARD'],
     ] as const;
 
@@ -122,7 +121,7 @@ describe('Family formal experience workflow entrypoints', () => {
       expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');
       expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
       expect(JSON.parse(String(request.body))).toMatchObject({
-        page_id: action === 'CREATE_INVITE' ? 'UI-15' : action === 'CREATE_GROUP' ? 'UI-16' : action === 'CREATE_EVENT' ? 'UI-23' : 'UI-26',
+        page_id: action === 'CREATE_INVITE' ? 'UI-15' : action === 'CREATE_GROUP' ? 'UI-16' : 'UI-26',
         action,
         fixture_ref: fixtureRef,
         fixture_version: 'family-34-page-test-experience.v1',

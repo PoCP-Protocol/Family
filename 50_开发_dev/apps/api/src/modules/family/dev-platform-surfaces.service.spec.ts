@@ -61,6 +61,20 @@ describe('DevPlatformSurfacesService', () => {
     expect(userStoryContent).not.toMatch(/name|age|school|score|badge|reward|outcome|share|download|publish|media|qr|order|booking/i);
   });
 
+  it('builds UI-22 as a family activity directory without registration, attendance, or external arrangements', () => {
+    const catalog = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-22')?.family_growth_activity_catalog;
+    expect(catalog).toMatchObject({
+      state: 'READY',
+      headline: '可以慢慢了解的家庭成长活动',
+      support_topics_route: 'teacher-zone',
+      fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME',
+    });
+    expect(catalog?.activities).toHaveLength(2);
+    expect(catalog?.activities.every((activity) => activity.detail_route === 'activity-detail')).toBe(true);
+    const userCatalogContent = JSON.stringify({ headline: catalog?.headline, introduction: catalog?.introduction, activities: catalog?.activities, support_topics_route: catalog?.support_topics_route });
+    expect(userCatalogContent).not.toMatch(/registration|register|attendance|attend|seat|capacity|price|payment|calendar|video|notification|booking|order|rank|score|reward|outcome/i);
+  });
+
   it('builds UI-17 as a family self-record without points, rewards, or entitlements', () => {
     const emptyRecord = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-17')?.family_self_record;
     expect(emptyRecord).toMatchObject({ state: 'WAITING_FOR_ACTION', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME' });

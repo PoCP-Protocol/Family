@@ -40,6 +40,24 @@ export interface DevFamilySelfRecord {
   fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME';
 }
 
+/** UI-22: a family-browsable activity directory, never a registration, attendance, or external arrangement. */
+export interface DevFamilyGrowthActivity {
+  activity_ref: string;
+  title: string;
+  summary: string;
+  age_hint: string;
+  detail_route: 'activity-detail';
+}
+
+export interface DevFamilyGrowthActivityCatalog {
+  state: 'READY';
+  headline: string;
+  introduction: string;
+  activities: readonly DevFamilyGrowthActivity[];
+  support_topics_route: 'teacher-zone';
+  fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME';
+}
+
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
   /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
@@ -61,6 +79,8 @@ export interface DevPlatformSurfaceCard {
   private_growth_story?: DevPrivateGrowthStory;
   /** Present only on UI-17; a self-referenced action note without points, rewards, or entitlements. */
   family_self_record?: DevFamilySelfRecord;
+  /** Present only on UI-22; a family-browsable activity directory without registration or external arrangements. */
+  family_growth_activity_catalog?: DevFamilyGrowthActivityCatalog;
 }
 
 export interface DevPlatformSurfacesProjection {

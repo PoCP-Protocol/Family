@@ -3,6 +3,7 @@ import {
   DEV_PLATFORM_SURFACES,
   type DevFlowReceiptSummary,
   type DevFamilySelfRecord,
+  type DevFamilyGrowthActivityCatalog,
   type DevPersonalGrowthJourney,
   type DevPrivateGrowthStory,
   type DevPlatformNoopCommandResult,
@@ -56,6 +57,7 @@ export class DevPlatformSurfacesService {
     const personalGrowthJourney = buildPersonalGrowthJourney(flowEvents);
     const privateGrowthStory = buildPrivateGrowthStory(flowEvents);
     const familySelfRecord = buildFamilySelfRecord(flowEvents);
+    const familyGrowthActivityCatalog = buildFamilyGrowthActivityCatalog();
     return [
       ['UI-11','PERSONAL_HISTORY','我的成长轨迹','READ_ONLY','TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING','DEV 用个人历史轨迹替代跨家庭排行；无家庭总分或同龄比较。','可查看自己的行动时间线。','READ_PERSONAL_HISTORY','READ_ONLY'],
       ['UI-12','EVIDENCE','成长故事海报','NOOP','EVIDENCE_STORY_IS_NOT_OUTCOME_OR_SHARE','DEV 展示成果故事占位；不生成海报、不外发分享。','分享适配器保持 no-op。','PREVIEW_SYNTHETIC_EVIDENCE_STORY','NOOP_NOT_PERSISTED'],
@@ -86,8 +88,23 @@ export class DevPlatformSurfacesService {
       ...(surface === 'UI-11' ? { personal_growth_journey: personalGrowthJourney } : {}),
       ...(surface === 'UI-12' ? { private_growth_story: privateGrowthStory } : {}),
       ...(surface === 'UI-17' ? { family_self_record: familySelfRecord } : {}),
+      ...(surface === 'UI-22' ? { family_growth_activity_catalog: familyGrowthActivityCatalog } : {}),
     }));
   }
+}
+
+function buildFamilyGrowthActivityCatalog(): DevFamilyGrowthActivityCatalog {
+  return {
+    state: 'READY',
+    headline: '可以慢慢了解的家庭成长活动',
+    introduction: '先看看活动主题和适龄参考，再决定是否想进一步了解。',
+    activities: [
+      { activity_ref: 'ACTIVITY_PARENT_CHILD_DIALOGUE', title: '亲子沟通小练习', summary: '围绕一次日常对话，交换彼此的想法。', age_hint: '适龄参考：学龄儿童家庭', detail_route: 'activity-detail' },
+      { activity_ref: 'ACTIVITY_FAMILY_READING', title: '家庭阅读时光', summary: '用一本喜欢的书，留出一段轻松的共读时间。', age_hint: '适龄参考：亲子共读家庭', detail_route: 'activity-detail' },
+    ],
+    support_topics_route: 'teacher-zone',
+    fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME',
+  };
 }
 
 function buildPersonalGrowthJourney(flowEvents: readonly DevFlowReceiptSummary[]): DevPersonalGrowthJourney {

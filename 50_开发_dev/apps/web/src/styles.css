@@ -3084,3 +3084,56 @@ h3 {
   margin-top: 10px;
 }
 .by-support-records-hint { color: #557a98; }
+
+/* UI-22 / UI-23：仅供家庭了解活动主题，不延伸原图中的报名或交易视觉。 */
+.by-family-growth-activity-catalog,
+.by-family-growth-activity-detail {
+  margin: 16px 12px 24px;
+  padding: 18px;
+  border: 1px solid #d8e7f0;
+  border-radius: 18px;
+  background: #f9fcff;
+  color: #23435d;
+}
+.by-family-growth-activity-catalog small,
+.by-family-growth-activity-detail small {
+  color: #58748b;
+  font-size: 12px;
+}
+.by-family-growth-activity-catalog h2,
+.by-family-growth-activity-detail h2 {
+  margin: 6px 0 8px;
+  color: #173e5c;
+  font-size: 19px;
+}
+.by-family-growth-activity-catalog > p,
+.by-family-growth-activity-detail > p {
+  margin: 8px 0;
+  color: #58748b;
+  line-height: 1.65;
+}
+.by-family-growth-activity-catalog ol {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+.by-family-growth-activity-catalog li {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(47 111 150 / 8%);
+}
+.by-family-growth-activity-catalog li b { color: #1b4967; }
+.by-family-growth-activity-catalog li span,
+.by-family-growth-activity-catalog li em {
+  color: #698296;
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.55;
+}
+.by-family-growth-activity-catalog .by-btn,
+.by-family-growth-activity-detail .by-btn { margin-top: 8px; }

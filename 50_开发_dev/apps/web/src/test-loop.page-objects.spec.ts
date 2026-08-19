@@ -588,6 +588,10 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
       '我们选择了一个想一起关注的方向。', '我们为今天留出了一个小行动。', '我们打开了家庭回顾，愿意再听听彼此的感受。',
     ], journey_route: 'growth-ranking', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE' } } : {}),
     ...(surface === 'UI-17' ? { family_self_record: { state: 'READY', headline: '我们已经为今天留下一条小记录', confirmation: '这次行动已经被家庭记下。不急着证明什么，也可以慢慢回看。', pause_hint: '如果今天不想继续，也可以先停在这里；下一次从更容易的一步开始。', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'RECORDED_ACTION_NOT_POINTS_REWARD_OR_OUTCOME' } } : {}),
+    ...(surface === 'UI-22' ? { family_growth_activity_catalog: { state: 'READY', headline: '可以慢慢了解的家庭成长活动', introduction: '从家庭现在关心的方向出发，先看看活动主题，再决定是否继续关注。', activities: [
+      { activity_ref: 'ACTIVITY_FAMILY_DIALOGUE', title: '亲子沟通小练习', summary: '一起练习倾听和表达的日常方法。', age_hint: '适合希望增进亲子交流的家庭', detail_route: 'activity-detail' },
+      { activity_ref: 'ACTIVITY_FAMILY_ROUTINE', title: '家庭节奏整理', summary: '看看如何为一周留出更从容的相处时间。', age_hint: '适合想调整日常节奏的家庭', detail_route: 'activity-detail' },
+    ], support_topics_route: 'teacher-zone', fact_boundary: 'ACTIVITY_BROWSING_NOT_REGISTRATION_ATTENDANCE_OR_OUTCOME' } } : {}),
   }));
   const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
 
@@ -647,6 +651,30 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     root.querySelector<HTMLButtonElement>('[data-by="ui11-open-family-review"]')?.click();
     expect(root.querySelector('[aria-label^="家庭成长报告"]')).not.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes the UI-22 family activity catalog to a private explanation and back without a registration write', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'salon-list' });
+    await tick(); await tick();
+    const catalog = root.querySelector('[data-ui22-activity-catalog-state="READY"]');
+    expect(catalog?.textContent).toContain('亲子沟通小练习');
+    expect(catalog?.textContent).not.toMatch(/报名|名额|价格|支付|日历|视频|通知|到场|DEV|SYNTHETIC/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui22-open-activity-detail"]')?.click();
+    await tick();
+    const detail = root.querySelector('[data-ui23-activity-detail-state="READY"]');
+    expect(detail?.textContent).toContain('亲子沟通小练习');
+    expect(detail?.textContent).not.toMatch(/报名|支付|预约|通知|到场/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui23-return-activity-catalog"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui22-activity-catalog-state="READY"]')).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-by="ui22-return-support-topics"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.every(([, init]) => !init || String((init as RequestInit).method || 'GET') === 'GET')).toBe(true);
   });
 
   it('routes the UI-17 family self-record only to family review or today action', async () => {
