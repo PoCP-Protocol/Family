@@ -11,6 +11,8 @@ const ids = {
   child: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   relationship: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
   journey: '11111111-2222-4333-8444-555555555555',
+  perspective: '12121212-2222-4333-8444-555555555555',
+  evidence: '13131313-2222-4333-8444-555555555555',
   profile: '22222222-3333-4444-8555-666666666666',
   priority: '33333333-4444-4555-8666-777777777777',
   episode: '44444444-5555-4666-8777-888888888888',
@@ -26,6 +28,13 @@ const pool = new Pool({ connectionString: url });
 const q = (text, values = []) => pool.query(text, values);
 try {
   await q('begin');
+  await q('delete from audit_logs where family_id=$1', [ids.family]);
+  await q('delete from family_service_records where family_id=$1', [ids.family]);
+  await q('delete from family_dev_flow_events where family_id=$1', [ids.family]);
+  await q('delete from test_experience_operations where family_id=$1', [ids.family]);
+  await q('delete from family_llm_gateway_audits where family_id=$1', [ids.family]);
+  await q('delete from family_product_events where family_id=$1', [ids.family]);
+  await q('delete from product_events where family_id=$1', [ids.family]);
   await q('delete from family_booking_service_records where family_id=$1', [ids.family]);
   await q('delete from family_booking_requests where family_id=$1', [ids.family]);
   await q('delete from family_service_availability_slots where availability_slot_id=$1', [ids.slot]);
@@ -35,6 +44,9 @@ try {
   await q('delete from intervention_episodes where family_id=$1', [ids.family]);
   await q('delete from growth_priorities where family_id=$1', [ids.family]);
   await q('delete from growth_profiles where family_id=$1', [ids.family]);
+  await q('delete from evidence_records where family_id=$1', [ids.family]);
+  await q('delete from perspectives where family_id=$1', [ids.family]);
+  await q('delete from growth_events where family_id=$1', [ids.family]);
   await q('delete from growth_journeys where family_id=$1', [ids.family]);
   await q('delete from family_relationships where family_id=$1', [ids.family]);
   await q('delete from consents where family_id=$1', [ids.family]);
@@ -65,11 +77,19 @@ try {
   await q(`insert into family_relationships(relationship_id,family_id,person_a_id,person_b_id,relationship_type)
     values($1,$2,$3,$4,'PARENT_CHILD')`, [ids.relationship, ids.family, ids.guardian, ids.child]);
   await q(`insert into consents(family_id,subject_person_id,guardian_person_id,purpose,status,policy_version,granted_at)
-    values($1,$2,$3,'SERVICE','GRANTED','service-v1',now())`, [ids.family, ids.child, ids.guardian]);
+    values($1,$2,$3,'SERVICE','GRANTED','service-v1',now()),
+          ($1,$2,$3,'ASSESSMENT','GRANTED','assessment-v1',now()),
+          ($1,$2,$3,'GROWTH_TRACKING','GRANTED','growth-tracking-v1',now())`, [ids.family, ids.child, ids.guardian]);
   await q(`insert into growth_journeys(journey_id,family_id,journey_type,phase,status,started_at,version)
-    values($1,$2,'90_DAY_GROWTH','DAY_1','ACTIVE',now(),1)`, [ids.journey, ids.family]);
+    values($1,$2,'PARENT_CHILD_COMMUNICATION_CONFLICT','ONBOARDING','ACTIVE',now(),1)`, [ids.journey, ids.family]);
+  await q(`insert into growth_events(event_id,family_id,event_type,occurred_at,source,payload)
+    values(gen_random_uuid(),$1,'GrowthOnboardingStarted',now(),'TEST_FIXTURE','{"onboarding_id":"11111111-2222-4333-8444-555555555555","child_id":"dddddddd-dddd-4ddd-8ddd-dddddddddddd","guardian_person_id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","safety_disposition":{"severity":"LOW","disposition":"NORMAL"}}'::jsonb)`, [ids.family]);
+  await q(`insert into perspectives(perspective_id,family_id,onboarding_id,subject_person_id,author_person_id,person_id,perspective_type,statement,recorded_at,capture_mode,content,fact_boundary,safety_disposition)
+    values($1,$2,$3,$4,$5,$4,'CHILD_PERSPECTIVE','孩子愿意尝试新的对话方式。',now(),'TEST_FIXTURE','{"source":"TEST_FIXTURE"}'::jsonb,'PERSPECTIVE_NOT_FACT','{"severity":"LOW","disposition":"NORMAL"}'::jsonb)`, [ids.perspective, ids.family, ids.journey, ids.child, ids.guardian]);
+  await q(`insert into evidence_records(evidence_id,family_id,evidence_type,source_ref,payload,observed_at,perspective_id,source,evidence_level)
+    values($1,$2,'FAMILY_PERSPECTIVE','TEST_FIXTURE','{"evidence_boundary":"PERSPECTIVE_NOT_OUTCOME"}'::jsonb,now(),$3,'TEST_FIXTURE','E1')`, [ids.evidence, ids.family, ids.perspective]);
   await q(`insert into growth_profiles(profile_id,family_id,subject_type,subject_ref_id,life_stage_code,strengths,growth_opportunities,confidence,version,effective_from,profile_scope,subject_person_id,status,basis,evidence_snapshot,policy_version)
-    values($1,$2,'CHILD',$3::text,'EARLY_ADOLESCENCE_12_15','["愿意尝试"]','["亲子沟通"]',0.7,1,now(),'FAMILY_PRIVATE',$3::uuid,'ACTIVE','{"source":"TEST_FIXTURE","truth_class":"PERSPECTIVE"}','{"evidence_boundary":"NOT_OUTCOME"}','test-v1')`, [ids.profile, ids.family, ids.child]);
+    values($1,$2,'CHILD',$3::text,'EARLY_ADOLESCENCE_12_15','["愿意尝试"]','["亲子沟通"]',0.7,1,now(),'FAMILY_PRIVATE',$4::uuid,'ACTIVE','{"source":"TEST_FIXTURE","truth_class":"PERSPECTIVE"}','{"evidence_boundary":"NOT_OUTCOME","evidence_ids":["13131313-2222-4333-8444-555555555555"]}','test-v1')`, [ids.profile, ids.family, ids.child, ids.guardian]);
   await q(`insert into growth_priorities(priority_id,family_id,profile_id,dimension_id,rank,confirmed_by_actor_id,onboarding_id,status,version,boundary,reason_codes,evidence_refs,policy_version)
     values($1,$2,$3,'P03',1,$4,$5,'ACTIVE',1,'PRIORITY_IS_HUMAN_CONFIRMED_PRACTICE_FOCUS','["FAMILY_CONFIRMED"]','["TEST_FIXTURE"]','test-v1')`, [ids.priority, ids.family, ids.profile, ids.guardian, ids.journey]);
   await q(`insert into intervention_episodes(episode_id,family_id,onboarding_id,priority_id,intervention_id,intervention_code,status,started_by_actor_id,planned_days,policy_version)

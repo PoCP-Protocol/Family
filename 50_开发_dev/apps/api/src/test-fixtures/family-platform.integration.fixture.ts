@@ -13,6 +13,8 @@ export const FAMILY_PLATFORM_FIXTURE = Object.freeze({
   childId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   relationshipId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
   journeyId: '11111111-2222-4333-8444-555555555555',
+  perspectiveId: '12121212-2222-4333-8444-555555555555',
+  evidenceId: '13131313-2222-4333-8444-555555555555',
   profileId: '22222222-3333-4444-8555-666666666666',
   priorityId: '33333333-4444-4555-8666-777777777777',
   episodeId: '44444444-5555-4666-8777-888888888888',
@@ -29,6 +31,13 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
   await pool.query('begin');
   try {
     // Repeatable cleanup for this fixture only. It never touches another family.
+    await pool.query('delete from audit_logs where family_id = $1', [f.familyId]);
+    await pool.query('delete from family_product_events where family_id = $1', [f.familyId]);
+    await pool.query('delete from product_events where family_id = $1', [f.familyId]);
+    await pool.query('delete from family_service_records where family_id = $1', [f.familyId]);
+    await pool.query('delete from family_dev_flow_events where family_id = $1', [f.familyId]);
+    await pool.query('delete from test_experience_operations where family_id = $1', [f.familyId]);
+    await pool.query('delete from family_llm_gateway_audits where family_id = $1', [f.familyId]);
     await pool.query('delete from family_booking_service_records where family_id = $1', [f.familyId]);
     await pool.query('delete from family_booking_requests where family_id = $1', [f.familyId]);
     await pool.query('delete from family_service_availability_slots where availability_slot_id = $1', [f.slotId]);
@@ -38,6 +47,9 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     await pool.query('delete from intervention_episodes where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_priorities where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_profiles where family_id = $1', [f.familyId]);
+    await pool.query('delete from evidence_records where family_id = $1', [f.familyId]);
+    await pool.query('delete from perspectives where family_id = $1', [f.familyId]);
+    await pool.query('delete from growth_events where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_journeys where family_id = $1', [f.familyId]);
     await pool.query('delete from family_relationships where family_id = $1', [f.familyId]);
     await pool.query('delete from consents where family_id = $1', [f.familyId]);
@@ -89,18 +101,35 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     );
     await pool.query(
       `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at)
-       values ($1, $2, $3, 'SERVICE', 'GRANTED', 'service-v1', now())`,
+       values ($1, $2, $3, 'SERVICE', 'GRANTED', 'service-v1', now()),
+              ($1, $2, $3, 'ASSESSMENT', 'GRANTED', 'assessment-v1', now()),
+              ($1, $2, $3, 'GROWTH_TRACKING', 'GRANTED', 'growth-tracking-v1', now())`,
       [f.familyId, f.childId, f.guardianId],
     );
     await pool.query(
       `insert into growth_journeys(journey_id, family_id, journey_type, phase, status, started_at, version)
-       values ($1, $2, '90_DAY_GROWTH', 'DAY_1', 'ACTIVE', now(), 1)`,
+       values ($1, $2, 'PARENT_CHILD_COMMUNICATION_CONFLICT', 'ONBOARDING', 'ACTIVE', now(), 1)`,
       [f.journeyId, f.familyId],
     );
     await pool.query(
+      `insert into growth_events(event_id, family_id, event_type, occurred_at, source, payload)
+       values (gen_random_uuid(), $1, 'GrowthOnboardingStarted', now(), 'TEST_FIXTURE', '{"onboarding_id":"11111111-2222-4333-8444-555555555555","child_id":"dddddddd-dddd-4ddd-8ddd-dddddddddddd","guardian_person_id":"cccccccc-cccc-4ccc-8ccc-cccccccccccc","safety_disposition":{"severity":"LOW","disposition":"NORMAL"}}'::jsonb)`,
+      [f.familyId],
+    );
+    await pool.query(
+      `insert into perspectives(perspective_id, family_id, onboarding_id, subject_person_id, author_person_id, person_id, perspective_type, statement, recorded_at, capture_mode, content, fact_boundary, safety_disposition)
+       values ($1, $2, $3, $4, $5, $4, 'CHILD_PERSPECTIVE', '孩子愿意尝试新的对话方式。', now(), 'TEST_FIXTURE', '{"source":"TEST_FIXTURE"}'::jsonb, 'PERSPECTIVE_NOT_FACT', '{"severity":"LOW","disposition":"NORMAL"}'::jsonb)`,
+      [f.perspectiveId, f.familyId, f.journeyId, f.childId, f.guardianId],
+    );
+    await pool.query(
+      `insert into evidence_records(evidence_id, family_id, evidence_type, source_ref, payload, observed_at, perspective_id, source, evidence_level)
+       values ($1, $2, 'FAMILY_PERSPECTIVE', 'TEST_FIXTURE', '{"evidence_boundary":"PERSPECTIVE_NOT_OUTCOME"}'::jsonb, now(), $3, 'TEST_FIXTURE', 'E1')`,
+      [f.evidenceId, f.familyId, f.perspectiveId],
+    );
+    await pool.query(
       `insert into growth_profiles(profile_id, family_id, subject_type, subject_ref_id, life_stage_code, strengths, growth_opportunities, confidence, version, effective_from, profile_scope, subject_person_id, status, basis, evidence_snapshot, policy_version)
-       values ($1, $2, 'CHILD', $3::text, 'EARLY_ADOLESCENCE_12_15', '["愿意尝试"]'::jsonb, '["亲子沟通"]'::jsonb, 0.7, 1, now(), 'FAMILY_PRIVATE', $3::uuid, 'ACTIVE', '{"source":"TEST_FIXTURE","truth_class":"PERSPECTIVE"}'::jsonb, '{"evidence_boundary":"NOT_OUTCOME"}'::jsonb, 'test-v1')`,
-      [f.profileId, f.familyId, f.childId],
+       values ($1, $2, 'CHILD', $3::text, 'EARLY_ADOLESCENCE_12_15', '["愿意尝试"]'::jsonb, '["亲子沟通"]'::jsonb, 0.7, 1, now(), 'FAMILY_PRIVATE', $4::uuid, 'ACTIVE', '{"source":"TEST_FIXTURE","truth_class":"PERSPECTIVE"}'::jsonb, '{"evidence_boundary":"NOT_OUTCOME","evidence_ids":["13131313-2222-4333-8444-555555555555"]}'::jsonb, 'test-v1')`,
+      [f.profileId, f.familyId, f.childId, f.guardianId],
     );
     await pool.query(
       `insert into growth_priorities(priority_id, family_id, profile_id, dimension_id, rank, confirmed_by_actor_id, onboarding_id, status, version, boundary, reason_codes, evidence_refs, policy_version)
