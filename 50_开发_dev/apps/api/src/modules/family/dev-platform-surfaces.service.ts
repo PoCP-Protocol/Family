@@ -180,12 +180,15 @@ function buildPrivateGrowthStory(flowEvents: readonly DevFlowReceiptSummary[]): 
     .filter((event) => ['UI-02', 'UI-04', 'UI-05', 'UI-09'].includes(event.ui_id))
     .sort((left, right) => left.created_at.localeCompare(right.created_at))
     .slice(-4)
-    .map((event) => ({
-      'UI-02': '我们选择了一个想一起关注的方向。',
-      'UI-04': '我们查看了可以慢慢练习的 90 天计划。',
-      'UI-05': '我们为今天留出了一个小行动。',
-      'UI-09': '我们打开了家庭回顾，愿意再听听彼此的感受。',
-    }[event.ui_id]!));
+    .map((event) => {
+      switch (event.ui_id) {
+        case 'UI-02': return '我们选择了一个想一起关注的方向。';
+        case 'UI-04': return '我们查看了可以慢慢练习的 90 天计划。';
+        case 'UI-05': return '我们为今天留出了一个小行动。';
+        case 'UI-09': return '我们打开了家庭回顾，愿意再听听彼此的感受。';
+        default: return '我们留下一段家庭自己的过程片段。';
+      }
+    });
   return {
     state: moments.length > 0 ? 'READY' : 'WAITING_FOR_MOMENT',
     title: moments.length > 0 ? '我们一起走过的片段' : '从一段愿意回看的经历开始',
