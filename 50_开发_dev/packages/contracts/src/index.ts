@@ -747,3 +747,4 @@ export interface HealthStatus {
 export * from './dev-core-growth';
 export * from './dev-platform-surfaces';
 export * from './family-growth-os';
+export * from './journey-plan';

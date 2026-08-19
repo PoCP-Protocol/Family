@@ -56,7 +56,11 @@ function controller(overrides: Record<string, unknown> = {}) {
     }),
     list: async (scopeFamilyId: string) => [],
   };
-  return new FamilyController({} as any, {} as any, {} as any, growthActionService as any, {} as any, {} as any, todayService as any, devCoreGrowthService as any, devPlatformSurfacesService as any, devFlowReceiptService as any);
+  return new FamilyController(
+    {} as any, {} as any, {} as any, {} as any,
+    growthActionService as any, {} as any, {} as any, todayService as any,
+    devCoreGrowthService as any, devPlatformSurfacesService as any, devFlowReceiptService as any,
+  );
 }
 
 describe('UI-01/UI-09 first slice controller contract', () => {

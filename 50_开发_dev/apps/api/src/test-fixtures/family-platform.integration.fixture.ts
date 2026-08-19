@@ -45,6 +45,8 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     await pool.query('delete from family_service_availability_slots where availability_slot_id = $1', [f.slotId]);
     await pool.query('delete from family_service_offerings where service_offering_id = $1', [f.offeringId]);
     await pool.query('delete from family_service_providers where provider_id = $1', [f.providerId]);
+    await pool.query(`delete from family_journey_plan_phases where plan_id in (select plan_id from family_journey_plans where family_id = $1)`, [f.familyId]);
+    await pool.query('delete from family_journey_plans where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_actions where family_id = $1', [f.familyId]);
     await pool.query('delete from intervention_episodes where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_priorities where family_id = $1', [f.familyId]);

@@ -42,6 +42,8 @@ try {
   await q('delete from family_service_availability_slots where availability_slot_id=$1', [ids.slot]);
   await q('delete from family_service_offerings where service_offering_id=$1', [ids.offering]);
   await q('delete from family_service_providers where provider_id=$1', [ids.provider]);
+  await q(`delete from family_journey_plan_phases where plan_id in (select plan_id from family_journey_plans where family_id=$1)`, [ids.family]);
+  await q('delete from family_journey_plans where family_id=$1', [ids.family]);
   await q('delete from growth_actions where family_id=$1', [ids.family]);
   await q('delete from intervention_episodes where family_id=$1', [ids.family]);
   await q('delete from growth_priorities where family_id=$1', [ids.family]);

@@ -10,6 +10,7 @@ import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { InterventionService } from './intervention.service';
+import { JourneyPlanService } from './journey-plan.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
 import { DevCoreGrowthService } from './dev-core-growth.service';
@@ -33,6 +34,7 @@ import { DevFlowReceiptService } from './dev-flow-receipt.service';
 		GrowthSubjectResolver,
 		GrowthPriorityService,
 		InterventionService,
+		JourneyPlanService,
 		GrowthActionService,
 		GrowthReviewService,
 		OnboardingService,

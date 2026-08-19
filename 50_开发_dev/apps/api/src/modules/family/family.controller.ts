@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
 import { projectTaskCheckinResult } from '@family/contracts';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, ConfirmJourneyPlanResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, CreateJourneyPlanResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, JourneyPlanProjection, PauseJourneyPlanResponse, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, ReviewJourneyPhaseResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
@@ -14,6 +14,7 @@ import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dt
 import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
+import { validateConfirmJourneyPlanRequest, validateCreateJourneyPlanRequest, validatePauseJourneyPlanRequest, validateReviewJourneyPhaseRequest } from './journey-plan.dto';
 import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
 import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
@@ -24,6 +25,7 @@ import { GrowthActionService } from './growth-action.service';
 import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
+import { JourneyPlanService } from './journey-plan.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
 import { DevCoreGrowthService } from './dev-core-growth.service';
@@ -37,6 +39,7 @@ export class FamilyController {
     @Inject(FamilyService) private readonly familyService: FamilyService,
     @Inject(GrowthPriorityService) private readonly growthPriorityService: GrowthPriorityService,
     @Inject(InterventionService) private readonly interventionService: InterventionService,
+    @Inject(JourneyPlanService) private readonly journeyPlanService: JourneyPlanService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
     @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
@@ -663,6 +666,84 @@ export class FamilyController {
   ): Promise<StartInterventionResponse | null> {
     assertReadContext(familyId, actorId, onboardingId);
     return this.interventionService.getActiveIntervention(familyId, onboardingId, actorId!);
+  }
+
+  /**
+   * Full 90-day Journey projection. The current phase is schedule state only;
+   * it is never an outcome, diagnosis, ranking or automatic recommendation.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/journey-plan')
+  async getJourneyPlan(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ): Promise<JourneyPlanProjection> {
+    assertReadContext(familyId, actorId);
+    return this.journeyPlanService.getActiveProjection(familyId, actorId!);
+  }
+
+  @RequireFamilyAction('CreateJourneyPlan')
+  @Post(':familyId/growth/onboardings/:onboardingId/journey-plan')
+  async createJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<CreateJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateCreateJourneyPlanRequest(familyId, onboardingId, idempotencyKey, body);
+    return this.journeyPlanService.createPlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('ConfirmJourneyPlan')
+  @Post(':familyId/growth/journey-plans/:planId/confirm')
+  async confirmJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<ConfirmJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateConfirmJourneyPlanRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.confirmPlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('PauseJourneyPlan')
+  @Post(':familyId/growth/journey-plans/:planId/pause')
+  async pauseJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<PauseJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validatePauseJourneyPlanRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.pausePlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('ReviewJourneyPhase')
+  @Post(':familyId/growth/journey-plans/:planId/phase-review')
+  async reviewJourneyPhase(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<ReviewJourneyPhaseResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateReviewJourneyPhaseRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.reviewCurrentPhase(request, buildAuditMeta(actorId, correlationId, source));
   }
 
   @Get(':familyId/growth/actions/today')
