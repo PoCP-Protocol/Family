@@ -28,6 +28,7 @@
 import type { ResolvedRendererProfile, PerformanceFrame } from '@family/fpai-multimodal-contracts';
 import { Avatar2DRenderer, type FamilyMouthShape, type CanvasLike } from './avatar2DRenderer';
 import { mapCharacterExpressionToFamilyExpression } from './avatar2DExpressionAdapter';
+import { SpeechPerformanceCoordinator, type SimplePlaybackClock } from './speechPerformanceCoordinator';
 import {
   lerp,
   expLerp,
@@ -47,6 +48,12 @@ export interface RenderOrchestratorOptions {
   randomSource?: () => number;
 }
 
+// MM5: Simple clock implementation for SpeechPerformanceCoordinator
+class RenderOrchestratorClock implements SimplePlaybackClock {
+  constructor(private nowFn: () => number) {}
+  now(): number { return this.nowFn(); }
+}
+
 interface PerformanceTransitionState {
   // Expression interpolation (MM4)
   currentExpressionOpenY: number;
@@ -61,6 +68,10 @@ interface PerformanceTransitionState {
   // Blink variation (MM4)
   nextBlinkScheduleMs: number;
   blinkIntervalMs: number;
+
+  // Speech coordination (MM5)
+  speechCoordinator: SpeechPerformanceCoordinator;
+  speechClock: SimplePlaybackClock;
 }
 
 export class RenderOrchestrator {
@@ -72,22 +83,30 @@ export class RenderOrchestrator {
   public constructor(opts: RenderOrchestratorOptions) {
     this.profile = opts.profile;
     this.randomSource = opts.randomSource ?? (() => Math.random());
+    const nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
     this.renderer = new Avatar2DRenderer({
       canvas: opts.canvas,
       profile: opts.profile,
-      now: opts.now,
+      now: nowFn,
     });
+
+    // MM5: Initialize speech coordinator with clock
+    const speechClock = new RenderOrchestratorClock(nowFn);
 
     // MM4: Initialize temporal transition state
     this.transitionState = {
       currentExpressionOpenY: DEFAULT_EXPRESSION_OPEN_Y,
       targetExpressionOpenY: DEFAULT_EXPRESSION_OPEN_Y,
-      lastFrameTimeMs: opts.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : Date.now()),
+      lastFrameTimeMs: nowFn(),
       lastGesture: 'NONE',
       gestureActiveUntilMs: 0,
       gestureCooldownUntilMs: 0,
-      nextBlinkScheduleMs: (opts.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : Date.now())) + this.randomBlinkInterval(),
+      nextBlinkScheduleMs: nowFn() + this.randomBlinkInterval(),
       blinkIntervalMs: this.randomBlinkInterval(),
+      speechClock,
+      speechCoordinator: new SpeechPerformanceCoordinator({
+        clock: speechClock,
+      }),
     };
   }
 
@@ -101,6 +120,7 @@ export class RenderOrchestrator {
    *
    * MM4: Sets TARGET for expression interpolation, not immediate.
    * State changes are still immediate (state machine transitions).
+   * MM5: Begins utterance if speech_activity present.
    */
   public applyPerformanceFrame(frame: PerformanceFrame): void {
     // MM3-PATCH-001: Coherence validation integrated from fpai-multimodal-runtime
@@ -140,6 +160,13 @@ export class RenderOrchestrator {
       this.maybeApplyGesture('SMALL_NOD', now);
     }
 
+    // MM5: Speech coordination
+    // Begin/update utterance based on speech_activity
+    const turn_id = (frame as any).turn_id ?? 'default-turn';
+    const generation_id = (frame as any).generation_id ?? 'default-gen';
+    const speechActivity = frame.speech_activity === 'SPEAKING' ? 'SPEAKING' : 'SILENT';
+    this.transitionState.speechCoordinator.beginUtterance(turn_id, generation_id, speechActivity);
+
     // Note: posture, gaze detail are not currently rendered in Avatar2D
     // These are placeholders for future enhancement
     // In current implementation, they inform state and expression choice above
@@ -167,11 +194,13 @@ export class RenderOrchestrator {
 
   /**
    * MM4: Update temporal state (expression interpolation, blink timing).
+   * MM5: Update speech performance coordinator.
    *
    * Called every rAF frame by client.ts rafLoop.
    * Updates expression openY with exponential lerp toward target.
    * Auto-triggers blink at natural random intervals.
    * Updates animation state (gesture cleanup, blink/nod status).
+   * Updates mouth activity envelope based on playback state.
    */
   public tick(nowMs: number): void {
     const dt = nowMs - this.transitionState.lastFrameTimeMs;
@@ -197,6 +226,10 @@ export class RenderOrchestrator {
       this.renderer.triggerBlink();
       this.transitionState.nextBlinkScheduleMs = nowMs + this.randomBlinkInterval();
     }
+
+    // MM5: Update mouth activity envelope from speech coordinator
+    this.transitionState.speechCoordinator.update();
+    this.renderer.setMouthActivity(this.transitionState.speechCoordinator.getMouthActivity());
   }
 
   /**
@@ -235,6 +268,19 @@ export class RenderOrchestrator {
    */
   public render(): void {
     this.renderer.render();
+  }
+
+  // MM5: Playback event handlers (called by StreamingAudioPlayer)
+  public notifyPlaybackStarted(turn_id: string, generation_id: string, scheduledStartMs: number): void {
+    this.transitionState.speechCoordinator.onPlaybackStarted(turn_id, generation_id, scheduledStartMs);
+  }
+
+  public notifyPlaybackEnded(turn_id: string, generation_id: string): void {
+    this.transitionState.speechCoordinator.onPlaybackEnded(turn_id, generation_id);
+  }
+
+  public notifyUtteranceInterrupted(): void {
+    this.transitionState.speechCoordinator.cancelUtterance();
   }
 
   /**

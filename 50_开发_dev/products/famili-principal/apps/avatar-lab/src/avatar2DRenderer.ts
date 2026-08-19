@@ -103,6 +103,7 @@ export interface Avatar2DFrameSnapshot {
   blink_phase: number;    // 0..1, 1 = 完全闭合
   nod_phase: number;      // 0..1
   expression_open_y: number;  // MM4: Current interpolated eye openY (reflects temporal state)
+  mouth_activity: number;  // MM5: Current mouth envelope (0..1)
   frame_index: number;
 }
 
@@ -177,6 +178,9 @@ export class Avatar2DRenderer {
   // MM4: Expression openY interpolation override (from RenderOrchestrator's temporal lerp)
   private expressionOpenYOverride: number | null = null;
 
+  // MM5: Mouth activity envelope (0..1) from SpeechPerformanceCoordinator
+  private mouthActivity: number = 0;
+
   public constructor(opts: Avatar2DRendererOptions) {
     this.canvas = opts.canvas;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
@@ -194,6 +198,11 @@ export class Avatar2DRenderer {
   /** MM4: Set interpolated eye openY from RenderOrchestrator's temporal lerp. */
   public setExpressionOpenY(openY: number): void {
     this.expressionOpenYOverride = openY;
+  }
+
+  /** MM5: Set mouth activity envelope from SpeechPerformanceCoordinator. */
+  public setMouthActivity(activity: number): void {
+    this.mouthActivity = Math.max(0, Math.min(1, activity));
   }
 
   public triggerBlink(): void {
@@ -250,6 +259,7 @@ export class Avatar2DRenderer {
       blink_phase: this.computeBlinkPhase(),
       nod_phase: this.computeNodPhase(),
       expression_open_y: this.expressionOpenYOverride ?? EXPRESSION_EYE[this.expression].openY,
+      mouth_activity: this.mouthActivity,
       frame_index: this.frameIndex,
     };
   }
@@ -315,7 +325,7 @@ export class Avatar2DRenderer {
     }
 
     // 嘴巴 (根据 MouthShape)
-    this.drawMouth(ctx, 0, headR * 0.30, headR, visualStyle);
+    this.drawMouth(ctx, 0, headR * 0.30, headR, visualStyle, this.mouthActivity);
 
     ctx.restore();
 
@@ -341,57 +351,63 @@ export class Avatar2DRenderer {
     return this.snapshot();
   }
 
-  private drawMouth(ctx: CanvasLikeContext, x: number, y: number, headR: number, visualStyle: VisualStyleConfig): void {
+  private drawMouth(ctx: CanvasLikeContext, x: number, y: number, headR: number, visualStyle: VisualStyleConfig, mouthActivity: number): void {
     ctx.fillStyle = visualStyle.mouthColor; // PATCH-004: Identity-driven mouth color
     ctx.strokeStyle = visualStyle.mouthColor;
     ctx.lineWidth = 2;
+
+    // MM5: Scale mouth openness based on envelope (0..1)
+    // At mouthActivity=0, draw minimal (REST). At mouthActivity=1, draw full shape.
+    // This creates smooth blending between semantic MouthShape and temporal envelope.
+    const activity = Math.max(0, Math.min(1, mouthActivity));
+
     switch (this.mouthShape) {
       case 'REST':
       case 'CLOSED': {
         ctx.beginPath();
         ctx.moveTo(x - headR * 0.20, y);
-        ctx.quadraticCurveTo(x, y + headR * 0.04, x + headR * 0.20, y);
+        ctx.quadraticCurveTo(x, y + headR * 0.04 * activity, x + headR * 0.20, y);
         ctx.stroke();
         break;
       }
       case 'OPEN_SMALL': {
         ctx.beginPath();
-        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.10, headR * 0.06, 0, 0, Math.PI * 2);
-        else ctx.arc(x, y, headR * 0.08, 0, Math.PI * 2);
+        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.10 * activity, headR * 0.06 * activity, 0, 0, Math.PI * 2);
+        else ctx.arc(x, y, headR * 0.08 * activity, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
       case 'OPEN_MEDIUM': {
         ctx.beginPath();
-        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.16, headR * 0.10, 0, 0, Math.PI * 2);
-        else ctx.arc(x, y, headR * 0.13, 0, Math.PI * 2);
+        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.16 * activity, headR * 0.10 * activity, 0, 0, Math.PI * 2);
+        else ctx.arc(x, y, headR * 0.13 * activity, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
       case 'OPEN_WIDE': {
         ctx.beginPath();
-        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.22, headR * 0.16, 0, 0, Math.PI * 2);
-        else ctx.arc(x, y, headR * 0.19, 0, Math.PI * 2);
+        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.22 * activity, headR * 0.16 * activity, 0, 0, Math.PI * 2);
+        else ctx.arc(x, y, headR * 0.19 * activity, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
       case 'ROUND': {
         ctx.beginPath();
-        ctx.arc(x, y, headR * 0.10, 0, Math.PI * 2);
+        ctx.arc(x, y, headR * 0.10 * activity, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
       case 'NARROW': {
         ctx.beginPath();
-        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.06, headR * 0.10, 0, 0, Math.PI * 2);
-        else ctx.arc(x, y, headR * 0.08, 0, Math.PI * 2);
+        if (ctx.ellipse) ctx.ellipse(x, y, headR * 0.06 * activity, headR * 0.10 * activity, 0, 0, Math.PI * 2);
+        else ctx.arc(x, y, headR * 0.08 * activity, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
       case 'SMILE_SPEECH': {
         ctx.beginPath();
-        ctx.moveTo(x - headR * 0.24, y - headR * 0.02);
-        ctx.quadraticCurveTo(x, y + headR * 0.10, x + headR * 0.24, y - headR * 0.02);
+        ctx.moveTo(x - headR * 0.24, y - headR * 0.02 * activity);
+        ctx.quadraticCurveTo(x, y + headR * 0.10 * activity, x + headR * 0.24, y - headR * 0.02 * activity);
         ctx.stroke();
         break;
       }

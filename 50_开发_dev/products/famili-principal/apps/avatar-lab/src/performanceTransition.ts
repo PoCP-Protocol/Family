@@ -15,18 +15,15 @@ export function expLerp(from: number, to: number, dt: number, tau: number): numb
 
 // Expression eye openness mapping (CharacterExpression → semantic eye openY)
 // MM3 defines expressions; MM4 adds temporal interpolation for smooth transitions
+// MUST match EXPRESSION_EYE in avatar2DRenderer.ts
 export const EXPRESSION_EYE_OPENYS: Record<string, number> = {
   'LISTENING': 0.55,
   'THINKING': 0.48,
-  'CALM_WARM': 0.60,
-  'CALM_SERIOUS': 0.52,
-  'SOFT_ENCOURAGING': 0.62,
-  'HAPPY': 0.70,
-  'FOCUSED': 0.45,
-  'CONFUSED': 0.55,
-  'UNCERTAIN': 0.50,
-  'CONCERNED': 0.48,
-  'EMPATHETIC': 0.58,
+  'CALM_WARM': 0.55,        // ✓ fixed: was 0.60, matches EXPRESSION_EYE
+  'CALM_SERIOUS': 0.35,     // ✓ fixed: was 0.52, matches EXPRESSION_EYE
+  'GENTLE_ENCOURAGING': 0.60,
+  'CALM_CAUTIOUS': 0.42,
+  'WARM_FIRM': 0.48,
 };
 
 export const DEFAULT_EXPRESSION_OPEN_Y = 0.55; // LISTENING default
