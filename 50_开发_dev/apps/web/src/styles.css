@@ -3206,3 +3206,17 @@ h3 {
 .by-family-sharing-draft p { margin: 8px 0; color: #4c5f7d; line-height: 1.65; }
 .by-family-sharing-draft .by-sharing-draft-status { padding: 10px 12px; border-radius: 12px; background: #eef5ff; color: #375988; }
 .by-family-sharing-draft > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+
+.by-family-expression-notes {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d8eadf;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f5fbf7, #ffffff);
+  box-shadow: 0 8px 22px rgba(46, 123, 78, .08);
+}
+.by-family-expression-notes small { color: #4f8565; font-weight: 700; }
+.by-family-expression-notes h2 { margin: 7px 0 10px; font-size: 19px; color: #1f5a3d; }
+.by-family-expression-notes p { margin: 8px 0; color: #48665a; line-height: 1.65; }
+.by-family-expression-notes .by-expression-notes-boundary { padding: 10px 12px; border-radius: 12px; background: #ebf7ef; color: #397150; }
+.by-family-expression-notes > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }

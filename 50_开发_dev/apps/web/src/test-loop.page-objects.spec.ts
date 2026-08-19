@@ -705,13 +705,13 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock.mock.calls.every(([, init]) => !init || String((init as RequestInit).method || 'GET') === 'GET')).toBe(true);
   });
 
-  it('routes the UI-25 family experience feed to a private UI-26 sharing draft without publishing or interaction', async () => {
+  it('routes the UI-25 family experience feed through a private UI-26 sharing draft into UI-28 family expression notes without publishing or interaction', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => projection })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'sharing-draft-fixture', status: 'CONFIRMED', external_effect: false, text_equivalent: '已记下家庭想法。' }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div'); document.body.append(root);
-    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'parent-community' });
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'parent-community' });
     await tick(); await tick();
     root.querySelector<HTMLButtonElement>('[data-by="ui25-open-sharing-draft"]')?.click();
     await tick();
@@ -725,9 +725,21 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     const [, request] = fetchMock.mock.calls[1];
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
     expect(JSON.parse(String((request as RequestInit).body))).toMatchObject({ page_id: 'UI-26', action: 'PUBLISH_TEMPLATE', fixture_ref: 'POST_TEMPLATE_GROWTH_CARD' });
-    root.querySelector<HTMLButtonElement>('[data-by="ui26-return-exchange-feed"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-by="ui26-open-expression-notes"]')?.click();
+    await tick();
+    const notes = root.querySelector('[data-ui28-expression-notes-state="SAVED"]');
+    expect(notes?.textContent).toContain('这一段家庭想法已经留好');
+    expect(notes?.textContent).toContain('只留给家庭');
+    expect(notes?.textContent).not.toMatch(/作者|儿童|照片|媒体|评论|回复|点赞|下载|通知|支付|订单|审核|DEV|SYNTHETIC|积分|等级|奖励|公开/i);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    root.querySelector<HTMLButtonElement>('[data-by="ui28-return-exchange-feed"]')?.click();
     await tick();
     expect(root.querySelector('[data-ui25-exchange-feed-state="READY"]')).not.toBeNull();
+    app.navigate('my-community');
+    await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui28-open-growth-plan"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
   });
 
   it('routes the UI-17 family self-record only to family review or today action', async () => {
