@@ -285,6 +285,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
       app.navigate(page);
       if (surface === 'UI-04') expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
       else if (surface === 'UI-05') expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
+      else if (surface === 'UI-06') expect(root.querySelector('[aria-label*="陪跑服务"]')).not.toBeNull();
       else if (surface === 'UI-08') expect(root.querySelector('[aria-label*="家庭成长报告"]')).not.toBeNull();
       else expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
@@ -480,6 +481,33 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(root.querySelector('[role="img"][aria-label*="家庭成长报告"]')).not.toBeNull();
     expect(root.querySelector('[data-ui08-review-state="ACTION_RECORDED"]')?.textContent).toContain('先不用急着判断效果');
     expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执|总分|排名|诊断/i);
+  });
+
+  it('shows private UI-06 companion context after a recorded action and routes only to review or today action', async () => {
+    const companionProjection = {
+      ...projection,
+      recent_flow_events: [{ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }],
+      cards: projection.cards.map((card) => card.surface === 'UI-06'
+        ? { ...card, companion_progress: { state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', headline: '本周，已经留下一次陪伴', confirmation: '今天的家庭行动已记录。每个家庭都可以按自己的节奏继续。', pace_hint: '如果还想再试试，可以从倾听开始；不合适时，先停一停也没关系。', review_route: 'growth-report', action_route: 'growth-daily-task', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME' } }
+        : card.surface === 'UI-08'
+          ? { ...card, action_review: { state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', headline: '把这一次的陪伴留在心里', confirmation: '今天的家庭行动已记录。先不用急着判断效果。', reflection_prompt: '可以想想：在倾听时，你注意到了什么？', next_step: '下次可以再试一次。', plan_route: 'core-plan', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME' } }
+          : card),
+    };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => companionProjection }));
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-community' });
+    await tick(); await tick();
+    expect(root.querySelector('[data-ui06-companion-state="ACTION_RECORDED"]')?.textContent).toContain('每个家庭都可以按自己的节奏继续');
+    expect(root.querySelector('[data-ui06-companion-state="ACTION_RECORDED"]')?.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执|完成度|评分|排名|诊断/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui06-open-family-review"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui08-review-state="ACTION_RECORDED"]')).not.toBeNull();
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-community' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui06-continue-daily-action"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label*="今日成长任务"]')).not.toBeNull();
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {

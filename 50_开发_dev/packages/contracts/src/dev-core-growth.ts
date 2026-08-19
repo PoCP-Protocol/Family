@@ -80,6 +80,17 @@ export interface DevFamilyGrowthReportDraft {
   plan_link_state: 'READY_TO_VIEW' | 'VIEWED';
 }
 
+export interface DevFamilyCompanionProgress {
+  state: 'ACTION_RECORDED';
+  focus: DevGrowthFocus;
+  headline: string;
+  confirmation: string;
+  pace_hint: string;
+  review_route: 'growth-report';
+  action_route: 'growth-daily-task';
+  fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME';
+}
+
 export interface DevFamilyActionReview {
   state: 'ACTION_RECORDED';
   focus: DevGrowthFocus;
@@ -143,6 +154,8 @@ export interface DevCoreGrowthCard {
   plan_preview?: DevGrowthPlanPreview;
   /** Present on UI-08 after an authenticated UI-09 action has been recorded. */
   action_review?: DevFamilyActionReview;
+  /** Present on UI-06 after an authenticated UI-09 action has been recorded. */
+  companion_progress?: DevFamilyCompanionProgress;
 }
 
 export interface DevCoreGrowthProjection {

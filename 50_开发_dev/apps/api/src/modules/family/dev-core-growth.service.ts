@@ -6,6 +6,7 @@ import {
   type DevCoreGrowthProjection,
   type DevCoreGrowthSurface,
   type DevFamilyActionReview,
+  type DevFamilyCompanionProgress,
   type DevFamilyGrowthReportDraft,
   type DevGrowthFocus,
   type DevGrowthPlanPreview,
@@ -93,6 +94,7 @@ export class DevCoreGrowthService {
     const reportDraft = buildReportDraft(focus, planPreviewed);
     const planPreview = buildPlanPreview(focus, planPreviewed, weeklyActionOpened);
     const actionReview = actionReviewReady ? buildFamilyActionReview(focus) : undefined;
+    const companionProgress = actionReviewReady ? buildFamilyCompanionProgress(focus) : undefined;
 
     return [
       {
@@ -128,9 +130,10 @@ export class DevCoreGrowthService {
       {
         surface: 'UI-06', kind: 'COMPANION_PROGRESS', title: '90 天陪跑', state: 'READ_ONLY',
         fact_boundary: 'ACTION_IS_NOT_OUTCOME', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: '展示任务节奏与回顾入口；check-in 只代表行动记录，不能证明成长效果。',
-        next_hint: '今日行动由 UI-09 的 CompleteGrowthAction 受控完成。',
+        summary: '展示家庭私有的行动节奏与回顾入口；行动记录不能证明成长效果。',
+        next_hint: '可以按家庭节奏继续今天的行动，或先回看这一次陪伴。',
         command: { name: 'READ_SYNTHETIC_COMPANION_PROGRESS', mode: 'READ_ONLY' },
+        ...(companionProgress ? { companion_progress: companionProgress } : {}),
       },
       {
         surface: 'UI-07', kind: 'MEMBERSHIP_READ', title: '我的成长服务', state: 'READ_ONLY',
@@ -259,6 +262,20 @@ function buildReportDraft(focus: DevGrowthFocus, planPreviewed: boolean): DevFam
       fallback: content.fallback,
     },
     plan_link_state: planPreviewed ? 'VIEWED' : 'READY_TO_VIEW',
+  };
+}
+
+function buildFamilyCompanionProgress(focus: DevGrowthFocus): DevFamilyCompanionProgress {
+  const content = GROWTH_FOCUS_CONTENT[focus];
+  return {
+    state: 'ACTION_RECORDED',
+    focus,
+    headline: '本周，已经留下一次陪伴',
+    confirmation: '今天的家庭行动已记录。每个家庭都可以按自己的节奏继续。',
+    pace_hint: `如果还想再试试，可以从“${content.action}”开始；不合适时，先停一停也没关系。`,
+    review_route: 'growth-report',
+    action_route: 'growth-daily-task',
+    fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
   };
 }
 
