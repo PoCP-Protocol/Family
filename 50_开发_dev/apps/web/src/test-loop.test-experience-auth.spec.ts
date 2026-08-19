@@ -258,3 +258,81 @@ describe('UI-23 authenticated activity interest draft', () => {
     expect(root.textContent).not.toMatch(/报名已确认|已占位|支付成功|活动通知已发送/);
   });
 });
+
+
+describe('UI-25 to UI-26 authenticated private sharing draft', () => {
+  it('reads the family exchange feed and records a bearer-only private draft without public publication or notification', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          family_id: 'family-sharing-auth-scope',
+          data_source: 'SYNTHETIC_DEV_ONLY',
+          external_effect_adapter: 'NOOP_NOT_INVOKED',
+          cards: [{
+            surface: 'UI-25',
+            state: 'READY',
+            title: '家庭成长交流',
+            loop: 'COMMUNITY_CONTENT_LOOP',
+            business_capability: 'family_learning_exchange_feed',
+            primary_objects: ['Family'],
+            command: { name: 'READ_PRIVATE_EXCHANGE_FEED' },
+            family_learning_exchange_feed: {
+              state: 'READY',
+              headline: '慢慢读一读家庭经验',
+              introduction: '这些内容只供家庭参考。',
+              entries: [{ exchange_ref: 'EXCHANGE_DIALOGUE', title: '给一次对话留一点停顿', summary: '先听一听。', topic: '亲子沟通' }],
+            },
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          operation_id: 'sharing-auth-fixture',
+          page_id: 'UI-26',
+          action: 'PUBLISH_TEMPLATE',
+          operation_kind: 'COMMUNITY_TEMPLATE_PUBLICATION',
+          fixture_ref: 'POST_TEMPLATE_GROWTH_CARD',
+          fixture_version: 'family-34-page-test-experience.v1',
+          status: 'CONFIRMED',
+          environment: 'DEV',
+          source: 'TEST_FIXTURE',
+          external_effect: false,
+          text_equivalent: '已记录发布回执。本次不会向任何家庭、社区或外部服务发布内容。',
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-sharing-auth-scope',
+      authToken: 'family-sharing-auth-bearer',
+      platformSurfacesApiMode: 'synthetic-api',
+      initialPage: 'parent-community',
+    });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [projectionUrl, projectionRequest] = fetchMock.mock.calls[0];
+    expect(projectionUrl).toBe('http://family-api.test/families/family-sharing-auth-scope/dev/platform-surfaces');
+    expect(projectionRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((projectionRequest.headers as Record<string, string>).authorization).toBe('Bearer family-sharing-auth-bearer');
+    root.querySelector<HTMLButtonElement>('[data-by="ui25-open-sharing-draft"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-by="ui26-save-sharing-draft"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [operationUrl, operationRequest] = fetchMock.mock.calls[1];
+    expect(operationUrl).toBe('http://family-api.test/families/family-sharing-auth-scope/orchestration/test-loop/experience/operations');
+    expect(operationRequest).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((operationRequest.headers as Record<string, string>).authorization).toBe('Bearer family-sharing-auth-bearer');
+    expect(JSON.parse(String(operationRequest.body))).toMatchObject({
+      page_id: 'UI-26', action: 'PUBLISH_TEMPLATE', fixture_ref: 'POST_TEMPLATE_GROWTH_CARD', fixture_version: 'family-34-page-test-experience.v1',
+    });
+    expect(root.querySelector('[data-ui26-sharing-draft-state="SAVED"]')?.textContent).toContain('家庭想法已记下');
+    expect(root.textContent).not.toMatch(/已公开发布|评论已开启|外部通知已发送|支付成功/);
+  });
+});
