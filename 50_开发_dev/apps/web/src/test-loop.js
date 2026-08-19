@@ -589,8 +589,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const correlationId = `family-web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     try {
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/llm/draft`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId },
+        method: 'POST', credentials: config.authToken ? 'omit' : 'include',
+        headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
         body: JSON.stringify({ page_id: pageId }),
       });
       const payload = await response.json();

@@ -480,3 +480,32 @@ describe('UI-33 to UI-34 authenticated family-private records', () => {
     expect(root.textContent).not.toMatch(/预约已确认|服务已完成|状态已变更|外部通知已发送/);
   });
 });
+
+
+describe('authenticated controlled explanation gateway', () => {
+  it('uses the account bearer without an inherited cookie for the UI-02 fallback explanation and only accepts a no-op text equivalent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        decision: 'NO_ACTION',
+        text_equivalent: '可以先从一件轻松的小行动开始。',
+        audit: { trace_id: 'explanation-noop-trace', model_gateway_status: 'NOOP_NOT_INVOKED' },
+        external_effect: false,
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-explanation-auth-scope', authToken: 'family-explanation-auth-bearer', initialPage: 'growth-assessment' });
+    root.querySelector<HTMLButtonElement>('[data-by="ui02-start-assessment"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-explanation-auth-scope/orchestration/test-loop/llm/draft');
+    expect(request).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-explanation-auth-bearer');
+    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-02' });
+    expect(root.textContent).not.toMatch(/模型已调用|自动诊断|核心状态已写入|外部通知已发送/);
+  });
+});
