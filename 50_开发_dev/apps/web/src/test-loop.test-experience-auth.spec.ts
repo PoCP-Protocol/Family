@@ -612,3 +612,44 @@ describe('UI-01 to UI-02 family assessment entry', () => {
     expect(root.querySelector('[data-ui-id="UI-03"]')).toBeNull();
   });
 });
+
+
+describe('UI-02 to UI-03 authenticated growth start and explanation', () => {
+  it('records a bounded assessment start with the account bearer and renders a reference explanation without diagnosis or model output', async () => {
+    const familyId = 'family-ui02-ui03-auth';
+    let started = false;
+    const fetchMock = vi.fn().mockImplementation(async (url: string, request: RequestInit = {}) => {
+      const endpoint = String(url);
+      if (endpoint.endsWith('/dev/core-growth')) {
+        return {
+          ok: true,
+          json: async () => ({
+            family_id: familyId,
+            data_source: 'SYNTHETIC_DEV_ONLY',
+            cards: [],
+            recent_flow_events: started ? [{ ui_id: 'UI-02', selection: 'PARENT_CHILD_COMMUNICATION', event_state: 'DEV_CONFIRMED' }] : [],
+          }),
+        };
+      }
+      expect(endpoint).toBe(`http://family-api.test/families/${familyId}/dev/flow-events`);
+      expect(request).toMatchObject({ method: 'POST', credentials: 'omit' });
+      expect(request.headers).toMatchObject({ authorization: 'Bearer bearer-ui02-ui03', 'idempotency-key': expect.any(String) });
+      expect(JSON.parse(String(request.body))).toEqual({ ui_id: 'UI-02', command: 'START_SYNTHETIC_ASSESSMENT_DRAFT', selection: 'PARENT_CHILD_COMMUNICATION' });
+      started = true;
+      return { ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', external_effect: false, data_source: 'SYNTHETIC_DEV_ONLY' }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, authToken: 'bearer-ui02-ui03', coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-assessment' });
+    await tick(); await tick();
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui02-start-assessment"]')?.click();
+    await tick(); await tick(); await tick();
+
+    expect(fetchMock.mock.calls.filter(([candidateUrl]) => String(candidateUrl).endsWith('/dev/core-growth'))).toHaveLength(2);
+    expect(root.dataset.familyCoreGrowthStatus).toBe('READY');
+    expect(root.querySelector('[data-ui03-explanation-state="READY"]')?.textContent).toContain('PARENT_CHILD_COMMUNICATION');
+    expect(root.textContent).not.toMatch(/诊断|模型已调用|成长结果已证实|排名|总分/);
+  });
+});
