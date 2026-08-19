@@ -2970,3 +2970,33 @@ h3 {
 .by-family-service-scope > div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
 .by-family-service-scope .by-btn { min-height: 40px; padding: 8px 6px; font-size: 13px; }
 @media (max-width: 360px) { .by-family-service-scope > div { grid-template-columns: 1fr; } }
+
+/* UI-20：家庭支持说明仅承接已读取主题摘要，位于原始教师详情视觉之后。 */
+.by-family-support-explanation {
+  margin: 14px 16px 20px;
+  padding: 16px;
+  border: 1px solid #d8e8f8;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 5px 16px rgba(24, 92, 156, 0.09);
+  color: #173a5d;
+}
+.by-family-support-explanation small {
+  color: #4f7699;
+  font-size: 12px;
+}
+.by-family-support-explanation h2 {
+  margin: 6px 0 10px;
+  font-size: 19px;
+  line-height: 1.35;
+  color: #123d68;
+}
+.by-family-support-explanation p {
+  margin: 8px 0;
+  color: #456a89;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.by-family-support-explanation .by-btn {
+  margin-top: 8px;
+}

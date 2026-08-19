@@ -35,9 +35,9 @@ function availableAgeBands(projection) {
 }
 
 /**
- * Renders UI-19 as an admitted teacher-supply read projection. No item opens UI-20 or creates a booking.
+ * Renders UI-19 as a family support-topic read projection. A selected topic can open UI-20 using only the already-read summary; no booking is created.
  * @param {HTMLElement} root
- * @param {{ apiBaseUrl: string, familyId: string, fetchImpl?: typeof fetch }} config
+ * @param {{ apiBaseUrl: string, familyId: string, fetchImpl?: typeof fetch, onOpenTopic?: (topic: any) => void }} config
  */
 export function mountTeacherSupplyView(root, config) {
   /** @type {TeacherSupplyFilters} */
@@ -67,6 +67,7 @@ export function mountTeacherSupplyView(root, config) {
       <div><strong style="font-size:16px">${text(item.title)}</strong><p style="margin:4px 0;color:#315b84;font-size:14px">这是一个可以慢慢了解的家庭支持方向。</p></div>
       <p style="margin:8px 0 0;color:#4c6987;font-size:13px">${item.service_type ? `支持主题：${text(item.service_type)} · ` : ''}${item.age_band ? `适龄参考：${text(item.age_band)}` : '可按家庭当前情境了解'}</p>
       <p style="margin:6px 0 0;color:#315b84;font-size:13px">${item.availability_status === 'AVAILABLE' ? `可以了解的方式：${channelText(item.next_available_channel)} · ${text(timeText(item.next_available_at))}` : '目前暂无安排信息，仍可先了解这个支持方向。'}</p>
+      <button type="button" class="by-btn by-btn-ghost" data-ui19-open-topic="${text(item.service_offering_ref)}">了解这个主题</button>
     </article>`).join('');
   }
 
@@ -113,6 +114,10 @@ export function mountTeacherSupplyView(root, config) {
       filters = { ...filters, availableOnly: /** @type {HTMLInputElement} */ (event.currentTarget).checked };
       void reload();
     });
+    root.querySelectorAll('[data-ui19-open-topic]').forEach((element) => element.addEventListener('click', () => {
+      const selected = projection?.offerings.find((item) => item.service_offering_ref === element.getAttribute('data-ui19-open-topic'));
+      if (selected) config.onOpenTopic?.(selected);
+    }));
   }
 
   void reload();

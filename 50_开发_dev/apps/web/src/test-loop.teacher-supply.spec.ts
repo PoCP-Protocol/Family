@@ -60,6 +60,19 @@ describe('UI-19 teacher supply route', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('page_id=UI-19&service_type=');
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain('available_only=true');
+
+    root.querySelector<HTMLButtonElement>('[data-ui19-open-topic="SERVICE_COMMUNICATION"]')?.click();
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const explanation = root.querySelector('[data-ui20-support-explanation="READY"]');
+    expect(explanation?.textContent).toContain('亲子沟通服务');
+    expect(explanation?.textContent).toContain('支持主题：亲子沟通');
+    expect(explanation?.textContent).toContain('可以了解的方式：线上交流');
+    expect(explanation?.textContent).not.toMatch(/法咪莉校长|推荐|排名|准入|资格|评价|预约|联系|支付|DEV|SYNTHETIC|contract/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui20-return-support-topics"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('renders a normal boundary message without posting when consent or authorization blocks the projection', async () => {
