@@ -166,6 +166,7 @@ export class JourneyPlanService {
          where plan_id = $1`,
         [request.plan_id, meta.occurredAt],
       );
+      await createJourneyPlanActions(client, plan, meta.occurredAt);
       const updated = await getPlanForUpdate(client, request.family_id, request.plan_id);
       const response: ConfirmJourneyPlanResponse = { plan: await hydratePlan(client, updated) };
       await insertAuditAndOutbox(client, CONFIRM_ACTION, 'JourneyPlanConfirmed', request.family_id, request.plan_id, request.idempotency_key, meta, response);
@@ -330,6 +331,64 @@ async function insertPhases(client: pg.PoolClient, planId: string, priorityDimen
       `insert into family_journey_plan_phases(plan_id, phase, start_day, end_day, status, focus_dimensions, review_due_day, boundary)
        values ($1, $2, $3, $4, 'PENDING', $5::jsonb, $6, $7)`,
       [planId, definition.phase, definition.start_day, definition.end_day, JSON.stringify(focus), definition.review_due_day, PHASE_BOUNDARY],
+    );
+  }
+}
+
+const PHASE_ACTION_TEMPLATES: Record<JourneyPlanPhase, readonly string[]> = {
+  SEE: [
+    '留出十分钟，先听孩子完整说完再回应。',
+    '用一句话复述你听到的内容，确认是否理解。',
+    '在一个自然时刻提出一个开放问题，不急着给建议。',
+    '记录一次互动中的感受；这只是家庭视角，不是结果判断。',
+  ],
+  PARENT_FIRST: [
+    '在回应前暂停三秒，先辨认自己想立刻解决的问题。',
+    '选择一次沟通，先表达理解再提出自己的看法。',
+    '把一条指令改成一个可以共同讨论的问题。',
+    '回看今天一次沟通，记录父母可继续练习的一个小动作。',
+  ],
+  CO_CREATE: [
+    '与孩子共同选定一件今天可尝试的小事。',
+    '在家庭互动中轮流表达，每个人都先说完再回应。',
+    '把一个分歧改写为双方都能理解的共同约定。',
+    '回顾共同尝试的过程，只记录观察与感受，不评价效果。',
+  ],
+  STABILIZE: [
+    '沿用一项已商定的沟通约定，并观察是否适合今天的情境。',
+    '为一次顺利互动留出肯定和感谢的表达。',
+    '遇到不顺利时，回到倾听、复述和共同选择这三个基础动作。',
+    '记录本周想保留或调整的一项家庭做法，供阶段复盘讨论。',
+  ],
+};
+
+function phaseForDay(dayIndex: number): JourneyPlanPhase {
+  return PHASE_DEFINITIONS.find((phase) => dayIndex >= phase.start_day && dayIndex <= phase.end_day)?.phase ?? 'STABILIZE';
+}
+
+async function createJourneyPlanActions(client: pg.PoolClient, plan: JourneyPlanRow, occurredAt: string): Promise<void> {
+  const existing = await client.query<{ count: string }>(
+    `select count(*)::text as count from growth_actions where journey_plan_id = $1`,
+    [plan.plan_id],
+  );
+  if (Number(existing.rows[0]?.count ?? '0') > 0) return;
+
+  const priority = await getPriorityDimension(client, plan.family_id, plan.onboarding_id, plan.priority_id);
+  for (let dayIndex = 1; dayIndex <= 90; dayIndex += 1) {
+    const phase = phaseForDay(dayIndex);
+    const templates = PHASE_ACTION_TEMPLATES[phase];
+    const assignment = templates[(dayIndex - 1) % templates.length];
+    await client.query(
+      `insert into growth_actions(
+         family_id, journey_id, intervention_id, dimension_id, action_type, instruction, status,
+         assigned_at, onboarding_id, priority_id, journey_plan_id, journey_phase, day_index,
+         assignment_text, due_date, completion_status, reflection, reflection_boundary, boundary
+       ) values (
+         $1, $2, null, $3, 'JOURNEY_90_DAY_PRACTICE', $4, 'PENDING',
+         $5, $2, $6, $7, $8, $9::smallint, $4,
+         ($5::timestamptz)::date + ($9::integer - 1), null, null, null, 'ACTION_IS_NOT_OUTCOME'
+       )`,
+      [plan.family_id, plan.onboarding_id, priority.dimension_id, assignment, occurredAt, plan.priority_id, plan.plan_id, phase, dayIndex],
     );
   }
 }

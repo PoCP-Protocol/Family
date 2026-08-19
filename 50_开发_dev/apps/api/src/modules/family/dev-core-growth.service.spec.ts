@@ -149,4 +149,37 @@ describe('DevCoreGrowthService', () => {
   it('rejects unsupported surfaces rather than creating an implicit dynamic route', () => {
     expect(() => service.acknowledgeNoop(familyId, 'UI-99' as any, 'UNKNOWN')).toThrow('unsupported_dev_core_growth_surface');
   });
+
+  it('includes a completed 90-day Journey action in UI-08 family-private review readback without asserting an outcome', () => {
+    const readback = service.getFamilyReviewReadback(
+      familyId,
+      '11111111-2222-4333-8444-555555555555',
+      {},
+      [],
+      [{
+        action_id: 'journey-action-day-1',
+        journey_plan_id: 'journey-plan-90',
+        journey_phase: 'SEE',
+        day_index: 1,
+        completed_at: '2026-08-19T12:00:00.000Z',
+        boundary: 'JOURNEY_ACTION_IS_PROCESS_NOT_OUTCOME',
+      }],
+    );
+    expect(readback).toMatchObject({
+      visibility: 'FAMILY_PRIVATE',
+      state: 'ACTION_RECORDED',
+      fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
+      recorded_actions: [expect.objectContaining({
+        receipt_id: 'journey-action-day-1',
+        source_ui: 'UI-09',
+        kind: 'JOURNEY_ACTION_RECEIPT',
+        journey_plan_id: 'journey-plan-90',
+        journey_phase: 'SEE',
+        day_index: 1,
+        boundary: 'JOURNEY_ACTION_IS_PROCESS_NOT_OUTCOME',
+      })],
+    });
+    expect(JSON.stringify(readback)).not.toContain('OutcomeEvidenceCreated');
+    expect(JSON.stringify(readback)).not.toContain('diagnosis');
+  });
 });

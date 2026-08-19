@@ -29,10 +29,10 @@ export async function cleanFamilyCoreTables(pool: pg.Pool): Promise<void> {
   await pool.query('delete from next_step_decisions');
   await pool.query('delete from growth_reviews');
   await pool.query('delete from outcome_observations');
-  // 90 天 Journey Plan（迁移 0035）引用 growth_priorities/growth_journeys；子表必须先清，兼容旧测试库。
+  // 90 天 Journey Plan（迁移 0035/0036）引用 growth_priorities/growth_journeys，行动又引用计划；按 children-first 顺序清理以兼容旧测试库。
+  await pool.query('delete from growth_actions');
   await pool.query("do $$ begin if to_regclass('public.family_journey_plan_phases') is not null then delete from family_journey_plan_phases; end if; end $$;");
   await pool.query("do $$ begin if to_regclass('public.family_journey_plans') is not null then delete from family_journey_plans; end if; end $$;");
-  await pool.query('delete from growth_actions');
   await pool.query('delete from intervention_episodes');
   await pool.query('delete from growth_priorities');
   await pool.query('delete from growth_events');

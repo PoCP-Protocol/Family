@@ -14,6 +14,11 @@ export interface TodayTaskProjection {
   task_id: string;
   family_id: string;
   day_index: GrowthActionDto['day_index'];
+  /** Optional execution linkage for an active 90-day family plan; absent for legacy 7-day actions. */
+  journey_plan_id: string | null;
+  /** Schedule phase, not a child state, diagnosis, score, or outcome. */
+  journey_phase: GrowthActionDto['journey_phase'] | null;
+  journey_execution_boundary: 'JOURNEY_ACTION_IS_PROCESS_NOT_OUTCOME' | null;
   assignment_text: string;
   due_date: string;
   task_state: FamilyTodayTaskState;
@@ -96,6 +101,9 @@ export function projectTodayTask(action: GrowthActionDto, asOf: string): TodayTa
     task_id: action.action_id,
     family_id: action.family_id,
     day_index: action.day_index,
+    journey_plan_id: action.journey_plan_id ?? null,
+    journey_phase: action.journey_phase ?? null,
+    journey_execution_boundary: action.journey_plan_id ? 'JOURNEY_ACTION_IS_PROCESS_NOT_OUTCOME' : null,
     assignment_text: action.assignment_text,
     due_date: action.due_date,
     task_state: checkedIn ? 'CHECKED_IN' : 'NOT_STARTED',

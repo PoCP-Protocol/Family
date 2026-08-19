@@ -228,14 +228,13 @@ export class DevCoreGrowthService {
     onboardingId: string,
     insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
     flowEvents: readonly { event_id: string; ui_id: string; command: string; created_at: string; selection?: string }[] = [],
+    journeyActions: readonly { action_id: string; journey_plan_id: string; journey_phase: string; day_index: number; completed_at: string; boundary: 'JOURNEY_ACTION_IS_PROCESS_NOT_OUTCOME' }[] = [],
   ) {
     const projection = this.getProjection(familyId, flowEvents);
     const review = projection.cards.find((item) => item.surface === 'UI-08')?.action_review;
     const plan = this.getPlanPreview(familyId, onboardingId, insight, flowEvents);
-    const recordedActions = flowEvents
+    const receiptActions = flowEvents
       .filter((event) => event.ui_id === 'UI-06' || event.ui_id === 'UI-09' || event.ui_id === 'UI-35')
-      .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
-      .slice(-12)
       .map((event) => ({
         receipt_id: event.event_id,
         source_ui: event.ui_id,
@@ -246,6 +245,19 @@ export class DevCoreGrowthService {
             : 'ACTION_RECEIPT' as const,
         occurred_at: event.created_at,
       }));
+    const journeyRecordedActions = journeyActions.map((action) => ({
+      receipt_id: action.action_id,
+      source_ui: 'UI-09' as const,
+      kind: 'JOURNEY_ACTION_RECEIPT' as const,
+      occurred_at: action.completed_at,
+      journey_plan_id: action.journey_plan_id,
+      journey_phase: action.journey_phase,
+      day_index: action.day_index,
+      boundary: action.boundary,
+    }));
+    const recordedActions = [...receiptActions, ...journeyRecordedActions]
+      .sort((left, right) => new Date(left.occurred_at).getTime() - new Date(right.occurred_at).getTime())
+      .slice(-12);
     const evidenceRefs = [
       ...(insight.parent_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),
       ...(insight.relationship_profile_drafts ?? []).flatMap((draft) => [...(draft.evidence_snapshot?.evidence_ids ?? [])]),

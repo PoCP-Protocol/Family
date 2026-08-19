@@ -588,8 +588,11 @@ export class FamilyController {
   ) {
     assertReadContext(familyId, actorId, onboardingId);
     const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
-    const events = await this.devFlowReceiptService.list(familyId, actorId!);
-    return this.devCoreGrowthService.getFamilyReviewReadback(familyId, onboardingId, insight, events);
+    const [events, journeyActions] = await Promise.all([
+      this.devFlowReceiptService.list(familyId, actorId!),
+      this.growthActionService.listCompletedJourneyActions(familyId, actorId!, onboardingId),
+    ]);
+    return this.devCoreGrowthService.getFamilyReviewReadback(familyId, onboardingId, insight, events, journeyActions);
   }
 
   @Get(':familyId/growth/onboardings/:onboardingId/priority')

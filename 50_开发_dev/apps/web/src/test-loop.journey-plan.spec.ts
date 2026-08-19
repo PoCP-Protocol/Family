@@ -108,3 +108,68 @@ describe('UI-05 90-day Journey Plan', () => {
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/journey-plan')).length).toBeGreaterThanOrEqual(3);
   });
 });
+
+
+describe('90-day Journey Plan readback across review surfaces', () => {
+  it('appends one family-private process summary to UI-08, UI-11 and UI-29 with Bearer-only retrieval', async () => {
+    const familyId = 'family-journey-readback-web';
+    const onboardingId = 'onboarding-journey-readback-web';
+    const plan = {
+      plan_id: 'plan-journey-readback-web',
+      status: 'ACTIVE',
+      current_phase: 'SEE',
+      current_day: 1,
+      total_days: 90,
+      phases: [
+        { phase: 'SEE', start_day: 1, end_day: 14, status: 'ACTIVE' },
+        { phase: 'PARENT_FIRST', start_day: 15, end_day: 35, status: 'PENDING' },
+        { phase: 'CO_CREATE', start_day: 36, end_day: 60, status: 'PENDING' },
+        { phase: 'STABILIZE', start_day: 61, end_day: 90, status: 'PENDING' },
+      ],
+    };
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init: RequestInit = {}) => {
+      const endpoint = String(url);
+      if (endpoint.endsWith('/dev/core-growth')) return response({ family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [] });
+      if (endpoint.endsWith('/growth/journey-plan')) {
+        expect(init).toMatchObject({ credentials: 'omit' });
+        expect((init.headers as Record<string, string>)?.authorization).toBe('Bearer journey-readback-web-token');
+        return response({
+          family_id: familyId,
+          plan,
+          fact_boundary: 'JOURNEY_PROGRESS_IS_SCHEDULE_STATE_NOT_GROWTH_OUTCOME',
+          recommendation_boundary: 'NEXT_PHASE_IS_A_FAMILY_DECISION_NOT_AN_AUTOMATIC_RECOMMENDATION',
+          model_gateway_status: 'NOOP',
+        });
+      }
+      if (endpoint.includes('/growth-profile-readback')) return response({ family_id: familyId, visibility: 'FAMILY_PRIVATE', state: 'READY', focus: null, plan_context: null, evidence_lineage: [] });
+      if (endpoint.includes('/family-review-readback')) return response({ family_id: familyId, visibility: 'FAMILY_PRIVATE', state: 'EMPTY', recorded_actions: [], reflection_prompt: null, next_hint: null });
+      throw new Error(`unexpected_fetch:${endpoint}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId,
+      onboardingId,
+      authToken: 'journey-readback-web-token',
+      coreGrowthApiMode: 'synthetic-api',
+      initialPage: 'growth-report',
+    });
+    for (let index = 0; index < 6; index += 1) await tick();
+
+    expect(root.querySelector('[data-journey-readback-surface="UI-08"]')?.getAttribute('data-journey-current-phase')).toBe('SEE');
+    expect(root.textContent).toContain('当前为第 1 天');
+    expect(root.textContent).toContain('不对孩子或家庭作评价');
+
+    app.navigate('growth-ranking');
+    expect(root.querySelector('[data-journey-readback-surface="UI-11"]')?.getAttribute('data-journey-plan-state')).toBe('ACTIVE');
+    expect(root.textContent).toContain('下一阶段需要家庭复盘后再决定');
+
+    app.navigate('growth-outcomes');
+    expect(root.querySelector('[data-journey-readback-surface="UI-29"]')?.getAttribute('data-journey-plan-id')).toBe(plan.plan_id);
+    expect(root.textContent).not.toContain('儿童诊断');
+    expect(root.textContent).not.toContain('总分');
+  });
+});

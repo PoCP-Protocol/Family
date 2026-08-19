@@ -545,8 +545,13 @@ export interface GrowthActionDto {
   family_id: string;
   onboarding_id: string;
   priority_id: string;
-  intervention_episode_id: string;
-  day_index: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  /** Existing 7-day intervention actions retain their episode; 90-day Journey actions do not require one. */
+  intervention_episode_id: string | null;
+  /** Family-confirmed 90-day plan linkage; null for legacy intervention actions. */
+  journey_plan_id?: string | null;
+  /** Schedule phase only; it is not a child state, diagnosis, score, or outcome. */
+  journey_phase?: 'SEE' | 'PARENT_FIRST' | 'CO_CREATE' | 'STABILIZE' | null;
+  day_index: number;
   status: GrowthActionStatus;
   assignment_text: string;
   due_date: string;
