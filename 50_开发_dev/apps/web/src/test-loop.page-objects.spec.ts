@@ -682,7 +682,12 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
       bookings: [{ service_offering_ref: 'PARENT_CHILD_DIALOGUE', status: 'REQUESTED' }],
       service_records: [{ record_id: 'record-1', status: 'RECORDED' }],
     };
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => familyServiceProjection });
+    const fetchMock = vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () => String(url).includes('/orchestration/test-loop/page-objects')
+        ? { family_id: familyId, visibility: 'FAMILY_PRIVATE', service_records: [{ service_record_id: 'record-live-1', record_kind: 'EXPERT_LIVE_INTEREST', operation_ref: 'operation-live-1', status: 'RECORDED', external_effect: false }] }
+        : familyServiceProjection,
+    }));
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div'); document.body.append(root);
     const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, serviceRecordsApiMode: 'synthetic-api', initialPage: 'service-records' });
@@ -692,8 +697,10 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(records?.textContent).not.toMatch(/支付|通知|导出|分享|DEV|SYNTHETIC|Model Gateway|回执|审计/);
     root.querySelector<HTMLButtonElement>('[data-by="ui34-open-support-records"]')?.click();
     expect(root.querySelector('[aria-label^="我的咨询和活动"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/services/customer-projection');
+    expect(String((fetchMock.mock.calls as Array<[string, RequestInit?]>)[1]?.[0])).toContain('/orchestration/test-loop/page-objects');
+    expect((fetchMock.mock.calls as Array<[string, RequestInit?]>).every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
     app.navigate('service-records');
     await tick();
     expect(root.querySelector('[data-ui34-records-state="READY"]')).not.toBeNull();

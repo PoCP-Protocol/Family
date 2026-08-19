@@ -45,6 +45,9 @@ describe('UI-19 teacher supply route', () => {
       if (String(url).includes('/services/customer-projection')) {
         return { ok: true, json: async () => ({ tenant_id: 'tenant-test', family_id: 'family-test-scope', projection_version: 1, visibility: 'FAMILY_PRIVATE', bookings: [{ booking_request_id: 'need-1', status: 'REQUESTED', service_offering_ref: 'SERVICE_COMMUNICATION' }], service_records: [{ service_record_id: 'record-1', source_booking_request_id: 'need-1', status: 'PENDING' }] }) };
       }
+      if (String(url).includes('/orchestration/test-loop/page-objects')) {
+        return { ok: true, json: async () => ({ family_id: 'family-test-scope', visibility: 'FAMILY_PRIVATE', service_records: [{ service_record_id: 'record-live-1', record_kind: 'EXPERT_LIVE_INTEREST', operation_ref: 'operation-live-1', status: 'RECORDED', external_effect: false }] }) };
+      }
       return { ok: true, json: async () => projection };
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -112,14 +115,16 @@ describe('UI-19 teacher supply route', () => {
     expect(records?.textContent).toContain('需求已记下');
     expect(records?.textContent).not.toMatch(/提供者|资格|评价|价格|权益|时间|通知|支付|DEV|SYNTHETIC|contract/i);
     expect(root.dataset.ui24SupportRecordsStatus).toBe('READ_ONLY_READY');
-    expect(fetchMock).toHaveBeenCalledTimes(5);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
     expect(String(fetchMock.mock.calls[4]?.[0])).toContain('/services/customer-projection');
     expect(fetchMock.mock.calls[4]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' });
+    expect(String(fetchMock.mock.calls[5]?.[0])).toContain('/orchestration/test-loop/page-objects');
+    expect(fetchMock.mock.calls[5]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' });
 
     root.querySelector<HTMLButtonElement>('[data-by="ui24-open-support-topics"]')?.click();
     await tick();
     expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
   it('renders a normal boundary message without posting when consent or authorization blocks the projection', async () => {

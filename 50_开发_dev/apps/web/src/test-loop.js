@@ -748,12 +748,39 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const correlationId = `family-ui24-records-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     familySupportRecordsLoadState = 'LOADING';
     try {
-      const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/customer-projection`, {
-        method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
-      });
+      const [response, pageObjectsResponse] = await Promise.all([
+        fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/customer-projection`, {
+          method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
+        }),
+        fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/page-objects`, {
+          method: 'GET', credentials: 'include', headers: firstSliceHeaders(`${correlationId}-page-objects`),
+        }),
+      ]);
       const payload = await response.json();
-      const valid = response.ok && payload?.family_id === config.familyId && payload?.visibility === 'FAMILY_PRIVATE' && Array.isArray(payload?.bookings) && Array.isArray(payload?.service_records);
-      familySupportRecordsProjection = valid ? payload : null;
+      const pageObjectsPayload = await pageObjectsResponse.json();
+      const valid = response.ok && pageObjectsResponse.ok
+        && payload?.family_id === config.familyId
+        && pageObjectsPayload?.family_id === config.familyId
+        && payload?.visibility === 'FAMILY_PRIVATE'
+        && pageObjectsPayload?.visibility === 'FAMILY_PRIVATE'
+        && Array.isArray(payload?.bookings)
+        && Array.isArray(payload?.service_records)
+        && Array.isArray(pageObjectsPayload?.service_records);
+      const existingRecordIds = new Set((payload?.service_records || []).map((record) => record?.service_record_id));
+      const pageObjectRecords = (pageObjectsPayload?.service_records || [])
+        .filter((record) => record?.service_record_id && !existingRecordIds.has(record.service_record_id))
+        .map((record) => ({
+          service_record_id: record.service_record_id,
+          source_booking_request_id: record.source_booking_request_id || record.operation_ref || '',
+          status: record.status,
+          record_kind: record.record_kind || null,
+          operation_ref: record.operation_ref || null,
+          occurred_at: record.occurred_at || null,
+          external_effect: record.external_effect === false ? false : null,
+        }));
+      familySupportRecordsProjection = valid
+        ? { ...payload, service_records: [...payload.service_records, ...pageObjectRecords] }
+        : null;
       familySupportRecordsLoadState = valid ? 'READY' : 'ERROR';
       root.dataset.ui24SupportRecordsStatus = valid ? 'READ_ONLY_READY' : 'CLIENT_FAILURE';
       root.dataset.ui24SupportRecordsExternalEffect = 'false';
