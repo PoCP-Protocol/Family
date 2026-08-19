@@ -63,7 +63,8 @@ describe('Family commerce and service booking slice entrypoints', () => {
     ] };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => catalog })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ intent: { order_intent_id: 'interest-fixture', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的了解意向。' } }) });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ intent: { order_intent_id: 'interest-fixture', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的了解意向。' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'group-draft-fixture', status: 'CREATED', external_effect: false, text_equivalent: '已记下共学想法。' }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
@@ -99,6 +100,22 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(JSON.parse(String(interestRequest.body))).toEqual({ page_id: 'UI-14', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1 });
     expect(root.querySelector('[data-ui14-detail-state="SAVED"]')?.textContent).toContain('你的了解意向已记下');
     expect(root.dataset.familyCommerceStatus).toBe('SUBMITTED');
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui14-open-group-draft"]')?.click();
+    const groupDraft = root.querySelector('[data-ui16-group-draft-state="READY"]');
+    expect(groupDraft?.getAttribute('data-ui16-product-ref')).toBe('PRODUCT_PARENT_CHILD_CAMP');
+    expect(groupDraft?.textContent).toContain('亲子沟通小练习');
+    expect(groupDraft?.textContent).not.toMatch(/成员|价格|优惠|订单|支付|库存|DEV|SYNTHETIC|contract/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui16-save-study-group-draft"]')?.click();
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const [groupUrl, groupRequest] = fetchMock.mock.calls[2];
+    expect(groupUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');
+    expect(groupRequest).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(groupRequest.body))).toMatchObject({ page_id: 'UI-16', action: 'CREATE_GROUP' });
+    expect(root.querySelector('[data-ui16-group-draft-state="SAVED"]')?.textContent).toContain('共学想法已记下');
+    expect(root.dataset.familyExperienceStatus).toBe('CREATED');
+    expect(root.dataset.familyExperienceAction).toBe('CREATE_GROUP');
     app.navigate('commerce-mall');
   });
 
