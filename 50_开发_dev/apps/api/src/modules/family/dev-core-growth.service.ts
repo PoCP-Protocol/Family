@@ -12,6 +12,7 @@ import {
   type DevGrowthFocus,
   type DevGrowthProfileProgress,
   type DevGrowthPlanPreview,
+  type DevServiceJourneyProjection,
   getFamilyGrowthSurfaceArchitectureBinding,
 } from '@family/contracts';
 
@@ -137,6 +138,59 @@ export class DevCoreGrowthService {
       provenance: { source_refs: ['GROWTH_INSIGHT_V1'], evidence_refs: evidenceRefs, uncertainty: 'MEDIUM' as const, as_of: new Date().toISOString() },
       model_gateway_status: 'NOOP_NOT_INVOKED' as const,
       next_allowed_action: preview ? 'REQUEST_FAMILY_DECISION' as const : 'HUMAN_REVIEW_REQUIRED' as const,
+    };
+  }
+
+  getServiceJourneyProjection(
+    familyId: string,
+    onboardingId: string,
+    insight: { parent_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; relationship_profile_drafts?: readonly { evidence_snapshot?: { evidence_ids?: readonly string[] } }[]; evidence?: readonly { evidence_id: string }[] },
+    flowEvents: readonly { event_id: string; ui_id: string; command: string; created_at: string; selection?: string }[] = [],
+  ): DevServiceJourneyProjection {
+    const plan = this.getPlanPreview(familyId, onboardingId, insight, flowEvents);
+    const privateEvents = flowEvents
+      .filter((event) => event.ui_id === 'UI-09' || event.ui_id === 'UI-06')
+      .sort((left, right) => left.created_at.localeCompare(right.created_at))
+      .slice(-6);
+    const completedActions = privateEvents.filter((event) => event.ui_id === 'UI-09').length;
+    return {
+      projection_version: 'UI06_SERVICE_JOURNEY_V1',
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      source_plan_draft_id: plan.draft_id,
+      state: plan.state === 'FAMILY_REVIEW' ? 'READY' : 'REVIEW_REQUIRED',
+      visibility: 'FAMILY_PRIVATE',
+      as_of: new Date().toISOString(),
+      expires_at: null,
+      service_cards: [
+        { service_ref: 'FAMILY_COMPANION', label: '家庭陪伴说明', state: 'READ_ONLY', boundary: 'CATALOG_FIXTURE_NOT_HUMAN_COMMITMENT' },
+        { service_ref: 'WEEKLY_REVIEW', label: '本周回顾入口', state: 'READ_ONLY', boundary: 'CATALOG_FIXTURE_NOT_HUMAN_COMMITMENT' },
+        { service_ref: 'AI_REMINDER', label: '温和提醒', state: 'READ_ONLY', boundary: 'CATALOG_FIXTURE_NOT_HUMAN_COMMITMENT' },
+        { service_ref: 'EXPERT_LIVE', label: '专家答疑', state: 'HOLD', boundary: 'CATALOG_FIXTURE_NOT_HUMAN_COMMITMENT' },
+      ],
+      process_summary: {
+        label: completedActions > 0 ? `已留下 ${completedActions} 次家庭行动记录` : '从本周的一件小行动开始',
+        completed_actions: completedActions,
+        boundary: 'PROCESS_PROJECTION_NOT_SCORE_OR_OUTCOME',
+      },
+      private_feed: privateEvents.map((event) => ({
+        entry_id: event.event_id,
+        kind: event.ui_id === 'UI-06' ? 'CHECKIN_DRAFT' as const : 'ACTION_RECEIPT' as const,
+        visibility: 'FAMILY_PRIVATE',
+        text: event.ui_id === 'UI-06' ? '家庭已留下一个私有打卡草稿。' : '家庭已记录一次行动回顾。',
+        provenance_ref: event.event_id,
+      })),
+      next_hint: {
+        text: plan.next_action?.text ?? '从本周的一件小行动开始。',
+        source: 'RULE_BASED',
+        boundary: 'RECOMMENDATION_NOT_DECISION_OR_ACTION',
+      },
+      consent: { purpose: 'SERVICE_JOURNEY_READ', state: 'GRANTED', policy_version: 'UI06_SERVICE_JOURNEY_V1' },
+      ai_ready: {
+        model_gateway_status: 'NOOP_NOT_INVOKED',
+        evidence_boundary: 'PROCESS_NOT_OUTCOME_OR_DIAGNOSIS',
+        agent_hint: 'OFFER_PRIVATE_CHECKIN_DRAFT_ONLY',
+      },
     };
   }
 

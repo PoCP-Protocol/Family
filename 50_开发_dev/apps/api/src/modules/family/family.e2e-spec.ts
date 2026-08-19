@@ -438,7 +438,7 @@ describe('POST /families E2E', () => {
 
     const headers = { authorization: 'Bearer test-token', 'x-actor-id': 'architect-1', 'x-correlation-id': correlationId };
     const reportResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/report-explanation`, { headers });
-    const report = await reportResponse.json();
+    const report = await reportResponse.json() as { evidence_lineage: unknown[] };
     const planResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview`, { headers });
     const plan = await planResponse.json();
 
@@ -451,8 +451,8 @@ describe('POST /families E2E', () => {
     const refreshHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-104-plan-refresh' };
     const refresh = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
     const replay = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
-    const refreshBody = await refresh.json();
-    const replayBody = await replay.json();
+    const refreshBody = await refresh.json() as { external_effect?: boolean; refreshed?: boolean };
+    const replayBody = await replay.json() as { external_effect?: boolean; refreshed?: boolean };
     expect(refresh.status).toBe(201);
     expect(replay.status).toBe(201);
     expect(refreshBody.external_effect).toBe(false);
@@ -462,6 +462,50 @@ describe('POST /families E2E', () => {
     const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id = $1 and command = 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT'", [setup.familyId]);
     expect(receipts.rows).toHaveLength(1);
     expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-04', external_effect: false });
+  });
+
+  it('E2E-M2-105 exposes UI-06 private service journey and replays an idempotent check-in draft', async () => {
+    const correlationId = 'corr-e2e-m2-105';
+    const setup = await seedM2Onboarding(correlationId);
+    await seedM2PerspectivePair(setup, correlationId);
+    const draftsResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/profile-drafts`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'idempotency-key': 'e2e-m2-105-build-drafts',
+      },
+      body: JSON.stringify({}),
+    });
+    expect(draftsResponse.status).toBe(201);
+    const headers = { authorization: 'Bearer test-token', 'x-actor-id': 'architect-1', 'x-correlation-id': correlationId };
+    const journeyResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey`, { headers });
+    const journey = await journeyResponse.json() as { projection_version: string; visibility: string; external_effect?: boolean; service_cards: { state: string }[]; process_summary: { boundary: string }; private_feed: { kind: string }[] };
+    expect(journeyResponse.status).toBe(200);
+    expect(journey).toMatchObject({ projection_version: 'UI06_SERVICE_JOURNEY_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, visibility: 'FAMILY_PRIVATE' });
+    expect(journey.service_cards.some((card) => card.state === 'HOLD')).toBe(true);
+    expect(journey.process_summary.boundary).toBe('PROCESS_PROJECTION_NOT_SCORE_OR_OUTCOME');
+
+    const draftHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-105-private-draft' };
+    const draftRequest = { action_ref: 'WEEKLY_ACTION_SEE' };
+    const createdResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey/checkin-drafts`, { method: 'POST', headers: draftHeaders, body: JSON.stringify(draftRequest) });
+    const replayResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey/checkin-drafts`, { method: 'POST', headers: draftHeaders, body: JSON.stringify(draftRequest) });
+    const created = await createdResponse.json() as { state: string; external_effect: boolean; ontology_write: boolean; draft_kind: string; action_ref: string };
+    const replay = await replayResponse.json() as { state: string; external_effect: boolean; ontology_write: boolean; draft_kind: string; action_ref: string };
+    expect(createdResponse.status).toBe(201);
+    expect(replayResponse.status).toBe(201);
+    expect(created).toMatchObject({ state: 'CREATED', draft_kind: 'PRIVATE_CHECKIN_DRAFT', action_ref: 'WEEKLY_ACTION_SEE', external_effect: false, ontology_write: false });
+    expect(replay).toMatchObject({ state: 'REPLAYED', draft_kind: 'PRIVATE_CHECKIN_DRAFT', action_ref: 'WEEKLY_ACTION_SEE', external_effect: false, ontology_write: false });
+
+    const updatedResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey`, { headers });
+    const updated = await updatedResponse.json() as { private_feed: { kind: string }[] };
+    expect(updatedResponse.status).toBe(200);
+    expect(updated.private_feed.some((entry) => entry.kind === 'CHECKIN_DRAFT')).toBe(true);
+    const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id=$1 and command='CREATE_PRIVATE_CHECKIN_DRAFT'", [setup.familyId]);
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-06', external_effect: false });
   });
 
   async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {

@@ -143,6 +143,66 @@ export interface DevGrowthPlanPreview {
   weekly_action_handoff: DevWeeklyGrowthActionHandoff;
 }
 
+/** UI-06 family-private companion journey; process values are never score or outcome. */
+export interface DevServiceJourneyProjection {
+  projection_version: 'UI06_SERVICE_JOURNEY_V1';
+  family_id: string;
+  onboarding_id: string;
+  source_plan_draft_id: string | null;
+  state: 'READY' | 'REVIEW_REQUIRED';
+  visibility: 'FAMILY_PRIVATE';
+  as_of: string;
+  expires_at: null;
+  service_cards: readonly {
+    service_ref: string;
+    label: string;
+    state: 'READ_ONLY' | 'HOLD';
+    boundary: 'CATALOG_FIXTURE_NOT_HUMAN_COMMITMENT';
+  }[];
+  process_summary: {
+    label: string;
+    completed_actions: number;
+    boundary: 'PROCESS_PROJECTION_NOT_SCORE_OR_OUTCOME';
+  };
+  private_feed: readonly {
+    entry_id: string;
+    kind: 'ACTION_RECEIPT' | 'CHECKIN_DRAFT';
+    visibility: 'FAMILY_PRIVATE';
+    text: string;
+    provenance_ref: string;
+  }[];
+  next_hint: {
+    text: string;
+    source: 'RULE_BASED';
+    boundary: 'RECOMMENDATION_NOT_DECISION_OR_ACTION';
+  };
+  consent: {
+    purpose: 'SERVICE_JOURNEY_READ';
+    state: 'GRANTED';
+    policy_version: 'UI06_SERVICE_JOURNEY_V1';
+  };
+  ai_ready: {
+    model_gateway_status: 'NOOP_NOT_INVOKED';
+    evidence_boundary: 'PROCESS_NOT_OUTCOME_OR_DIAGNOSIS';
+    agent_hint: 'OFFER_PRIVATE_CHECKIN_DRAFT_ONLY';
+  };
+}
+
+export interface DevPrivateCheckinDraftReceipt {
+  receipt_id: string;
+  family_id: string;
+  onboarding_id: string;
+  state: 'CREATED' | 'REPLAYED';
+  visibility: 'FAMILY_PRIVATE';
+  draft_kind: 'PRIVATE_CHECKIN_DRAFT';
+  action_ref: 'WEEKLY_ACTION_SEE' | 'WEEKLY_ACTION_ADJUST' | 'PAUSE_AND_RETURN';
+  external_effect: false;
+  ontology_write: false;
+  audit_event_ref: string;
+  correlation_id: string;
+  boundary: 'DRAFT_IS_NOT_TASK_OUTCOME_COMMUNITY_POST_OR_SERVICE_RECORD';
+}
+
 export interface DevCoreGrowthCard {
   surface: DevCoreGrowthSurface;
   /** Architecture metadata sourced from the shared six-loop UI mapping. */

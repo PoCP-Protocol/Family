@@ -507,6 +507,62 @@ export class FamilyController {
     return { ...this.devCoreGrowthService.getPlanPreview(familyId, onboardingId, insight, events), refreshed: true, external_effect: false };
   }
 
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/service-journey')
+  async getServiceJourney(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getServiceJourneyProjection(familyId, onboardingId, insight, events);
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/growth/onboardings/:onboardingId/service-journey/checkin-drafts')
+  async createPrivateServiceJourneyCheckinDraft(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    if (!idempotencyKey?.trim()) throw new BadRequestException('idempotency_key_required');
+    const candidate = body as { action_ref?: unknown };
+    const actionRef = candidate?.action_ref;
+    if (actionRef !== 'WEEKLY_ACTION_SEE' && actionRef !== 'WEEKLY_ACTION_ADJUST' && actionRef !== 'PAUSE_AND_RETURN') {
+      throw new BadRequestException('unsupported_private_checkin_action_ref');
+    }
+    // Require active onboarding/provenance before recording a family-private draft.
+    await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const effectiveCorrelationId = correlationId?.trim() || randomUUID();
+    const receipt = await this.devFlowReceiptService.record(familyId, actorId!, {
+      ui_id: 'UI-06',
+      command: 'CREATE_PRIVATE_CHECKIN_DRAFT',
+      correlation_id: effectiveCorrelationId,
+      idempotency_key: idempotencyKey.trim(),
+      selection: actionRef,
+    });
+    return {
+      receipt_id: receipt.event_id,
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      state: receipt.replayed ? 'REPLAYED' as const : 'CREATED' as const,
+      visibility: 'FAMILY_PRIVATE' as const,
+      draft_kind: 'PRIVATE_CHECKIN_DRAFT' as const,
+      action_ref: actionRef,
+      external_effect: false as const,
+      ontology_write: false as const,
+      audit_event_ref: receipt.event_id,
+      correlation_id: effectiveCorrelationId,
+      boundary: 'DRAFT_IS_NOT_TASK_OUTCOME_COMMUNITY_POST_OR_SERVICE_RECORD' as const,
+    };
+  }
+
   @Get(':familyId/growth/onboardings/:onboardingId/priority')
   async getGrowthPriorityInsight(
     @Param('familyId') familyId: string,
