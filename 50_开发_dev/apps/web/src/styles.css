@@ -3084,6 +3084,19 @@ h3 {
   margin-top: 10px;
 }
 .by-support-records-hint { color: #557a98; }
+.by-family-service-records {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d8e7f0;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f7fcff);
+  box-shadow: 0 8px 22px rgba(24, 92, 156, .08);
+}
+.by-family-service-records small { color: #4f7699; font-weight: 700; }
+.by-family-service-records h2 { margin: 7px 0 8px; color: #234b70; font-size: 20px; }
+.by-family-service-records p { margin: 7px 0; color: #526f89; line-height: 1.65; }
+.by-family-service-records .by-family-service-records-boundary { color: #71879b; font-size: 12px; }
+.by-family-service-records > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
 
 /* UI-22 / UI-23：仅供家庭了解活动主题，不延伸原图中的报名或交易视觉。 */
 .by-family-growth-activity-catalog,
