@@ -3275,3 +3275,17 @@ h3 {
 .by-family-my-services p { margin: 7px 0; color: #526d8d; line-height: 1.65; }
 .by-family-my-services .by-my-services-next { padding: 10px 12px; border-radius: 12px; background: #edf5ff; color: #315f8e; }
 .by-family-my-services > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.by-family-orders-assets {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d8e2f3;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f7f3ff);
+  box-shadow: 0 8px 22px rgba(67, 65, 127, .08);
+}
+.by-family-orders-assets small { color: #6357a4; font-weight: 700; }
+.by-family-orders-assets h2 { margin: 7px 0 8px; color: #3e3a7d; font-size: 20px; }
+.by-family-orders-assets p { margin: 7px 0; color: #5e6485; line-height: 1.65; }
+.by-family-orders-assets .by-orders-assets-points { padding: 10px 12px; border-radius: 12px; background: #f0edff; color: #5348a0; font-weight: 700; }
+.by-family-orders-assets .by-orders-assets-boundary { font-size: 12px; color: #7a7d98; }
+.by-family-orders-assets > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }

@@ -318,6 +318,33 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
   });
 
+  it('reads UI-32 family orders and assets and keeps all follow-up routes read-only', async () => {
+    const membershipProjection = {
+      subscriptions: [{ membership_subscription_id: 'subscription-fixture', status: 'ACTIVE' }],
+      benefits: [{ benefit_grant_id: 'benefit-consult', benefit_ref: 'BENEFIT_CONSULT', status: 'AVAILABLE' }],
+      dev_points: { balance: 1280, source: 'DEV_FIXTURE', redeemable: false },
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => membershipProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'orders-assets' });
+    await tick(); await tick();
+    const panel = root.querySelector('[data-ui32-assets-state="READY"]');
+    expect(panel?.textContent).toContain('家庭已有 1 项服务记录可回看');
+    expect(panel?.textContent).toContain('家庭积分回看：1280');
+    expect(root.textContent).not.toMatch(/支付|退款|提现|兑换|下载|分享|DEV|SYNTHETIC|Model Gateway|回执|审计/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui32-open-my-services"]')?.click();
+    expect(root.querySelector('[aria-label^="我的服务"]')).not.toBeNull();
+    app.navigate('orders-assets');
+    root.querySelector<HTMLButtonElement>('[data-by="ui32-open-annual-member"]')?.click();
+    expect(root.querySelector('[aria-label^="我的年度会员服务"]')).not.toBeNull();
+    app.navigate('orders-assets');
+    root.querySelector<HTMLButtonElement>('[data-by="ui32-open-growth-plan"]')?.click();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
   it('moves from UI-18 family service scope to the UI-19 topic directory through read-only family-scoped projections', async () => {
     const membershipProjection = {
       subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],
