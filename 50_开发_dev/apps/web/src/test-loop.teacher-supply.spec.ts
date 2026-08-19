@@ -34,7 +34,15 @@ afterEach(() => {
 
 describe('UI-19 teacher supply route', () => {
   it('keeps the supplied reference image and renders family support topics through a single protected GET', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    const fetchMock = vi.fn(async (url, request = {}) => {
+      if (String(url).includes('/services/slots')) {
+        return { ok: true, json: async () => ({ slots: [{ availability_slot_ref: 'SLOT_COMMUNICATION', status: 'AVAILABLE', channel: 'VIDEO' }] }) };
+      }
+      if (request.method === 'POST' && String(url).includes('/services/booking-requests')) {
+        return { ok: true, json: async () => ({ booking: { booking_request_id: 'need-1', status: 'REQUESTED', external_effect: false } }) };
+      }
+      return { ok: true, json: async () => projection };
+    });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
@@ -69,10 +77,34 @@ describe('UI-19 teacher supply route', () => {
     expect(explanation?.textContent).toContain('支持主题：亲子沟通');
     expect(explanation?.textContent).toContain('可以了解的方式：线上交流');
     expect(explanation?.textContent).not.toMatch(/法咪莉校长|推荐|排名|准入|资格|评价|预约|联系|支付|DEV|SYNTHETIC|contract/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui20-open-consultation-need"]')?.click();
+    await tick();
+    const need = root.querySelector('[data-ui21-consultation-need-state="READY"]');
+    expect(need?.textContent).toContain('亲子沟通服务');
+    expect(need?.textContent).toContain('可以先把想了解的方向记下来');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui21-save-consultation-need"]')?.click();
+    await tick();
+    await tick();
+    expect(root.dataset.familyConsultationNeedStatus).toBe('REQUESTED');
+    expect(root.querySelector('[data-ui21-consultation-need-state="SAVED"]')?.textContent).toContain('咨询需求已记下');
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(String(fetchMock.mock.calls[2]?.[0])).toContain('/services/slots?service_offering_ref=SERVICE_COMMUNICATION&service_offering_version=1');
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'GET', credentials: 'include' });
+    expect(String(fetchMock.mock.calls[3]?.[0])).toContain('/services/booking-requests');
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body || '{}')).toMatchObject({ page_id: 'UI-21', service_offering_ref: 'SERVICE_COMMUNICATION', availability_slot_ref: 'SLOT_COMMUNICATION' });
+    expect(need?.textContent).not.toMatch(/提供者|资格|评价|价格|权益|通知|支付|DEV|SYNTHETIC|contract/i);
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui21-return-support-explanation"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui20-support-explanation="READY"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     root.querySelector<HTMLButtonElement>('[data-by="ui20-return-support-topics"]')?.click();
     await tick();
     expect(root.querySelector('[data-ui-id="UI-19"]')).not.toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it('renders a normal boundary message without posting when consent or authorization blocks the projection', async () => {

@@ -135,28 +135,31 @@ describe('Family formal experience workflow entrypoints', () => {
     }
   });
 
-  it('submits a qualified service booking only to the protected service booking endpoint', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      json: async () => ({
-        booking: { booking_request_id: 'booking-fixture', status: 'REQUESTED', external_effect: false, text_equivalent: '已记录本次预约。不会发送通知或确认真人服务。' },
+  it('records a family consultation need only through protected slot and request endpoints', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ slots: [{ availability_slot_ref: 'SLOT_PRIMARY', status: 'AVAILABLE', channel: 'VIDEO' }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({
+        booking: { booking_request_id: 'booking-fixture', status: 'REQUESTED', external_effect: false },
         service_record: { service_record_id: 'record-fixture', status: 'PENDING', external_effect: false },
-      }),
-    });
+      }) });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div');
     document.body.append(root);
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'consultation-booking' });
-    root.querySelector<HTMLButtonElement>('[aria-label="确认预约"]')?.click();
+    root.querySelector<HTMLButtonElement>('[aria-label="记下咨询需求"]')?.click();
     await tick();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, request] = fetchMock.mock.calls[0];
+    await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [slotsUrl, slotsRequest] = fetchMock.mock.calls[0];
+    expect(slotsUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/slots?service_offering_ref=SERVICE_PARENT_CHILD_PRIMARY&service_offering_version=1');
+    expect(slotsRequest).toMatchObject({ method: 'GET', credentials: 'include' });
+    const [url, request] = fetchMock.mock.calls[1];
     expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/booking-requests');
     expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
-    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'SERVICE_PARENT_CHILD_PRIMARY', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY' });
-    expect(root.dataset.familyServiceBookingAction).toBe('SUBMIT_SERVICE_BOOKING');
-    expect(root.dataset.familyServiceBookingStatus).toBe('REQUESTED');
-    expect(root.dataset.familyServiceBookingRequest).toBe('booking-fixture');
-    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不会发送通知');
+    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'SERVICE_PARENT_CHILD_PRIMARY', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY', attributes: { entry: 'family_support_explanation' } });
+    expect(root.dataset.familyConsultationNeedStatus).toBe('REQUESTED');
+    expect(root.dataset.familyConsultationNeedRequest).toBe('booking-fixture');
+    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('咨询需求已记下');
   });
 
   it('loads service records through the protected read-only booking projection', async () => {
