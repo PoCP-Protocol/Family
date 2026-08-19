@@ -742,6 +742,51 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
   });
 
+  it('reads a recorded family action on UI-29 and routes only to the private story or growth plan without an external write', async () => {
+    const coreProjection = {
+      projection_version: 'DEV_CORE_GROWTH_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [],
+      recent_flow_events: [{ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'PARENT_CHILD_COMMUNICATION', event_state: 'DEV_CONFIRMED' }],
+    };
+    const fetchMock = vi.fn(async (url: string, request: RequestInit) => {
+      expect(request).toMatchObject({ method: 'GET', credentials: 'include' });
+      if (url.endsWith('/dev/core-growth')) return { ok: true, json: async () => coreProjection };
+      expect(url).toBe(`http://family-api.test/families/${familyId}/dev/platform-surfaces`);
+      return { ok: true, json: async () => projection };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-outcomes' });
+    await tick(); await tick(); await tick();
+    const review = root.querySelector('[data-ui29-growth-review-state="ACTION_RECORDED"]');
+    expect(review?.textContent).toContain('已经留下一次家庭行动');
+    expect(review?.textContent).not.toMatch(/成长值|总分|排名|任务比例|连续|奖章|奖励|儿童|诊断|结果|效果|公开|分享|下载|通知|支付|订单|DEV|SYNTHETIC/i);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    root.querySelector<HTMLButtonElement>('[data-by="ui29-open-private-story"]')?.click();
+    await tick();
+    expect(root.querySelector('[data-ui12-story-state="READY"]')).not.toBeNull();
+    app.navigate('growth-outcomes');
+    await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui29-open-growth-plan"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps UI-29 as an empty, non-judgmental read view when no family action has been recorded', async () => {
+    const coreProjection = { projection_version: 'DEV_CORE_GROWTH_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', cards: [], recent_flow_events: [] };
+    const fetchMock = vi.fn(async (url: string) => url.endsWith('/dev/core-growth')
+      ? { ok: true, json: async () => coreProjection }
+      : { ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', platformSurfacesApiMode: 'synthetic-api', initialPage: 'growth-outcomes' });
+    await tick(); await tick(); await tick();
+    const review = root.querySelector('[data-ui29-growth-review-state="EMPTY"]');
+    expect(review?.textContent).toContain('先从一件小行动开始');
+    expect(review?.textContent).not.toMatch(/总分|排名|成长值|奖章|奖励|诊断|效果|公开|支付|订单|DEV|SYNTHETIC/i);
+    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
   it('routes the UI-17 family self-record only to family review or today action', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
     vi.stubGlobal('fetch', fetchMock);
