@@ -61,7 +61,7 @@ describe('Family 34-page visual experience and real Gateway entry', () => {
     expect(root.dataset.familyLlmDecision).toBe('BLOCK_CONFIGURATION');
     expect(root.dataset.familyLlmTrace).toBe('trace-fixture-only');
     expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('返回、暂停或现在先不继续');
-    expect(root.querySelector('.by-reference-assessment')).not.toBeNull();
+    expect(root.querySelector('[aria-label*="AI成长诊断报告"]')).not.toBeNull();
     expect(root.textContent).not.toMatch(/DEV|stub|Gate|policy|contract/i);
   });
 
@@ -77,7 +77,7 @@ describe('Family 34-page visual experience and real Gateway entry', () => {
 
     expect(root.dataset.familyLlmDecision).toBe('CLIENT_FAILURE');
     expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('返回、暂停或现在先不继续');
-    expect(root.querySelector('.by-reference-assessment')).not.toBeNull();
+    expect(root.querySelector('[aria-label*="AI成长诊断报告"]')).not.toBeNull();
   });
 });
 

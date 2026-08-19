@@ -42,6 +42,33 @@ describe('DevCoreGrowthService', () => {
     expect(JSON.stringify(projection)).not.toContain('diagnosis');
   });
 
+  it('derives the UI-04 report and UI-05 plan preview from the latest UI-02 family focus without creating a formal plan', () => {
+    const projection = service.getProjection(familyId, [
+      { ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION' },
+      { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
+    ]);
+    expect(projection.cards.find((card) => card.surface === 'UI-04')?.report_draft).toMatchObject({
+      focus: 'EMOTION_REGULATION', state: 'READY', headline: '先看见感受，再决定怎样回应', plan_link_state: 'READY_TO_VIEW',
+      this_week_action: expect.objectContaining({ action: expect.stringContaining('我看到你现在很不容易') }),
+    });
+    expect(projection.cards.find((card) => card.surface === 'UI-05')?.plan_preview).toMatchObject({
+      focus: 'EMOTION_REGULATION', state: 'READY',
+      stages: expect.arrayContaining([
+        expect.objectContaining({ stage_id: 'SEE', weeks: '第 1-3 周' }),
+        expect.objectContaining({ stage_id: 'STABILIZE', weeks: '第 11-13 周' }),
+      ]),
+    });
+
+    const previewed = service.getProjection(familyId, [
+      { ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION' },
+      { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
+    ]);
+    expect(previewed.cards.find((card) => card.surface === 'UI-04')?.report_draft?.state).toBe('PLAN_PREVIEWED');
+    expect(previewed.cards.find((card) => card.surface === 'UI-05')?.plan_preview?.state).toBe('VIEWED_FROM_REPORT');
+    expect(JSON.stringify(previewed)).not.toContain('GrowthTaskCreated');
+    expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');
+  });
+
   it('exposes a controller-safe allow-list for supported DEV surfaces', () => {
     expect(service.supportsSurface('UI-05')).toBe(true);
     expect(service.supportsSurface('UI-35')).toBe(true);

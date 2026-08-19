@@ -57,6 +57,38 @@ export interface DevAiCurriculumDraft {
   next_transition: 'GROWTH_PLAN_DRAFT_RECOMMENDATION_ONLY';
 }
 
+export type DevGrowthFocus =
+  | 'PARENT_CHILD_COMMUNICATION'
+  | 'LEARNING_HABITS'
+  | 'EMOTION_REGULATION'
+  | 'SELF_REGULATION'
+  | 'DEVICE_USE_CONTEXT';
+
+/**
+ * Rule-based report content for the UI-04 read projection. It reflects a
+ * guardian-selected focus only; it is neither a child diagnosis nor an outcome.
+ */
+export interface DevFamilyGrowthReportDraft {
+  report_id: string;
+  state: 'READY' | 'PLAN_PREVIEWED';
+  focus: DevGrowthFocus;
+  headline: string;
+  summary: string;
+  observations: readonly { label: string; detail: string }[];
+  this_week_action: { when: string; action: string; fallback: string };
+  plan_link_state: 'READY_TO_VIEW' | 'VIEWED';
+}
+
+/** Read-only UI-05 preview; it never creates a formal GrowthPlan or task. */
+export interface DevGrowthPlanPreview {
+  plan_id: string;
+  state: 'READY' | 'VIEWED_FROM_REPORT';
+  focus: DevGrowthFocus;
+  headline: string;
+  stages: readonly { stage_id: string; label: string; weeks: string; intent: string; small_action: string }[];
+  next_action: string;
+}
+
 export interface DevCoreGrowthCard {
   surface: DevCoreGrowthSurface;
   /** Architecture metadata sourced from the shared six-loop UI mapping. */
@@ -82,6 +114,10 @@ export interface DevCoreGrowthCard {
   };
   /** Present only on course-capability cards such as UI-35. */
   curriculum_draft?: DevAiCurriculumDraft;
+  /** Present on UI-04; a family-readable report derived from the selected focus. */
+  report_draft?: DevFamilyGrowthReportDraft;
+  /** Present on UI-05; a read-only 90-day plan preview derived from the same focus. */
+  plan_preview?: DevGrowthPlanPreview;
 }
 
 export interface DevCoreGrowthProjection {

@@ -283,7 +283,9 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     ];
     for (const [page, surface] of pages) {
       app.navigate(page);
-      expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
+      if (surface === 'UI-04') expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
+      else if (surface === 'UI-05') expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
+      else expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
     app.navigate('growth-camp-21');
     expect(root.querySelector('[data-core-growth-surface="UI-35"]')?.textContent).toContain('21 天智慧父母成长营');
@@ -372,7 +374,56 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     await tick(); await tick(); await tick();
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toMatchObject({ ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION' });
     expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
-    expect(root.querySelector('[data-core-growth-surface="UI-04"]')?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
+    expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执/i);
+  });
+
+  it('passes the selected family focus from UI-03 through the UI-04 report into the UI-05 plan preview without exposing engineering text', async () => {
+    const reportProjection = {
+      ...projection,
+      recent_flow_events: [
+        { ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' },
+        { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' },
+      ],
+      cards: projection.cards.map((card) => card.surface === 'UI-04'
+        ? { ...card, command: { name: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', mode: 'CONTROLLED_DRAFT' }, report_draft: {
+          report_id: 'REPORT-EMOTION-V1', state: 'READY', focus: 'EMOTION_REGULATION', headline: '先看见感受，再决定怎样回应', summary: '给情绪留出被表达的空间，让互动回到更平稳的节奏。',
+          observations: [{ label: '你在关注', detail: '情绪出现时彼此是否有被理解的机会。' }, { label: '可以尝试', detail: '先描述看到的状态，再邀请对方说说感受。' }, { label: '慢慢调整', detail: '冲突时可以先停一停，等平静后再继续。' }],
+          this_week_action: { when: '本周任选一个轻松的时刻', action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。', fallback: '如果当下不适合交谈，就约定稍后再回来继续。' }, plan_link_state: 'READY_TO_VIEW',
+        } }
+        : card.surface === 'UI-05'
+          ? { ...card, plan_preview: { plan_id: 'PLAN-EMOTION-V1', state: 'READY', focus: 'EMOTION_REGULATION', headline: '为情绪留出理解和恢复的空间', stages: [{ stage_id: 'SEE', label: '看见当下', weeks: '第 1-3 周', intent: '找到最适合开始的一件小事。', small_action: '今天遇到情绪波动时，先说“我看到你现在很不容易”，再停 30 秒。' }, { stage_id: 'ADJUST', label: '温和调整', weeks: '第 4-6 周', intent: '根据家庭节奏微调做法。', small_action: '每周留出一次 10 分钟的小回顾。' }, { stage_id: 'CO_CREATE', label: '一起共创', weeks: '第 7-10 周', intent: '让孩子参与选择和安排。', small_action: '一起决定下一周想尝试的一件事。' }, { stage_id: 'STABILIZE', label: '延续习惯', weeks: '第 11-13 周', intent: '保留适合家庭的做法。', small_action: '选出最想延续的一项家庭约定。' }], next_action: '从本周的一件小行动开始。' } }
+          : card),
+    };
+    const planProjection = {
+      ...reportProjection,
+      recent_flow_events: [{ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }, ...reportProjection.recent_flow_events],
+      cards: reportProjection.cards.map((card) => card.surface === 'UI-04'
+        ? { ...card, report_draft: { ...card.report_draft, state: 'PLAN_PREVIEWED', plan_link_state: 'VIEWED' } }
+        : card.surface === 'UI-05'
+          ? { ...card, plan_preview: { ...card.plan_preview, state: 'VIEWED_FROM_REPORT' } }
+          : card),
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => reportProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => reportProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false, selection: 'EMOTION_REGULATION' }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => planProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'assessment' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui03-preview-plan"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(root.querySelector('.by-clear-reference')).not.toBeNull();
+    expect(root.querySelector('[data-ui04-focus="EMOTION_REGULATION"]')?.textContent).toContain('先看见感受，再决定怎样回应');
+    expect(root.querySelector('[data-ui04-focus="EMOTION_REGULATION"]')?.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui04-plan-handoff"]')?.click();
+    await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('[data-ui05-plan-state="VIEWED_FROM_REPORT"]')?.textContent).toContain('为情绪留出理解和恢复的空间');
+    expect(root.querySelector('[data-ui05-focus="EMOTION_REGULATION"]')?.textContent).toContain('第 11-13 周');
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {
@@ -382,7 +433,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, coreGrowthApiMode: 'synthetic-api', initialPage: 'core-plan' });
     await tick(); await tick();
     expect(root.dataset.familyCoreGrowthStatus).toBe('ERROR');
-    expect(root.querySelector('[data-core-growth-surface="UI-05"]')?.textContent).toContain('内容暂时无法加载，请稍后再试。');
+    expect(root.querySelector('[data-ui05-plan-state="ERROR"]')?.textContent).toContain('90 天成长计划暂时无法加载，请稍后再试。');
   });
 });
 

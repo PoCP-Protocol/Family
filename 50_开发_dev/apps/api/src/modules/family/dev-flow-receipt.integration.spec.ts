@@ -121,6 +121,41 @@ describe('DEV flow receipt integration', () => {
     expect(stored.rows[0].payload).toMatchObject({ selection: 'EMOTION_REGULATION', synthetic_only: true, evidence_boundary: 'PERSPECTIVE' });
   });
 
+  it('reads the selected focus into the UI-04 report and UI-05 plan preview after a persisted report-to-plan handoff', async () => {
+    const seed = await seedGuardian();
+    const selected = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui04-focus'),
+      body: JSON.stringify({ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(selected.status).toBe(201);
+    const explanation = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui04-explanation'),
+      body: JSON.stringify({ ui_id: 'UI-03', command: 'PREVIEW_SYNTHETIC_REPORT_EXPLANATION', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(explanation.status).toBe(201);
+
+    const beforeHandoff = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui04-read') });
+    expect(beforeHandoff.status).toBe(200);
+    const beforeProjection = await beforeHandoff.json() as any;
+    expect(beforeProjection.cards.find((card: any) => card.surface === 'UI-04')?.report_draft).toMatchObject({
+      focus: 'EMOTION_REGULATION', state: 'READY', plan_link_state: 'READY_TO_VIEW',
+    });
+    expect(beforeProjection.cards.find((card: any) => card.surface === 'UI-05')?.plan_preview).toMatchObject({
+      focus: 'EMOTION_REGULATION', state: 'READY', stages: expect.arrayContaining([expect.objectContaining({ stage_id: 'SEE' })]),
+    });
+
+    const handoff = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui04-plan', 'idem-ui04-plan'),
+      body: JSON.stringify({ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(handoff.status).toBe(201);
+    const afterHandoff = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui04-plan-read') });
+    const afterProjection = await afterHandoff.json() as any;
+    expect(afterProjection.cards.find((card: any) => card.surface === 'UI-04')?.report_draft).toMatchObject({ state: 'PLAN_PREVIEWED', plan_link_state: 'VIEWED' });
+    expect(afterProjection.cards.find((card: any) => card.surface === 'UI-05')?.plan_preview).toMatchObject({ state: 'VIEWED_FROM_REPORT' });
+    expect(afterProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', external_effect: false })]));
+  });
+
   it('fails closed for an unknown UI and cross-family actor', async () => {
     const owner = await seedGuardian('Owner');
     const other = await seedGuardian('Other');

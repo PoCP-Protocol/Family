@@ -84,8 +84,10 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    const [projection, events] = [this.devCoreGrowthService.getProjection(familyId), await this.devFlowReceiptService.list(familyId, actorId)];
-    return { ...projection, recent_flow_events: events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id)) };
+    const events = await this.devFlowReceiptService.list(familyId, actorId);
+    const coreGrowthEvents = events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id));
+    const projection = this.devCoreGrowthService.getProjection(familyId, coreGrowthEvents);
+    return { ...projection, recent_flow_events: coreGrowthEvents };
   }
 
   /** DEV-only trace acknowledgement: intentionally no DB write, audit persistence, outbox consumer or external effect. */
