@@ -384,3 +384,41 @@ describe('UI-28 authenticated private expression readback', () => {
     expect(root.textContent).not.toMatch(/公开发布|成长结果|效果已证实|外部通知已发送/);
   });
 });
+
+
+describe('UI-32 authenticated family assets readback', () => {
+  it('reads family-private subscriptions, benefits and process points with the account bearer only and exposes no payment or entitlement mutation', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        subscriptions: [{ subscription_id: 'subscription-private', status: 'ACTIVE', external_effect: false }],
+        benefits: [{ benefit_id: 'benefit-private', status: 'AVAILABLE', external_effect: false }],
+        dev_points: { balance: 640, redeemable: false },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-assets-auth-scope',
+      authToken: 'family-assets-auth-bearer',
+      membershipProjectionApiMode: 'synthetic-api',
+      initialPage: 'orders-assets',
+    });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [projectionUrl, projectionRequest] = fetchMock.mock.calls[0];
+    expect(projectionUrl).toBe('http://family-api.test/families/family-assets-auth-scope/orchestration/test-loop/membership/customer-projection');
+    expect(projectionRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((projectionRequest.headers as Record<string, string>).authorization).toBe('Bearer family-assets-auth-bearer');
+    const panel = root.querySelector('[data-ui32-assets-state="READY"]');
+    expect(panel?.textContent).toContain('家庭已有 1 项服务记录可回看');
+    expect(panel?.textContent).toContain('当前有 1 项家庭支持权益说明');
+    expect(panel?.textContent).toContain('家庭积分回看：640');
+    expect(root.textContent).toContain('不会在这里改变订单、权益或积分');
+    expect(root.textContent).not.toMatch(/支付成功|订单已确认|权益已生效|积分已扣除|外部通知已发送/);
+  });
+});
