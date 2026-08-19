@@ -636,7 +636,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     root.dataset.familyMembershipProjectionStatus = 'LOADING';
     try {
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/membership/customer-projection`, {
-        method: 'GET', credentials: 'include', headers: firstSliceHeaders(correlationId),
+        method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: firstSliceHeaders(correlationId),
       });
       if (!response.ok) throw new Error(`membership_projection_${response.status}`);
       membershipProjection = await response.json();
@@ -1136,9 +1136,12 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     const supportLabel = (ref) => ({ BENEFIT_CONSULT: '家庭交流支持', BENEFIT_CONTENT: '成长内容支持' }[ref] || '家庭支持项目');
     const items = [...new Set((membershipProjection.benefits || []).map((benefit) => supportLabel(benefit.benefit_ref)))];
     const hasService = (membershipProjection.subscriptions || []).length > 0 || items.length > 0;
+    const pointsSummary = membershipProjection?.dev_points
+      ? `<p class="by-family-points-summary">家庭过程积分：${membershipProjection.dev_points.balance}。只用于回看，不支持兑换、提现或改变正式积分。</p>`
+      : '';
     const content = hasService
-      ? `<p>这些服务资料可以按家庭自己的节奏慢慢了解，不需要现在作出安排。</p><ul>${(items.length ? items : ['家庭成长支持']).map((item) => `<li>${item}</li>`).join('')}</ul>`
-      : '<p>现在还没有需要了解的服务内容。可以先回到成长计划，从一件小行动开始。</p>';
+      ? `<p>这些服务资料可以按家庭自己的节奏慢慢了解，不需要现在作出安排。</p><ul>${(items.length ? items : ['家庭成长支持']).map((item) => `<li>${item}</li>`).join('')}</ul>${pointsSummary}`
+      : `<p>现在还没有需要了解的服务内容。可以先回到成长计划，从一件小行动开始。</p>${pointsSummary}`;
     const renewalState = renewalInterestDraftState === 'SAVED'
       ? '<p class="by-renewal-interest-success">续费了解意向已记下。之后是否继续，由家庭自己决定。</p>'
       : renewalInterestDraftState === 'ERROR'
