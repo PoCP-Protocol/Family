@@ -12,6 +12,9 @@
  * 3. Allow micro-animations (viseme, blink) as independent calls
  * 4. Preserve identity through performance changes
  * 5. Maintain MM2 WeakSet provenance integrity
+ * 6. MM4: Manage temporal transitions (target vs current state)
+ * 7. MM4: Dedup rapid nod requests with cooldown
+ * 8. MM4: Vary blink intervals naturally
  *
  * NOT responsible for:
  * - STT / TTS
@@ -25,24 +28,67 @@
 import type { ResolvedRendererProfile, PerformanceFrame } from '@family/fpai-multimodal-contracts';
 import { Avatar2DRenderer, type FamilyMouthShape, type CanvasLike } from './avatar2DRenderer';
 import { mapCharacterExpressionToFamilyExpression } from './avatar2DExpressionAdapter';
+import {
+  lerp,
+  expLerp,
+  EXPRESSION_EYE_OPENYS,
+  DEFAULT_EXPRESSION_OPEN_Y,
+  GESTURE_NOD_DURATION_MS,
+  GESTURE_COOLDOWN_DURATION_MS,
+  BLINK_MIN_INTERVAL_MS,
+  BLINK_MAX_INTERVAL_MS,
+  EXPRESSION_TRANSITION_TAU_MS,
+} from './performanceTransition';
 
 export interface RenderOrchestratorOptions {
   canvas: CanvasLike;
   profile: ResolvedRendererProfile;
   now?: () => number;
+  randomSource?: () => number;
+}
+
+interface PerformanceTransitionState {
+  // Expression interpolation (MM4)
+  currentExpressionOpenY: number;
+  targetExpressionOpenY: number;
+  lastFrameTimeMs: number;
+
+  // Gesture deduplication (MM4)
+  lastGesture: string;
+  gestureActiveUntilMs: number;
+  gestureCooldownUntilMs: number;
+
+  // Blink variation (MM4)
+  nextBlinkScheduleMs: number;
+  blinkIntervalMs: number;
 }
 
 export class RenderOrchestrator {
   private renderer: Avatar2DRenderer;
   private profile: ResolvedRendererProfile;
+  private readonly randomSource: () => number;
+  private transitionState: PerformanceTransitionState;
 
   public constructor(opts: RenderOrchestratorOptions) {
     this.profile = opts.profile;
+    this.randomSource = opts.randomSource ?? (() => Math.random());
     this.renderer = new Avatar2DRenderer({
       canvas: opts.canvas,
       profile: opts.profile,
       now: opts.now,
     });
+
+    // MM4: Initialize temporal transition state
+    this.transitionState = {
+      currentExpressionOpenY: DEFAULT_EXPRESSION_OPEN_Y,
+      targetExpressionOpenY: DEFAULT_EXPRESSION_OPEN_Y,
+      lastFrameTimeMs: opts.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : Date.now()),
+      lastGesture: 'NONE',
+      gestureActiveUntilMs: 0,
+      gestureCooldownUntilMs: 0,
+      nextBlinkScheduleMs: (opts.now?.() ?? (typeof performance !== 'undefined' ? performance.now() : Date.now())) + this.randomBlinkInterval(),
+      blinkIntervalMs: this.randomBlinkInterval(),
+    };
   }
 
   /**
@@ -52,6 +98,9 @@ export class RenderOrchestrator {
    * prevents transient inconsistent states.
    *
    * This is the ONLY semantic performance entry point in production.
+   *
+   * MM4: Sets TARGET for expression interpolation, not immediate.
+   * State changes are still immediate (state machine transitions).
    */
   public applyPerformanceFrame(frame: PerformanceFrame): void {
     // MM3-PATCH-001: Coherence validation integrated from fpai-multimodal-runtime
@@ -81,9 +130,73 @@ export class RenderOrchestrator {
     this.renderer.setState(avatarState);
     this.renderer.setExpression(rendererExpression);
 
+    // MM4: Set TARGET for expression eye interpolation
+    // The actual current value will lerp toward this target in tick()
+    this.transitionState.targetExpressionOpenY = EXPRESSION_EYE_OPENYS[frame.expression] ?? DEFAULT_EXPRESSION_OPEN_Y;
+
+    // MM4: Gesture deduplication
+    if (frame.gesture === 'SMALL_NOD') {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      this.maybeApplyGesture('SMALL_NOD', now);
+    }
+
     // Note: posture, gaze detail are not currently rendered in Avatar2D
     // These are placeholders for future enhancement
     // In current implementation, they inform state and expression choice above
+  }
+
+  /** MM4: Gesture cooldown + deduplication. Only trigger if not recently active. */
+  private maybeApplyGesture(gesture: string, nowMs: number): void {
+    // Already in cooldown? Skip.
+    if (nowMs < this.transitionState.gestureCooldownUntilMs) return;
+    // Same gesture still active? Skip.
+    if (gesture === this.transitionState.lastGesture && nowMs < this.transitionState.gestureActiveUntilMs) return;
+
+    // Execute gesture
+    this.renderer.triggerNod();
+    this.transitionState.lastGesture = gesture;
+    this.transitionState.gestureActiveUntilMs = nowMs + GESTURE_NOD_DURATION_MS;
+    this.transitionState.gestureCooldownUntilMs = nowMs + GESTURE_COOLDOWN_DURATION_MS;
+  }
+
+  /** MM4: Calculate random blink interval within natural bounds. */
+  private randomBlinkInterval(): number {
+    const range = BLINK_MAX_INTERVAL_MS - BLINK_MIN_INTERVAL_MS;
+    return BLINK_MIN_INTERVAL_MS + this.randomSource() * range;
+  }
+
+  /**
+   * MM4: Update temporal state (expression interpolation, blink timing).
+   *
+   * Called every rAF frame by client.ts rafLoop.
+   * Updates expression openY with exponential lerp toward target.
+   * Auto-triggers blink at natural random intervals.
+   * Updates animation state (gesture cleanup, blink/nod status).
+   */
+  public tick(nowMs: number): void {
+    const dt = nowMs - this.transitionState.lastFrameTimeMs;
+    this.transitionState.lastFrameTimeMs = nowMs;
+
+    // Update animation state (gesture cleanup, blink/nod ending)
+    this.renderer.updateAnimationState();
+
+    // Expression lerp toward target openY
+    if (dt > 0) {
+      this.transitionState.currentExpressionOpenY = expLerp(
+        this.transitionState.currentExpressionOpenY,
+        this.transitionState.targetExpressionOpenY,
+        dt,
+        EXPRESSION_TRANSITION_TAU_MS
+      );
+      // Apply interpolated value to renderer
+      this.renderer.setExpressionOpenY(this.transitionState.currentExpressionOpenY);
+    }
+
+    // Auto-blink on schedule
+    if (nowMs >= this.transitionState.nextBlinkScheduleMs) {
+      this.renderer.triggerBlink();
+      this.transitionState.nextBlinkScheduleMs = nowMs + this.randomBlinkInterval();
+    }
   }
 
   /**
@@ -117,7 +230,7 @@ export class RenderOrchestrator {
   /**
    * Render current frame to canvas.
    *
-   * Called by external rAF loop or render loop.
+   * Called every rAF frame by client.ts rafLoop.
    * Idempotent: safe to call multiple times per frame.
    */
   public render(): void {

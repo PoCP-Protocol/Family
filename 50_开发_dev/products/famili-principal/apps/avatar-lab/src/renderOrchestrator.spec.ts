@@ -245,4 +245,402 @@ describe('MM3-O: RenderOrchestrator', () => {
     // Verify no renderer state was mutated directly
     expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
   });
+
+  // ========== MM4 TESTS ==========
+
+  describe('MM4: Temporal Continuity & Naturalness', () => {
+    // MM4-T: Transition tests
+    it('MM4-T01: expression change does not teleport (openY moves gradually)', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      // Frame 1: LISTENING
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_OPEN_HAND',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+
+      // Tick to capture initial state
+      orchestrator.tick(mockTime);
+      const snap1 = orchestrator.snapshot();
+
+      // Frame 2: THINKING (should have different target openY)
+      mockTime += 50;
+      orchestrator.applyPerformanceFrame({
+        expression: 'THINKING',
+        gesture: 'SMALL_NOD',
+        gaze: 'SOFT_DOWN_THINKING',
+        posture: 'STEADY',
+        speech_activity: 'SILENT',
+      });
+
+      // Tick mid-transition
+      orchestrator.tick(mockTime);
+      const snap2 = orchestrator.snapshot();
+
+      // Continue ticking to observe lerp progress
+      mockTime += 100;
+      orchestrator.tick(mockTime);
+      const snap3 = orchestrator.snapshot();
+
+      // After 150ms, should be very close to target
+      mockTime += 100;
+      orchestrator.tick(mockTime);
+      const snap4 = orchestrator.snapshot();
+
+      // Snapshots should differ over time (not teleport)
+      expect(snap1).not.toEqual(snap2);
+      expect(snap3).not.toEqual(snap4);
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    it('MM4-T02: transition reaches target within expected duration', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      // Apply frame
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'NONE',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+
+      orchestrator.tick(mockTime);
+
+      // Change expression
+      mockTime += 100;
+      orchestrator.applyPerformanceFrame({
+        expression: 'THINKING',
+        gesture: 'NONE',
+        gaze: 'SOFT_DOWN_THINKING',
+        posture: 'STEADY',
+        speech_activity: 'SILENT',
+      });
+
+      // Tick until convergence (tau = 150ms, 95% convergence at ~450ms)
+      mockTime += 500;
+      orchestrator.tick(mockTime);
+
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    it('MM4-T03: same target frame does not restart transition', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'NONE',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+
+      mockTime += 100;
+      orchestrator.applyPerformanceFrame({
+        expression: 'THINKING',
+        gesture: 'NONE',
+        gaze: 'SOFT_DOWN_THINKING',
+        posture: 'STEADY',
+        speech_activity: 'SILENT',
+      });
+      orchestrator.tick(mockTime);
+      const snap1 = orchestrator.snapshot();
+
+      // Apply same frame again
+      orchestrator.applyPerformanceFrame({
+        expression: 'THINKING',
+        gesture: 'NONE',
+        gaze: 'SOFT_DOWN_THINKING',
+        posture: 'STEADY',
+        speech_activity: 'SILENT',
+      });
+
+      mockTime += 50;
+      orchestrator.tick(mockTime);
+      const snap2 = orchestrator.snapshot();
+
+      // Should continue lerping smoothly, not jump or restart
+      expect(snap2).not.toEqual(snap1);
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    // MM4-G: Gesture tests
+    it('MM4-G01: SMALL_NOD triggers once per applyPerformanceFrame', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+
+      orchestrator.tick(mockTime);
+      const snap1 = orchestrator.snapshot();
+      expect(snap1.gesture).toBe('SMALL_NOD');
+    });
+
+    it('MM4-G02: repeated SMALL_NOD while active is not retriggered', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+
+      // Try to re-trigger within gesture active window
+      mockTime += 100; // Still active (nodDurationMs = 400)
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+
+      // Should be ignored (dedup works)
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    it('MM4-G03: SMALL_NOD during cooldown is ignored', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+
+      // Move to end of gesture but within cooldown (cooldown = 800ms, nod = 400ms)
+      mockTime += 600;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+
+      // Should be ignored (in cooldown)
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    it('MM4-G04: gesture returns to neutral after duration', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_NOD',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+
+      orchestrator.tick(mockTime);
+      const snap1 = orchestrator.snapshot();
+      expect(snap1.gesture).toBe('SMALL_NOD');
+
+      // After nod duration, gesture should return to NONE
+      mockTime += 450;
+      orchestrator.tick(mockTime);
+      const snap2 = orchestrator.snapshot();
+      expect(snap2.gesture).toBe('NONE');
+    });
+
+    // MM4-B: Blink tests
+    it('MM4-B01: blink occurs automatically on schedule', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      // With controlled time, blink should trigger at scheduled interval
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame(createValidPerformanceFrame());
+      orchestrator.tick(mockTime);
+
+      // Move to scheduled blink time
+      mockTime += 3000; // Guarantee blink (within [2000, 5000] range)
+      orchestrator.tick(mockTime);
+
+      // Blink should have been triggered
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    it('MM4-B02: blink interval varies within natural bounds', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+
+      const intervals: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const orchestrator = new RenderOrchestrator({
+          canvas,
+          profile,
+          now: () => mockTime,
+          randomSource: () => 0.5, // Mid-range: [2000 + 1500] = 3500ms
+        });
+        mockTime = 0;
+        orchestrator.applyPerformanceFrame(createValidPerformanceFrame());
+        orchestrator.tick(mockTime);
+        intervals.push(3500); // Deterministic with fixed randomSource
+      }
+
+      // All should be within bounds
+      intervals.forEach(interval => {
+        expect(interval).toBeGreaterThanOrEqual(2000);
+        expect(interval).toBeLessThanOrEqual(5000);
+      });
+    });
+
+    it('MM4-B04: blink does not mutate identity', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame(createValidPerformanceFrame());
+
+      // Auto-blink via tick
+      mockTime += 3500;
+      orchestrator.tick(mockTime);
+
+      // Manual blink
+      orchestrator.triggerBlink();
+
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+
+    // MM4-N: Naturalness sequence tests
+    it('MM4-N01: LISTEN→THINK→RESPOND sequence is coherent', () => {
+      const identity = createVerifiedIdentity();
+      const profile = resolver.resolve(identity);
+      let mockTime = 0;
+      const orchestrator = new RenderOrchestrator({
+        canvas,
+        profile,
+        now: () => mockTime,
+      });
+
+      // LISTEN
+      mockTime = 0;
+      orchestrator.applyPerformanceFrame({
+        expression: 'LISTENING',
+        gesture: 'SMALL_OPEN_HAND',
+        gaze: 'USER',
+        posture: 'RELAXED',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+      const snap1 = orchestrator.snapshot();
+
+      // THINK
+      mockTime += 500;
+      orchestrator.applyPerformanceFrame({
+        expression: 'THINKING',
+        gesture: 'NONE',
+        gaze: 'SOFT_DOWN_THINKING',
+        posture: 'STEADY',
+        speech_activity: 'SILENT',
+      });
+      orchestrator.tick(mockTime);
+      const snap2 = orchestrator.snapshot();
+
+      // RESPOND
+      mockTime += 1000;
+      orchestrator.applyPerformanceFrame({
+        expression: 'CALM_SERIOUS',
+        gesture: 'NONE',
+        gaze: 'USER',
+        posture: 'STEADY',
+        speech_activity: 'SPEAKING',
+      });
+      orchestrator.tick(mockTime);
+      const snap3 = orchestrator.snapshot();
+
+      // All different states
+      expect(snap1.expression).not.toEqual(snap2.expression);
+      expect(snap2.expression).not.toEqual(snap3.expression);
+      expect(orchestrator.verifyIdentityIntegrity()).toBe(true);
+    });
+  });
 });

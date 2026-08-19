@@ -37,11 +37,11 @@ export function mapCharacterExpressionToFamilyExpression(
 
     // Active listening: fully present, engaged
     case 'LISTENING':
-      return 'CALM_WARM';
+      return 'LISTENING';
 
     // Thoughtful, processing: open but reflective
     case 'THINKING':
-      return 'CALM_WARM';
+      return 'THINKING';
 
     // Gentle positive reinforcement
     case 'SOFT_ENCOURAGING':

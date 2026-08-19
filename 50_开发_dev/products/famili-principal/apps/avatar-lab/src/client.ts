@@ -176,6 +176,17 @@ socket.addEventListener('open', () => {
       profile,
     });
     logEvent('[orchestrator] initialized with verified identity');
+
+    // MM4: Start rAF loop for temporal continuity
+    // Calls tick() every frame for state transitions + render() for canvas repaint
+    const rafLoop = () => {
+      const now = performance.now();
+      renderOrchestrator?.tick(now);
+      renderOrchestrator?.render();
+      requestAnimationFrame(rafLoop);
+    };
+    requestAnimationFrame(rafLoop);
+    logEvent('[mm4] animation loop started');
   } catch (err) {
     state.console_errors += 1;
     logEvent('[orchestrator-init-error] ' + (err as Error).message);

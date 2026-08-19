@@ -27,9 +27,9 @@ describe('MM3-E: Avatar2D Expression Mapping', () => {
     expect(() => verifyExpressionMappingComplete()).not.toThrow();
   });
 
-  it('MM3-E03: LISTENING maps to CALM_WARM', () => {
+  it('MM3-E03: LISTENING maps to LISTENING (MM4: supports temporal transitions)', () => {
     const result = mapCharacterExpressionToFamilyExpression('LISTENING');
-    expect(result).toBe('CALM_WARM');
+    expect(result).toBe('LISTENING');
   });
 
   it('MM3-E04: SOFT_ENCOURAGING maps to GENTLE_ENCOURAGING', () => {
@@ -47,9 +47,9 @@ describe('MM3-E: Avatar2D Expression Mapping', () => {
     expect(result).toBe('CALM_WARM');
   });
 
-  it('MM3-E07: THINKING maps to CALM_WARM', () => {
+  it('MM3-E07: THINKING maps to THINKING (MM4: supports temporal transitions)', () => {
     const result = mapCharacterExpressionToFamilyExpression('THINKING');
-    expect(result).toBe('CALM_WARM');
+    expect(result).toBe('THINKING');
   });
 
   it('MM3-E08: WARM_FIRM maps to WARM_FIRM', () => {
@@ -68,7 +68,7 @@ describe('MM3-E: Avatar2D Expression Mapping', () => {
   });
 
   it('MM3-E11: All mapped results are valid FamilyExpression values', () => {
-    const validFamilyExpressions = ['CALM_WARM', 'CALM_SERIOUS', 'GENTLE_ENCOURAGING', 'CALM_CAUTIOUS', 'WARM_FIRM'];
+    const validFamilyExpressions = ['LISTENING', 'THINKING', 'CALM_WARM', 'CALM_SERIOUS', 'GENTLE_ENCOURAGING', 'CALM_CAUTIOUS', 'WARM_FIRM'];
     const allCharacterExpressions = [
       'NEUTRAL_WARM',
       'LISTENING',

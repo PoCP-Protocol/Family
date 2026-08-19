@@ -43,6 +43,8 @@ export type FamilyAvatarState =
   | 'HUMAN_GATE';
 
 export type FamilyExpression =
+  | 'LISTENING'
+  | 'THINKING'
   | 'CALM_WARM'
   | 'CALM_SERIOUS'
   | 'GENTLE_ENCOURAGING'
@@ -100,6 +102,7 @@ export interface Avatar2DFrameSnapshot {
   gesture: FamilyGesture;
   blink_phase: number;    // 0..1, 1 = 完全闭合
   nod_phase: number;      // 0..1
+  expression_open_y: number;  // MM4: Current interpolated eye openY (reflects temporal state)
   frame_index: number;
 }
 
@@ -143,6 +146,8 @@ const STATE_COLORS: Record<FamilyAvatarState, string> = {
 };
 
 const EXPRESSION_EYE: Record<FamilyExpression, { openY: number }> = {
+  LISTENING: { openY: 0.55 },
+  THINKING: { openY: 0.48 },
   CALM_WARM: { openY: 0.55 },
   CALM_SERIOUS: { openY: 0.35 },
   GENTLE_ENCOURAGING: { openY: 0.60 },
@@ -169,6 +174,9 @@ export class Avatar2DRenderer {
   private readonly blinkDurationMs = 120;
   private readonly nodDurationMs = 400;
 
+  // MM4: Expression openY interpolation override (from RenderOrchestrator's temporal lerp)
+  private expressionOpenYOverride: number | null = null;
+
   public constructor(opts: Avatar2DRendererOptions) {
     this.canvas = opts.canvas;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
@@ -183,6 +191,11 @@ export class Avatar2DRenderer {
   public setMouthShape(m: FamilyMouthShape): void { this.mouthShape = m; }
   public setGesture(g: FamilyGesture): void { this.gesture = g; }
 
+  /** MM4: Set interpolated eye openY from RenderOrchestrator's temporal lerp. */
+  public setExpressionOpenY(openY: number): void {
+    this.expressionOpenYOverride = openY;
+  }
+
   public triggerBlink(): void {
     this.blinkStartMs = this.nowFn();
     this.blinkActive = true;
@@ -192,6 +205,22 @@ export class Avatar2DRenderer {
     this.nodStartMs = this.nowFn();
     this.nodActive = true;
     this.gesture = 'SMALL_NOD';
+  }
+
+  /** MM4: Update temporal animation state (called by tick). */
+  public updateAnimationState(): void {
+    const now = this.nowFn();
+
+    // End blink if duration exceeded
+    if (this.blinkActive && now - this.blinkStartMs > this.blinkDurationMs) {
+      this.blinkActive = false;
+    }
+
+    // End nod if duration exceeded; reset gesture to NONE
+    if (this.nodActive && now - this.nodStartMs > this.nodDurationMs) {
+      this.nodActive = false;
+      if (this.gesture === 'SMALL_NOD') this.gesture = 'NONE';
+    }
   }
 
   /** MM2: Return bound identity profile for verification that WHO is rendering. */
@@ -220,6 +249,7 @@ export class Avatar2DRenderer {
       gesture: this.gesture,
       blink_phase: this.computeBlinkPhase(),
       nod_phase: this.computeNodPhase(),
+      expression_open_y: this.expressionOpenYOverride ?? EXPRESSION_EYE[this.expression].openY,
       frame_index: this.frameIndex,
     };
   }
@@ -228,6 +258,10 @@ export class Avatar2DRenderer {
   public render(): Avatar2DFrameSnapshot {
     const ctx = this.canvas.getContext('2d');
     if (!ctx) throw new Error('Avatar2DRenderer: canvas 2d context unavailable');
+
+    // Update animation state before rendering
+    this.updateAnimationState();
+
     const W = this.canvas.width;
     const H = this.canvas.height;
 
@@ -238,16 +272,6 @@ export class Avatar2DRenderer {
     const now = this.nowFn();
     if (!this.blinkActive && now - this.lastBlinkTriggerMs > 3000) {
       this.triggerBlink();
-    }
-
-    // 结束 blink / nod
-    if (this.blinkActive && now - this.blinkStartMs > this.blinkDurationMs) {
-      this.blinkActive = false;
-    }
-    if (this.nodActive && now - this.nodStartMs > this.nodDurationMs) {
-      this.nodActive = false;
-      // NOD 结束后如果 gesture 还是 SMALL_NOD, 回落到 NONE
-      if (this.gesture === 'SMALL_NOD') this.gesture = 'NONE';
     }
 
     ctx.clearRect(0, 0, W, H);
@@ -271,13 +295,14 @@ export class Avatar2DRenderer {
     ctx.arc(0, 0, headR, 0, Math.PI * 2);
     ctx.fill();
 
-    // 眼睛
+    // 眼睛 (MM4: Use interpolated openY if available from RenderOrchestrator's temporal lerp)
     const eyeMeta = EXPRESSION_EYE[this.expression];
     const eyeY = -headR * 0.15;
     const eyeDx = headR * 0.35;
     const eyeRx = headR * 0.11;
     const blinkPhase = this.computeBlinkPhase();
-    const eyeRy = eyeRx * eyeMeta.openY * (1 - blinkPhase);
+    const baseOpenY = this.expressionOpenYOverride ?? eyeMeta.openY;
+    const eyeRy = eyeRx * baseOpenY * (1 - blinkPhase);
     ctx.fillStyle = visualStyle.eyeColor; // PATCH-004: Identity-driven eye color
     for (const sx of [-eyeDx, eyeDx]) {
       ctx.beginPath();
