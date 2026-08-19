@@ -56,6 +56,37 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(root.dataset.familyServiceBookingStatus).toBe('READ_ONLY');
   });
 
+  it('reads the UI-13 family content directory from UI-01 without creating commerce state', async () => {
+    const catalog = { products: [
+      { product_id: 'product-a', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1, title: '亲子沟通小练习', admission_status: 'ADMITTED', source_ref: 'fixture:catalog-a', fixture_only: true, attributes_schema_version: 1 },
+      { product_id: 'product-b', product_ref: 'PRODUCT_FAMILY_READING', product_version: 1, title: '家庭阅读工具', admission_status: 'ADMITTED', source_ref: 'fixture:catalog-b', fixture_only: true, attributes_schema_version: 1 },
+    ] };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => catalog });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', commerceCatalogApiMode: 'synthetic-api', initialPage: 'home' });
+    root.querySelector<HTMLButtonElement>('[data-ui01-feature="recommended_card_1"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/commerce/products');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'include' });
+    expect(root.dataset.familyCommerceCatalogStatus).toBe('READY');
+    const directory = root.querySelector('[data-ui13-catalog-state="READY"]');
+    expect(directory?.textContent).toContain('从这些内容慢慢了解');
+    expect(directory?.textContent).toContain('亲子沟通小练习');
+    expect(directory?.textContent).not.toMatch(/DEV|SYNTHETIC|价格|销量|购买|支付|订单|权益|分享|下载|发布/);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('内容目录已准备好');
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui13-open-catalog-item"]')?.click();
+    expect(root.querySelector('[aria-label^="商品详情：21天亲子沟通挑战营"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    app.navigate('commerce-mall');
+  });
+
   it('submits an admitted product selection and reads customer assets only through protected commerce endpoints', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
