@@ -3289,3 +3289,18 @@ h3 {
 .by-family-orders-assets .by-orders-assets-points { padding: 10px 12px; border-radius: 12px; background: #f0edff; color: #5348a0; font-weight: 700; }
 .by-family-orders-assets .by-orders-assets-boundary { font-size: 12px; color: #7a7d98; }
 .by-family-orders-assets > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.by-family-profile {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d6e4f3;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f0f7ff);
+  box-shadow: 0 8px 22px rgba(32, 83, 139, .08);
+}
+.by-family-profile small { color: #2b6fae; font-weight: 700; }
+.by-family-profile h2 { margin: 7px 0 8px; color: #214d79; font-size: 20px; }
+.by-family-profile p { margin: 7px 0; color: #526d8d; line-height: 1.65; }
+.by-family-profile .by-family-profile-focus { padding: 10px 12px; border-radius: 12px; background: #edf5ff; color: #315f8e; }
+.by-family-profile-focus span { color: #6d85a1; font-size: 12px; }
+.by-family-profile .by-family-profile-boundary { color: #7489a0; font-size: 12px; }
+.by-family-profile > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }

@@ -657,6 +657,24 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('routes UI-33 family profile readback to plan or services without sensitive writes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, platformSurfacesApiMode: 'synthetic-api', initialPage: 'family-profile' });
+    await tick(); await tick();
+    const profile = root.querySelector('[data-ui33-profile-state="READY"]');
+    expect(profile?.textContent).toContain('资料只为家庭服务');
+    expect(profile?.textContent).not.toMatch(/儿童诊断|诊断结论|排名|总分|DEV|SYNTHETIC|Model Gateway|回执|审计|导出|删除|分享/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui33-open-growth-plan"]')?.click();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    app.navigate('family-profile');
+    root.querySelector<HTMLButtonElement>('[data-by="ui33-open-my-services"]')?.click();
+    expect(root.querySelector('[aria-label^="我的服务"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
   it('routes the UI-22 family activity catalog to a private explanation and back without a registration write', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
     vi.stubGlobal('fetch', fetchMock);
