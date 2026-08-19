@@ -23,6 +23,10 @@ import {
   type PrincipalAiRunResult,
   type PrincipalRiskRoute,
 } from '@family/principal-ai';
+import {
+  derivePerformanceIntent,
+  type PerformanceIntent,
+} from '@family/fpai-multimodal-contracts';
 import type {
   AvatarEvent,
   MediaConsentContext,
@@ -315,7 +319,13 @@ export class RealtimePrincipalOrchestrator {
     }
 
     // §14/§15 Performance Planner + TTS/Avatar 并行启动
-    const plan = this.planner.plan(output, sceneHint, risk);
+    // MM3-PATCH-001: Derive semantic intent, then plan performance frame
+    const intent: PerformanceIntent = derivePerformanceIntent({
+      risk_route: risk,
+      boundary: output.boundary,
+      one_small_action: output.one_small_action,
+    });
+    const plan = this.planner.plan(intent, risk);
     this.lastPlan = plan;
     this.emitServer({
       kind: 'PERFORMANCE_PLAN',

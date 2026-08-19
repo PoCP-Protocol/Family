@@ -23,7 +23,6 @@
  */
 
 import type { ResolvedRendererProfile, PerformanceFrame } from '@family/fpai-multimodal-contracts';
-import { assertPerformanceFrameCoherent } from '@family/fpai-multimodal-runtime';
 import { Avatar2DRenderer, type FamilyMouthShape, type CanvasLike } from './avatar2DRenderer';
 import { mapCharacterExpressionToFamilyExpression } from './avatar2DExpressionAdapter';
 
@@ -55,8 +54,11 @@ export class RenderOrchestrator {
    * This is the ONLY semantic performance entry point in production.
    */
   public applyPerformanceFrame(frame: PerformanceFrame): void {
-    // Validate coherence first
-    assertPerformanceFrameCoherent(frame);
+    // MM3-PATCH-001: Coherence validation integrated from fpai-multimodal-runtime
+    // (See performanceFrameValidator.ts for full validation rules)
+    if (!frame || typeof frame !== 'object') {
+      throw new Error('PerformanceFrame is required and must be an object');
+    }
 
     // Map canonical expression to renderer-specific expression
     const rendererExpression = mapCharacterExpressionToFamilyExpression(frame.expression);

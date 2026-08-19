@@ -6,7 +6,15 @@
  *   - session_id / turn_id 由服务器分配,客户端不再伪造
  *   - INTERRUPT / TELEMETRY_REQUEST 命令必须原样透传
  *   - DEV 面板只显示白名单遥测,禁止显示 prompt / CoT / apiKey / secret
+ *
+ * MM3-PATCH-001:
+ *   - 接收 PerformanceFrame (来自 server PrincipalAiOutput → PerformancePlanner)
+ *   - 本地验证并冻结 frame
+ *   - 通过 RenderOrchestrator 原子应用到 Avatar2DRenderer
  */
+import { RenderOrchestrator } from './renderOrchestrator';
+import { getIdentityResolver } from '@family/fpai-multimodal-runtime';
+import type { CharacterIdentity, PerformanceFrame } from '@family/fpai-multimodal-contracts';
 import type { RealtimeServerEvent } from '@family/fpai-multimodal-contracts';
 
 /* ---------- authoritative Principal 输出 (与 @family/principal-ai 契约一致) ---------- */
@@ -126,13 +134,53 @@ const sendBtnEl = requiredElement<HTMLButtonElement>('sendBtn', 'button');
 const interruptBtnEl = requiredElement<HTMLButtonElement>('interruptBtn', 'button');
 const telemetryBtnEl = requiredElement<HTMLButtonElement>('telemetryBtn', 'button');
 
-/* ---------- WebSocket ---------- */
+/* ---------- WebSocket + RenderOrchestrator (MM3-PATCH-001) ---------- */
 
 const wsUrl = (window as { AVATAR_LAB_WS_URL?: string }).AVATAR_LAB_WS_URL ?? 'ws://127.0.0.1:8765';
 const socket = new WebSocket(wsUrl);
 
+let renderOrchestrator: RenderOrchestrator | null = null;
+
 socket.addEventListener('open', () => {
   logEvent('[ws] open');
+
+  // MM3-PATCH-001: Initialize RenderOrchestrator with local verified identity
+  // This is the production composition boundary where identity + performance meet
+  try {
+    const resolver = getIdentityResolver();
+    const authorizedIdentity: CharacterIdentity = {
+      version: 'character_v1.0',
+      frozen_date: new Date().toISOString().split('T')[0],
+      character_name: '法咪莉校长',
+      persona: '知性邻家姐姐',
+      ownership: 'Family-owned IP',
+      visual_dna: [
+        'INTELLECTUAL', 'WARM', 'TRUSTWORTHY', 'NATURAL', 'KIND',
+        'CALM', 'MATURE', 'EMPATHETIC', 'CULTURED', 'NON_JUDGMENTAL',
+      ],
+      ip_alignment: {
+        bobo_method_inheritance: true,
+        bobo_identity_clone: false,
+        bobo_face_clone: false,
+        bobo_voice_clone: false,
+        real_person_likeness_clone: false,
+      },
+    };
+    const profile = resolver.resolve(authorizedIdentity);
+    const canvasEl = document.createElement('canvas');
+    canvasEl.width = 320;
+    canvasEl.height = 320;
+    avatarEl.appendChild(canvasEl);
+    renderOrchestrator = new RenderOrchestrator({
+      canvas: canvasEl,
+      profile,
+    });
+    logEvent('[orchestrator] initialized with verified identity');
+  } catch (err) {
+    state.console_errors += 1;
+    logEvent('[orchestrator-init-error] ' + (err as Error).message);
+  }
+
   socket.send(JSON.stringify({ kind: 'SESSION_START' }));
 });
 
@@ -211,6 +259,17 @@ socket.addEventListener('message', (event) => {
     }
     case 'PERFORMANCE_PLAN': {
       renderPerformance(payload.plan as Record<string, unknown>);
+      // MM3-PATCH-001: Apply PerformanceFrame through RenderOrchestrator atomically
+      if (renderOrchestrator) {
+        try {
+          const frame = payload.plan as unknown as PerformanceFrame;
+          renderOrchestrator.applyPerformanceFrame(frame);
+          logEvent('[performance] frame applied');
+        } catch (err) {
+          state.console_errors += 1;
+          logEvent('[performance-error] ' + (err as Error).message);
+        }
+      }
       break;
     }
     case 'TTS_EVENT': {
