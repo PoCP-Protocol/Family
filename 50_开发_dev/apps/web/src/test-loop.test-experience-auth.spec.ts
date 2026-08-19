@@ -422,3 +422,61 @@ describe('UI-32 authenticated family assets readback', () => {
     expect(root.textContent).not.toMatch(/支付成功|订单已确认|权益已生效|积分已扣除|外部通知已发送/);
   });
 });
+
+
+describe('UI-33 to UI-34 authenticated family-private records', () => {
+  it('reads the family profile with the account bearer only and preserves the non-diagnostic boundary', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        family_id: 'family-profile-auth-scope', data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED',
+        cards: [{ surface: 'UI-33', state: 'READY', title: '家庭档案', summary: '仅回看家庭留存资料。', loop: 'PROFILE_RECORDS_LOOP', business_capability: 'family_profile', primary_objects: ['Family'], command: { name: 'READ_FAMILY_PROFILE' } }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-profile-auth-scope', authToken: 'family-profile-auth-bearer', platformSurfacesApiMode: 'synthetic-api', initialPage: 'family-profile' });
+    await tick(); await tick();
+
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-profile-auth-scope/dev/platform-surfaces');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-profile-auth-bearer');
+    expect(root.querySelector('[data-ui33-profile-state="READY"]')?.textContent).toContain('成员资料、关注方向和成长记录彼此分开');
+    expect(root.textContent).not.toMatch(/修改资料|隐私已变更|诊断已生成|排名|总分/);
+  });
+
+  it('reads family service records with the account bearer only without changing bookings or service status', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          family_id: 'family-records-auth-scope', visibility: 'FAMILY_PRIVATE',
+          bookings: [{ booking_request_id: 'booking-private', service_offering_ref: 'TEST_PARENT_CHILD_DIALOGUE', status: 'REQUESTED' }],
+          service_records: [{ service_record_id: 'record-private', record_kind: 'EVENT_REGISTRATION_INTEREST', status: 'RECORDED', visibility: 'FAMILY_PRIVATE', external_effect: false }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ family_id: 'family-records-auth-scope', service_records: [] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-records-auth-scope', authToken: 'family-records-auth-bearer', serviceRecordsApiMode: 'synthetic-api', initialPage: 'service-records' });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-records-auth-scope/orchestration/test-loop/services/customer-projection');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-records-auth-bearer');
+    const [pageObjectsUrl, pageObjectsRequest] = fetchMock.mock.calls[1];
+    expect(pageObjectsUrl).toBe('http://family-api.test/families/family-records-auth-scope/orchestration/test-loop/page-objects');
+    expect(pageObjectsRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((pageObjectsRequest.headers as Record<string, string>).authorization).toBe('Bearer family-records-auth-bearer');
+    expect(root.querySelector('[data-ui34-records-state="READY"]')?.textContent).toContain('家庭支持过程记录可回看');
+    expect(root.textContent).not.toMatch(/预约已确认|服务已完成|状态已变更|外部通知已发送/);
+  });
+});
