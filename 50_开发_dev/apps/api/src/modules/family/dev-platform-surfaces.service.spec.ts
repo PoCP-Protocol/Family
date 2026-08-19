@@ -46,6 +46,21 @@ describe('DevPlatformSurfacesService', () => {
     expect(userJourneyContent).not.toMatch(/rank|score|percentile|peer|city|class|streak|badge|reward/i);
   });
 
+  it('builds UI-12 as a private process story without media, results, or sharing', () => {
+    const emptyStory = service.getProjection(familyId).cards.find((card) => card.surface === 'UI-12')?.private_growth_story;
+    expect(emptyStory).toMatchObject({ state: 'WAITING_FOR_MOMENT', journey_route: 'growth-ranking', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE', moments: [] });
+    const story = service.getProjection(familyId, [
+      { event_id: 'evt-02', ui_id: 'UI-02', business_loop: 'GROWTH_LOOP', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:01.000Z', replayed: false },
+      { event_id: 'evt-05', ui_id: 'UI-05', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:02.000Z', replayed: false },
+      { event_id: 'evt-09', ui_id: 'UI-09', business_loop: 'GROWTH_LOOP', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:03.000Z', replayed: false },
+      { event_id: 'evt-21', ui_id: 'UI-21', business_loop: 'TEACHER_SALON_LOOP', command: 'PREVIEW_SYNTHETIC_BOOKING', event_state: 'DEV_CONFIRMED', created_at: '2026-08-19T00:00:04.000Z', replayed: false },
+    ]).cards.find((card) => card.surface === 'UI-12')?.private_growth_story;
+    expect(story).toMatchObject({ state: 'READY', title: '我们一起走过的片段', journey_route: 'growth-ranking' });
+    expect(story?.moments).toHaveLength(3);
+    const userStoryContent = JSON.stringify({ state: story?.state, title: story?.title, summary: story?.summary, moments: story?.moments, journey_route: story?.journey_route });
+    expect(userStoryContent).not.toMatch(/name|age|school|score|badge|reward|outcome|share|download|publish|media|qr|order|booking/i);
+  });
+
   it('exposes a controller-safe allow-list for UI-11~UI-34', () => {
     expect(service.supportsSurface('UI-21')).toBe(true);
     expect(service.supportsSurface('UI-10')).toBe(false);

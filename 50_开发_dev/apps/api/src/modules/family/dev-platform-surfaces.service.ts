@@ -3,6 +3,7 @@ import {
   DEV_PLATFORM_SURFACES,
   type DevFlowReceiptSummary,
   type DevPersonalGrowthJourney,
+  type DevPrivateGrowthStory,
   type DevPlatformNoopCommandResult,
   type DevPlatformSurface,
   type DevPlatformSurfaceCard,
@@ -52,6 +53,7 @@ export class DevPlatformSurfacesService {
 
   private templates(flowEvents: readonly DevFlowReceiptSummary[]): Template[] {
     const personalGrowthJourney = buildPersonalGrowthJourney(flowEvents);
+    const privateGrowthStory = buildPrivateGrowthStory(flowEvents);
     return [
       ['UI-11','PERSONAL_HISTORY','我的成长轨迹','READ_ONLY','TIMELINE_IS_PROVENANCE_NOT_SCORE_OR_RANKING','DEV 用个人历史轨迹替代跨家庭排行；无家庭总分或同龄比较。','可查看自己的行动时间线。','READ_PERSONAL_HISTORY','READ_ONLY'],
       ['UI-12','EVIDENCE','成长故事海报','NOOP','EVIDENCE_STORY_IS_NOT_OUTCOME_OR_SHARE','DEV 展示成果故事占位；不生成海报、不外发分享。','分享适配器保持 no-op。','PREVIEW_SYNTHETIC_EVIDENCE_STORY','NOOP_NOT_PERSISTED'],
@@ -80,6 +82,7 @@ export class DevPlatformSurfacesService {
     ].map(([surface, domain, title, state, boundary, summary, next_hint, command, mode]) => ({
       surface: surface as DevPlatformSurface, domain: domain as DevPlatformSurfaceCard['domain'], title, state: state as DevPlatformSurfaceCard['state'], boundary, summary, next_hint, command: { name: command, mode: mode as DevPlatformSurfaceCard['command']['mode'] },
       ...(surface === 'UI-11' ? { personal_growth_journey: personalGrowthJourney } : {}),
+      ...(surface === 'UI-12' ? { private_growth_story: privateGrowthStory } : {}),
     }));
   }
 }
@@ -103,5 +106,28 @@ function buildPersonalGrowthJourney(flowEvents: readonly DevFlowReceiptSummary[]
     plan_route: 'core-plan',
     review_route: 'growth-report',
     fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING',
+  };
+}
+
+function buildPrivateGrowthStory(flowEvents: readonly DevFlowReceiptSummary[]): DevPrivateGrowthStory {
+  const moments = flowEvents
+    .filter((event) => ['UI-02', 'UI-04', 'UI-05', 'UI-09'].includes(event.ui_id))
+    .sort((left, right) => left.created_at.localeCompare(right.created_at))
+    .slice(-4)
+    .map((event) => ({
+      'UI-02': '我们选择了一个想一起关注的方向。',
+      'UI-04': '我们查看了可以慢慢练习的 90 天计划。',
+      'UI-05': '我们为今天留出了一个小行动。',
+      'UI-09': '我们打开了家庭回顾，愿意再听听彼此的感受。',
+    }[event.ui_id]!));
+  return {
+    state: moments.length > 0 ? 'READY' : 'WAITING_FOR_MOMENT',
+    title: moments.length > 0 ? '我们一起走过的片段' : '从一段愿意回看的经历开始',
+    summary: moments.length > 0
+      ? '这些是我们已经尝试过的过程，不急着下结论，只是留给家庭慢慢回看的片段。'
+      : '当我们开始关注一件小事，这里会留下家庭自己的过程片段。',
+    moments,
+    journey_route: 'growth-ranking',
+    fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE',
   };
 }

@@ -584,6 +584,9 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
       { event_id: 'evt-02', label: '选择了一个家庭关注方向', detail: '从最想照顾的一件事开始。' },
       { event_id: 'evt-09', label: '打开了家庭回顾', detail: '回看一次陪伴，不急着判断效果。' },
     ], plan_route: 'core-plan', review_route: 'growth-report', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING' } } : {}),
+    ...(surface === 'UI-12' ? { private_growth_story: { state: 'READY', title: '我们一起走过的片段', summary: '这些是我们已经尝试过的过程，不急着下结论，只是留给家庭慢慢回看的片段。', moments: [
+      '我们选择了一个想一起关注的方向。', '我们为今天留出了一个小行动。', '我们打开了家庭回顾，愿意再听听彼此的感受。',
+    ], journey_route: 'growth-ranking', fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE' } } : {}),
   }));
   const projection = { projection_version: 'DEV_PLATFORM_SURFACES_V1', family_id: familyId, data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', model_gateway: 'NOOP_NOT_INVOKED', cards };
 
@@ -598,6 +601,11 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(ui11?.textContent).toContain('我们的成长旅程');
     expect(ui11?.textContent).not.toMatch(/DEV|SYNTHETIC|排名|积分|名次|称号|奖励/);
     expect(root.querySelector('.by-assistive-status')?.textContent).toContain('成长旅程已更新');
+    app.navigate('growth-poster');
+    const ui12 = root.querySelector('[data-platform-surface="UI-12"]');
+    expect(ui12?.textContent).toContain('家庭私有回看');
+    expect(ui12?.textContent).not.toMatch(/DEV|SYNTHETIC|姓名|年龄|学校|分数|勋章|二维码|分享|下载|发布/);
+    expect(root.querySelector('.by-assistive-status')?.textContent).toContain('家庭故事已准备好');
 
     const pages = [
       'growth-poster','commerce-mall','commerce-product','commerce-invite','commerce-group','commerce-points','commerce-mine',
@@ -615,7 +623,7 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('routes the UI-11 private journey only to the existing plan or family review', async () => {
+  it('routes the UI-11 private journey to plan, private story, or family review only', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => projection });
     vi.stubGlobal('fetch', fetchMock);
     const root = document.createElement('div'); document.body.append(root);
@@ -623,6 +631,12 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     await tick(); await tick();
     root.querySelector<HTMLButtonElement>('[data-by="ui11-open-plan"]')?.click();
     expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    app.navigate('growth-ranking');
+    root.querySelector<HTMLButtonElement>('[data-by="ui11-open-private-story"]')?.click();
+    expect(root.querySelector('[data-ui12-story-state]')?.textContent).toContain('我们一起走过的片段');
+    expect(root.querySelector('[data-ui12-story-state]')?.textContent).not.toMatch(/分享|下载|发布|二维码/);
+    root.querySelector<HTMLButtonElement>('[data-by="ui12-return-growth-journey"]')?.click();
+    expect(root.querySelector('[data-ui11-journey-state]')).not.toBeNull();
     app.navigate('growth-ranking');
     root.querySelector<HTMLButtonElement>('[data-by="ui11-open-family-review"]')?.click();
     expect(root.querySelector('[aria-label^="家庭成长报告"]')).not.toBeNull();

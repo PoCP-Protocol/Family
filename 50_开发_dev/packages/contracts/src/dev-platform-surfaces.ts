@@ -20,6 +20,15 @@ export interface DevPersonalGrowthJourney {
   fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_RANKING';
 }
 
+export interface DevPrivateGrowthStory {
+  state: 'WAITING_FOR_MOMENT' | 'READY';
+  title: string;
+  summary: string;
+  moments: readonly string[];
+  journey_route: 'growth-ranking';
+  fact_boundary: 'PROCESS_EVENTS_NOT_OUTCOME_OR_SHARE';
+}
+
 export interface DevPlatformSurfaceCard {
   surface: DevPlatformSurface;
   /** Six-loop architecture metadata, sourced from FAMILY_UI_ARCHITECTURE_BINDINGS. */
@@ -37,6 +46,8 @@ export interface DevPlatformSurfaceCard {
   command: { name: string; mode: 'READ_ONLY' | 'CONTROLLED_DRAFT' | 'NOOP_NOT_PERSISTED' };
   /** Present only on UI-11; a same-family process history, never a comparative ranking. */
   personal_growth_journey?: DevPersonalGrowthJourney;
+  /** Present only on UI-12; a private process narrative without media or external sharing. */
+  private_growth_story?: DevPrivateGrowthStory;
 }
 
 export interface DevPlatformSurfacesProjection {
