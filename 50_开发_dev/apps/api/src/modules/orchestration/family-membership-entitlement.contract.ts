@@ -128,6 +128,12 @@ export interface FamilyMembershipAssetProjection {
     valid_to: string | null;
     row_version: number;
   }>;
+  /** Dev-only read snapshot; never a production points ledger or redemption balance. */
+  dev_points?: {
+    balance: number;
+    source: 'DEV_FIXTURE';
+    redeemable: false;
+  };
   text_equivalent: string;
 }
 

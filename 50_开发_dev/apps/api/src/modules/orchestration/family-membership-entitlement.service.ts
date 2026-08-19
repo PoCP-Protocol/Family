@@ -410,7 +410,9 @@ export class FamilyMembershipEntitlementService {
       tenant_id: tenantId, family_id: familyId, projection_version: 1, as_of: new Date().toISOString(),
       source_refs: [...subscriptions.values()].map((subscription) => subscription.subscription_ref),
       policy_version: null, visibility: 'FAMILY_PRIVATE', expires_at: null,
-      subscriptions: [...subscriptions.values()], benefits,
+      subscriptions: [...subscriptions.values()],
+      benefits,
+      dev_points: { balance: 1280, source: 'DEV_FIXTURE', redeemable: false },
       text_equivalent: benefits.length ? '可查看当前家庭的会员订阅和权益资产。该内容仅在家庭范围内展示。' : '当前没有可展示的会员权益资产。',
     };
   }

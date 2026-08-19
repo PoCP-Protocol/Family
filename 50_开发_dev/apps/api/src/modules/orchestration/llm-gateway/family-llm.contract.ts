@@ -60,7 +60,7 @@ export interface FamilyLlmSnapshot {
   intent_choice?: string;
   mock_state?: string;
   admitted_candidates: readonly FamilyLlmCandidateSnapshot[];
-  supported_actions: readonly ('RETURN' | 'PAUSE' | 'NO_ACTION' | 'SELECT_OPTION' | 'TOGGLE_TASK' | 'CREATE_INVITE' | 'CREATE_GROUP' | 'CREATE_BOOKING' | 'CREATE_EVENT' | 'PUBLISH_TEMPLATE')[];
+  supported_actions: readonly ('RETURN' | 'PAUSE' | 'NO_ACTION' | 'SELECT_OPTION' | 'TOGGLE_TASK' | 'CREATE_INVITE' | 'CREATE_GROUP' | 'CREATE_BOOKING' | 'CREATE_EVENT' | 'PUBLISH_TEMPLATE' | 'CREATE_RENEWAL_INTEREST')[];
 }
 
 export interface FamilyLlmToolProposal {

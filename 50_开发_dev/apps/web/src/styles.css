@@ -3234,3 +3234,31 @@ h3 {
 .by-family-growth-review p { margin: 8px 0; color: #705d47; line-height: 1.65; }
 .by-family-growth-review .by-growth-review-boundary { padding: 10px 12px; border-radius: 12px; background: #fff2dd; color: #8a6530; }
 .by-family-growth-review > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+
+.by-family-annual-service-overview {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #d9e4f3;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f7faff, #ffffff);
+  box-shadow: 0 8px 22px rgba(44, 84, 139, .08);
+}
+.by-family-annual-service-overview small { color: #5b76a1; font-weight: 700; }
+.by-family-annual-service-overview h2 { margin: 7px 0 10px; font-size: 19px; color: #294c7d; }
+.by-family-annual-service-overview p { margin: 8px 0; color: #4b607c; line-height: 1.65; }
+.by-family-annual-service-overview ul { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+.by-family-annual-service-overview li { padding: 9px 11px; border-radius: 10px; background: #edf4ff; color: #3e5e88; }
+.by-family-annual-service-overview > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.by-family-annual-service-overview .by-renewal-interest-success { padding: 10px 12px; border-radius: 12px; background: #edf8ef; color: #36704a; }
+.by-family-annual-service-overview .by-renewal-interest-error { padding: 10px 12px; border-radius: 12px; background: #fff2ee; color: #9b5148; }
+.by-family-points-projection {
+  margin: 16px 14px 24px;
+  padding: 18px;
+  border: 1px solid #e2d9f4;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fbf8ff, #ffffff);
+  box-shadow: 0 8px 22px rgba(94, 67, 145, .08);
+}
+.by-family-points-projection small { color: #745aa8; font-weight: 700; }
+.by-family-points-projection h2 { margin: 7px 0 4px; font-size: 28px; color: #5f4698; }
+.by-family-points-projection p { margin: 8px 0 12px; color: #655a76; line-height: 1.65; }

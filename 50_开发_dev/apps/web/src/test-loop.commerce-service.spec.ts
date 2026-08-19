@@ -212,6 +212,82 @@ describe('Family commerce and service booking slice entrypoints', () => {
     expect(root.querySelector('[aria-label^="我的会员中心"]')).not.toBeNull();
   });
 
+  it('reads the same family-private service scope on UI-30 and routes only to my services or the growth plan', async () => {
+    const membershipProjection = {
+      subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],
+      benefits: [
+        { benefit_grant_id: 'benefit-consult', benefit_ref: 'BENEFIT_CONSULT', status: 'AVAILABLE', allocated_units: 1, remaining_units: 1, row_version: 1 },
+        { benefit_grant_id: 'benefit-content', benefit_ref: 'BENEFIT_CONTENT', status: 'AVAILABLE', allocated_units: 1, remaining_units: 1, row_version: 1 },
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => membershipProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'annual-member-mine' });
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/membership/customer-projection');
+    expect(request).toMatchObject({ method: 'GET', credentials: 'include' });
+    const overview = root.querySelector('[data-ui30-service-overview-state="READY"]');
+    expect(overview?.textContent).toContain('家庭交流支持');
+    expect(overview?.textContent).toContain('成长内容支持');
+    expect(overview?.textContent).not.toMatch(/支付|订单|DEV|SYNTHETIC|contract/i);
+    root.querySelector<HTMLButtonElement>('[data-by="ui30-open-my-services"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label^="我的服务"]')).not.toBeNull();
+    app.navigate('annual-member-mine');
+    root.querySelector<HTMLButtonElement>('[data-by="ui30-open-growth-plan"]')?.click();
+    await tick();
+    expect(root.querySelector('[aria-label^="90天成长方案"]')).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps UI-30 as a non-commercial empty read view when the family has no readable services', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ subscriptions: [], benefits: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'annual-member-mine' });
+    await tick(); await tick();
+    const overview = root.querySelector('[data-ui30-service-overview-state="EMPTY"]');
+    expect(overview?.textContent).toContain('先从家庭成长计划开始');
+    expect(overview?.textContent).not.toMatch(/支付|订单|DEV|SYNTHETIC|contract/i);
+    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+  });
+
+  it('runs the UI-30 Dev points, invitation, and renewal-interest journey without payment or external effects', async () => {
+    const membershipProjection = {
+      subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],
+      benefits: [{ benefit_grant_id: 'benefit-consult', benefit_ref: 'BENEFIT_CONSULT', status: 'AVAILABLE', allocated_units: 1, remaining_units: 1, row_version: 1 }],
+      dev_points: { balance: 1280, source: 'DEV_FIXTURE', redeemable: false },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => membershipProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ operation_id: 'renewal-fixture', page_id: 'UI-30', action: 'CREATE_RENEWAL_INTEREST', status: 'CONFIRMED', external_effect: false }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+    const app = createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', membershipProjectionApiMode: 'synthetic-api', initialPage: 'annual-member-mine' });
+    await tick(); await tick();
+
+    root.querySelector<HTMLButtonElement>('[data-by="ui30-open-points"]')?.click();
+    await tick(); await tick();
+    expect(root.querySelector('[data-ui30-points-state="READY"]')?.textContent).toContain('1280');
+    expect(root.textContent).not.toMatch(/DEV|SYNTHETIC|contract/i);
+    app.navigate('annual-member-mine');
+    root.querySelector<HTMLButtonElement>('[data-by="ui30-open-invite"]')?.click();
+    expect(root.querySelector('[aria-label^="邀请有礼"]')).not.toBeNull();
+    app.navigate('annual-member-mine');
+    root.querySelector<HTMLButtonElement>('[data-by="ui30-create-renewal-interest"]')?.click();
+    await tick(); await tick();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [renewalUrl, renewalRequest] = fetchMock.mock.calls[1];
+    expect(renewalUrl).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');
+    expect(renewalRequest).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(renewalRequest.body))).toMatchObject({ page_id: 'UI-30', action: 'CREATE_RENEWAL_INTEREST', fixture_ref: 'RENEWAL_INTENT_FAMILY_GROWTH' });
+    expect(root.querySelector('[data-ui30-service-overview-state="READY"]')?.textContent).toContain('续费了解意向已记下');
+  });
+
   it('moves from UI-18 family service scope to the UI-19 topic directory through read-only family-scoped projections', async () => {
     const membershipProjection = {
       subscriptions: [{ membership_subscription_id: 'subscription-fixture', subscription_ref: 'membership-fixture', plan_ref: 'PLAN_FAMILY_GROWTH', plan_version: 1, status: 'ACTIVE', row_version: 1 }],

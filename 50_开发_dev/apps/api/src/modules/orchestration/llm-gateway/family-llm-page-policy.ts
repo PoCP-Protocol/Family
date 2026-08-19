@@ -39,7 +39,7 @@ const PAGE_POLICIES: readonly FamilyLlmPagePolicy[] = [
   { page_id: 'UI-27', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'NONE', supported_actions: DEFAULT_ACTIONS },
   { page_id: 'UI-28', use_case: 'family.dev.explain_mock_community', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
   { page_id: 'UI-29', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
-  { page_id: 'UI-30', use_case: 'family.dev.explain_mock_service', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
+  { page_id: 'UI-30', use_case: 'family.dev.explain_mock_service', allowed_state_upper_bound: 'DECISION', supported_actions: ['RETURN', 'PAUSE', 'NO_ACTION', 'CREATE_RENEWAL_INTEREST'] },
   { page_id: 'UI-31', use_case: 'family.dev.explain_mock_service', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
   { page_id: 'UI-32', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
   { page_id: 'UI-33', use_case: 'family.dev.explain_mock_service', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
