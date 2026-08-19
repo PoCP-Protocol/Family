@@ -210,3 +210,51 @@ describe('UI-17 to UI-18 authenticated family-private platform projections', () 
     expect(root.textContent).not.toMatch(/支付成功|订单已生成|预约已确认|外部通知已发送/);
   });
 });
+
+
+describe('UI-23 authenticated activity interest draft', () => {
+  it('records only a bearer-authenticated no-op activity interest from the activity detail confirmation entry', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        operation_id: 'activity-interest-auth-fixture',
+        page_id: 'UI-23',
+        action: 'CREATE_EVENT',
+        operation_kind: 'EVENT_REGISTRATION',
+        fixture_ref: 'EVENT_PARENT_CHILD_SALON_2025_05_25',
+        fixture_version: 'family-34-page-test-experience.v1',
+        status: 'CONFIRMED',
+        environment: 'DEV',
+        source: 'TEST_FIXTURE',
+        external_effect: false,
+        text_equivalent: '已记下活动了解意向。本次不会收费、保留外部席位或发送活动通知。',
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-activity-auth-scope',
+      authToken: 'family-activity-auth-bearer',
+      initialPage: 'activity-detail',
+    });
+    root.querySelector<HTMLButtonElement>('[aria-label="记下活动想法"]')?.click();
+    await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, request] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://family-api.test/families/family-activity-auth-scope/orchestration/test-loop/experience/operations');
+    expect(request).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-activity-auth-bearer');
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      page_id: 'UI-23',
+      action: 'CREATE_EVENT',
+      fixture_ref: 'EVENT_PARENT_CHILD_SALON_2025_05_25',
+      fixture_version: 'family-34-page-test-experience.v1',
+    });
+    expect(root.dataset.familyExperienceStatus).toBe('CONFIRMED');
+    expect(root.textContent).not.toMatch(/报名已确认|已占位|支付成功|活动通知已发送/);
+  });
+});
