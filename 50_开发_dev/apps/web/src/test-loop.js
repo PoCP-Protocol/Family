@@ -81,6 +81,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   /** @type {any[] | null} */
   let commerceCatalogProjection = null;
   let commerceCatalogLoadState = 'IDLE';
+  /** @type {any | null} */
+  let commerceCustomerProjection = null;
   /** @type {{ product_ref: string, product_version?: number, title: string } | null} */
   let selectedCatalogItem = null;
   let detailInterestState = '';
@@ -683,9 +685,22 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
         },
       );
       const payload = await response.json();
+      const projectionHasExpectedFamily = !payload?.family_id || payload.family_id === config.familyId;
+      const projectionHasPrivateVisibility = !payload?.visibility || payload.visibility === 'FAMILY_PRIVATE';
+      const projectionIsFamilyPrivate = projectionHasExpectedFamily
+        && projectionHasPrivateVisibility
+        && Array.isArray(payload?.order_intents)
+        && Array.isArray(payload?.entitlements);
+      if (isProjection) commerceCustomerProjection = projectionIsFamilyPrivate ? payload : null;
+      else if (payload?.intent?.external_effect === false && payload?.intent?.order_intent_id) {
+        commerceCustomerProjection = {
+          family_id: config.familyId, visibility: 'FAMILY_PRIVATE',
+          order_intents: [payload.intent], entitlements: [],
+        };
+      }
       llmTextEquivalent = payload?.intent?.text_equivalent || payload?.text_equivalent || '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';
       root.dataset.familyCommerceAction = isProjection ? 'READ_CUSTOMER_COMMERCE_PROJECTION' : 'SUBMIT_ORDER_INTENT';
-      root.dataset.familyCommerceStatus = payload?.intent?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');
+      root.dataset.familyCommerceStatus = payload?.intent?.status || (isProjection && projectionIsFamilyPrivate ? 'READ_ONLY' : 'CLIENT_FAILURE');
       root.dataset.familyCommerceOrderIntent = payload?.intent?.order_intent_id || '';
       return payload;
     } catch (_error) {
@@ -1182,17 +1197,18 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   }
   function myServices() { return `${clearReference('my-services-reference-532x1000.png', '我的服务：90天成长计划、任务进度、服务入口和继续打卡，仅作静态视觉展示', [['clear-services-profile', 'family-profile', '查看家庭档案']], '532/1000')}${familyMyServicesPanel()}`; }
   function familyOrdersAssetsPanel() {
-    if (!membershipProjectionApiEnabled()) return '';
+    if (!membershipProjectionApiEnabled() && !commerceCustomerProjection) return '';
     if (membershipProjectionLoadState === 'LOADING') return '<section class="by-family-orders-assets" data-ui32-assets-state="LOADING"><small>家庭资产回看</small><h2>正在准备家庭资产说明</h2><p>请稍等片刻。</p></section>';
-    if (membershipProjectionLoadState === 'ERROR') return '<section class="by-family-orders-assets is-blocked" data-ui32-assets-state="ERROR"><small>家庭资产回看</small><h2>家庭资产说明暂时无法加载</h2><p>可以稍后再试，或回到我的服务继续。</p><button class="by-btn full-primary" data-by="ui32-open-my-services">查看我的服务</button></section>';
-    if (!membershipProjection) return '';
-    const subscriptions = membershipProjection.subscriptions || [];
-    const benefits = membershipProjection.benefits || [];
-    const points = membershipProjection.dev_points?.balance;
-    const hasReadableAsset = subscriptions.length > 0 || benefits.length > 0 || points !== undefined;
+    if (membershipProjectionLoadState === 'ERROR' && !commerceCustomerProjection) return '<section class="by-family-orders-assets is-blocked" data-ui32-assets-state="ERROR"><small>家庭资产回看</small><h2>家庭资产说明暂时无法加载</h2><p>可以稍后再试，或回到我的服务继续。</p><button class="by-btn full-primary" data-by="ui32-open-my-services">查看我的服务</button></section>';
+    const subscriptions = membershipProjection?.subscriptions || [];
+    const benefits = membershipProjection?.benefits || [];
+    const points = membershipProjection?.dev_points?.balance;
+    const orderIntents = commerceCustomerProjection?.order_intents || [];
+    const hasReadableAsset = subscriptions.length > 0 || benefits.length > 0 || points !== undefined || orderIntents.length > 0;
     const orderCopy = subscriptions.length > 0 ? `家庭已有 ${subscriptions.length} 项服务记录可回看。` : '现在还没有可回看的家庭订单记录。';
+    const intentCopy = orderIntents.length > 0 ? `<p data-ui32-commerce-intents="${orderIntents.length}">已记下 ${orderIntents.length} 项商品了解意向；这不是订单，也不会发起支付。</p>` : '';
     const benefitCopy = benefits.length > 0 ? `当前有 ${benefits.length} 项家庭支持权益说明。` : '现在还没有可回看的权益说明。';
-    return `<section class="by-family-orders-assets" data-ui32-assets-state="${hasReadableAsset ? 'READY' : 'EMPTY'}"><small>家庭资产回看</small><h2>${hasReadableAsset ? '这些信息只为家庭保留' : '先从家庭服务开始'}</h2><p>${orderCopy}</p><p>${benefitCopy}</p>${points !== undefined ? `<p class="by-orders-assets-points">家庭积分回看：${points}</p>` : ''}<p class="by-orders-assets-boundary">这里只回看家庭已有记录，不会在这里改变订单、权益或积分。</p><div><button class="by-btn by-btn-ghost" data-by="ui32-open-annual-member">回到年度陪伴</button><button class="by-btn by-btn-ghost" data-by="ui32-open-my-services">查看我的服务</button><button class="by-btn full-primary" data-by="ui32-open-growth-plan">回到成长计划</button></div></section>`;
+    return `<section class="by-family-orders-assets" data-ui32-assets-state="${hasReadableAsset ? 'READY' : 'EMPTY'}"><small>家庭资产回看</small><h2>${hasReadableAsset ? '这些信息只为家庭保留' : '先从家庭服务开始'}</h2><p>${orderCopy}</p>${intentCopy}<p>${benefitCopy}</p>${points !== undefined ? `<p class="by-orders-assets-points">家庭积分回看：${points}</p>` : ''}<p class="by-orders-assets-boundary">这里只回看家庭已有记录，不会在这里改变订单、权益或积分。</p><div><button class="by-btn by-btn-ghost" data-by="ui32-open-annual-member">回到年度陪伴</button><button class="by-btn by-btn-ghost" data-by="ui32-open-my-services">查看我的服务</button><button class="by-btn full-primary" data-by="ui32-open-growth-plan">回到成长计划</button></div></section>`;
   }
   function ordersAssets() { return `${clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010')}${familyOrdersAssetsPanel()}`; }
   function familyProfilePanel() {

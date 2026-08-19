@@ -68,3 +68,45 @@ describe('UI-13 to UI-14 authenticated commerce intent', () => {
     expect(root.textContent).not.toMatch(/支付|外部效果|订单完成/);
   });
 });
+
+
+describe('UI-14 to UI-32 authenticated commerce readback', () => {
+  it('restores a family-private no-payment product interest in assets without treating it as an order or entitlement', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          products: [{ product_id: 'product-camp', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1, title: '亲子沟通小练习', admission_status: 'ADMITTED', source_ref: 'fixture:catalog', fixture_only: true, attributes_schema_version: 1 }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          intent: { order_intent_id: 'intent-private-readback', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的了解意向。不会扣款。' },
+          entitlement: null,
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test', familyId: 'family-commerce-readback', authToken: 'family-commerce-readback-bearer', commerceCatalogApiMode: 'synthetic-api', initialPage: 'home',
+    });
+    root.querySelector<HTMLButtonElement>('[data-ui01-feature="recommended_card_1"]')?.click();
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui13-open-catalog-item"]')?.click();
+    root.querySelector<HTMLButtonElement>('[data-by="ui14-save-interest"]')?.click();
+    await tick(); await tick();
+    app.navigate('orders-assets');
+    await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [, intentRequest] = fetchMock.mock.calls[1];
+    expect(intentRequest).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((intentRequest.headers as Record<string, string>).authorization).toBe('Bearer family-commerce-readback-bearer');
+    expect(root.querySelector('[data-ui32-commerce-intents="1"]')?.textContent).toContain('已记下 1 项商品了解意向');
+    expect(root.textContent).toContain('这不是订单，也不会发起支付');
+    expect(root.textContent).not.toMatch(/支付成功|订单完成|权益已变更|扣款成功/);
+  });
+});
