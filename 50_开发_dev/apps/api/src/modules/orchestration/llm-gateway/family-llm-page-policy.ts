@@ -10,7 +10,7 @@ export interface FamilyLlmPagePolicy {
 const DEFAULT_ACTIONS: FamilyLlmSnapshot['supported_actions'] = ['RETURN', 'PAUSE', 'NO_ACTION'];
 
 const PAGE_POLICIES: readonly FamilyLlmPagePolicy[] = [
-  { page_id: 'UI-01', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'NONE', supported_actions: DEFAULT_ACTIONS },
+  { page_id: 'UI-01', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'DECISION', supported_actions: ['RETURN', 'PAUSE', 'NO_ACTION', 'ENTER_EXPERT_LIVE'] },
   { page_id: 'UI-02', use_case: 'family.dev.text_equivalent', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },
   { page_id: 'UI-03', use_case: 'family.dev.explain_need', allowed_state_upper_bound: 'NEED', supported_actions: ['RETURN', 'PAUSE', 'NO_ACTION', 'SELECT_OPTION'] },
   { page_id: 'UI-04', use_case: 'family.dev.explain_report', allowed_state_upper_bound: 'READ_ONLY_ADMITTED_CANDIDATES', supported_actions: DEFAULT_ACTIONS },

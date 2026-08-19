@@ -7,6 +7,7 @@ export const TEST_EXPERIENCE_ACTIONS = [
   'CREATE_EVENT',
   'PUBLISH_TEMPLATE',
   'CREATE_RENEWAL_INTEREST',
+  'ENTER_EXPERT_LIVE',
 ] as const;
 export type TestExperienceAction = (typeof TEST_EXPERIENCE_ACTIONS)[number];
 
@@ -22,7 +23,7 @@ export interface TestExperienceOperationResult {
   operation_id: string;
   page_id: string;
   action: TestExperienceAction;
-  operation_kind: 'COMMERCE_INVITE' | 'COMMERCE_GROUP' | 'SERVICE_BOOKING' | 'EVENT_REGISTRATION' | 'COMMUNITY_TEMPLATE_PUBLICATION' | 'MEMBERSHIP_RENEWAL_DRAFT';
+  operation_kind: 'COMMERCE_INVITE' | 'COMMERCE_GROUP' | 'SERVICE_BOOKING' | 'EVENT_REGISTRATION' | 'COMMUNITY_TEMPLATE_PUBLICATION' | 'MEMBERSHIP_RENEWAL_DRAFT' | 'EXPERT_LIVE_SESSION';
   fixture_ref: string;
   fixture_version: typeof TEST_EXPERIENCE_FIXTURE_VERSION;
   status: 'CONFIRMED';
@@ -52,6 +53,7 @@ const FIXTURE_RULES: Record<TestExperienceAction, readonly string[]> = {
   CREATE_EVENT: ['EVENT_PARENT_CHILD_SALON_2025_05_25'],
   PUBLISH_TEMPLATE: ['POST_TEMPLATE_GROWTH_CARD'],
   CREATE_RENEWAL_INTEREST: ['RENEWAL_INTENT_FAMILY_GROWTH'],
+  ENTER_EXPERT_LIVE: ['EXPERT_LIVE_SESSION_FAMILY_GUIDANCE'],
 };
 
 const ACTION_PAGE: Record<TestExperienceAction, string> = {
@@ -61,6 +63,7 @@ const ACTION_PAGE: Record<TestExperienceAction, string> = {
   CREATE_EVENT: 'UI-23',
   PUBLISH_TEMPLATE: 'UI-26',
   CREATE_RENEWAL_INTEREST: 'UI-30',
+  ENTER_EXPERT_LIVE: 'UI-01',
 };
 
 export function isTestExperienceAction(value: unknown): value is TestExperienceAction {
@@ -83,6 +86,7 @@ export function operationKindForTestExperienceAction(action: TestExperienceActio
     case 'CREATE_EVENT': return 'EVENT_REGISTRATION';
     case 'PUBLISH_TEMPLATE': return 'COMMUNITY_TEMPLATE_PUBLICATION';
     case 'CREATE_RENEWAL_INTEREST': return 'MEMBERSHIP_RENEWAL_DRAFT';
+    case 'ENTER_EXPERT_LIVE': return 'EXPERT_LIVE_SESSION';
   }
 }
 
@@ -94,5 +98,6 @@ export function testExperienceTextEquivalent(action: TestExperienceAction): stri
     case 'CREATE_EVENT': return '已确认活动报名回执。本次不会收费、保留外部席位或发送活动通知。';
     case 'PUBLISH_TEMPLATE': return '已记录发布回执。本次不会向任何家庭、社区或外部服务发布内容。';
     case 'CREATE_RENEWAL_INTEREST': return '已记下续费了解意向。本次不会扣款、续费、变更权益或发送通知。';
+    case 'ENTER_EXPERT_LIVE': return '已记下家庭查看专家直播场次。本次不会建立音视频连接、联系专家或发送通知。';
   }
 }

@@ -37,7 +37,7 @@ function availableAgeBands(projection) {
 /**
  * Renders UI-19 as a family support-topic read projection. A selected topic can open UI-20 using only the already-read summary; no booking is created.
  * @param {HTMLElement} root
- * @param {{ apiBaseUrl: string, familyId: string, fetchImpl?: typeof fetch, onOpenTopic?: (topic: any) => void, onOpenActivityCatalog?: () => void }} config
+ * @param {{ apiBaseUrl: string, familyId: string, fetchImpl?: typeof fetch, onOpenTopic?: (topic: any) => void, onOpenActivityCatalog?: () => void, onRender?: () => void }} config
  */
 export function mountTeacherSupplyView(root, config) {
   /** @type {TeacherSupplyFilters} */
@@ -73,16 +73,19 @@ export function mountTeacherSupplyView(root, config) {
 
   function renderLoading() {
     root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="${cardStyle}" aria-live="polite">正在准备家庭支持主题…</div></section>`;
+    config.onRender?.();
   }
 
   function renderReady() {
     if (!projection) return;
     root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><div style="padding:14px 16px 2px"><h1 style="margin:0;color:#123d68;font-size:19px">家庭支持主题</h1><p style="margin:6px 0;color:#4c6987;font-size:13px">可以按家庭当前的情境慢慢了解。浏览不会替家庭作出安排。</p><button type="button" class="by-btn by-btn-ghost" data-ui19-open-activity-catalog>看看家庭成长活动</button></div>${filtersHtml()}<section aria-live="polite" aria-label="家庭支持主题列表">${offeringsHtml()}</section><p class="by-assistive-status" aria-live="polite">家庭支持主题已准备好。可以按自己的节奏慢慢了解。</p></section>`;
     bindFilters();
+    config.onRender?.();
   }
 
   function renderBlocked() {
     root.innerHTML = `<section class="by-app by-clear-reference" data-ui-id="UI-19" style="${style}"><img class="by-screen" role="img" src="${referenceImage}" alt="名师专区原图：搜索、咨询横幅、热门领域、推荐名师与底部导航" style="display:block;width:100%;height:auto"><p style="${cardStyle}" aria-live="polite" data-ui19-boundary="blocked">家庭支持主题暂时无法加载，请稍后再试。</p></section>`;
+    config.onRender?.();
   }
 
   async function reload() {

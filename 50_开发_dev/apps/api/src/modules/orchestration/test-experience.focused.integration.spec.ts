@@ -83,10 +83,11 @@ const actionCases = [
   { page_id: 'UI-23', action: 'CREATE_EVENT', fixture_ref: 'EVENT_PARENT_CHILD_SALON_2025_05_25', kind: 'EVENT_REGISTRATION' },
   { page_id: 'UI-26', action: 'PUBLISH_TEMPLATE', fixture_ref: 'POST_TEMPLATE_GROWTH_CARD', kind: 'COMMUNITY_TEMPLATE_PUBLICATION' },
   { page_id: 'UI-30', action: 'CREATE_RENEWAL_INTEREST', fixture_ref: 'RENEWAL_INTENT_FAMILY_GROWTH', kind: 'MEMBERSHIP_RENEWAL_DRAFT' },
+  { page_id: 'UI-01', action: 'ENTER_EXPERT_LIVE', fixture_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', kind: 'EXPERT_LIVE_SESSION' },
 ] as const;
 
 describe('Test Experience Operation → Cancel → Customer Projection', () => {
-  it('persists the six registered test-only operations with zero external effect and idempotent replay', async () => {
+  it('persists the seven registered test-only operations with zero external effect and idempotent replay', async () => {
     const seed = await seedGuardian();
     const operationIds: string[] = [];
     for (const [index, input] of actionCases.entries()) {
@@ -120,7 +121,7 @@ describe('Test Experience Operation → Cancel → Customer Projection', () => {
         expect((await replay.json()).operation_id).toBe(result.operation_id);
       }
     }
-    expect(Number((await pool!.query('select count(*) n from test_experience_operations')).rows[0].n)).toBe(6);
+    expect(Number((await pool!.query('select count(*) n from test_experience_operations')).rows[0].n)).toBe(7);
     expect(Number((await pool!.query('select count(*) n from test_experience_operations where external_effect=true')).rows[0].n)).toBe(0);
 
     const projection = await request(`/families/${seed.familyId}/orchestration/test-loop/experience/customer-projection`, 'GET', seed.token);

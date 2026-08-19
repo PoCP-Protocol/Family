@@ -3317,3 +3317,19 @@ h3 {
 .by-family-profile-focus span { color: #6d85a1; font-size: 12px; }
 .by-family-profile .by-family-profile-boundary { color: #7489a0; font-size: 12px; }
 .by-family-profile > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+
+.by-expert-live-session {
+  width: min(92%, 520px);
+  margin: 16px auto 24px;
+  padding: 18px;
+  border: 1px solid #dce9fb;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+  box-shadow: 0 8px 24px rgba(54, 113, 196, 0.08);
+}
+.by-expert-live-session small { color: #3671c4; font-weight: 700; }
+.by-expert-live-session h2 { margin: 8px 0; color: #1c2d46; font-size: 18px; }
+.by-expert-live-session p { margin: 8px 0; color: #64748b; line-height: 1.65; }
+.by-expert-live-session .by-expert-live-status { color: #2f6b56; }
+.by-expert-live-session > div { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.by-expert-live-session .by-btn { flex: 1 1 160px; }

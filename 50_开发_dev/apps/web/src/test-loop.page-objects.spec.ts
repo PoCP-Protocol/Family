@@ -402,16 +402,16 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
       ...reportProjection,
       recent_flow_events: [{ ui_id: 'UI-04', command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }, ...reportProjection.recent_flow_events],
       cards: reportProjection.cards.map((card) => card.surface === 'UI-04'
-        ? { ...card, report_draft: { ...card.report_draft, state: 'PLAN_PREVIEWED', plan_link_state: 'VIEWED' } }
+        ? { ...card, report_draft: { ...(card as any).report_draft, state: 'PLAN_PREVIEWED', plan_link_state: 'VIEWED' } }
         : card.surface === 'UI-05'
-          ? { ...card, plan_preview: { ...card.plan_preview, state: 'VIEWED_FROM_REPORT' } }
+          ? { ...card, plan_preview: { ...(card as any).plan_preview, state: 'VIEWED_FROM_REPORT' } }
           : card),
     };
     const actionProjection = {
       ...planProjection,
       recent_flow_events: [{ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }, ...planProjection.recent_flow_events],
       cards: planProjection.cards.map((card) => card.surface === 'UI-05'
-        ? { ...card, plan_preview: { ...card.plan_preview, weekly_action_handoff: { ...card.plan_preview.weekly_action_handoff, state: 'OPENED' } } }
+        ? { ...card, plan_preview: { ...(card as any).plan_preview, weekly_action_handoff: { ...(card as any).plan_preview?.weekly_action_handoff, state: 'OPENED' } } }
         : card),
     };
     const todayProjection = {
@@ -826,7 +826,8 @@ describe('UI-11~UI-34 DEV Platform Surfaces projection', () => {
     const review = root.querySelector('[data-ui29-growth-review-state="EMPTY"]');
     expect(review?.textContent).toContain('先从一件小行动开始');
     expect(review?.textContent).not.toMatch(/总分|排名|成长值|奖章|奖励|诊断|效果|公开|支付|订单|DEV|SYNTHETIC/i);
-    expect(fetchMock.mock.calls.every(([, request]) => !request || String((request as RequestInit).method || 'GET') === 'GET')).toBe(true);
+    const calls = fetchMock.mock.calls as Array<[string, RequestInit?]>;
+    expect(calls.every(([, request]) => !request || String(request.method || 'GET') === 'GET')).toBe(true);
   });
 
   it('routes the UI-17 family self-record only to family review or today action', async () => {
@@ -890,5 +891,79 @@ describe('Family 34 UI route coverage', () => {
     // UI-19 is the pre-existing read-only Service Supply slice. Every other default baseline route remains API-silent.
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toContain('/orchestration/test-loop/services/offerings?page_id=UI-19&available_only=true');
+  });
+});
+
+
+describe('UI-01 expert live controlled entry', () => {
+  it('routes the home expert-live hotspot to the family support view and records a no-external-effect viewing intent', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes('/services/offerings')) {
+        return {
+          ok: true,
+          json: async () => ({
+            tenant_id: 'tenant-test',
+            family_id: 'family-test-scope',
+            source_page_id: 'UI-19',
+            projection_version: 1,
+            as_of: new Date().toISOString(),
+            source_refs: [],
+            policy_version: 'TEST',
+            visibility: 'FAMILY_SCOPED_ADMITTED_SUPPLY',
+            expires_at: null,
+            external_effect: false,
+            filters: { provider_kind: 'TEACHER', service_type: null, age_band: null, available_only: true },
+            offerings: [],
+            data_source: 'SYNTHETIC_DEV_ONLY',
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          operation_id: 'expert-live-operation-1',
+          page_id: 'UI-01',
+          action: 'ENTER_EXPERT_LIVE',
+          status: 'CONFIRMED',
+          external_effect: false,
+          text_equivalent: '已记下家庭查看专家直播场次。',
+        }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-test-scope',
+      initialPage: 'home',
+    });
+
+    root.querySelector<HTMLButtonElement>('[data-ui01-feature="expert_live"]')?.click();
+    await tick();
+    await tick();
+    await tick();
+    await tick();
+
+    expect(root.dataset.ui19SupplyStatus).toBe('READ_ONLY_READY');
+    expect(root.querySelector('[data-ui01-live-state="READY"]')).not.toBeNull();
+    const liveButton = root.querySelector<HTMLButtonElement>('[data-by="ui01-enter-expert-live"]');
+    expect(liveButton).not.toBeNull();
+    liveButton?.click();
+    await tick();
+    await tick();
+
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const [url, request] = fetchMock.mock.calls.find(([candidateUrl]) => String(candidateUrl).endsWith('/experience/operations')) || [];
+    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');
+    expect(request).toMatchObject({ method: 'POST', credentials: 'include' });
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      page_id: 'UI-01',
+      action: 'ENTER_EXPERT_LIVE',
+      fixture_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE',
+    });
+    expect(root.querySelector('[data-ui01-live-state="SAVED"]')?.textContent).toContain('已记在家庭的关注清单里');
+    expect(root.querySelector('.by-expert-live-session')?.textContent).toContain('已记在家庭的关注清单里');
   });
 });
