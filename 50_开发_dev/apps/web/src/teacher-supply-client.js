@@ -71,7 +71,7 @@ function isTeacherSupplyProjection(value) {
 
 /**
  * Loads only admitted TEACHER supply for the trusted family context resolved by the server.
- * @param {{ apiBaseUrl: string, familyId: string, filters?: TeacherSupplyFilters, fetchImpl?: typeof fetch }} config
+ * @param {{ apiBaseUrl: string, familyId: string, authToken?: string, filters?: TeacherSupplyFilters, fetchImpl?: typeof fetch }} config
  * @returns {Promise<TeacherSupplyProjection>}
  */
 export async function loadTeacherSupply(config) {
@@ -87,7 +87,7 @@ export async function loadTeacherSupply(config) {
     {
       method: 'GET',
       credentials: 'include',
-      headers: { 'x-correlation-id': correlationId },
+      headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
     },
   );
   if (!response.ok) throw new TeacherSupplyProjectionError(`teacher_supply_read_failed_${response.status}`);

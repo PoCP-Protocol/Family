@@ -5,6 +5,7 @@ const url = process.env.TEST_DATABASE_URL;
 if (!url) throw new Error('TEST_DATABASE_URL is required');
 const ids = {
   tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  account: '12121212-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   family: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   guardian: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   child: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
@@ -36,24 +37,35 @@ try {
   await q('delete from growth_profiles where family_id=$1', [ids.family]);
   await q('delete from growth_journeys where family_id=$1', [ids.family]);
   await q('delete from family_relationships where family_id=$1', [ids.family]);
+  await q('delete from consents where family_id=$1', [ids.family]);
+  await q('delete from identity_sessions where family_id=$1 or account_ref=$2', [ids.family, ids.account]);
+  await q('delete from account_person_bindings where account_id=$1', [ids.account]);
+  await q('delete from tenant_family_bindings where family_id=$1', [ids.family]);
   await q('delete from family_memberships where family_id=$1', [ids.family]);
   await q('update families set primary_contact_person_id=null where family_id=$1', [ids.family]);
   await q('delete from persons where family_id=$1', [ids.family]);
   await q('delete from families where family_id=$1', [ids.family]);
+  await q('delete from accounts where account_id=$1', [ids.account]);
   await q('delete from tenants where tenant_id=$1', [ids.tenant]);
 
   await q(`insert into tenants(tenant_id,tenant_ref,display_name,tenant_type,status,region_ref,plan_ref)
     values($1,'TEST_FAMILY_PLATFORM','Family Test Tenant','INTERNAL_SANDBOX','ACTIVE','TEST','FAMILY_GROWTH_DEV')`, [ids.tenant]);
+  await q(`insert into accounts(account_id,external_ref,status) values($1,'test-family-guardian','ACTIVE')`, [ids.account]);
   await q(`insert into families(family_id,display_name,status,version) values($1,'星河家庭（测试）','ACTIVE',1)`, [ids.family]);
+  await q(`insert into tenant_family_bindings(tenant_id,family_id,status,effective_from,migration_ref)
+    values($1,$2,'ACTIVE',now(),'TEST_FIXTURE')`, [ids.tenant, ids.family]);
   await q(`insert into persons(person_id,family_id,person_type,parent_role,display_name,account_id)
     values($1,$2,'PARENT','GUARDIAN','林女士（测试家长）','test-family-guardian')`, [ids.guardian, ids.family]);
   await q(`insert into persons(person_id,family_id,person_type,display_name,birth_date)
     values($1,$2,'CHILD','小星（测试孩子）','2013-05-01')`, [ids.child, ids.family]);
+  await q(`insert into account_person_bindings(account_id,person_id,status) values($1,$2,'ACTIVE')`, [ids.account, ids.guardian]);
   await q('update families set primary_contact_person_id=$1 where family_id=$2', [ids.guardian, ids.family]);
   await q(`insert into family_memberships(membership_id,family_id,person_id,role,status,joined_at)
     values(gen_random_uuid(),$1,$2,'OWNER_GUARDIAN','ACTIVE',now()),(gen_random_uuid(),$1,$3,'CHILD_SUBJECT','ACTIVE',now())`, [ids.family, ids.guardian, ids.child]);
   await q(`insert into family_relationships(relationship_id,family_id,person_a_id,person_b_id,relationship_type)
     values($1,$2,$3,$4,'PARENT_CHILD')`, [ids.relationship, ids.family, ids.guardian, ids.child]);
+  await q(`insert into consents(family_id,subject_person_id,guardian_person_id,purpose,status,policy_version,granted_at)
+    values($1,$2,$3,'SERVICE','GRANTED','service-v1',now())`, [ids.family, ids.child, ids.guardian]);
   await q(`insert into growth_journeys(journey_id,family_id,journey_type,phase,status,started_at,version)
     values($1,$2,'90_DAY_GROWTH','DAY_1','ACTIVE',now(),1)`, [ids.journey, ids.family]);
   await q(`insert into growth_profiles(profile_id,family_id,subject_type,subject_ref_id,life_stage_code,strengths,growth_opportunities,confidence,version,effective_from,profile_scope,subject_person_id,status,basis,evidence_snapshot,policy_version)

@@ -7,6 +7,7 @@ import type pg from 'pg';
  */
 export const FAMILY_PLATFORM_FIXTURE = Object.freeze({
   tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  accountId: '12121212-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   familyId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   guardianId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   childId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
@@ -39,10 +40,15 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     await pool.query('delete from growth_profiles where family_id = $1', [f.familyId]);
     await pool.query('delete from growth_journeys where family_id = $1', [f.familyId]);
     await pool.query('delete from family_relationships where family_id = $1', [f.familyId]);
+    await pool.query('delete from consents where family_id = $1', [f.familyId]);
+    await pool.query('delete from identity_sessions where family_id = $1 or account_ref = $2', [f.familyId, f.accountId]);
+    await pool.query('delete from account_person_bindings where account_id = $1', [f.accountId]);
+    await pool.query('delete from tenant_family_bindings where family_id = $1', [f.familyId]);
     await pool.query('delete from family_memberships where family_id = $1', [f.familyId]);
     await pool.query('update families set primary_contact_person_id = null where family_id = $1', [f.familyId]);
     await pool.query('delete from persons where family_id = $1', [f.familyId]);
     await pool.query('delete from families where family_id = $1', [f.familyId]);
+    await pool.query('delete from accounts where account_id = $1', [f.accountId]);
     await pool.query('delete from tenants where tenant_id = $1', [f.tenantId]);
 
     await pool.query(
@@ -50,11 +56,14 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
        values ($1, 'TEST_FAMILY_PLATFORM', 'Family Test Tenant', 'INTERNAL_SANDBOX', 'ACTIVE', 'TEST', 'FAMILY_GROWTH_DEV')`,
       [f.tenantId],
     );
+    await pool.query(`insert into accounts(account_id, external_ref, status) values ($1, 'test-family-guardian', 'ACTIVE')`, [f.accountId]);
     await pool.query(
       `insert into families(family_id, display_name, status, version)
        values ($1, '星河家庭（测试）', 'ACTIVE', 1)`,
       [f.familyId],
     );
+    await pool.query(`insert into tenant_family_bindings(tenant_id, family_id, status, effective_from, migration_ref)
+       values ($1, $2, 'ACTIVE', now(), 'TEST_FIXTURE')`, [f.tenantId, f.familyId]);
     await pool.query(
       `insert into persons(person_id, family_id, person_type, parent_role, display_name, account_id)
        values ($1, $2, 'PARENT', 'GUARDIAN', '林女士（测试家长）', 'test-family-guardian')`,
@@ -65,6 +74,7 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
        values ($1, $2, 'CHILD', '小星（测试孩子）', '2013-05-01')`,
       [f.childId, f.familyId],
     );
+    await pool.query(`insert into account_person_bindings(account_id, person_id, status) values ($1, $2, 'ACTIVE')`, [f.accountId, f.guardianId]);
     await pool.query('update families set primary_contact_person_id = $1 where family_id = $2', [f.guardianId, f.familyId]);
     await pool.query(
       `insert into family_memberships(membership_id, family_id, person_id, role, status, joined_at)
@@ -76,6 +86,11 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
       `insert into family_relationships(relationship_id, family_id, person_a_id, person_b_id, relationship_type)
        values ($1, $2, $3, $4, 'PARENT_CHILD')`,
       [f.relationshipId, f.familyId, f.guardianId, f.childId],
+    );
+    await pool.query(
+      `insert into consents(family_id, subject_person_id, guardian_person_id, purpose, status, policy_version, granted_at)
+       values ($1, $2, $3, 'SERVICE', 'GRANTED', 'service-v1', now())`,
+      [f.familyId, f.childId, f.guardianId],
     );
     await pool.query(
       `insert into growth_journeys(journey_id, family_id, journey_type, phase, status, started_at, version)
