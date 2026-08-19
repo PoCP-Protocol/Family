@@ -611,8 +611,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
         : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/experience/operations`;
       const response = await fetch(url, {
         method: isProjection ? 'GET' : 'POST',
-        credentials: 'include',
-        headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
+        credentials: config.authToken ? 'omit' : 'include',
+        headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}), ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
         ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, action: route.action, fixture_ref: route.fixtureRef, fixture_version: 'family-34-page-test-experience.v1', ...(route.channel ? { channel: route.channel } : {}) }) }),
       });
       const payload = await response.json();
@@ -1009,7 +1009,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
   function familyStudyGroupDraftPanel() {
     if (!selectedCatalogItem) return '';
     const state = familyStudyGroupDraftState === 'SAVED'
-      ? '<p class="by-group-draft-success">共学想法已记下。是否邀请、何时一起开始，都可以之后再决定。</p>'
+      ? '<p class="by-group-draft-success">共学想法已记下。现在不会发起拼团、扣款或通知他人；是否邀请、何时一起开始，都可以之后再决定。</p>'
       : familyStudyGroupDraftState === 'ERROR'
         ? '<p class="by-group-draft-error">暂时无法记下这个想法，请稍后再试。</p>'
         : '<p>如果你们想和熟悉的家庭一起学习，可以先把这个想法记下来；是否邀请由你们自己决定。</p>';
