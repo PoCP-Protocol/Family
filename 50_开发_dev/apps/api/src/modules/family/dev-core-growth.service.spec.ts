@@ -110,6 +110,24 @@ describe('DevCoreGrowthService', () => {
     expect(JSON.stringify(readback)).not.toContain('OutcomeEvidenceCreated');
   });
 
+  it('keeps UI-10 child assistant read-only and does not turn a UI-35 camp action into a child recommendation', () => {
+    const campOnly = service.getProjection(familyId, [
+      { ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' },
+    ]);
+    expect(campOnly.cards.find((card) => card.surface === 'UI-10')?.child_action_prompt).toBeUndefined();
+
+    const reviewedAction = service.getProjection(familyId, [
+      { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
+      { ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION' },
+    ]);
+    expect(reviewedAction.cards.find((card) => card.surface === 'UI-10')?.child_action_prompt).toMatchObject({
+      state: 'ACTION_RECORDED',
+      fact_boundary: 'ACTION_RECORDED_NOT_CHILD_OUTCOME',
+    });
+    expect(JSON.stringify(reviewedAction)).toContain('NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY');
+    expect(JSON.stringify(reviewedAction)).not.toContain('diagnosis');
+  });
+
   it('exposes a controller-safe allow-list for supported DEV surfaces', () => {
     expect(service.supportsSurface('UI-05')).toBe(true);
     expect(service.supportsSurface('UI-35')).toBe(true);
