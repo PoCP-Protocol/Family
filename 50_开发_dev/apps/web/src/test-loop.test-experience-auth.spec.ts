@@ -336,3 +336,51 @@ describe('UI-25 to UI-26 authenticated private sharing draft', () => {
     expect(root.textContent).not.toMatch(/已公开发布|评论已开启|外部通知已发送|支付成功/);
   });
 });
+
+
+describe('UI-28 authenticated private expression readback', () => {
+  it('restores a persisted UI-26 private draft from family-scoped bearer projections without treating it as public content or an outcome', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ family_id: 'family-expression-auth-scope', data_source: 'SYNTHETIC_DEV_ONLY', external_effect_adapter: 'NOOP_NOT_INVOKED', cards: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          environment: 'DEV', source: 'TEST_FIXTURE',
+          operations: [{
+            operation_id: 'private-draft-readback',
+            operation_kind: 'COMMUNITY_TEMPLATE_PUBLICATION',
+            fixture_ref: 'POST_TEMPLATE_GROWTH_CARD',
+            status: 'CONFIRMED',
+          }],
+          text_equivalent: '家庭的体验回执只供回看。',
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    createTestLoopApp(root, {
+      apiBaseUrl: 'http://family-api.test',
+      familyId: 'family-expression-auth-scope',
+      authToken: 'family-expression-auth-bearer',
+      platformSurfacesApiMode: 'synthetic-api',
+      initialPage: 'my-community',
+    });
+    await tick(); await tick(); await tick();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [platformUrl, platformRequest] = fetchMock.mock.calls[0];
+    expect(platformUrl).toBe('http://family-api.test/families/family-expression-auth-scope/dev/platform-surfaces');
+    expect(platformRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((platformRequest.headers as Record<string, string>).authorization).toBe('Bearer family-expression-auth-bearer');
+    const [readbackUrl, readbackRequest] = fetchMock.mock.calls[1];
+    expect(readbackUrl).toBe('http://family-api.test/families/family-expression-auth-scope/orchestration/test-loop/experience/customer-projection');
+    expect(readbackRequest).toMatchObject({ method: 'GET', credentials: 'omit' });
+    expect((readbackRequest.headers as Record<string, string>).authorization).toBe('Bearer family-expression-auth-bearer');
+    expect(root.querySelector('[data-ui28-expression-notes-state="SAVED"]')?.textContent).toContain('只留给家庭');
+    expect(root.textContent).not.toMatch(/公开发布|成长结果|效果已证实|外部通知已发送/);
+  });
+});
