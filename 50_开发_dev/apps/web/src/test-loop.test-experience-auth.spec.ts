@@ -566,3 +566,35 @@ describe('UI-35 authenticated camp action readback', () => {
     expect(root.textContent).not.toMatch(/成长效果|结果已证实|儿童诊断|排名|总分|外部通知/);
   });
 });
+
+
+describe('UI-01 authenticated expert live interest', () => {
+  it('records only a bearer-authenticated no-op expert-live interest without connecting to a live session, assigning a service or sending a notification', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes('/services/offerings')) return {
+        ok: true,
+        json: async () => ({
+          family_id: 'family-expert-live-auth-scope', visibility: 'FAMILY_SCOPED_ADMITTED_SUPPLY', external_effect: false,
+          offerings: [], live_session: { session_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', title: '家庭沟通主题直播', topic: '在日常互动里先听见彼此', starts_at: '2026-08-20T12:00:00.000Z', status: 'SCHEDULED', host_display_name: '家庭成长顾问', fixture_only: true, external_effect: false },
+        }),
+      };
+      return { ok: true, json: async () => ({ operation_id: 'expert-live-private-operation', page_id: 'UI-01', action: 'ENTER_EXPERT_LIVE', operation_kind: 'EXPERT_LIVE_SESSION', fixture_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE', status: 'CONFIRMED', external_effect: false, text_equivalent: '已记下家庭查看专家直播场次。本次不会建立音视频连接、联系专家或发送通知。' }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div'); document.body.append(root);
+
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-expert-live-auth-scope', authToken: 'family-expert-live-auth-bearer', initialPage: 'teacher-zone' });
+    await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="ui01-enter-expert-live"]')?.click();
+    await tick(); await tick();
+
+    const operationCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/orchestration/test-loop/experience/operations'));
+    expect(operationCalls).toHaveLength(1);
+    const [url, request] = operationCalls[0] as unknown as [string, any];
+    expect(url).toBe('http://family-api.test/families/family-expert-live-auth-scope/orchestration/test-loop/experience/operations');
+    expect(request).toMatchObject({ method: 'POST', credentials: 'omit' });
+    expect((request.headers as Record<string, string>).authorization).toBe('Bearer family-expert-live-auth-bearer');
+    expect(JSON.parse(String(request.body))).toMatchObject({ page_id: 'UI-01', action: 'ENTER_EXPERT_LIVE', fixture_ref: 'EXPERT_LIVE_SESSION_FAMILY_GUIDANCE' });
+    expect(root.textContent).not.toMatch(/音视频已连接|真人服务已建立|外部通知已发送|预约已确认/);
+  });
+});
