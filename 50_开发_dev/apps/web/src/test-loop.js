@@ -427,7 +427,7 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
     root.dataset.familyCommerceCatalogStatus = 'LOADING';
     try {
       const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/products`, {
-        method: 'GET', credentials: 'include', headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
+        method: 'GET', credentials: config.authToken ? 'omit' : 'include', headers: { 'x-correlation-id': correlationId, ...(config.authToken ? { authorization: `Bearer ${config.authToken}` } : {}) },
       });
       const payload = await response.json();
       if (!response.ok || !Array.isArray(payload?.products) || payload.products.some((item) => item?.admission_status !== 'ADMITTED' || item?.fixture_only !== true)) throw new Error('family_commerce_catalog_unavailable');
@@ -664,8 +664,8 @@ export function createTestLoopApp(root, config = defaultTestLoopConfig) {
           : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/order-intents`,
         {
           method: isProjection ? 'GET' : 'POST',
-          credentials: 'include',
-          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
+          credentials: config.authToken ? 'omit' : 'include',
+          headers: { ...firstSliceHeaders(correlationId), 'content-type': 'application/json', ...(isProjection ? {} : { 'idempotency-key': correlationId }) },
           ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, product_ref: route.productRef, product_version: route.productVersion }) }),
         },
       );

@@ -24,6 +24,7 @@ export const FAMILY_PLATFORM_FIXTURE = Object.freeze({
   slotId: '88888888-9999-4aaa-8bbb-cccccccccccc',
   bookingId: '99999999-aaaa-4bbb-8ccc-dddddddddddd',
   serviceRecordId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+  productId: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
 });
 
 export async function seedFamilyPlatformFixture(pool: pg.Pool) {
@@ -34,6 +35,7 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
     await pool.query('delete from audit_logs where family_id = $1', [f.familyId]);
     await pool.query('delete from family_product_events where family_id = $1', [f.familyId]);
     await pool.query('delete from product_events where family_id = $1', [f.familyId]);
+    await pool.query('delete from family_product_offerings where tenant_id = $1', [f.tenantId]);
     await pool.query('delete from family_service_records where family_id = $1', [f.familyId]);
     await pool.query('delete from family_dev_flow_events where family_id = $1', [f.familyId]);
     await pool.query('delete from test_experience_operations where family_id = $1', [f.familyId]);
@@ -151,6 +153,11 @@ export async function seedFamilyPlatformFixture(pool: pg.Pool) {
       `insert into growth_actions(action_id, family_id, journey_id, intervention_id, dimension_id, action_type, instruction, status, assigned_to_person_id, assigned_at, onboarding_id, priority_id, intervention_episode_id, day_index, assignment_text, due_date, completion_status, reflection_boundary, boundary)
        values ($1, $2, $3, 'INTERVENTION-001', 'P03', 'DAILY_MICRO_ACTION', '先听完再回应', 'PENDING', $4, now(), $3, $5, $6, 1, '今晚留出十分钟，先听完再回应。', current_date, null, 'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME', 'ACTION_IS_NOT_OUTCOME')`,
       [f.actionId, f.familyId, f.journeyId, f.childId, f.priorityId, f.episodeId],
+    );
+    await pool.query(
+      `insert into family_product_offerings(product_id, scope_type, tenant_id, product_ref, version_no, title, admission_status, source_ref, fixture_only, status, attributes)
+       values ($1, 'TENANT', $2, 'PRODUCT_PARENT_CHILD_CAMP', 1, '21天亲子沟通挑战营（测试）', 'ADMITTED', 'TEST_FIXTURE', true, 'ACTIVE', '{"delivery_mode":"SANDBOX_NOOP","category":"PARENT_CHILD"}'::jsonb)`,
+      [f.productId, f.tenantId],
     );
     await pool.query(
       `insert into family_service_providers(provider_id, scope_type, tenant_id, provider_ref, display_name, provider_kind, qualification_ref, qualification_status, admission_status, source_ref, fixture_only, status)

@@ -85,6 +85,24 @@ describe('Family platform Dev fixture integration', () => {
     });
   });
 
+  it('provides an admitted UI-13/UI-14 course-camp product for authenticated Dev catalog and no-payment intent testing', async () => {
+    const result = await pool.query(
+      `select product_id, product_ref, version_no, admission_status, fixture_only, status, attributes
+         from family_product_offerings
+        where tenant_id = $1 and product_id = $2`,
+      [FAMILY_PLATFORM_FIXTURE.tenantId, FAMILY_PLATFORM_FIXTURE.productId],
+    );
+    expect(result.rows).toEqual([expect.objectContaining({
+      product_id: FAMILY_PLATFORM_FIXTURE.productId,
+      product_ref: 'PRODUCT_PARENT_CHILD_CAMP',
+      version_no: 1,
+      admission_status: 'ADMITTED',
+      fixture_only: true,
+      status: 'ACTIVE',
+      attributes: expect.objectContaining({ delivery_mode: 'SANDBOX_NOOP' }),
+    })]);
+  });
+
   it('is repeatable after a check-in audit and remains family-private after reseeding', async () => {
     await pool.query(
       `insert into audit_logs(family_id, actor_type, actor_id, action_name, resource_type, resource_id, correlation_id, idempotency_key, result, metadata)

@@ -22,6 +22,7 @@ const ids = {
   slot: '88888888-9999-4aaa-8bbb-cccccccccccc',
   booking: '99999999-aaaa-4bbb-8ccc-dddddddddddd',
   serviceRecord: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+  product: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
 };
 
 const pool = new Pool({ connectionString: url });
@@ -35,6 +36,7 @@ try {
   await q('delete from family_llm_gateway_audits where family_id=$1', [ids.family]);
   await q('delete from family_product_events where family_id=$1', [ids.family]);
   await q('delete from product_events where family_id=$1', [ids.family]);
+  await q('delete from family_product_offerings where tenant_id=$1', [ids.tenant]);
   await q('delete from family_booking_service_records where family_id=$1', [ids.family]);
   await q('delete from family_booking_requests where family_id=$1', [ids.family]);
   await q('delete from family_service_availability_slots where availability_slot_id=$1', [ids.slot]);
@@ -99,6 +101,8 @@ try {
     values($1,$2,$3,$4,'INTERVENTION-001','LISTEN_BEFORE_RESPOND','ACTIVE',$5,7,'test-v1')`, [ids.episode, ids.family, ids.journey, ids.priority, ids.guardian]);
   await q(`insert into growth_actions(action_id,family_id,journey_id,intervention_id,dimension_id,action_type,instruction,status,assigned_to_person_id,assigned_at,onboarding_id,priority_id,intervention_episode_id,day_index,assignment_text,due_date,reflection_boundary,boundary)
     values($1,$2,$3,'INTERVENTION-001','P03','DAILY_MICRO_ACTION','先听完再回应','PENDING',$4,now(),$3,$5,$6,1,'今晚留出十分钟，先听完再回应。',current_date,'REFLECTION_IS_RAW_MATERIAL_NOT_OUTCOME','ACTION_IS_NOT_OUTCOME')`, [ids.action, ids.family, ids.journey, ids.child, ids.priority, ids.episode]);
+  await q(`insert into family_product_offerings(product_id,scope_type,tenant_id,product_ref,version_no,title,admission_status,source_ref,fixture_only,status,attributes)
+    values($1,'TENANT',$2,'PRODUCT_PARENT_CHILD_CAMP',1,'21天亲子沟通挑战营（测试）','ADMITTED','TEST_FIXTURE',true,'ACTIVE','{"delivery_mode":"SANDBOX_NOOP","category":"PARENT_CHILD"}'::jsonb)`, [ids.product, ids.tenant]);
   await q(`insert into family_service_providers(provider_id,scope_type,tenant_id,provider_ref,display_name,provider_kind,qualification_ref,qualification_status,admission_status,source_ref,fixture_only,status)
     values($1,'TENANT',$2,'TEST_TEACHER_001','周老师（测试服务者）','TEACHER','TEST-QUALIFICATION','ACTIVE','ADMITTED','TEST_FIXTURE',true,'ACTIVE')`, [ids.provider, ids.tenant]);
   await q(`insert into family_service_offerings(service_offering_id,tenant_id,provider_id,service_offering_ref,title,admission_status,source_ref,fixture_only,status)
