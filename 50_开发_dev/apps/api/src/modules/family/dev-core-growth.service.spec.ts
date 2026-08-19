@@ -71,6 +71,14 @@ describe('DevCoreGrowthService', () => {
       { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
     ]);
     expect(actionOpened.cards.find((card) => card.surface === 'UI-05')?.plan_preview?.weekly_action_handoff.state).toBe('OPENED');
+    expect(actionOpened.cards.find((card) => card.surface === 'UI-08')?.action_review).toBeUndefined();
+    const reviewReady = service.getProjection(familyId, [
+      { ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION' },
+      { ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION' },
+    ]);
+    expect(reviewReady.cards.find((card) => card.surface === 'UI-08')?.action_review).toMatchObject({
+      state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', plan_route: 'core-plan', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
+    });
     expect(JSON.stringify(previewed)).not.toContain('GrowthTaskCreated');
     expect(JSON.stringify(previewed)).not.toContain('OutcomeEvidenceCreated');
   });

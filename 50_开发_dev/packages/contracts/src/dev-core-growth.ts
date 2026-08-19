@@ -21,6 +21,7 @@ export type DevCoreGrowthCardKind =
   | 'ASSESSMENT_ENTRY'
   | 'ASSESSMENT_DRAFT'
   | 'REPORT_EXPLANATION'
+  | 'GROWTH_REVIEW'
   | 'PLAN_DRAFT'
   | 'COMPANION_PROGRESS'
   | 'MEMBERSHIP_READ'
@@ -79,6 +80,17 @@ export interface DevFamilyGrowthReportDraft {
   plan_link_state: 'READY_TO_VIEW' | 'VIEWED';
 }
 
+export interface DevFamilyActionReview {
+  state: 'ACTION_RECORDED';
+  focus: DevGrowthFocus;
+  headline: string;
+  confirmation: string;
+  reflection_prompt: string;
+  next_step: string;
+  plan_route: 'core-plan';
+  fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME';
+}
+
 export interface DevWeeklyGrowthActionHandoff {
   state: 'READY_TO_OPEN' | 'OPENED';
   stage_id: 'SEE';
@@ -129,6 +141,8 @@ export interface DevCoreGrowthCard {
   report_draft?: DevFamilyGrowthReportDraft;
   /** Present on UI-05; a read-only 90-day plan preview derived from the same focus. */
   plan_preview?: DevGrowthPlanPreview;
+  /** Present on UI-08 after an authenticated UI-09 action has been recorded. */
+  action_review?: DevFamilyActionReview;
 }
 
 export interface DevCoreGrowthProjection {

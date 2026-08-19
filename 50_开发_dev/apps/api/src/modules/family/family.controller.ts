@@ -85,7 +85,7 @@ export class FamilyController {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
     const events = await this.devFlowReceiptService.list(familyId, actorId);
-    const coreGrowthEvents = events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id));
+    const coreGrowthEvents = events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id) || event.ui_id === 'UI-09');
     const projection = this.devCoreGrowthService.getProjection(familyId, coreGrowthEvents);
     return { ...projection, recent_flow_events: coreGrowthEvents };
   }

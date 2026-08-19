@@ -285,6 +285,7 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
       app.navigate(page);
       if (surface === 'UI-04') expect(root.querySelector('[aria-label*="家庭成长说明"]')).not.toBeNull();
       else if (surface === 'UI-05') expect(root.querySelector('[aria-label*="90天成长方案"]')).not.toBeNull();
+      else if (surface === 'UI-08') expect(root.querySelector('[aria-label*="家庭成长报告"]')).not.toBeNull();
       else expect(root.querySelector(`[data-core-growth-surface="${surface}"]`)?.textContent).not.toContain('SYNTHETIC_DEV_ONLY');
     }
     app.navigate('growth-camp-21');
@@ -444,6 +445,41 @@ describe('UI-02~UI-10 DEV Core Growth projection', () => {
     expect(root.querySelector('[data-ui05-weekly-action-state="OPENED"]')?.textContent).toContain('我看到你现在很不容易');
     expect(root.querySelector('[data-first-slice-surface="UI-09"]')?.textContent).toContain('今天和孩子一起做一次 10 分钟倾听练习');
     expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执/i);
+  });
+
+  it('opens a non-judgmental UI-08 family review only after UI-09 records its real daily action', async () => {
+    const todayTask = { task_id: 'action-ui09-review', assignment_text: '今天和孩子一起做一次 10 分钟倾听练习', task_state: 'NOT_STARTED', checkin_allowed: true };
+    const todayProjection = { projection_version: 'UI01_UI09_FAMILY_TODAY_V1', family_id: familyId, entry_state: 'READY', today_task: todayTask };
+    const baseCoreProjection = {
+      ...projection,
+      recent_flow_events: [{ ui_id: 'UI-02', command: 'SELECT_SYNTHETIC_ASSESSMENT_DIMENSION', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }],
+      cards: projection.cards.map((card) => card.surface === 'UI-08' ? { ...card, action_review: undefined } : card),
+    };
+    const reviewProjection = {
+      ...baseCoreProjection,
+      recent_flow_events: [{ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION', event_state: 'DEV_CONFIRMED' }, ...baseCoreProjection.recent_flow_events],
+      cards: baseCoreProjection.cards.map((card) => card.surface === 'UI-08' ? { ...card, action_review: { state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', headline: '把这一次的陪伴留在心里', confirmation: '今天的家庭行动已记录。先不用急着判断效果。', reflection_prompt: '可以想想：在倾听时，你注意到了什么？', next_step: '下次可以再试一次，也可以换一个更轻松的时刻。', plan_route: 'core-plan', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME' } } : card),
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => todayProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => baseCoreProjection })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ result_state: 'SUCCESS', action: { ...todayTask, task_state: 'CHECKED_IN', checkin_allowed: false }, next_hint: { text_key: 'REFRESH_TODAY_AFTER_CHECKIN' } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ event_state: 'DEV_CONFIRMED', data_source: 'SYNTHETIC_DEV_ONLY', external_effect: false }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => reviewProjection });
+    vi.stubGlobal('fetch', fetchMock);
+    const root = document.createElement('div');
+    document.body.append(root);
+    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId, firstSliceApiMode: 'synthetic-api', coreGrowthApiMode: 'synthetic-api', initialPage: 'growth-daily-task' });
+    await tick(); await tick(); await tick();
+    root.querySelector<HTMLButtonElement>('[data-by="page-objects-complete-daily-task"]')?.click();
+    await tick(); await tick(); await tick(); await tick();
+    expect(JSON.parse(String(fetchMock.mock.calls[3][1].body))).toMatchObject({ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION' });
+    expect(root.querySelector('[data-ui08-action-review-state="ACTION_RECORDED"]')?.textContent).toContain('查看家庭回顾');
+    root.querySelector<HTMLButtonElement>('[data-by="ui09-open-family-review"]')?.click();
+    await tick();
+    expect(root.querySelector('[role="img"][aria-label*="家庭成长报告"]')).not.toBeNull();
+    expect(root.querySelector('[data-ui08-review-state="ACTION_RECORDED"]')?.textContent).toContain('先不用急着判断效果');
+    expect(root.textContent).not.toMatch(/DEV|synthetic|NOOP|Model Gateway|回执|总分|排名|诊断/i);
   });
 
   it('shows a blocked state rather than local synthetic fallback when DEV projection API fails', async () => {

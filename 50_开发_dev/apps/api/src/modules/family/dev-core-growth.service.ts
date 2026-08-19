@@ -5,6 +5,7 @@ import {
   type DevCoreGrowthNoopCommandResult,
   type DevCoreGrowthProjection,
   type DevCoreGrowthSurface,
+  type DevFamilyActionReview,
   type DevFamilyGrowthReportDraft,
   type DevGrowthFocus,
   type DevGrowthPlanPreview,
@@ -29,6 +30,9 @@ export class DevCoreGrowthService {
     const weeklyActionOpened = flowEvents.some(
       (event) => event.ui_id === 'UI-05' && event.command === 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION',
     );
+    const actionReviewReady = flowEvents.some(
+      (event) => event.ui_id === 'UI-09' && event.command === 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW',
+    );
 
     return {
       projection_version: 'DEV_CORE_GROWTH_V1',
@@ -48,7 +52,7 @@ export class DevCoreGrowthService {
         status: 'NOOP_NOT_INVOKED',
         rule: 'NO_FREE_TEXT_MODEL_WRITE_TO_CORE_ONTOLOGY',
       },
-      cards: this.cards(focus, planPreviewed, weeklyActionOpened).map((item) => {
+      cards: this.cards(focus, planPreviewed, weeklyActionOpened, actionReviewReady).map((item) => {
         const architecture = getFamilyGrowthSurfaceArchitectureBinding(item.surface);
         return {
           ...item,
@@ -84,9 +88,11 @@ export class DevCoreGrowthService {
     focus: DevGrowthFocus,
     planPreviewed: boolean,
     weeklyActionOpened: boolean,
+    actionReviewReady: boolean,
   ): Array<Omit<DevCoreGrowthCard, 'loop' | 'business_capability' | 'primary_objects' | 'state_boundary'>> {
     const reportDraft = buildReportDraft(focus, planPreviewed);
     const planPreview = buildPlanPreview(focus, planPreviewed, weeklyActionOpened);
+    const actionReview = actionReviewReady ? buildFamilyActionReview(focus) : undefined;
 
     return [
       {
@@ -134,11 +140,12 @@ export class DevCoreGrowthService {
         command: { name: 'READ_SYNTHETIC_GROWTH_SERVICE', mode: 'READ_ONLY' },
       },
       {
-        surface: 'UI-08', kind: 'REPORT_EXPLANATION', title: '成长报告', state: 'READ_ONLY',
-        fact_boundary: 'PROFILE_IS_INTERPRETIVE_NOT_FACT', data_source: 'SYNTHETIC_DEV_ONLY',
-        summary: 'DEV 报告展示解释性信息和限制，不把 Perspective、推荐或行动记录写成 Fact。',
-        next_hint: '报告可引导到计划草稿；不直接创建 Journey 或 Outcome。',
-        command: { name: 'READ_SYNTHETIC_GROWTH_REPORT', mode: 'READ_ONLY' },
+        surface: 'UI-08', kind: 'GROWTH_REVIEW', title: '家庭成长回顾', state: 'READ_ONLY',
+        fact_boundary: 'ACTION_IS_NOT_OUTCOME', data_source: 'SYNTHETIC_DEV_ONLY',
+        summary: '展示已记录行动后的家庭回顾提示；不把行动、感受或建议写成孩子的成长结果。',
+        next_hint: '回到 90 天计划，按家庭节奏决定下一步。',
+        command: { name: 'READ_SYNTHETIC_FAMILY_ACTION_REVIEW', mode: 'READ_ONLY' },
+        ...(actionReview ? { action_review: actionReview } : {}),
       },
       {
         surface: 'UI-10', kind: 'CHILD_ASSISTANT_READ', title: '成长小助手', state: 'NOOP',
@@ -252,6 +259,20 @@ function buildReportDraft(focus: DevGrowthFocus, planPreviewed: boolean): DevFam
       fallback: content.fallback,
     },
     plan_link_state: planPreviewed ? 'VIEWED' : 'READY_TO_VIEW',
+  };
+}
+
+function buildFamilyActionReview(focus: DevGrowthFocus): DevFamilyActionReview {
+  const content = GROWTH_FOCUS_CONTENT[focus];
+  return {
+    state: 'ACTION_RECORDED',
+    focus,
+    headline: '把这一次的陪伴留在心里',
+    confirmation: '今天的家庭行动已记录。先不用急着判断效果。',
+    reflection_prompt: `可以想想：${content.action}时，你注意到了什么？`,
+    next_step: '如果有一个做法想保留，下次可以再试一次；如果不合适，就换一个更轻松的时刻。',
+    plan_route: 'core-plan',
+    fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
   };
 }
 

@@ -166,6 +166,18 @@ describe('DEV flow receipt integration', () => {
       state: 'OPENED', target_route: 'growth-daily-task', action: expect.any(String), fallback: expect.any(String),
     });
     expect(actionProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-05', command: 'OPEN_SYNTHETIC_WEEKLY_GROWTH_ACTION', external_effect: false })]));
+
+    const openReview = await fetch(`${baseUrl}/families/${seed.familyId}/dev/flow-events`, {
+      method: 'POST', headers: headers(seed.actorId, 'corr-ui09-review', 'idem-ui09-review'),
+      body: JSON.stringify({ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', selection: 'EMOTION_REGULATION' }),
+    });
+    expect(openReview.status).toBe(201);
+    const reviewReadback = await fetch(`${baseUrl}/families/${seed.familyId}/dev/core-growth`, { headers: headers(seed.actorId, 'corr-ui08-review-read') });
+    const reviewProjection = await reviewReadback.json() as any;
+    expect(reviewProjection.cards.find((card: any) => card.surface === 'UI-08')?.action_review).toMatchObject({
+      state: 'ACTION_RECORDED', focus: 'EMOTION_REGULATION', plan_route: 'core-plan', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME',
+    });
+    expect(reviewProjection.recent_flow_events).toEqual(expect.arrayContaining([expect.objectContaining({ ui_id: 'UI-09', command: 'OPEN_SYNTHETIC_FAMILY_ACTION_REVIEW', external_effect: false })]));
   });
 
   it('fails closed for an unknown UI and cross-family actor', async () => {
