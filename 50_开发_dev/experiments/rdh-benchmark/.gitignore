@@ -1,0 +1,42 @@
+# Benchmark artifacts
+*.mp4
+*.avi
+*.mkv
+*.mov
+
+# Model weights (too large)
+*.pt
+*.pth
+*.ckpt
+weights/
+checkpoints/
+models/
+
+# Temporary
+*.tmp
+*.log
+__pycache__/
+.venv/
+venv/
+
+# Large generated data
+outputs/ditto/full/*.mp4
+outputs/musetalk/full/*.mp4
+outputs/liveportrait/full/*.mp4
+
+# Environment
+.env
+.venv
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
