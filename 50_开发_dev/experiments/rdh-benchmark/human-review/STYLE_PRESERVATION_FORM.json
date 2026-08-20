@@ -1,0 +1,131 @@
+{
+  "form_name": "Style Preservation Review",
+  "form_version": "v1",
+  "purpose": "Evaluate whether Famili V1 visual identity is preserved during engine inference",
+
+  "template": {
+    "reviewer_id": "[anonymous or name]",
+    "engine": "[Engine_X / Engine_Y / Engine_Z]",
+    "clip": "[A01 / A02 / A03 / A04 / A05 / A06]",
+    "review_date": "YYYY-MM-DD",
+    "review_duration_minutes": 10,
+
+    "visual_elements": {
+      "face_shape": {
+        "score": "[1-5]",
+        "comment": "Is face shape consistent with V1 reference?"
+      },
+      "eye_size_and_shape": {
+        "score": "[1-5]",
+        "critical": true,
+        "comment": "Are eyes large and expressive? Not compressed to realistic size?",
+        "specific_observations": [
+          "eye_width: [maintained / compressed / enlarged]",
+          "eye_distance: [correct / too close / too far]",
+          "pupil_clarity: [clear / blurry / distorted]"
+        ]
+      },
+      "hair_identity": {
+        "score": "[1-5]",
+        "comment": "Is hair black, length, texture consistent?"
+      },
+      "skin_rendering": {
+        "score": "[1-5]",
+        "comment": "Is skin tone semi-realistic 3D? Not photorealistic? Not cartoony?"
+      },
+      "facial_expression": {
+        "score": "[1-5]",
+        "comment": "Is expression warm, intelligent, trustworthy?"
+      }
+    },
+
+    "clothing_and_styling": {
+      "blazer": {
+        "score": "[1-5]",
+        "comment": "Purple blazer visible and stable?"
+      },
+      "blouse": {
+        "score": "[1-5]",
+        "comment": "White V-neck blouse visible and stable?"
+      },
+      "overall_wardrobe": {
+        "score": "[1-5]",
+        "comment": "Professional, warm, consistent?"
+      }
+    },
+
+    "persona_preservation": {
+      "intellectual": {
+        "score": "[1-5]",
+        "comment": "Does character convey wisdom, knowledge?"
+      },
+      "warmth": {
+        "score": "[1-5]",
+        "comment": "Does character feel approachable, kind?"
+      },
+      "trustworthiness": {
+        "score": "[1-5]",
+        "comment": "Would this character be suitable for family guidance?"
+      },
+      "maturity": {
+        "score": "[1-5]",
+        "comment": "Age impression 30-35 maintained?"
+      }
+    },
+
+    "consistency_across_time": {
+      "start_to_end_identity": {
+        "score": "[1-5]",
+        "comment": "Does character remain same person from first to last frame?"
+      },
+      "style_drift": {
+        "assessment": "[none / minor / major]",
+        "details": "Describe any noticeable changes"
+      }
+    },
+
+    "engine_artifacts": {
+      "eye_distortion": {
+        "present": "[YES / NO]",
+        "severity": "[none / minor / major]",
+        "description": "Any eye jitter, distortion, or artificial appearance?"
+      },
+      "mouth_artifacts": {
+        "present": "[YES / NO]",
+        "severity": "[none / minor / major]",
+        "description": "Any tearing, jitter, or unnatural movement?"
+      },
+      "hair_instability": {
+        "present": "[YES / NO]",
+        "severity": "[none / minor / major]",
+        "description": "Any clipping, floating, or color shift?"
+      },
+      "facial_geometry_issues": {
+        "present": "[YES / NO]",
+        "severity": "[none / minor / major]",
+        "description": "Any warping, morphing, or shape distortion?"
+      }
+    },
+
+    "overall_assessment": {
+      "style_preservation_score": "[1-5]",
+      "scale_definition": {
+        "5": "Nearly complete preservation, clearly same Famili V1",
+        "4": "Minor changes, still obviously same person (acceptable)",
+        "3": "Clear style drift, different appearance",
+        "2": "Character heavily reconstructed",
+        "1": "Different person / severely distorted"
+      },
+      "hard_floor_met": "[YES / NO]",
+      "comment": "Style preservation >= 4.0 required for primary"
+    },
+
+    "recommendation": {
+      "pass_fail": "[PASS / FAIL]",
+      "viability_for_production": "[VIABLE / CONCERN / BLOCKING_ISSUE]",
+      "reasoning": "Why pass or fail? What specific issues?"
+    },
+
+    "additional_notes": "Any other observations about Famili V1 preservation or engine quality?"
+  }
+}
