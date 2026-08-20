@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ActorId, FamilyPlatformAuthGuard, RequireFamilyAction } from '../auth/family-platform-auth.guard';
-import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
+import { projectTaskCheckinResult } from '@family/contracts';
+import type { AddChildResponse, AddParentResponse, AssignLifeStageResponse, AuditMeta, BuildGrowthProfileDraftsResponse, CompleteGrowthActionResponse, CompleteGrowthReviewResponse, ConfirmGrowthPriorityResponse, ConfirmGrowthProfileResponse, ConfirmJourneyPlanResponse, CreateFamilyRelationshipResponse, CreateFamilyResponse, CreateJourneyPlanResponse, FamilyAggregateResponse, FamilyTimelineResponse, GrantConsentResponse, GrowthActionDto, GrowthInsightResponse, GrowthPriorityInsightResponse, InterventionCardDto, JourneyPlanProjection, PauseJourneyPlanResponse, PerspectiveSummaryResponse, RecordNextStepDecisionResponse, RecordOutcomeObservationResponse, RecordPerspectiveResponse, ReviewJourneyPhaseResponse, StartGrowthOnboardingResponse, StartInterventionResponse } from '@family/contracts';
 import { validateAddChildRequest } from './add-child.dto';
 import { validateAddParentRequest } from './add-parent.dto';
 import { validateAssignLifeStageRequest } from './assign-life-stage.dto';
@@ -12,6 +14,7 @@ import { validateConfirmGrowthProfileRequest } from './confirm-growth-profile.dt
 import { validateCreateFamilyRelationshipRequest } from './create-family-relationship.dto';
 import { validateCreateFamilyRequest } from './create-family.dto';
 import { validateGrantConsentRequest } from './grant-consent.dto';
+import { validateConfirmJourneyPlanRequest, validateCreateJourneyPlanRequest, validatePauseJourneyPlanRequest, validateReviewJourneyPhaseRequest } from './journey-plan.dto';
 import { validateRecordNextStepDecisionRequest } from './record-next-step-decision.dto';
 import { validateRecordOutcomeObservationRequest } from './record-outcome-observation.dto';
 import { validateRecordPerspectiveRequest } from './record-perspective.dto';
@@ -22,8 +25,12 @@ import { GrowthActionService } from './growth-action.service';
 import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { InterventionService } from './intervention.service';
+import { JourneyPlanService } from './journey-plan.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
+import { DevCoreGrowthService } from './dev-core-growth.service';
+import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
+import { DevFlowReceiptService } from './dev-flow-receipt.service';
 
 @Controller('families')
 @UseGuards(FamilyPlatformAuthGuard)   // PLATFORM-IAM-104:统一解析可信 actor;required 模式拒 x-actor-id-only
@@ -32,10 +39,14 @@ export class FamilyController {
     @Inject(FamilyService) private readonly familyService: FamilyService,
     @Inject(GrowthPriorityService) private readonly growthPriorityService: GrowthPriorityService,
     @Inject(InterventionService) private readonly interventionService: InterventionService,
+    @Inject(JourneyPlanService) private readonly journeyPlanService: JourneyPlanService,
     @Inject(GrowthActionService) private readonly growthActionService: GrowthActionService,
     @Inject(GrowthReviewService) private readonly growthReviewService: GrowthReviewService,
     @Inject(OnboardingService) private readonly onboardingService: OnboardingService,
     @Inject(TodayService) private readonly todayService: TodayService,
+    @Inject(DevCoreGrowthService) private readonly devCoreGrowthService: DevCoreGrowthService,
+    @Inject(DevPlatformSurfacesService) private readonly devPlatformSurfacesService: DevPlatformSurfacesService,
+    @Inject(DevFlowReceiptService) private readonly devFlowReceiptService: DevFlowReceiptService,
   ) {}
 
   // FAMILY-ONBOARDING-001:可恢复 onboarding 状态(读模型,0 canonical 写)。
@@ -50,7 +61,9 @@ export class FamilyController {
     return this.onboardingService.getStatus(familyId, actorId);
   }
 
-  // TODAY-001:Today 首页只读聚合(0 canonical 写)。
+  // UI-01/UI-09 first slice: family-scoped read projection, 0 canonical writes.
+  // The underlying GrowthAction read already applies family-manager authorization;
+  // the check-in command separately revalidates consent/safety immediately before write.
   @RequireFamilyAction('ReadFamily')
   @Get(':familyId/today')
   async today(
@@ -59,7 +72,115 @@ export class FamilyController {
   ) {
     if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
     if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
-    return this.todayService.getToday(familyId, actorId);
+    return this.todayService.getFamilyTodayProjection(familyId, actorId);
+  }
+
+  /**
+   * UI-02..UI-10 DEV-only Family Growth OS projection.
+   * It returns explicitly synthetic/read-only data to wire the visual pages without creating
+   * assessment facts, profiles, plans, outcomes, external effects or model calls.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/core-growth')
+  async devCoreGrowth(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const events = await this.devFlowReceiptService.list(familyId, actorId);
+    const coreGrowthEvents = events.filter((event) => this.devCoreGrowthService.supportsSurface(event.ui_id) || event.ui_id === 'UI-09');
+    const projection = this.devCoreGrowthService.getProjection(familyId, coreGrowthEvents);
+    return { ...projection, recent_flow_events: coreGrowthEvents };
+  }
+
+  /** DEV-only trace acknowledgement: intentionally no DB write, audit persistence, outbox consumer or external effect. */
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/core-growth/commands')
+  async devCoreGrowthCommand(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { surface?: unknown; command?: unknown };
+    if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
+      throw new BadRequestException('surface_and_command_required');
+    }
+    if (!this.devCoreGrowthService.supportsSurface(candidate.surface)) throw new BadRequestException('unsupported_dev_core_growth_surface');
+    return this.devCoreGrowthService.acknowledgeNoop(familyId, candidate.surface, candidate.command.trim());
+  }
+
+  /** UI-11..UI-34 DEV-only read projection/no-op adapter. No payment, notification, booking, share, export, publication or model call is executed. */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/platform-surfaces')
+  async devPlatformSurfaces(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const events = await this.devFlowReceiptService.list(familyId, actorId);
+    const projection = this.devPlatformSurfacesService.getProjection(familyId, events);
+    return { ...projection, recent_flow_events: events.filter((event) => this.devPlatformSurfacesService.supportsSurface(event.ui_id)) };
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/platform-surfaces/commands')
+  async devPlatformSurfacesCommand(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { surface?: unknown; command?: unknown };
+    if (typeof candidate?.surface !== 'string' || typeof candidate?.command !== 'string' || candidate.command.trim().length === 0) {
+      throw new BadRequestException('surface_and_command_required');
+    }
+    if (!this.devPlatformSurfacesService.supportsSurface(candidate.surface)) throw new BadRequestException('unsupported_dev_platform_surface');
+    return this.devPlatformSurfacesService.acknowledgeNoop(familyId, candidate.surface, candidate.command.trim());
+  }
+
+  /**
+   * DEV-only persistent interaction receipt shared by all six business loops.
+   * It stores synthetic test-flow state only and never creates an order,
+   * booking, entitlement, public post, outcome, notification, export or model call.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/dev/flow-events')
+  async recordDevFlowEvent(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    const candidate = body as { ui_id?: unknown; command?: unknown; selection?: unknown };
+    if (typeof candidate?.ui_id !== 'string' || typeof candidate?.command !== 'string') {
+      throw new BadRequestException('ui_id_and_command_required');
+    }
+    return this.devFlowReceiptService.record(familyId, actorId, {
+      ui_id: candidate.ui_id,
+      command: candidate.command,
+      correlation_id: correlationId?.trim() || randomUUID(),
+      idempotency_key: idempotencyKey?.trim() || undefined,
+      ...(typeof candidate.selection === 'string' ? { selection: candidate.selection } : {}),
+    });
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/dev/flow-events')
+  async listDevFlowEvents(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    if (!isUuid(familyId)) throw new BadRequestException('Invalid family_id');
+    return { family_id: familyId, events: await this.devFlowReceiptService.list(familyId, actorId) };
   }
 
   @RequireFamilyAction('ReadFamily')
@@ -220,6 +341,21 @@ export class FamilyController {
     return this.familyService.grantConsent(request, meta);
   }
 
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboarding/active')
+  async getActiveGrowthOnboarding(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ): Promise<StartGrowthOnboardingResponse | null> {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+    if (!isUuid(familyId)) {
+      throw new BadRequestException('Invalid family_id');
+    }
+    return this.familyService.getActiveGrowthOnboarding(familyId, actorId);
+  }
+
   @Post(':familyId/growth/onboarding')
   async startGrowthOnboarding(
     @Param('familyId') familyId: string,
@@ -329,6 +465,136 @@ export class FamilyController {
     return this.familyService.getGrowthInsight(familyId, onboardingId, actorId);
   }
 
+  @Get(':familyId/growth/onboardings/:onboardingId/report-explanation')
+  async getReportExplanation(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getReportExplanation(familyId, onboardingId, insight, events);
+  }
+
+  @Get(':familyId/growth/onboardings/:onboardingId/plan-preview')
+  async getPlanPreview(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getPlanPreview(familyId, onboardingId, insight, events);
+  }
+
+  @Post(':familyId/growth/onboardings/:onboardingId/plan-preview/refresh')
+  async refreshPlanPreview(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    if (!idempotencyKey?.trim()) throw new BadRequestException('idempotency_key_required');
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    await this.devFlowReceiptService.record(familyId, actorId!, {
+      ui_id: 'UI-04',
+      command: 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT',
+      correlation_id: correlationId?.trim() || randomUUID(),
+      idempotency_key: idempotencyKey.trim(),
+    });
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return { ...this.devCoreGrowthService.getPlanPreview(familyId, onboardingId, insight, events), refreshed: true, external_effect: false };
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/service-journey')
+  async getServiceJourney(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getServiceJourneyProjection(familyId, onboardingId, insight, events);
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Post(':familyId/growth/onboardings/:onboardingId/service-journey/checkin-drafts')
+  async createPrivateServiceJourneyCheckinDraft(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+    @Body() body: unknown,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    if (!idempotencyKey?.trim()) throw new BadRequestException('idempotency_key_required');
+    const candidate = body as { action_ref?: unknown };
+    const actionRef = candidate?.action_ref;
+    if (actionRef !== 'WEEKLY_ACTION_SEE' && actionRef !== 'WEEKLY_ACTION_ADJUST' && actionRef !== 'PAUSE_AND_RETURN') {
+      throw new BadRequestException('unsupported_private_checkin_action_ref');
+    }
+    // Require active onboarding/provenance before recording a family-private draft.
+    await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const effectiveCorrelationId = correlationId?.trim() || randomUUID();
+    const receipt = await this.devFlowReceiptService.record(familyId, actorId!, {
+      ui_id: 'UI-06',
+      command: 'CREATE_PRIVATE_CHECKIN_DRAFT',
+      correlation_id: effectiveCorrelationId,
+      idempotency_key: idempotencyKey.trim(),
+      selection: actionRef,
+    });
+    return {
+      receipt_id: receipt.event_id,
+      family_id: familyId,
+      onboarding_id: onboardingId,
+      state: receipt.replayed ? 'REPLAYED' as const : 'CREATED' as const,
+      visibility: 'FAMILY_PRIVATE' as const,
+      draft_kind: 'PRIVATE_CHECKIN_DRAFT' as const,
+      action_ref: actionRef,
+      external_effect: false as const,
+      ontology_write: false as const,
+      audit_event_ref: receipt.event_id,
+      correlation_id: effectiveCorrelationId,
+      boundary: 'DRAFT_IS_NOT_TASK_OUTCOME_COMMUNITY_POST_OR_SERVICE_RECORD' as const,
+    };
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/growth-profile-readback')
+  async getGrowthProfileReadback(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const events = await this.devFlowReceiptService.list(familyId, actorId!);
+    return this.devCoreGrowthService.getGrowthProfileReadback(familyId, onboardingId, insight, events);
+  }
+
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/onboardings/:onboardingId/family-review-readback')
+  async getFamilyReviewReadback(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @ActorId() actorId: string,
+  ) {
+    assertReadContext(familyId, actorId, onboardingId);
+    const insight = await this.familyService.getGrowthInsight(familyId, onboardingId, actorId!);
+    const [events, journeyActions] = await Promise.all([
+      this.devFlowReceiptService.list(familyId, actorId!),
+      this.growthActionService.listCompletedJourneyActions(familyId, actorId!, onboardingId),
+    ]);
+    return this.devCoreGrowthService.getFamilyReviewReadback(familyId, onboardingId, insight, events, journeyActions);
+  }
+
   @Get(':familyId/growth/onboardings/:onboardingId/priority')
   async getGrowthPriorityInsight(
     @Param('familyId') familyId: string,
@@ -405,6 +671,84 @@ export class FamilyController {
     return this.interventionService.getActiveIntervention(familyId, onboardingId, actorId!);
   }
 
+  /**
+   * Full 90-day Journey projection. The current phase is schedule state only;
+   * it is never an outcome, diagnosis, ranking or automatic recommendation.
+   */
+  @RequireFamilyAction('ReadFamily')
+  @Get(':familyId/growth/journey-plan')
+  async getJourneyPlan(
+    @Param('familyId') familyId: string,
+    @ActorId() actorId: string,
+  ): Promise<JourneyPlanProjection> {
+    assertReadContext(familyId, actorId);
+    return this.journeyPlanService.getActiveProjection(familyId, actorId!);
+  }
+
+  @RequireFamilyAction('CreateJourneyPlan')
+  @Post(':familyId/growth/onboardings/:onboardingId/journey-plan')
+  async createJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('onboardingId') onboardingId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<CreateJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateCreateJourneyPlanRequest(familyId, onboardingId, idempotencyKey, body);
+    return this.journeyPlanService.createPlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('ConfirmJourneyPlan')
+  @Post(':familyId/growth/journey-plans/:planId/confirm')
+  async confirmJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<ConfirmJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateConfirmJourneyPlanRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.confirmPlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('PauseJourneyPlan')
+  @Post(':familyId/growth/journey-plans/:planId/pause')
+  async pauseJourneyPlan(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<PauseJourneyPlanResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validatePauseJourneyPlanRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.pausePlan(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
+  @RequireFamilyAction('ReviewJourneyPhase')
+  @Post(':familyId/growth/journey-plans/:planId/phase-review')
+  async reviewJourneyPhase(
+    @Param('familyId') familyId: string,
+    @Param('planId') planId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ): Promise<ReviewJourneyPhaseResponse> {
+    if (!actorId || actorId.trim().length === 0) throw new UnauthorizedException('actor_is_authenticated');
+    const request = validateReviewJourneyPhaseRequest(familyId, planId, idempotencyKey, body);
+    return this.journeyPlanService.reviewCurrentPhase(request, buildAuditMeta(actorId, correlationId, source));
+  }
+
   @Get(':familyId/growth/actions/today')
   async getTodayGrowthAction(
     @Param('familyId') familyId: string,
@@ -432,6 +776,31 @@ export class FamilyController {
     const request = validateCompleteGrowthActionRequest(familyId, actionId, idempotencyKey, body);
     const meta = buildAuditMeta(actorId, correlationId, source);
     return this.growthActionService.completeGrowthAction(request, meta);
+  }
+
+  /**
+   * UI-09 first real slice facade. The pre-existing growth/actions/:actionId/complete
+   * endpoint remains canonical for current consumers; this UI contract returns a
+   * family-scoped readback projection without adding any external effect.
+   */
+  @RequireFamilyAction('CompleteAction')
+  @Post(':familyId/tasks/:taskId/check-in')
+  async checkInTodayTask(
+    @Param('familyId') familyId: string,
+    @Param('taskId') taskId: string,
+    @Body() body: unknown,
+    @ActorId() actorId: string,
+    @Headers('x-correlation-id') correlationId?: string,
+    @Headers('x-source') source?: string,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    if (!actorId || actorId.trim().length === 0) {
+      throw new UnauthorizedException('actor_is_authenticated');
+    }
+    const request = validateCompleteGrowthActionRequest(familyId, taskId, idempotencyKey, body);
+    const meta = buildAuditMeta(actorId, correlationId, source);
+    const response = await this.growthActionService.completeGrowthAction(request, meta);
+    return projectTaskCheckinResult(response.action, meta.correlationId, request.idempotency_key, response.replayed === true);
   }
 
   @Post(':familyId/growth/outcome-observations')

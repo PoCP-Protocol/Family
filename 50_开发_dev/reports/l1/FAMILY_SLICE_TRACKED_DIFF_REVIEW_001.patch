@@ -1,0 +1,505 @@
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[1mindex 0c3a96d..cdfd2cd 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/auth/family-authorization.policy.ts"[m
+[36m@@ -14 +14,3 @@[m [mexport type FamilyNamedAction =[m
+[31m-  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp';[m
+[32m+[m[32m  | 'RequestGrowthHelp' | 'ConfirmGrowthIntent' | 'DecideGrowthService' | 'SubmitServiceFollowUp'[m
+[32m+[m[32m  | 'ExecuteTestExperienceAction' | 'ExecuteFamilyPageObjectAction'[m
+[32m+[m[32m  | 'SubmitCommerceIntent' | 'SubmitServiceBooking';[m
+[36m@@ -35,0 +38,7 @@[m [mconst MATRIX: Record<FamilyNamedAction, Record<FamilyRole, Decision>> = {[m
+[32m+[m[32m  // 34 页商业流程的真实 DEV/TEST 状态机：仅测试 fixture、测试数据库和零外部副作用；仍由领域层校验 page/action/fixture/consent。[m
+[32m+[m[32m  ExecuteTestExperienceAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  ExecuteFamilyPageObjectAction: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 商城商品→订单意向→权益回执：仅本地 DEV/TEST 数据与 no-op adapter，不能触发支付或生产权益。[m
+[32m+[m[32m  SubmitCommerceIntent: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[32m+[m[32m  // 服务供给→预约请求→服务记录：仅本地 DEV/TEST 供给与 no-op 通知适配器，不确认真人服务。[m
+[32m+[m[32m  SubmitServiceBooking: { OWNER_GUARDIAN: 'ALLOW', GUARDIAN: 'ALLOW', ADULT_MEMBER: 'DENY', CHILD_SUBJECT: 'DENY' },[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[1mindex 4129938..9d36701 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.controller.ts"[m
+[36m@@ -10,0 +11,8 @@[m [mimport { OrchestrationService } from './orchestration.service';[m
+[32m+[m[32mimport { TestExperienceService } from './test-experience.service';[m
+[32m+[m[32mimport { FamilyPageObjectsService } from './family-page-objects.service';[m
+[32m+[m[32mimport { FamilyCommerceIntentService } from './family-commerce-intent.service';[m
+[32m+[m[32mimport { FamilyServiceBookingService } from './family-service-booking.service';[m
+[32m+[m[32mimport type { ExecuteTestExperienceDto } from './test-experience.contract';[m
+[32m+[m[32mimport type { FamilyPageObjectActionDto } from './family-page-objects.contract';[m
+[32m+[m[32mimport type { CancelOrderIntentDto, SubmitOrderIntentDto } from './family-commerce-intent.contract';[m
+[32m+[m[32mimport type { CancelBookingDto, RequestBookingDto } from './family-service-booking.contract';[m
+[36m@@ -20 +28,7 @@[m [mexport class OrchestrationController {[m
+[31m-  constructor(@Inject(OrchestrationService) private readonly svc: OrchestrationService) {}[m
+[32m+[m[32m  constructor([m
+[32m+[m[32m    @Inject(OrchestrationService) private readonly svc: OrchestrationService,[m
+[32m+[m[32m    @Inject(TestExperienceService) private readonly testExperience: TestExperienceService,[m
+[32m+[m[32m    @Inject(FamilyPageObjectsService) private readonly pageObjects: FamilyPageObjectsService,[m
+[32m+[m[32m    @Inject(FamilyCommerceIntentService) private readonly commerceIntents: FamilyCommerceIntentService,[m
+[32m+[m[32m    @Inject(FamilyServiceBookingService) private readonly serviceBookings: FamilyServiceBookingService,[m
+[32m+[m[32m  ) {}[m
+[36m@@ -184,0 +199,134 @@[m [mexport class OrchestrationController {[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * 正式 DEV/TEST 体验动作入口。请求只能引用固定 fixture，页面和动作组合由服务端策略复验；[m
+[32m+[m[32m   * 绝不接收金额、联系人、自由文本、provider 参数或任何生产副作用参数。[m
+[32m+[m[32m   */[m
+[32m+[m[32m  @Post('orchestration/test-loop/experience/operations')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteTestExperienceAction')[m
+[32m+[m[32m  async executeTestExperience([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: ExecuteTestExperienceDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.testExperience.execute(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/experience/operations/:operationId/cancel')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteTestExperienceAction')[m
+[32m+[m[32m  async cancelTestExperience(@Param('familyId') familyId: string, @Param('operationId') operationId: string) {[m
+[32m+[m[32m    return this.testExperience.cancel(familyId, operationId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/experience/customer-projection')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async testExperienceCustomerProjection(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.testExperience.customerProjection(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/page-objects')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async familyPageObjects(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.pageObjects.projection(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/page-objects/actions')[m
+[32m+[m[32m  @RequireOrchestrationAction('ExecuteFamilyPageObjectAction')[m
+[32m+[m[32m  async familyPageObjectAction([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: FamilyPageObjectActionDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.pageObjects.act(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Versioned admitted products available to this trusted family's DEV/TEST commerce slice. */[m
+[32m+[m[32m  @Get('orchestration/test-loop/commerce/products')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async commerceProducts(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.commerceIntents.products(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Records a no-payment commercial intent and an internal DEV/TEST entitlement receipt. */[m
+[32m+[m[32m  @Post('orchestration/test-loop/commerce/order-intents')[m
+[32m+[m[32m  @RequireOrchestrationAction('SubmitCommerceIntent')[m
+[32m+[m[32m  async submitCommerceIntent([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: SubmitOrderIntentDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.commerceIntents.submit(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/commerce/order-intents/cancel')[m
+[32m+[m[32m  @RequireOrchestrationAction('SubmitCommerceIntent')[m
+[32m+[m[32m  async cancelCommerceIntent([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: CancelOrderIntentDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.commerceIntents.cancel(familyId, actor.personId, body ?? {}, corr(correlationId));[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/commerce/customer-projection')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async commerceCustomerProjection(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.commerceIntents.customerProjection(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Admitted DEV/TEST service supply, including qualified providers and future no-op availability slots. */[m
+[32m+[m[32m  @Get('orchestration/test-loop/services/offerings')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async serviceOfferings(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.serviceBookings.offerings(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/services/slots')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async serviceSlots([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Query('service_offering_ref') serviceOfferingRef?: string,[m
+[32m+[m[32m    @Query('service_offering_version') serviceOfferingVersion?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    const version = Number(serviceOfferingVersion);[m
+[32m+[m[32m    if (!serviceOfferingRef || !Number.isInteger(version) || version <= 0) {[m
+[32m+[m[32m      throw new BadRequestException('service_offering_ref and service_offering_version required');[m
+[32m+[m[32m    }[m
+[32m+[m[32m    return this.serviceBookings.slots(familyId, serviceOfferingRef, version);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /** Records a family booking request and a no-op DEV/TEST service-record receipt. No calendar or notification is sent. */[m
+[32m+[m[32m  @Post('orchestration/test-loop/services/booking-requests')[m
+[32m+[m[32m  @RequireOrchestrationAction('SubmitServiceBooking')[m
+[32m+[m[32m  async requestServiceBooking([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: RequestBookingDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m    @Headers('idempotency-key') idempotencyKey?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.serviceBookings.request(familyId, actor.personId, body ?? {}, corr(correlationId), idempotencyKey?.trim() || undefined);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Post('orchestration/test-loop/services/booking-requests/cancel')[m
+[32m+[m[32m  @RequireOrchestrationAction('SubmitServiceBooking')[m
+[32m+[m[32m  async cancelServiceBooking([m
+[32m+[m[32m    @Param('familyId') familyId: string,[m
+[32m+[m[32m    @Body() body: CancelBookingDto,[m
+[32m+[m[32m    @OrchestrationActor() actor: Actor,[m
+[32m+[m[32m    @Headers('x-correlation-id') correlationId?: string,[m
+[32m+[m[32m  ) {[m
+[32m+[m[32m    return this.serviceBookings.cancel(familyId, actor.personId, body ?? {}, corr(correlationId));[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  @Get('orchestration/test-loop/services/customer-projection')[m
+[32m+[m[32m  @RequireOrchestrationAction('ReadFamily')[m
+[32m+[m[32m  async serviceBookingCustomerProjection(@Param('familyId') familyId: string) {[m
+[32m+[m[32m    return this.serviceBookings.customerProjection(familyId);[m
+[32m+[m[32m  }[m
+[32m+[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[1mindex 86d6b3a..23a8cd1 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/modules/orchestration/orchestration.module.ts"[m
+[36m@@ -16,0 +17,5 @@[m [mimport { FamilyLlmOutputValidator } from './llm-gateway/output-validator';[m
+[32m+[m[32mimport { TestExperienceService } from './test-experience.service';[m
+[32m+[m[32mimport { FamilyPageObjectsService } from './family-page-objects.service';[m
+[32m+[m[32mimport { FamilyProductEventService } from './family-product-event.service';[m
+[32m+[m[32mimport { FamilyCommerceIntentService } from './family-commerce-intent.service';[m
+[32m+[m[32mimport { FamilyServiceBookingService } from './family-service-booking.service';[m
+[36m@@ -28,0 +34,5 @@[m [mimport { FamilyLlmOutputValidator } from './llm-gateway/output-validator';[m
+[32m+[m[32m    TestExperienceService,[m
+[32m+[m[32m    FamilyPageObjectsService,[m
+[32m+[m[32m    FamilyProductEventService,[m
+[32m+[m[32m    FamilyCommerceIntentService,[m
+[32m+[m[32m    FamilyServiceBookingService,[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts" "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[1mindex dacb457..86def1b 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/api/src/test/test-database.ts"[m
+[36m@@ -77,0 +78,6 @@[m [mexport async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<[m
+[32m+[m[32m    // Event and booking/commerce facts must clear before Tenant/Family bases; supply masters remain fixture-only.[m
+[32m+[m[32m    'family_product_events',[m
+[32m+[m[32m    'family_booking_service_records', 'family_booking_requests', 'family_service_availability_slots', 'family_service_offerings', 'family_service_providers',[m
+[32m+[m[32m    'family_entitlements', 'family_order_intent_lines', 'family_order_intents', 'family_product_offerings',[m
+[32m+[m[32m    'family_service_records', 'family_page_task_items', 'family_support_report_snapshots', 'family_profile_snapshots',[m
+[32m+[m[32m    'test_experience_operations',[m
+[36m@@ -78,0 +85,3 @@[m [mexport async function cleanOrchestrationTablesIfPresent(pool: pg.Pool): Promise<[m
+[32m+[m[32m    'multimodal_audit_events', 'multimodal_derived_artifacts', 'multimodal_processing_runs', 'multimodal_assets', 'multimodal_consents',[m
+[32m+[m[32m    'multimodal_output_schemas', 'multimodal_processing_policies', 'multimodal_capability_profiles',[m
+[32m+[m[32m    'tenant_catalog_bindings', 'tenant_policy_profiles', 'tenant_family_bindings', 'tenant_account_memberships', 'tenants',[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css" "b/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"[m
+[1mindex 1847b47..b1ab5b2 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/styles.css"[m
+[36m@@ -2849 +2849 @@[m [mh3 {[m
+[31m-.clear-product-group{left:51%;bottom:1%;width:45%;height:9%}.clear-product-invite{left:4%;bottom:1%;width:45%;height:9%}.clear-invite-cta{left:7%;top:58%;width:86%;height:8%}[m
+[32m+[m[32m.clear-product-group{left:51%;bottom:1%;width:45%;height:9%}.clear-product-buy{left:4%;bottom:1%;width:45%;height:9%}.clear-invite-cta{left:7%;top:58%;width:86%;height:8%}[m
+[36m@@ -2852,0 +2853,11 @@[m [mh3 {[m
+[32m+[m
+[32m+[m[32m/* Family / 伐木累受控测试体验热点：透明命中区，仅衔接原图既有操作位。 */[m
+[32m+[m[32m.clear-invite-cta{left:7%;top:60%;width:86%;height:9%}[m
+[32m+[m[32m.clear-group-join{left:64%;top:17%;width:28%;height:13%}[m
+[32m+[m[32m.clear-booking-confirm{left:7%;top:82%;width:86%;height:8%}[m
+[32m+[m[32m.clear-activity-confirm{left:7%;top:84%;width:86%;height:8%}[m
+[32m+[m[32m.clear-publish-confirm{left:7%;top:84%;width:86%;height:8%}[m
+[32m+[m[32m.clear-orders-mine{left:7%;top:44%;width:86%;height:11%}[m
+[32m+[m
+[32m+[m[32m/* 服务预约投影：原图“我的咨询和活动”信息区的无视觉变化命中区。 */[m
+[32m+[m[32m.clear-service-mine-projection{left:28%;bottom:1%;width:68%;height:8%}[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.gateway.spec.ts" "b/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.gateway.spec.ts"[m
+[1mindex fa5834b..a0a396c 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.gateway.spec.ts"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.gateway.spec.ts"[m
+[36m@@ -82,0 +83,141 @@[m [mdescribe('Family 34-page visual experience and real Gateway entry', () => {[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdescribe('Family formal experience workflow entrypoints', () => {[m
+[32m+[m[32m  it('sends the four remaining registered page actions only to the protected Test Experience endpoint with fixed fixtures', async () => {[m
+[32m+[m[32m    const fetchMock = vi.fn().mockImplementation(async (url: string, request: RequestInit) => {[m
+[32m+[m[32m      if (url.endsWith('/customer-projection')) {[m
+[32m+[m[32m        return { json: async () => ({ source: 'TEST_FIXTURE', operations: [], text_equivalent: '以下显示当前家庭的体验回执。' }) };[m
+[32m+[m[32m      }[m
+[32m+[m[32m      const body = JSON.parse(String(request.body));[m
+[32m+[m[32m      return {[m
+[32m+[m[32m        json: async () => ({[m
+[32m+[m[32m          operation_id: `operation-${body.action}`,[m
+[32m+[m[32m          status: 'CONFIRMED',[m
+[32m+[m[32m          source: 'TEST_FIXTURE',[m
+[32m+[m[32m          external_effect: false,[m
+[32m+[m[32m          text_equivalent: '已生成本次体验回执。',[m
+[32m+[m[32m        }),[m
+[32m+[m[32m      };[m
+[32m+[m[32m    });[m
+[32m+[m[32m    vi.stubGlobal('fetch', fetchMock);[m
+[32m+[m
+[32m+[m[32m    const cases = [[m
+[32m+[m[32m      ['commerce-invite', '确认邀请', 'CREATE_INVITE', 'CAMPAIGN_FAMILY_MOMENTS'],[m
+[32m+[m[32m      ['commerce-group', '确认拼团', 'CREATE_GROUP', 'GROUP_PARENT_CHILD_CAMP'],[m
+[32m+[m[32m      ['activity-detail', '确认报名', 'CREATE_EVENT', 'EVENT_PARENT_CHILD_SALON_2025_05_25'],[m
+[32m+[m[32m      ['publish-dynamic', '确认发布', 'PUBLISH_TEMPLATE', 'POST_TEMPLATE_GROWTH_CARD'],[m
+[32m+[m[32m    ] as const;[m
+[32m+[m
+[32m+[m[32m    for (const [initialPage, label, action, fixtureRef] of cases) {[m
+[32m+[m[32m      const root = document.createElement('div');[m
+[32m+[m[32m      document.body.append(root);[m
+[32m+[m[32m      createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage });[m
+[32m+[m[32m      const button = root.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`);[m
+[32m+[m[32m      expect(button).not.toBeNull();[m
+[32m+[m[32m      button?.click();[m
+[32m+[m[32m      await tick();[m
+[32m+[m[32m      const call = fetchMock.mock.calls.at(-1);[m
+[32m+[m[32m      if (!call) throw new Error('experience request is required');[m
+[32m+[m[32m      const [url, request] = call;[m
+[32m+[m[32m      expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/experience/operations');[m
+[32m+[m[32m      expect(request).toMatchObject({ method: 'POST', credentials: 'include' });[m
+[32m+[m[32m      expect(JSON.parse(String(request.body))).toMatchObject({[m
+[32m+[m[32m        page_id: action === 'CREATE_INVITE' ? 'UI-15' : action === 'CREATE_GROUP' ? 'UI-16' : action === 'CREATE_EVENT' ? 'UI-23' : 'UI-26',[m
+[32m+[m[32m        action,[m
+[32m+[m[32m        fixture_ref: fixtureRef,[m
+[32m+[m[32m        fixture_version: 'family-34-page-test-experience.v1',[m
+[32m+[m[32m      });[m
+[32m+[m[32m      expect(root.dataset.familyExperienceAction).toBe(action);[m
+[32m+[m[32m      expect(root.dataset.familyExperienceStatus).toBe('CONFIRMED');[m
+[32m+[m[32m      expect(root.dataset.familyExperienceOperation).toBe(`operation-${action}`);[m
+[32m+[m[32m      expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('体验回执');[m
+[32m+[m[32m      root.remove();[m
+[32m+[m[32m    }[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  it('submits a qualified service booking only to the protected service booking endpoint', async () => {[m
+[32m+[m[32m    const fetchMock = vi.fn().mockResolvedValue({[m
+[32m+[m[32m      json: async () => ({[m
+[32m+[m[32m        booking: { booking_request_id: 'booking-fixture', status: 'REQUESTED', external_effect: false, text_equivalent: '已记录本次预约。不会发送通知或确认真人服务。' },[m
+[32m+[m[32m        service_record: { service_record_id: 'record-fixture', status: 'PENDING', external_effect: false },[m
+[32m+[m[32m      }),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    vi.stubGlobal('fetch', fetchMock);[m
+[32m+[m[32m    const root = document.createElement('div');[m
+[32m+[m[32m    document.body.append(root);[m
+[32m+[m[32m    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'consultation-booking' });[m
+[32m+[m[32m    root.querySelector<HTMLButtonElement>('[aria-label="确认预约"]')?.click();[m
+[32m+[m[32m    await tick();[m
+[32m+[m[32m    expect(fetchMock).toHaveBeenCalledTimes(1);[m
+[32m+[m[32m    const [url, request] = fetchMock.mock.calls[0];[m
+[32m+[m[32m    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/booking-requests');[m
+[32m+[m[32m    expect(request).toMatchObject({ method: 'POST', credentials: 'include' });[m
+[32m+[m[32m    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-21', service_offering_ref: 'SERVICE_PARENT_CHILD_PRIMARY', service_offering_version: 1, availability_slot_ref: 'SLOT_PRIMARY' });[m
+[32m+[m[32m    expect(root.dataset.familyServiceBookingAction).toBe('SUBMIT_SERVICE_BOOKING');[m
+[32m+[m[32m    expect(root.dataset.familyServiceBookingStatus).toBe('REQUESTED');[m
+[32m+[m[32m    expect(root.dataset.familyServiceBookingRequest).toBe('booking-fixture');[m
+[32m+[m[32m    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不会发送通知');[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  it('loads service records through the protected read-only booking projection', async () => {[m
+[32m+[m[32m    const fetchMock = vi.fn().mockResolvedValue({[m
+[32m+[m[32m      json: async () => ({ bookings: [], service_records: [], text_equivalent: '以下显示当前家庭已选择的咨询与活动服务记录。' }),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    vi.stubGlobal('fetch', fetchMock);[m
+[32m+[m[32m    const root = document.createElement('div');[m
+[32m+[m[32m    document.body.append(root);[m
+[32m+[m[32m    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'service-mine' });[m
+[32m+[m[32m    root.querySelector<HTMLButtonElement>('[aria-label="查看我的预约和服务记录"]')?.click();[m
+[32m+[m[32m    await tick();[m
+[32m+[m[32m    expect(fetchMock).toHaveBeenCalledTimes(1);[m
+[32m+[m[32m    const [url, request] = fetchMock.mock.calls[0];[m
+[32m+[m[32m    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/services/customer-projection');[m
+[32m+[m[32m    expect(request).toMatchObject({ method: 'GET', credentials: 'include' });[m
+[32m+[m[32m    expect(root.dataset.familyServiceBookingAction).toBe('READ_SERVICE_BOOKING_PROJECTION');[m
+[32m+[m[32m    expect(root.dataset.familyServiceBookingStatus).toBe('READ_ONLY');[m
+[32m+[m[32m    expect(root.textContent).not.toMatch(/DEV|stub|Gate|policy|contract/i);[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  it('submits an admitted product selection only to the protected commerce intent endpoint', async () => {[m
+[32m+[m[32m    const fetchMock = vi.fn().mockResolvedValue({[m
+[32m+[m[32m      json: async () => ({[m
+[32m+[m[32m        intent: { order_intent_id: 'intent-fixture', status: 'SUBMITTED', external_effect: false, text_equivalent: '已记录你的选择。不会扣款。' },[m
+[32m+[m[32m        entitlement: { entitlement_id: 'entitlement-fixture', status: 'AVAILABLE', external_effect: false },[m
+[32m+[m[32m      }),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    vi.stubGlobal('fetch', fetchMock);[m
+[32m+[m[32m    const root = document.createElement('div');[m
+[32m+[m[32m    document.body.append(root);[m
+[32m+[m[32m    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'commerce-product' });[m
+[32m+[m[32m    root.querySelector<HTMLButtonElement>('[aria-label="立即购买"]')?.click();[m
+[32m+[m[32m    await tick();[m
+[32m+[m[32m    expect(fetchMock).toHaveBeenCalledTimes(1);[m
+[32m+[m[32m    const [url, request] = fetchMock.mock.calls[0];[m
+[32m+[m[32m    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/commerce/order-intents');[m
+[32m+[m[32m    expect(request).toMatchObject({ method: 'POST', credentials: 'include' });[m
+[32m+[m[32m    expect(JSON.parse(String(request.body))).toEqual({ page_id: 'UI-14', product_ref: 'PRODUCT_PARENT_CHILD_CAMP', product_version: 1 });[m
+[32m+[m[32m    expect(root.dataset.familyCommerceAction).toBe('SUBMIT_ORDER_INTENT');[m
+[32m+[m[32m    expect(root.dataset.familyCommerceStatus).toBe('SUBMITTED');[m
+[32m+[m[32m    expect(root.dataset.familyCommerceOrderIntent).toBe('intent-fixture');[m
+[32m+[m[32m    expect(root.querySelector('[aria-live="polite"]')?.textContent).toContain('不会扣款');[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  it('loads customer assets through a read-only protected commerce projection without leaking internal UI terms', async () => {[m
+[32m+[m[32m    const fetchMock = vi.fn().mockResolvedValue({[m
+[32m+[m[32m      json: async () => ({ entitlements: [], order_intents: [], text_equivalent: '以下显示当前家庭的商品选择与服务权益回执。' }),[m
+[32m+[m[32m    });[m
+[32m+[m[32m    vi.stubGlobal('fetch', fetchMock);[m
+[32m+[m[32m    const root = document.createElement('div');[m
+[32m+[m[32m    document.body.append(root);[m
+[32m+[m[32m    createTestLoopApp(root, { apiBaseUrl: 'http://family-api.test', familyId: 'family-test-scope', initialPage: 'orders-assets' });[m
+[32m+[m[32m    root.querySelector<HTMLButtonElement>('[aria-label="查看订单与资产"]')?.click();[m
+[32m+[m[32m    await tick();[m
+[32m+[m[32m    expect(fetchMock).toHaveBeenCalledTimes(1);[m
+[32m+[m[32m    const [url, request] = fetchMock.mock.calls[0];[m
+[32m+[m[32m    expect(url).toBe('http://family-api.test/families/family-test-scope/orchestration/test-loop/commerce/customer-projection');[m
+[32m+[m[32m    expect(request).toMatchObject({ method: 'GET', credentials: 'include' });[m
+[32m+[m[32m    expect(root.dataset.familyCommerceAction).toBe('READ_CUSTOMER_COMMERCE_PROJECTION');[m
+[32m+[m[32m    expect(root.dataset.familyCommerceStatus).toBe('READ_ONLY');[m
+[32m+[m[32m    expect(root.textContent).not.toMatch(/DEV|stub|Gate|policy|contract/i);[m
+[32m+[m[32m  });[m
+[32m+[m[32m});[m
+[1mdiff --git "a/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.js" "b/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.js"[m
+[1mindex 014c200..5662dbf 100644[m
+[1m--- "a/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.js"[m
+[1m+++ "b/50_\345\274\200\345\217\221_dev/apps/web/src/test-loop.js"[m
+[36m@@ -43,0 +44,16 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[32m+[m[32m  const commerceActionRoutes = {[m
+[32m+[m[32m    'commerce-submit-intent': { pageId: 'UI-14', productRef: 'PRODUCT_PARENT_CHILD_CAMP', productVersion: 1, nextPage: 'orders-assets' },[m
+[32m+[m[32m    'commerce-load-customer-assets': { pageId: null, productRef: null, productVersion: null, nextPage: 'orders-assets' },[m
+[32m+[m[32m  };[m
+[32m+[m[32m  const serviceBookingActionRoutes = {[m
+[32m+[m[32m    'service-submit-booking': { pageId: 'UI-21', serviceOfferingRef: 'SERVICE_PARENT_CHILD_PRIMARY', serviceOfferingVersion: 1, availabilitySlotRef: 'SLOT_PRIMARY', nextPage: 'service-mine' },[m
+[32m+[m[32m    'service-load-customer-projection': { pageId: null, serviceOfferingRef: null, serviceOfferingVersion: null, availabilitySlotRef: null, nextPage: 'service-mine' },[m
+[32m+[m[32m  };[m
+[32m+[m[32m  const experienceActionRoutes = {[m
+[32m+[m[32m    'experience-create-invite': { pageId: 'UI-15', action: 'CREATE_INVITE', fixtureRef: 'CAMPAIGN_FAMILY_MOMENTS', nextPage: 'commerce-mine' },[m
+[32m+[m[32m    'experience-create-group': { pageId: 'UI-16', action: 'CREATE_GROUP', fixtureRef: 'GROUP_PARENT_CHILD_CAMP', nextPage: 'commerce-mine' },[m
+[32m+[m[32m    'experience-create-booking': { pageId: 'UI-21', action: 'CREATE_BOOKING', fixtureRef: 'TEACHER_LI_SLOT_2025_05_21_1000', channel: 'VIDEO', nextPage: 'service-mine' },[m
+[32m+[m[32m    'experience-create-event': { pageId: 'UI-23', action: 'CREATE_EVENT', fixtureRef: 'EVENT_PARENT_CHILD_SALON_2025_05_25', nextPage: 'service-mine' },[m
+[32m+[m[32m    'experience-publish-template': { pageId: 'UI-26', action: 'PUBLISH_TEMPLATE', fixtureRef: 'POST_TEMPLATE_GROWTH_CARD', nextPage: 'my-community' },[m
+[32m+[m[32m    'experience-load-assets': { pageId: 'UI-32', action: null, fixtureRef: null, nextPage: 'orders-assets' },[m
+[32m+[m[32m  };[m
+[36m@@ -63,0 +80,58 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[32m+[m[32m  async function requestTestExperience(routeKey) {[m
+[32m+[m[32m    const route = experienceActionRoutes[routeKey];[m
+[32m+[m[32m    const correlationId = `family-experience-${Date.now()}-${Math.random().toString(16).slice(2)}`;[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const isProjection = route.action === null;[m
+[32m+[m[32m      const url = isProjection[m
+[32m+[m[32m        ? `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/experience/customer-projection`[m
+[32m+[m[32m        : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/experience/operations`;[m
+[32m+[m[32m      const response = await fetch(url, {[m
+[32m+[m[32m        method: isProjection ? 'GET' : 'POST',[m
+[32m+[m[32m        credentials: 'include',[m
+[32m+[m[32m        headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },[m
+[32m+[m[32m        ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, action: route.action, fixture_ref: route.fixtureRef, fixture_version: 'family-34-page-test-experience.v1', ...(route.channel ? { channel: route.channel } : {}) }) }),[m
+[32m+[m[32m      });[m
+[32m+[m[32m      const payload = await response.json();[m
+[32m+[m[32m      llmTextEquivalent = payload?.text_equivalent || '当前体验回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyExperienceAction = route.action || 'READ_CUSTOMER_PROJECTION';[m
+[32m+[m[32m      root.dataset.familyExperienceStatus = payload?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');[m
+[32m+[m[32m      root.dataset.familyExperienceOperation = payload?.operation_id || '';[m
+[32m+[m[32m      return payload;[m
+[32m+[m[32m    } catch (_error) {[m
+[32m+[m[32m      llmTextEquivalent = '当前体验回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyExperienceAction = route.action || 'READ_CUSTOMER_PROJECTION';[m
+[32m+[m[32m      root.dataset.familyExperienceStatus = 'CLIENT_FAILURE';[m
+[32m+[m[32m      root.dataset.familyExperienceOperation = '';[m
+[32m+[m[32m      return null;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m[32m  async function requestCommerceIntent(routeKey) {[m
+[32m+[m[32m    const route = commerceActionRoutes[routeKey];[m
+[32m+[m[32m    const correlationId = `family-commerce-${Date.now()}-${Math.random().toString(16).slice(2)}`;[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const isProjection = route.pageId === null;[m
+[32m+[m[32m      const response = await fetch([m
+[32m+[m[32m        isProjection[m
+[32m+[m[32m          ? `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/customer-projection`[m
+[32m+[m[32m          : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/commerce/order-intents`,[m
+[32m+[m[32m        {[m
+[32m+[m[32m          method: isProjection ? 'GET' : 'POST',[m
+[32m+[m[32m          credentials: 'include',[m
+[32m+[m[32m          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },[m
+[32m+[m[32m          ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, product_ref: route.productRef, product_version: route.productVersion }) }),[m
+[32m+[m[32m        },[m
+[32m+[m[32m      );[m
+[32m+[m[32m      const payload = await response.json();[m
+[32m+[m[32m      llmTextEquivalent = payload?.intent?.text_equivalent || payload?.text_equivalent || '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyCommerceAction = isProjection ? 'READ_CUSTOMER_COMMERCE_PROJECTION' : 'SUBMIT_ORDER_INTENT';[m
+[32m+[m[32m      root.dataset.familyCommerceStatus = payload?.intent?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');[m
+[32m+[m[32m      root.dataset.familyCommerceOrderIntent = payload?.intent?.order_intent_id || '';[m
+[32m+[m[32m      return payload;[m
+[32m+[m[32m    } catch (_error) {[m
+[32m+[m[32m      llmTextEquivalent = '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyCommerceAction = route.pageId === null ? 'READ_CUSTOMER_COMMERCE_PROJECTION' : 'SUBMIT_ORDER_INTENT';[m
+[32m+[m[32m      root.dataset.familyCommerceStatus = 'CLIENT_FAILURE';[m
+[32m+[m[32m      root.dataset.familyCommerceOrderIntent = '';[m
+[32m+[m[32m      return null;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[36m@@ -104,0 +179,30 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[32m+[m[32m  async function requestServiceBooking(routeKey) {[m
+[32m+[m[32m    const route = serviceBookingActionRoutes[routeKey];[m
+[32m+[m[32m    const correlationId = `family-service-${Date.now()}-${Math.random().toString(16).slice(2)}`;[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const isProjection = route.pageId === null;[m
+[32m+[m[32m      const response = await fetch([m
+[32m+[m[32m        isProjection[m
+[32m+[m[32m          ? `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/customer-projection`[m
+[32m+[m[32m          : `${config.apiBaseUrl}/families/${config.familyId}/orchestration/test-loop/services/booking-requests`,[m
+[32m+[m[32m        {[m
+[32m+[m[32m          method: isProjection ? 'GET' : 'POST',[m
+[32m+[m[32m          credentials: 'include',[m
+[32m+[m[32m          headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId, ...(isProjection ? {} : { 'idempotency-key': correlationId }) },[m
+[32m+[m[32m          ...(isProjection ? {} : { body: JSON.stringify({ page_id: route.pageId, service_offering_ref: route.serviceOfferingRef, service_offering_version: route.serviceOfferingVersion, availability_slot_ref: route.availabilitySlotRef }) }),[m
+[32m+[m[32m        },[m
+[32m+[m[32m      );[m
+[32m+[m[32m      const payload = await response.json();[m
+[32m+[m[32m      llmTextEquivalent = payload?.booking?.text_equivalent || payload?.text_equivalent || '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyServiceBookingAction = isProjection ? 'READ_SERVICE_BOOKING_PROJECTION' : 'SUBMIT_SERVICE_BOOKING';[m
+[32m+[m[32m      root.dataset.familyServiceBookingStatus = payload?.booking?.status || (isProjection ? 'READ_ONLY' : 'CLIENT_FAILURE');[m
+[32m+[m[32m      root.dataset.familyServiceBookingRequest = payload?.booking?.booking_request_id || '';[m
+[32m+[m[32m      return payload;[m
+[32m+[m[32m    } catch (_error) {[m
+[32m+[m[32m      llmTextEquivalent = '当前服务回执暂不可用。你可以返回、暂停或现在先不继续。';[m
+[32m+[m[32m      root.dataset.familyServiceBookingAction = route.pageId === null ? 'READ_SERVICE_BOOKING_PROJECTION' : 'SUBMIT_SERVICE_BOOKING';[m
+[32m+[m[32m      root.dataset.familyServiceBookingStatus = 'CLIENT_FAILURE';[m
+[32m+[m[32m      root.dataset.familyServiceBookingRequest = '';[m
+[32m+[m[32m      return null;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[36m@@ -106,3 +210,3 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function commerceProduct() { return clearReference('product-detail-reference-418x970.png', '商品详情：21天亲子沟通挑战营、价格、服务权益、邀请优惠券和购买拼团操作区', [['clear-product-group', 'llm-commerce-group', '发起拼团'], ['clear-product-invite', 'commerce-invite', '去分享']], '418/970'); }[m
+[31m-  function commerceInvite() { return clearReference('invite-rewards-reference-432x992.png', '邀请有礼：邀请3个家庭、1/3进度、奖励卡、立即邀请、邀请方式和二维码横幅', [['clear-invite-cta', 'commerce-mine', '立即邀请']], '432/992'); }[m
+[31m-  function commerceGroup() { return clearReference('group-buy-reference-440x960.png', '拼团专区：分类Tab、四张拼团卡、团长、倒计时、参与头像、原价拼团价和去拼团按钮', [], '440/960'); }[m
+[32m+[m[32m  function commerceProduct() { return clearReference('product-detail-reference-418x970.png', '商品详情：21天亲子沟通挑战营、价格、服务权益、邀请优惠券和购买拼团操作区', [['clear-product-buy', 'commerce-submit-intent', '立即购买'], ['clear-product-group', 'llm-commerce-group', '发起拼团']], '418/970'); }[m
+[32m+[m[32m  function commerceInvite() { return clearReference('invite-rewards-reference-432x992.png', '邀请有礼：邀请3个家庭、1/3进度、奖励卡、立即邀请、邀请方式和二维码横幅', [['clear-invite-cta', 'experience-create-invite', '确认邀请']], '432/992'); }[m
+[32m+[m[32m  function commerceGroup() { return clearReference('group-buy-reference-440x960.png', '拼团专区：分类Tab、四张拼团卡、团长、倒计时、参与头像、原价拼团价和去拼团按钮', [['clear-group-join', 'experience-create-group', '确认拼团']], '440/960'); }[m
+[36m@@ -113 +217 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function consultationBooking() { return clearReference('consultation-booking-reference-492x1008.png', '在线咨询预约：咨询方式、时间、问题描述与确认预约，仅作静态视觉展示', [['clear-booking-back', 'teacher-detail', '返回名师详情']], '492/1008'); }[m
+[32m+[m[32m  function consultationBooking() { return clearReference('consultation-booking-reference-492x1008.png', '在线咨询预约：咨询方式、时间、问题描述与确认预约', [['clear-booking-back', 'teacher-detail', '返回名师详情'], ['clear-booking-confirm', 'service-submit-booking', '确认预约']], '492/1008'); }[m
+[36m@@ -115,2 +219,2 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function activityDetail() { return clearReference('activity-detail-reference-470x1016.png', '活动详情：活动亮点、流程、适合人群、参与收获与报名操作区，仅作静态视觉展示', [['clear-activity-mine', 'service-mine', '我的预约和活动']], '470/1016'); }[m
+[31m-  function serviceMine() { return clearReference('service-mine-reference-472x1018.png', '我的咨询和活动：用户资料、咨询、活动与会员信息，仅作静态视觉展示', [['clear-service-mine-home', 'home', '首页']], '472/1018'); }[m
+[32m+[m[32m  function activityDetail() { return clearReference('activity-detail-reference-470x1016.png', '活动详情：活动亮点、流程、适合人群、参与收获与报名操作区，仅作静态视觉展示', [['clear-activity-mine', 'service-mine', '我的预约和活动'], ['clear-activity-confirm', 'experience-create-event', '确认报名']], '470/1016'); }[m
+[32m+[m[32m  function serviceMine() { return clearReference('service-mine-reference-472x1018.png', '我的咨询和活动：用户资料、咨询、活动与会员信息', [['clear-service-mine-home', 'home', '首页'], ['clear-service-mine-projection', 'service-load-customer-projection', '查看我的预约和服务记录']], '472/1018'); }[m
+[36m@@ -118 +222 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function publishDynamic() { return clearReference('publish-dynamic-reference-548x1028.png', '发布动态：发布类型、素材、话题、挑战与发布打卡操作区，仅作静态视觉展示', [['clear-publish-back', 'parent-community', '返回家长社区']], '548/1028'); }[m
+[32m+[m[32m  function publishDynamic() { return clearReference('publish-dynamic-reference-548x1028.png', '发布动态：发布类型、素材、话题、挑战与发布打卡操作区，仅作静态视觉展示', [['clear-publish-back', 'parent-community', '返回家长社区'], ['clear-publish-confirm', 'experience-publish-template', '确认发布']], '548/1028'); }[m
+[36m@@ -124 +228 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心，仅作静态视觉展示', [['clear-orders-mine', 'annual-member-mine', '返回我的']], '552/1010'); }[m
+[32m+[m[32m  function ordersAssets() { return clearReference('orders-assets-reference-552x1010.png', '订单与资产：订单、优惠券、积分、奖励与权益中心', [['clear-orders-mine', 'commerce-load-customer-assets', '查看订单与资产']], '552/1010'); }[m
+[36m@@ -128 +232 @@[m [mexport function createTestLoopApp(root, config = defaultTestLoopConfig) {[m
+[31m-  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }[m
+[32m+[m[32m  function bind() { root.querySelectorAll('[data-by]').forEach(el => el.addEventListener('click', async () => { const a = el.dataset.by; if (a in serviceBookingActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = serviceBookingActionRoutes[a]; await requestServiceBooking(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in commerceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = commerceActionRoutes[a]; await requestCommerceIntent(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a in llmActionRoutes) { const [pageId, nextPage] = llmActionRoutes[a]; root.setAttribute('aria-busy', 'true'); await requestPageExplanation(pageId); root.removeAttribute('aria-busy'); page = nextPage; render(); return; } if (a in experienceActionRoutes) { root.setAttribute('aria-busy', 'true'); const route = experienceActionRoutes[a]; await requestTestExperience(a); root.removeAttribute('aria-busy'); page = route.nextPage; render(); return; } if (a === 'back') { page = 'home'; } else if (a === 'assessment-form') { page = 'report'; } else if (a.startsWith('check-')) { checked[Number(a.slice(6))] = !checked[Number(a.slice(6))]; } else if (a === 'home' || a in { assessment:1, report:1, task:1, child:1, ranking:1, poster:1, plan:1, mall:1, product:1, invite:1, group:1, points:1, mine:1, member:1, 'core-report':1, 'core-plan':1, 'core-community':1, 'core-mine':1, 'growth-assessment':1, 'growth-report':1, 'growth-daily-task':1, 'growth-child':1, 'growth-ranking':1, 'growth-poster':1, 'commerce-mall':1, 'commerce-product':1, 'commerce-invite':1, 'commerce-group':1, 'commerce-points':1, 'commerce-mine':1, 'teacher-zone':1, 'teacher-detail':1, 'consultation-booking':1, 'salon-list':1, 'activity-detail':1, 'service-mine':1, 'parent-community':1, 'publish-dynamic':1, 'dynamic-detail':1, 'my-community':1, 'growth-outcomes':1, 'annual-member-mine':1, 'my-services':1, 'orders-assets':1, 'family-profile':1, 'service-records':1 }) { page = a; } render(); })); }[m

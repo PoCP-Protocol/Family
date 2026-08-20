@@ -1,11 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { createHash, randomUUID } from 'node:crypto';
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AppModule } from '../../app.module';
 import { createTestPool, getTestDatabaseUrl } from '../../test/test-database';
 
-const ACTOR = { 'x-actor-id': 'advisor-1', 'x-correlation-id': 'c-e2e', 'content-type': 'application/json' };
+const ACTOR = { 'x-correlation-id': 'c-e2e', 'content-type': 'application/json' };
+const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 
 async function cleanPrincipal(pool: pg.Pool): Promise<void> {
   for (const t of ['principal_action_proposals', 'principal_feedback', 'principal_model_runs',
@@ -22,6 +24,7 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
   let baseUrl: string;
   let pool: pg.Pool;
   let familyId: string;
+  let token: string;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = getTestDatabaseUrl();
@@ -35,11 +38,38 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
     await cleanPrincipal(pool);
     const r = await pool.query(`insert into families(display_name) values ('E2E家庭') returning family_id`);
     familyId = r.rows[0].family_id;
+    const guardianId = (await pool.query(
+      `insert into persons(family_id, person_type, parent_role, display_name)
+       values ($1, 'PARENT', 'GUARDIAN', 'E2E监护人') returning person_id`,
+      [familyId],
+    )).rows[0].person_id;
+    const accountId = (await pool.query(
+      `insert into accounts(status) values ('ACTIVE') returning account_id`,
+    )).rows[0].account_id;
+    await pool.query(
+      `insert into account_person_bindings(account_id, person_id, status) values ($1, $2, 'ACTIVE')`,
+      [accountId, guardianId],
+    );
+    await pool.query(
+      `insert into family_memberships(family_id, person_id, role, status, joined_at)
+       values ($1, $2, 'OWNER_GUARDIAN', 'ACTIVE', now())`,
+      [familyId, guardianId],
+    );
+    token = `fam_${randomUUID()}`;
+    await pool.query(
+      `insert into identity_sessions(token_hash, account_ref, expires_at)
+       values ($1, $2, now() + interval '1 day')`,
+      [sha256(token), accountId],
+    );
   });
   afterAll(async () => { await app.close(); await pool.end(); });
 
   const post = (path: string, body: unknown) =>
-    fetch(`${baseUrl}${path}`, { method: 'POST', headers: ACTOR, body: JSON.stringify(body) });
+    fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { ...ACTOR, authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
 
   async function newSession() {
     const res = await post(`/families/${familyId}/principal/sessions`, { subject_ref: 'child-1' });
@@ -204,11 +234,11 @@ describe('Principal Runtime E2E (M3-101A-B, Fake provider, real PostgreSQL)', ()
   it('GET session returns aggregate; unknown family -> 404', async () => {
     const sid = await newSession();
     await post(`/families/${familyId}/principal/sessions/${sid}/messages`, { subject_ref: 'child-1', message: '手机玩太久了' });
-    const get = await fetch(`${baseUrl}/families/${familyId}/principal/sessions/${sid}`, { headers: { 'x-actor-id': 'advisor-1' } });
+    const get = await fetch(`${baseUrl}/families/${familyId}/principal/sessions/${sid}`, { headers: { authorization: `Bearer ${token}` } });
     expect(get.status).toBe(200);
     const agg = await get.json() as { messages: unknown[] };
     expect(agg.messages.length).toBeGreaterThanOrEqual(1);
-    const bad = await fetch(`${baseUrl}/families/${familyId}/principal/sessions/00000000-0000-0000-0000-000000000000`, { headers: { 'x-actor-id': 'advisor-1' } });
+    const bad = await fetch(`${baseUrl}/families/${familyId}/principal/sessions/00000000-0000-0000-0000-000000000000`, { headers: { authorization: `Bearer ${token}` } });
     expect(bad.status).toBe(404);
   });
 });

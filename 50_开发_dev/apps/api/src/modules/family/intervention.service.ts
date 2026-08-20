@@ -10,6 +10,7 @@ import type {
   StartInterventionResponse,
 } from '@family/contracts';
 import { FamilyRepository } from './family.repository';
+import { assertFamilyManagePermission } from './family-permission';
 import {
   ACTION_BOUNDARY,
   INTERVENTION_CODE,
@@ -22,7 +23,6 @@ import {
 import { assertNormalSafetyRoute } from './normal-safety-route.policy';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 
-const CREATE_FAMILY_ACTION = 'CreateFamily';
 const START_INTERVENTION_ACTION = 'StartIntervention';
 const INTERVENTION_STARTED_EVENT = 'InterventionStarted';
 
@@ -153,19 +153,6 @@ async function ensureFamilyExists(client: pg.PoolClient, familyId: string): Prom
   const result = await client.query('select family_id from families where family_id = $1 for share', [familyId]);
   if (result.rowCount !== 1) {
     throw new NotFoundException('family_not_found');
-  }
-}
-
-async function assertFamilyManagePermission(client: pg.PoolClient, familyId: string, actorId: string): Promise<void> {
-  const result = await client.query(
-    `select audit_id
-     from audit_logs
-     where family_id = $1 and actor_id = $2 and action_name = $3 and result = 'SUCCESS'
-     limit 1`,
-    [familyId, actorId, CREATE_FAMILY_ACTION],
-  );
-  if (result.rowCount !== 1) {
-    throw new ForbiddenException('actor_has_family_manage_permission');
   }
 }
 

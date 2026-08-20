@@ -41,6 +41,8 @@ function resolveRuntimeProfile(): RuntimeProfile {
 
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
 
+export type PrincipalDeliveryMode = 'LEGACY' | 'ORCHESTRATION_AI_COACH';
+
 export interface HandleMessageResult {
   session_id: string;
   response_id: string | null;
@@ -82,7 +84,9 @@ export class PrincipalService {
     familyId: string, sessionId: string, subjectRef: string, actorId: string,
     userMessage: string, correlationId: string,
     images?: Array<{ media_type: string; data: string }>,
+    options?: { deliveryMode?: PrincipalDeliveryMode },
   ): Promise<HandleMessageResult> {
+    const deliveryMode = options?.deliveryMode ?? 'LEGACY';
     await this.repo.addMessage(sessionId, familyId, 'USER', userMessage, correlationId);
     await this.repo.recordProductEvent('principal_question_submitted', familyId, sessionId, correlationId,
       images?.length ? { image_count: images.length } : {}); // 只记数量,不落原始字节(隐私)
@@ -261,10 +265,10 @@ export class PrincipalService {
       return { session_id: sessionId, response_id: resp.response_id, risk_route: route, consent_allowed: consent.allowed, response: null, action_proposal_id: null, human_handoff: true };
     }
 
-    // NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
-    // 真正应用到 Growth 是 101A-C accept(→ 既有 Named Action)。
+    // LEGACY NORMAL(schema 已过;FAIL_CLOSED 会被降为 REVIEW,不进此分支)→ 建 Action Proposal(canonical=false)。
+    // ORCHESTRATION_AI_COACH 复用本方法前面的完整安全管线，但不创建 legacy proposal，也不调用 acceptProposal。
     let proposalId: string | null = null;
-    if (route === 'NORMAL' && output.one_small_action) {
+    if (route === 'NORMAL' && output.one_small_action && deliveryMode === 'LEGACY') {
       const p = await this.repo.saveProposal({
         response_id: resp.response_id, session_id: sessionId, family_id: familyId, subject_ref: subjectRef,
         proposal_type: 'RECOMMEND_INTERVENTION', recommended_intervention_id: 'LISTEN_BEFORE_RESPOND',
@@ -275,6 +279,9 @@ export class PrincipalService {
       await this.repo.recordProductEvent('principal_action_proposal_viewed', familyId, sessionId, correlationId, { proposal_id: proposalId });
     }
 
+    if (deliveryMode === 'ORCHESTRATION_AI_COACH') {
+      await this.repo.recordProductEvent('principal_orchestration_ai_coach_delivered', familyId, sessionId, correlationId, { proposal_delta: 0, delivery_mode: deliveryMode });
+    }
     return { session_id: sessionId, response_id: resp.response_id, risk_route: route, consent_allowed: consent.allowed, response: output, action_proposal_id: proposalId, human_handoff: false };
   }
 

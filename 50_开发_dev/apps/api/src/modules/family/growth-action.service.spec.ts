@@ -107,7 +107,7 @@ describe('GrowthActionService', () => {
       idempotency_key: 'idem-complete-replay',
     }, meta);
 
-    expect(response).toEqual(replayResponse);
+    expect(response).toEqual({ ...replayResponse, replayed: true });
     expect(client.updatedActionCount).toBe(0);
     expect(client.auditActions).toEqual([]);
   });

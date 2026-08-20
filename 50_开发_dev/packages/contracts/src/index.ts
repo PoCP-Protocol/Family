@@ -4,6 +4,10 @@
  * 后续可由 specs 自动生成;此处先手工承载 M1 Family Core 所需最小集合。
  */
 
+// Growth Orchestration V3 运行时契约(FAMILY-GROWTH-VERTICAL-SLICE-001;禁语义别名)。
+export * from './orchestration';
+export * from './ui01-ui09-first-slice';
+
 export type FamilyStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 export type PersonType = 'PARENT' | 'CHILD';
 export type ParentRole = 'MOTHER' | 'FATHER' | 'GUARDIAN' | 'OTHER_GUARDIAN';
@@ -541,8 +545,13 @@ export interface GrowthActionDto {
   family_id: string;
   onboarding_id: string;
   priority_id: string;
-  intervention_episode_id: string;
-  day_index: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  /** Existing 7-day intervention actions retain their episode; 90-day Journey actions do not require one. */
+  intervention_episode_id: string | null;
+  /** Family-confirmed 90-day plan linkage; null for legacy intervention actions. */
+  journey_plan_id?: string | null;
+  /** Schedule phase only; it is not a child state, diagnosis, score, or outcome. */
+  journey_phase?: 'SEE' | 'PARENT_FIRST' | 'CO_CREATE' | 'STABILIZE' | null;
+  day_index: number;
   status: GrowthActionStatus;
   assignment_text: string;
   due_date: string;
@@ -580,6 +589,8 @@ export interface CompleteGrowthActionRequest {
 export interface CompleteGrowthActionResponse {
   action: GrowthActionDto;
   reflection_boundary: ReflectionBoundary;
+  /** True only when an identical idempotency key/request hash replays a stored receipt. */
+  replayed?: boolean;
 }
 
 export type Wave3PolicyVersion = 'M2_106_DETERMINISTIC_V1';
@@ -737,3 +748,8 @@ export interface HealthStatus {
   version: string;
   time: string;
 }
+
+export * from './dev-core-growth';
+export * from './dev-platform-surfaces';
+export * from './family-growth-os';
+export * from './journey-plan';

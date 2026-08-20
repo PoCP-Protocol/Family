@@ -1,0 +1,17 @@
+CREATE VIEW
+CREATE VIEW
+   code_set_ref   | active_values
+------------------+---------------
+ LIFECYCLE_STATUS |             6
+ OBJECT_LAYER     |             8
+ SCOPE_LEVEL      |             8
+(3 rows)
+
+ object_layer |  scope_level  | count
+--------------+---------------+-------
+ AUDIT        | TENANT_FAMILY |     1
+ BASE         | TENANT        |     1
+ BASE         | TENANT_FAMILY |     4
+ INTERFACE    | TENANT_FAMILY |     1
+ PROJECTION   | TENANT_FAMILY |     3
+(5 rows)

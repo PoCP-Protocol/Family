@@ -348,6 +348,57 @@ describe('M2 Wave2 PostgreSQL + HTTP E2E', () => {
     expect(await after.text()).toBe('');
   });
 
+  it('E2E-UI01-UI09-01 exposes FamilyTodayProjection and records one guarded check-in with idempotent readback', async () => {
+    const setup = await seedConfirmedProfile('corr-ui01-ui09-first-slice');
+    const insight = await (await getPriorityInsight(setup.familyId, setup.onboardingId)).json() as GrowthPriorityInsightHttpResponse;
+    const confirmedResponse = await confirmPriority(setup.familyId, setup.onboardingId, insight.draft.draft_id, 'R03', 'corr-ui01-ui09-first-slice', 'idem-ui01-ui09-confirm');
+    expect(confirmedResponse.status).toBe(201);
+    const confirmed = await confirmedResponse.json() as ConfirmGrowthPriorityHttpResponse;
+    const startedResponse = await startIntervention(setup.familyId, setup.onboardingId, confirmed.priority!.priority_id, 'corr-ui01-ui09-first-slice', 'idem-ui01-ui09-start');
+    expect(startedResponse.status).toBe(201);
+    const started = await startedResponse.json() as StartInterventionHttpResponse;
+
+    const todayResponse = await fetch(`${baseUrl}/families/${setup.familyId}/today`, { headers: baseHeaders('corr-ui01-ui09-today') });
+    const today = await todayResponse.json() as Record<string, any>;
+    expect(todayResponse.status).toBe(200);
+    expect(today).toMatchObject({
+      projection_version: 'UI01_UI09_FAMILY_TODAY_V1',
+      family_id: setup.familyId,
+      entry_state: 'READY',
+      today_task: { task_id: started.actions[0].action_id, task_state: 'NOT_STARTED', checkin_allowed: true },
+      ai_ready: {
+        evidence_boundary: 'ACTION_CHECKIN_IS_NOT_OUTCOME_OR_CAUSAL_EFFECT',
+        recommendation_source: 'RULE_BASED_SYNTHETIC_NO_RECOMMENDATION',
+        model_gateway_status: 'NOOP_NOT_INVOKED',
+      },
+    });
+    expect(today.outcome).toBeUndefined();
+    expect(today.family_total_score).toBeUndefined();
+    expect(today.family_ranking).toBeUndefined();
+
+    const checkinPath = `/families/${setup.familyId}/tasks/${started.actions[0].action_id}/check-in`;
+    const checkinBody = { completion_status: 'COMPLETED', reflection: '', occurred_at: new Date().toISOString() };
+    const checkedIn = await postJson(checkinPath, checkinBody, 'corr-ui01-ui09-checkin', 'idem-ui01-ui09-checkin');
+    const result = await checkedIn.json() as Record<string, any>;
+    expect(checkedIn.status).toBe(201);
+    expect(result).toMatchObject({
+      result_state: 'SUCCESS',
+      action: { task_id: started.actions[0].action_id, task_state: 'CHECKED_IN', completion_status: 'COMPLETED' },
+      audit_status: 'RECORDED',
+      correlation_id: 'corr-ui01-ui09-checkin',
+      next_hint: { source: 'RULE_BASED_SYNTHETIC_NOOP', text_key: 'REFRESH_TODAY_AFTER_CHECKIN', model_gateway_status: 'NOOP_NOT_INVOKED' },
+    });
+
+    const replay = await postJson(checkinPath, checkinBody, 'corr-ui01-ui09-checkin-replay', 'idem-ui01-ui09-checkin');
+    expect(replay.status).toBe(201);
+    expect((await replay.json() as Record<string, any>).result_state).toBe('REPLAYED');
+    await expectCompletedActionCount(1);
+    await expectAuditActionCount('CompleteGrowthAction', 1);
+    await expectOutboxEventCount('GrowthActionCompleted', 1);
+    await expectOutcomeLikeTablesEmpty();
+    await expectNoAiLikeSideEffects();
+  });
+
   it('E2E-W2-08 resolves the onboarding child in a multi-child family without a first-child shortcut', async () => {
     const setup = await seedConfirmedProfile('corr-w2-multi-child');
     await postJsonExpect(`/families/${setup.familyId}/children`, {

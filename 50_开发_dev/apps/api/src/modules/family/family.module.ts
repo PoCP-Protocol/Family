@@ -10,8 +10,12 @@ import { GrowthPriorityService } from './growth-priority.service';
 import { GrowthReviewService } from './growth-review.service';
 import { GrowthSubjectResolver } from './growth-subject.resolver';
 import { InterventionService } from './intervention.service';
+import { JourneyPlanService } from './journey-plan.service';
 import { OnboardingService } from './onboarding.service';
 import { TodayService } from './today.service';
+import { DevCoreGrowthService } from './dev-core-growth.service';
+import { DevPlatformSurfacesService } from './dev-platform-surfaces.service';
+import { DevFlowReceiptService } from './dev-flow-receipt.service';
 
 /**
  * Family 模块占位(TASK-001)。
@@ -30,11 +34,16 @@ import { TodayService } from './today.service';
 		GrowthSubjectResolver,
 		GrowthPriorityService,
 		InterventionService,
+		JourneyPlanService,
 		GrowthActionService,
 		GrowthReviewService,
 		OnboardingService,
-		TodayService,
-	],
+		    TodayService,
+    DevCoreGrowthService,
+    DevPlatformSurfacesService,
+    DevFlowReceiptService,
+
+		],
 	// M3-101A-C:导出 InterventionService,供 Principal Action Bridge 调用既有 StartIntervention Named Action(不复制其 canonical 门)。
 	exports: [InterventionService],
 })

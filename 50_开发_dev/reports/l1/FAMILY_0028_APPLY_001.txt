@@ -1,0 +1,14 @@
+INSERT 0 10
+           object_type           |        physical_relation        | object_layer |  scope_level  | version_no
+---------------------------------+---------------------------------+--------------+---------------+------------
+ FamilyLlmGatewayAudit           | family_llm_gateway_audits       | AUDIT        | TENANT_FAMILY |          1
+ Family                          | families                        | BASE         | TENANT_FAMILY |          1
+ FamilyPageTask                  | family_page_task_items          | BASE         | TENANT_FAMILY |          1
+ Tenant                          | tenants                         | BASE         | TENANT        |          1
+ TenantFamilyBinding             | tenant_family_bindings          | BASE         | TENANT_FAMILY |          1
+ TestExperienceOperation         | test_experience_operations      | BASE         | TENANT_FAMILY |          1
+ MultimodalAsset                 | multimodal_assets               | INTERFACE    | TENANT_FAMILY |          1
+ FamilyAdmittedCatalogProjection | family_admitted_catalog_items   | PROJECTION   | TENANT_FAMILY |          1
+ FamilySupportReport             | family_support_report_snapshots | PROJECTION   | TENANT_FAMILY |          1
+ MultimodalDerivedArtifact       | multimodal_derived_artifacts    | PROJECTION   | TENANT_FAMILY |          1
+(10 rows)

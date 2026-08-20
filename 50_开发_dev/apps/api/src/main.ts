@@ -8,6 +8,7 @@ async function bootstrap(): Promise<void> {
   if (corsOrigin) {
     app.enableCors({
       origin: corsOrigin.split(',').map((origin) => origin.trim()).filter(Boolean),
+      credentials: true,
     });
   }
   const port = Number(process.env.PORT ?? 3000);

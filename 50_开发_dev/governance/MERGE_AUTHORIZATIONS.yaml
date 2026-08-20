@@ -65,3 +65,9 @@ authorizations:
     authorized_by: family-chief-architect
     ref: "FAMILY-GROWTH-ORCHESTRATION-REBASE-001 PHASE0-FINAL-CLOSEOUT — PASS_CLOSED"
     date: "2026-08-16"
+  - pr: 35
+    head_sha: "a65b1202ce865e3d6cf91af97be18cd02405cf10"   # 总架构师点名授权的 exact head;--match-head-commit 锁定合并(merge_commit 2ce16a3),head 未漂移;合并后审计,由 vertical-slice-001 分支登记(§28)
+    merge_commit: "2ce16a377d27898e48be10e11f75b15a4b12b26d"
+    authorized_by: family-chief-architect
+    ref: "FAMILY-GROWTH-ORCHESTRATION-ARCH-001 SCHEMA-FINAL-CLOSEOUT-003 — PASS_CLOSED; ARCHITECTURE_GATE PASS_CLOSED"
+    date: "2026-08-16"

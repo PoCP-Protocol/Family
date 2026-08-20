@@ -202,6 +202,70 @@ export class FamilyService {
     });
   }
 
+  async getActiveGrowthOnboarding(familyId: string, actorId: string): Promise<StartGrowthOnboardingResponse | null> {
+    return this.repository.withTransaction(async (client) => {
+      await ensureFamilyExists(client, familyId);
+      await assertFamilyManagePermission(client, familyId, actorId);
+      const result = await client.query<{
+        journey_id: string;
+        phase: GrowthOnboardingDto['phase'];
+        status: GrowthOnboardingDto['status'];
+        started_at: Date;
+        created_at: Date;
+        payload: { child_id?: string; guardian_person_id?: string; safety_disposition?: SafetyDispositionDto } | null;
+      }>(
+        `select j.journey_id, j.phase, j.status, j.started_at, j.created_at,
+                event.payload
+         from growth_journeys j
+         left join lateral (
+           select ge.payload
+           from growth_events ge
+           where ge.family_id = j.family_id
+             and ge.event_type = $2
+             and ge.payload->>'onboarding_id' = j.journey_id::text
+           order by ge.occurred_at desc
+           limit 1
+         ) event on true
+         where j.family_id = $1
+           and j.journey_type = $3
+           and j.status = 'ACTIVE'
+         order by j.started_at desc
+         limit 1`,
+        [familyId, GROWTH_ONBOARDING_STARTED_EVENT, M2_ONBOARDING_JOURNEY_TYPE],
+      );
+      if (result.rowCount !== 1) return null;
+      const row = result.rows[0];
+      const childId = row.payload?.child_id;
+      const guardianPersonId = row.payload?.guardian_person_id;
+      if (!childId || !guardianPersonId || !row.payload?.safety_disposition) {
+        throw new ConflictException('active_growth_onboarding_projection_incomplete');
+      }
+      const activeAssignment = await getActiveLifeStageAssignment(client, childId);
+      assertM2LifeStageReady(activeAssignment);
+      if (!activeAssignment) {
+        throw new ConflictException('active_growth_onboarding_life_stage_missing');
+      }
+      const targetDimensions: ['P03', 'R03', 'R04', 'R05'] = ['P03', 'R03', 'R04', 'R05'];
+      return {
+        onboarding: {
+          onboarding_id: row.journey_id,
+          family_id: familyId,
+          child_id: childId,
+          guardian_person_id: guardianPersonId,
+          journey_type: M2_ONBOARDING_JOURNEY_TYPE,
+          life_stage_code: activeAssignment.life_stage_code,
+          target_dimensions: targetDimensions,
+          status: row.status,
+          phase: row.phase,
+          safety_disposition: row.payload.safety_disposition,
+          ai_personalization_enabled: false,
+          started_at: row.started_at.toISOString(),
+          created_at: row.created_at.toISOString(),
+        },
+      };
+    });
+  }
+
   async startGrowthOnboarding(request: StartGrowthOnboardingRequest, meta: AuditMeta): Promise<StartGrowthOnboardingResponse> {
     const requestHash = hashStartGrowthOnboardingRequest(request);
 

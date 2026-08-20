@@ -1,0 +1,16 @@
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+INSERT 0 3
+INSERT 0 11
+              object               | count
+-----------------------------------+-------
+ family_reference_code_sets        |     3
+ family_reference_code_values      |    11
+ family_reference_validation_rules |     0
+ family_data_object_registry       |     0
+(4 rows)

@@ -411,3 +411,34 @@ capabilities:
     authorized_at: null
     supersedes: []
     notes: 未授权(voice/avatar/digital human 同)。
+
+  # 总架构师裁决(2026-08-16): PR#36 P0 exact head 已接受审阅;开发面冻结。
+  - capability_id: FAMILY_GROWTH_VERTICAL_SLICE_001_P0_RUNTIME_TRUST_CLOSEOUT
+    stage: FAMILY-GROWTH-VERTICAL-SLICE-001 / P0
+    status: PASS_CANDIDATE_ACCEPTED_FOR_REVIEW
+    architecture_authorized: true
+    code_authorized: true
+    runtime_authorized: true
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: "Chief Architect ruling 2026-08-16; exact head 6103981dec6c7a4b9ceb988ddcdb75b5c44f6154"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: "仅确认当前开发分支的内部确定性 P0 收口与验证。PR#36=DRAFT;AUTO_MERGE=NO;master/HOME/mobile runtime/pilot/production/public release 均保持 HOLD。"
+
+  - capability_id: FAMILY_APP_FIRST_EXPERIENCE_MAPPING_DRAFT
+    stage: APP-GATE-DESIGN-INPUT
+    status: DRAFT_FOR_APP_GATE_DECISION_INPUT
+    architecture_authorized: true
+    code_authorized: false
+    runtime_authorized: false
+    live_external_call_authorized: false
+    pilot_authorized: false
+    production_authorized: false
+    authorized_by: family-chief-architect
+    authorization_ref: "Chief Architect ruling 2026-08-16; 榜样教育材料→Family App-first 体验设计映射"
+    authorized_at: "2026-08-16"
+    supersedes: []
+    notes: "仅输出材料-功能-治理边界-实施顺序映射与 App Gate 草案。两份自家 PPT 证据等级上限 E1，不证明效果或治理结论；不得改业务代码、DTO/API/数据库，不启动 HOME 或移动端 runtime。"

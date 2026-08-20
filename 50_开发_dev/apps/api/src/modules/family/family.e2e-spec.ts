@@ -419,6 +419,127 @@ describe('POST /families E2E', () => {
     return await response.json() as TBody;
   }
 
+  it('E2E-M2-104 exposes UI-04 report explanation and UI-05 plan preview with idempotent refresh', async () => {
+    const correlationId = 'corr-e2e-m2-104';
+    const setup = await seedM2Onboarding(correlationId);
+    await seedM2PerspectivePair(setup, correlationId);
+    const draftsResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/profile-drafts`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'idempotency-key': 'e2e-m2-104-build-drafts',
+      },
+      body: JSON.stringify({}),
+    });
+    expect(draftsResponse.status).toBe(201);
+
+    const headers = { authorization: 'Bearer test-token', 'x-actor-id': 'architect-1', 'x-correlation-id': correlationId };
+    const reportResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/report-explanation`, { headers });
+    const report = await reportResponse.json() as { evidence_lineage: unknown[] };
+    const planResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview`, { headers });
+    const plan = await planResponse.json();
+
+    expect(reportResponse.status).toBe(200);
+    expect(report).toMatchObject({ projection_version: 'UI04_REPORT_EXPLANATION_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED' } });
+    expect(report.evidence_lineage.length).toBeGreaterThan(0);
+    expect(planResponse.status).toBe(200);
+    expect(plan).toMatchObject({ projection_version: 'UI05_PLAN_PREVIEW_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, model_gateway_status: 'NOOP_NOT_INVOKED', structure: { horizon_days: 90 } });
+
+    const refreshHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-104-plan-refresh' };
+    const refresh = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
+    const replay = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/plan-preview/refresh`, { method: 'POST', headers: refreshHeaders, body: JSON.stringify({ source_insight_version: 'GROWTH_INSIGHT_V1' }) });
+    const refreshBody = await refresh.json() as { external_effect?: boolean; refreshed?: boolean };
+    const replayBody = await replay.json() as { external_effect?: boolean; refreshed?: boolean };
+    expect(refresh.status).toBe(201);
+    expect(replay.status).toBe(201);
+    expect(refreshBody.external_effect).toBe(false);
+    expect(replayBody.external_effect).toBe(false);
+    expect(replayBody.refreshed).toBe(true);
+
+    const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id = $1 and command = 'PREVIEW_SYNTHETIC_90_DAY_PLAN_DRAFT'", [setup.familyId]);
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-04', external_effect: false });
+  });
+
+  it('E2E-M2-105 exposes UI-06 private service journey and replays an idempotent check-in draft', async () => {
+    const correlationId = 'corr-e2e-m2-105';
+    const setup = await seedM2Onboarding(correlationId);
+    await seedM2PerspectivePair(setup, correlationId);
+    const draftsResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/profile-drafts`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-actor-id': 'architect-1',
+        'x-correlation-id': correlationId,
+        'idempotency-key': 'e2e-m2-105-build-drafts',
+      },
+      body: JSON.stringify({}),
+    });
+    expect(draftsResponse.status).toBe(201);
+    const headers = { authorization: 'Bearer test-token', 'x-actor-id': 'architect-1', 'x-correlation-id': correlationId };
+    const journeyResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey`, { headers });
+    const journey = await journeyResponse.json() as { projection_version: string; visibility: string; external_effect?: boolean; service_cards: { state: string }[]; process_summary: { boundary: string }; private_feed: { kind: string }[] };
+    expect(journeyResponse.status).toBe(200);
+    expect(journey).toMatchObject({ projection_version: 'UI06_SERVICE_JOURNEY_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId, visibility: 'FAMILY_PRIVATE' });
+    expect(journey.service_cards.some((card) => card.state === 'HOLD')).toBe(true);
+    expect(journey.process_summary.boundary).toBe('PROCESS_PROJECTION_NOT_SCORE_OR_OUTCOME');
+
+    const draftHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-105-private-draft' };
+    const draftRequest = { action_ref: 'WEEKLY_ACTION_SEE' };
+    const createdResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey/checkin-drafts`, { method: 'POST', headers: draftHeaders, body: JSON.stringify(draftRequest) });
+    const replayResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey/checkin-drafts`, { method: 'POST', headers: draftHeaders, body: JSON.stringify(draftRequest) });
+    const created = await createdResponse.json() as { state: string; external_effect: boolean; ontology_write: boolean; draft_kind: string; action_ref: string };
+    const replay = await replayResponse.json() as { state: string; external_effect: boolean; ontology_write: boolean; draft_kind: string; action_ref: string };
+    expect(createdResponse.status).toBe(201);
+    expect(replayResponse.status).toBe(201);
+    expect(created).toMatchObject({ state: 'CREATED', draft_kind: 'PRIVATE_CHECKIN_DRAFT', action_ref: 'WEEKLY_ACTION_SEE', external_effect: false, ontology_write: false });
+    expect(replay).toMatchObject({ state: 'REPLAYED', draft_kind: 'PRIVATE_CHECKIN_DRAFT', action_ref: 'WEEKLY_ACTION_SEE', external_effect: false, ontology_write: false });
+
+    const updatedResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/service-journey`, { headers });
+    const updated = await updatedResponse.json() as { private_feed: { kind: string }[] };
+    expect(updatedResponse.status).toBe(200);
+    expect(updated.private_feed.some((entry) => entry.kind === 'CHECKIN_DRAFT')).toBe(true);
+    const receipts = await pool.query("select ui_id, command, external_effect from family_dev_flow_events where family_id=$1 and command='CREATE_PRIVATE_CHECKIN_DRAFT'", [setup.familyId]);
+    expect(receipts.rows).toHaveLength(1);
+    expect(receipts.rows[0]).toMatchObject({ ui_id: 'UI-06', external_effect: false });
+
+    const profileResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/growth-profile-readback`, { headers });
+    const profile = await profileResponse.json() as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; evidence_lineage: unknown[]; fact_boundary: string; ai_ready: { model_gateway_status: string } };
+    expect(profileResponse.status).toBe(200);
+    expect(profile).toMatchObject({
+      projection_version: 'UI07_GROWTH_PROFILE_READBACK_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId,
+      visibility: 'FAMILY_PRIVATE', fact_boundary: 'FOCUS_AND_PLAN_CONTEXT_ARE_NOT_OUTCOME_OR_DIAGNOSIS',
+      ai_ready: { model_gateway_status: 'NOOP_NOT_INVOKED' },
+    });
+    expect(profile.evidence_lineage.length).toBeGreaterThan(0);
+
+    const campHeaders = { ...headers, 'content-type': 'application/json', 'idempotency-key': 'e2e-m2-105-ui35-day-1' };
+    const campAction = await fetch(`${baseUrl}/families/${setup.familyId}/dev/flow-events`, {
+      method: 'POST', headers: campHeaders,
+      body: JSON.stringify({ ui_id: 'UI-35', command: 'CHECKIN_SYNTHETIC_21_DAY_CAMP_TASK', selection: 'DAY_1_PARENT_ACTION' }),
+    });
+    expect(campAction.status).toBe(201);
+    expect(await campAction.json()).toMatchObject({ ui_id: 'UI-35', selection: 'DAY_1_PARENT_ACTION', external_effect: false });
+
+    const reviewResponse = await fetch(`${baseUrl}/families/${setup.familyId}/growth/onboardings/${setup.onboardingId}/family-review-readback`, { headers });
+    const reviewText = await reviewResponse.text();
+    const review = JSON.parse(reviewText) as { projection_version: string; family_id: string; onboarding_id: string; visibility: string; state: string; recorded_actions: { source_ui: string; kind: string }[]; fact_boundary: string; ai_ready: { reflection_boundary: string } };
+    expect(reviewResponse.status, reviewText).toBe(200);
+    expect(review).toMatchObject({
+      projection_version: 'UI08_FAMILY_REVIEW_READBACK_V1', family_id: setup.familyId, onboarding_id: setup.onboardingId,
+      visibility: 'FAMILY_PRIVATE', state: 'ACTION_RECORDED', fact_boundary: 'ACTION_RECORDED_NOT_OUTCOME_OR_CHILD_DIAGNOSIS',
+      ai_ready: { reflection_boundary: 'PERSPECTIVE_NOT_FACT' },
+    });
+    expect(review.recorded_actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source_ui: 'UI-06', kind: 'PRIVATE_CHECKIN_DRAFT' }),
+      expect.objectContaining({ source_ui: 'UI-35', kind: 'CAMP_DAILY_ACTION' }),
+    ]));
+  });
+
   async function seedM2Onboarding(correlationId: string): Promise<{ familyId: string; parentId: string; childId: string; onboardingId: string }> {
     const familyResponse = await postFamily({ display_name: '青春期沟通家庭', idempotency_key: `e2e-m2-family-${correlationId}` }, correlationId);
     const familyBody = await familyResponse.json() as CreateFamilyHttpResponse;

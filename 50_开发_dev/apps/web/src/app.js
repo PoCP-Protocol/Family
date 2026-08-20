@@ -41,6 +41,7 @@ import {
  * @property {string} familyId
  * @property {string} childId
  * @property {string} guardianPersonId
+ * @property {string} [authToken]
  * @property {'pre-real-api' | 'real-api'} [wave2ApiMode]
  */
 
@@ -52,6 +53,14 @@ export const defaultConfig = {
   childId: '33333333-3333-4333-8333-333333333333',
   guardianPersonId: '11111111-1111-4111-8111-111111111111',
 };
+
+/**
+ * @param {AppConfig} config
+ * @returns {Record<string, string>}
+ */
+function authHeaders(config) {
+  return config.authToken ? { Authorization: `Bearer ${config.authToken}` } : {};
+}
 
 /**
  * @param {HTMLElement} root
@@ -271,10 +280,24 @@ export function createGrowthApp(root, config = defaultConfig) {
     render();
 
     try {
-      const response = await submitStartGrowthOnboarding(config, structuredSafetySignals);
+      let response;
+      try {
+        response = await submitStartGrowthOnboarding(config, structuredSafetySignals);
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('growth_onboarding_already_active')) {
+          throw error;
+        }
+        response = await fetchActiveGrowthOnboarding(config);
+        if (!response) {
+          throw new Error('active_growth_onboarding_not_found');
+        }
+        state.message = '已恢复当前家庭成长旅程。下一步分别记录父母视角和孩子视角。';
+      }
       state.onboarding = response.onboarding;
       state.status = 'started';
-      state.message = '成长入口已启动。下一步分别记录父母视角和孩子视角。';
+      if (!state.message.includes('已恢复')) {
+        state.message = '成长入口已启动。下一步分别记录父母视角和孩子视角。';
+      }
     } catch (error) {
       state.status = 'error';
       state.message = error instanceof Error ? error.message : '启动成长入口失败。';
@@ -652,6 +675,30 @@ export function createGrowthApp(root, config = defaultConfig) {
 
 /**
  * @param {AppConfig} config
+ * @returns {Promise<StartGrowthOnboardingResponse | null>}
+ */
+export async function fetchActiveGrowthOnboarding(config) {
+  const response = await fetch(`${config.apiBaseUrl}/families/${config.familyId}/growth/onboarding/active`, {
+    method: 'GET',
+    headers: {
+      'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
+    },
+  });
+  const body = /** @type {StartGrowthOnboardingResponse | null | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
+  if (!response.ok) {
+    const message = body && 'message' in body && body.message ? body.message : `ActiveGrowthOnboarding failed with ${response.status}`;
+    throw new Error(message);
+  }
+  if (body === null) return null;
+  if (!body || !('onboarding' in body)) {
+    throw new Error('ActiveGrowthOnboarding returned an invalid response.');
+  }
+  return body;
+}
+
+/**
+ * @param {AppConfig} config
  * @param {StructuredSafetySignal[]} structuredSafetySignals
  * @returns {Promise<StartGrowthOnboardingResponse>}
  */
@@ -661,6 +708,7 @@ export async function submitStartGrowthOnboarding(config, structuredSafetySignal
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createIdempotencyKey('m2-101', config.familyId, config.childId),
     },
     body: JSON.stringify({
@@ -696,6 +744,7 @@ export async function submitRecordPerspective(config, onboardingId, request) {
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': request.idempotency_key,
     },
     body: JSON.stringify({
@@ -737,6 +786,7 @@ export async function fetchPerspectiveSummary(config, onboardingId) {
     method: 'GET',
     headers: {
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
     },
   });
   const body = /** @type {PerspectiveSummaryResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
@@ -765,6 +815,7 @@ export async function submitBuildGrowthProfileDrafts(config, onboardingId, sourc
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createIdempotencyKey('m2-103-drafts', config.familyId, `${onboardingId}-${sourceFingerprint}`),
     },
     body: JSON.stringify({}),
@@ -793,6 +844,7 @@ export async function fetchGrowthInsight(config, onboardingId) {
     method: 'GET',
     headers: {
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
     },
   });
   const body = /** @type {GrowthInsightResponse | { message?: string } | undefined} */ (await response.json().catch(() => undefined));
@@ -820,6 +872,7 @@ export async function submitConfirmGrowthProfile(config, draftId) {
     headers: {
       'Content-Type': 'application/json',
       'X-Actor-Id': config.actorPersonId,
+      ...authHeaders(config),
       'Idempotency-Key': createIdempotencyKey('m2-103-confirm', config.familyId, draftId),
     },
     body: JSON.stringify({}),

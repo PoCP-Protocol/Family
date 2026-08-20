@@ -213,3 +213,90 @@ Phase0 重定基 → Phase1 架构契约(ARCH-001)→ 其自有 Architecture Gat
 > 这个功能是否帮助平台更好地:**理解成长需求 / 找到成长资源 / 组织成长服务 / 完成成长交付 / 让下一次服务更好**?五者皆非 → `DO_NOT_BUILD`。
 
 HOLD(除非直挡 Phase 当前纵切):marketplace/佣金/payment/分账 · provider bidding · ML 推荐 · 无限 feed · 砍价裂变/焦虑 upsell · world model · Family 7B · 大组织多租户 · 成批新 dimension/intervention · 健康/心理诊断/医疗逻辑。合 master 须显式 per-merge 授权。
+
+## 11. DEV 真实能力与 AI Control Plane（34 页 UI / 3 PPT 证据派生）
+
+> 本章只固化架构不变量，不记录 PR、环境具体状态、模型版本或验收结果。产品证据、逐页基线、六条闭环、实现映射与实时交付状态分别见 `governance/BANGYANG_34_UI_AND_3_PPT_MASTER_DELIVERY_PLAN_001.md`、`governance/BANGYANG_34_UI_SCENARIO_FLOWS_AND_RULES_001.md`、`governance/BANGYANG_34_UI_REAL_LLM_GATEWAY_IMPLEMENTATION_MAPPING_001.md` 与 `governance/FAMILY_PLATFORM_MASTER_REQUIREMENTS_DESIGN_DELIVERY_TEST_PLAN_V1.md`。
+
+### 11.1 不变量：DEV 应实现真实能力，不是静态 mock
+
+**DEV 真实能力 = 相同的业务状态机、API、数据库/测试存储、权限、审计、异常恢复、AI Gateway 和 Adapter interface；测试数据 = 唯一数据源；沙箱 adapter = 唯一外部副作用出口。**
+
+因此，测试订单、测试预约、测试活动、测试社区和测试服务不是“假功能”，而是可运行的领域工作流：它们生成可回放的受控状态与审计回执。生产 adapter 与真实用户数据仍需独立裁决，但未来接入时应替换 adapter，不得重写领域行为、权限或状态机。
+
+```text
+34-page Experience / Text Equivalent
+        ↓ HTTP / explicit action contract
+Family Application & Domain Workflows
+        ↓           ↓
+Named Action      Test Action (same invariants; test namespace)
+        ↓           ↓
+Canonical domain  Test fixture / test database projection
+        ↓
+AI Control Plane + External Adapter Ports
+        ↓
+DEV/TEST sandbox providers only → independent Production Gate later
+```
+
+### 11.2 双控制面：业务控制面与 AI 控制面
+
+| 控制面 | 拥有的职责 | 永远不拥有的职责 |
+|---|---|---|
+| 业务控制面 | trusted context、family scope、consent、领域状态机、Named Action/Test Action、幂等、审计、领域事件、adapter invocation | 直接信任客户端 family ID、模型自由文本写事实、跨范围访问 |
+| AI 控制面 | Gateway、模型 allowlist、Context Assembler、Prompt/Schema 版本、Tool Registry、Output Validator、Eval、Audit/Replay、Kill Switch | 领域事实写权、数据库直接写权、任意 HTTP/支付/外发/真人服务权限、训练和长期记忆 |
+
+模型只能提出受 schema 约束的解释草稿或工具请求；业务控制面独立验证并决定是否执行 Test Action/Named Action。**模型不是行动主体，Domain 才是行动主体。**
+
+### 11.3 真实 LLM Gateway 的稳定契约
+
+1. 真实模型调用一律从服务端单一 Gateway 发出；页面、浏览器、领域模块和 adapter 不得直连提供者。
+2. Gateway 只接收 Context Assembler 生成的最小、结构化、只读快照；不得读取整库、完整档案、完整聊天历史、儿童原始材料、审计原文或外部未准入数据。
+3. Gateway 只返回严格 JSON Schema 的说明草稿、文本等价草稿、受控停止草稿或 tool proposal；所有输出先经语义、词法、枚举、候选别名、状态上限和文本等价验证。
+4. 任一范围、consent、fixture、schema、策略、模型 allowlist、工具权限、输出验证或基础设施条件不满足时，必须 fail-closed，绝不降级为未受控文本或客户端直连。
+5. Gateway 与模型均无 Need、Intent、Decision、Plan、Case、Task、Order、Booking、Post、Profile、Asset、Resource Admission 或审计事实的直接写权限。
+
+### 11.4 真实密钥的配置不变量
+
+真实 LLM API key 仅由用户在测试时通过本地环境变量、未提交 `.env.local` 或受控 secret 配置注入。代码、文档、fixture、日志、审计、回放、错误、截图和测试快照只允许出现配置槽位**名称**，不得包含、回显、序列化、哈希或推断任何真实凭证。
+
+| 配置槽位 | 架构作用 | 缺失时行为 |
+|---|---|---|
+| `FAMILY_LLM_ENABLED` | 显式启用受控 DEV/TEST LLM 路径 | `LLM_DISABLED`；零网络调用 |
+| `FAMILY_LLM_API_KEY` | 仅服务器内存中的认证配置 | `LLM_NOT_CONFIGURED`；零网络调用 |
+| `FAMILY_LLM_API_BASE` | 允许的兼容服务端点 | `LLM_NOT_CONFIGURED`；零网络调用 |
+| `FAMILY_LLM_MODEL` | model allowlist 的候选模型 | `LLM_MODEL_NOT_ALLOWED`；零网络调用 |
+| `FAMILY_LLM_ENVIRONMENT` | 强制仅 DEV/TEST 的环境声明 | `LLM_ENVIRONMENT_BLOCKED`；零网络调用 |
+
+配置检查不记录值、前缀、长度、hash、认证 header 或 provider 异常原文。审计仅记录模型 ID、请求类别、版本、fixture/trace alias、判定和时间。
+
+### 11.5 Tool Registry 与 External Adapter Port
+
+Tool Registry 只能暴露受控业务动作的**请求能力**，不能暴露原始数据库、文件、网络、支付、消息、分享、搜索或环境变量。任何 LLM tool proposal 必须经业务控制面再验证 principal、family scope、consent、fixture、schema、幂等键、状态前置条件与副作用环境。
+
+```text
+LLM tool proposal
+  → Tool Registry allowlist
+  → Domain Action Guard
+  → Test/DEV state transition
+  → Adapter Port
+  → sandbox/test provider receipt
+  → Audit + replay projection
+```
+
+外部能力均以 Port/Adapter 建模。DEV/TEST 使用可运行的 sandbox/test adapter；真实支付、真实消息、真实预约、真人供给、真实社区外发或生产数据 adapter 只有在独立 Gate 后才可绑定。该限制不降低领域功能完整度，而是把外部副作用替换为可控实现。
+
+### 11.6 六闭环共用的可验证能力
+
+34 页和六条闭环共享同一组能力：可信家庭范围、测试数据投影、领域状态机、幂等 Action、真实 LLM 解释、受控工具、外部 adapter receipt、审计回放、文本等价和失败关闭。每条闭环至少要有一个真实 LLM Gateway 节点，并能端到端验证正常路径与范围/配置/输出失败路径。
+
+| 场景簇 | 真实领域能力 | 真实 LLM 的合法职责 | 隔离的外部副作用 |
+|---|---|---|---|
+| 核心服务与增长 | Need/Intent、服务路径、任务、报告呈现、返回/暂停/NO_ACTION | 解释受控 fixture、任务与文本等价 | 无真人、无诊断、无真实分享 |
+| 商城 | 目录、订单、积分、邀请/拼团状态机、资产账本 | 解释测试商品/状态及模拟边界 | test/sandbox commerce adapter；无生产支付/分佣 |
+| 名师沙龙 | 师资目录、时段、预约草稿/确认、活动状态 | 解释测试服务/活动状态 | test/sandbox booking/event adapter；无真人联系 |
+| 社区 | 内容模板、发布回执、详情、资料/成果投影 | 解释固定内容与安全出口 | test/sandbox community adapter；无跨家庭/真实外发 |
+| 客户后台 | 服务、订单、资产、档案、记录状态投影 | 解释测试记录及文本等价 | 无真实客服、权益或生产档案 |
+
+### 11.7 E1 研究材料与效果真相的永久分离
+
+原素材/历史命名：榜样教育（Bangyang）的 PPT、UI、课程、案例，以及家庭教育研究和后续研究材料只能作为需求、设计和假设的输入。它们按 Family `evidence.py` 与 Evidence Gate 处理；自家材料的证据上限为 E1，不得被用作教育效果、成长结果、模型正确性、资源资格或生产放行证明。AI 输出同样不能把服务过程、家庭主观感受或 E1 素材改写为效果因果结论。

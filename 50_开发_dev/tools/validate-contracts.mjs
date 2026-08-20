@@ -99,10 +99,13 @@ try {
   rec('Scaffold', false, e.message.split('\n')[0]);
 }
 
-// 6) DDL 静态检查(执行需活库,标注)
+// 6) 数据库迁移静态检查（真实执行仍需活库）。
+// 迁移目录同时承载 schema DDL、enum 演进、只读视图和幂等 seed；
+// 不能只把 CREATE TABLE / ALTER TABLE 当作唯一有效迁移。
+const migrationStatementPattern = /\b(?:create\s+(?:or\s+replace\s+)?(?:table|type|extension|view|(?:unique\s+)?index)|alter\s+(?:table|type)|insert\s+into)\b/i;
 for (const f of walk(join(ROOT, 'database'), ['.sql'])) {
   const txt = readFileSync(f, 'utf8');
-  rec('DDL-static', /(create\s+(table|type|extension|(?:unique\s+)?index)|alter\s+table)/i.test(txt), `${rel(f)} bytes=${txt.length}`);
+  rec('DDL-static', migrationStatementPattern.test(txt), `${rel(f)} bytes=${txt.length}`);
 }
 
 // 汇总
