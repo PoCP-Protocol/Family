@@ -95,6 +95,11 @@ export interface Avatar2DRendererOptions {
   profile: ResolvedRendererProfile; // PATCH-005: Compile-time verified type + runtime authority check
 }
 
+export interface GazeOffset {
+  x: number;
+  y: number;
+}
+
 export interface Avatar2DFrameSnapshot {
   state: FamilyAvatarState;
   expression: FamilyExpression;
@@ -104,6 +109,8 @@ export interface Avatar2DFrameSnapshot {
   nod_phase: number;      // 0..1
   expression_open_y: number;  // MM4: Current interpolated eye openY (reflects temporal state)
   mouth_activity: number;  // MM5: Current mouth envelope (0..1)
+  gaze_x: number;         // MM6: Current gaze offset X (normalized, -1..1)
+  gaze_y: number;         // MM6: Current gaze offset Y (normalized, -1..1)
   frame_index: number;
 }
 
@@ -181,6 +188,9 @@ export class Avatar2DRenderer {
   // MM5: Mouth activity envelope (0..1) from SpeechPerformanceCoordinator
   private mouthActivity: number = 0;
 
+  // MM6: Gaze offset (normalized, -1..1) from GazeRuntime for pupil positioning
+  private gazeOffset: GazeOffset = { x: 0, y: 0 };
+
   public constructor(opts: Avatar2DRendererOptions) {
     this.canvas = opts.canvas;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
@@ -203,6 +213,11 @@ export class Avatar2DRenderer {
   /** MM5: Set mouth activity envelope from SpeechPerformanceCoordinator. */
   public setMouthActivity(activity: number): void {
     this.mouthActivity = Math.max(0, Math.min(1, activity));
+  }
+
+  /** MM6: Set normalized gaze offset from GazeRuntime. */
+  public setGazeOffset(offset: GazeOffset): void {
+    this.gazeOffset = { x: offset.x, y: offset.y };
   }
 
   public triggerBlink(): void {
@@ -260,6 +275,8 @@ export class Avatar2DRenderer {
       nod_phase: this.computeNodPhase(),
       expression_open_y: this.expressionOpenYOverride ?? EXPRESSION_EYE[this.expression].openY,
       mouth_activity: this.mouthActivity,
+      gaze_x: this.gazeOffset.x,
+      gaze_y: this.gazeOffset.y,
       frame_index: this.frameIndex,
     };
   }
@@ -321,6 +338,27 @@ export class Avatar2DRenderer {
       } else {
         ctx.arc(sx, eyeY, Math.max(1, eyeRy), 0, Math.PI * 2);
       }
+      ctx.fill();
+    }
+
+    // MM6: Render pupils with gaze offset, contained within eye bounds
+    // Pupils are constrained within eye bounds; gaze offset drives their position
+    const basePupilRadius = headR * 0.04; // Base pupil size
+    const maxPupilOffsetX = eyeRx * 0.5; // Max horizontal offset = 50% of eye radius
+    const maxPupilOffsetY = eyeRy * 0.5; // Max vertical offset = 50% of eye vertical radius
+    const pupilOffsetX = this.gazeOffset.x * maxPupilOffsetX;
+    const pupilOffsetY = this.gazeOffset.y * maxPupilOffsetY;
+
+    // Constrain pupil radius to never exceed eye bounds
+    // Pupil must fit: |offset| + pupilRadius <= eyeRadius
+    const maxPupilRadiusX = Math.max(0.5, eyeRx - Math.abs(pupilOffsetX));
+    const maxPupilRadiusY = Math.max(0.5, eyeRy - Math.abs(pupilOffsetY));
+    const pupilRadius = Math.min(basePupilRadius, maxPupilRadiusX, maxPupilRadiusY);
+
+    ctx.fillStyle = '#000000'; // Black pupils
+    for (const sx of [-eyeDx, eyeDx]) {
+      ctx.beginPath();
+      ctx.arc(sx + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
       ctx.fill();
     }
 

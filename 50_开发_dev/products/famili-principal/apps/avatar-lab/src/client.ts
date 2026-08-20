@@ -14,6 +14,8 @@
  */
 import { RenderOrchestrator } from './renderOrchestrator';
 import { StreamingAudioPlayer } from './streamingAudioPlayer';
+import { FamiliLayered2DRenderer } from './familiLayered2DRenderer';
+import { Avatar2DRenderer } from './avatar2DRenderer';
 import { getIdentityResolver } from '@family/fpai-multimodal-runtime';
 import type { CharacterIdentity, PerformanceFrame } from '@family/fpai-multimodal-contracts';
 import type { RealtimeServerEvent } from '@family/fpai-multimodal-contracts';
@@ -143,11 +145,9 @@ const socket = new WebSocket(wsUrl);
 let renderOrchestrator: RenderOrchestrator | null = null;
 let audioPlayer: StreamingAudioPlayer | null = null;
 
-socket.addEventListener('open', () => {
-  logEvent('[ws] open');
-
-  // MM3-PATCH-001: Initialize RenderOrchestrator with local verified identity
-  // This is the production composition boundary where identity + performance meet
+// VBF-0: Decouple renderer initialization from WebSocket
+// Real Famili character must be visible even if backend disconnected
+function initializeRenderer(): void {
   try {
     const resolver = getIdentityResolver();
     const authorizedIdentity: CharacterIdentity = {
@@ -173,11 +173,28 @@ socket.addEventListener('open', () => {
     canvasEl.width = 320;
     canvasEl.height = 320;
     avatarEl.appendChild(canvasEl);
+
+    // VBF-0: Use real Famili renderer by default (production)
+    // Geometry diagnostic renderer available only in dev/test
+    const isDev = (window as any).__DEV__ === true;
+    if (isDev) {
+      // DEV: could select renderer
+      // For now, always use production real Famili
+    }
+
+    // Production default: real Famili character
+    const visualRenderer = new FamiliLayered2DRenderer({
+      canvas: canvasEl,
+      profile,
+      assetPath: '/famili/famili-master-candidate.png',
+    });
+    logEvent(`[vbf0-renderer] FamiliLayered2DRenderer initialized with capabilities: ${JSON.stringify(visualRenderer.getCapabilities())}`);
+
     renderOrchestrator = new RenderOrchestrator({
       canvas: canvasEl,
       profile,
     });
-    logEvent('[orchestrator] initialized with verified identity');
+    logEvent('[orchestrator] initialized with verified identity + real Famili visual body');
 
     // MM5: Initialize StreamingAudioPlayer with lifecycle callbacks wired to RenderOrchestrator
     audioPlayer = new StreamingAudioPlayer({
@@ -205,12 +222,26 @@ socket.addEventListener('open', () => {
     };
     requestAnimationFrame(rafLoop);
     logEvent('[mm4] animation loop started');
+
+    state.avatar_status = 'ready';
   } catch (err) {
     state.console_errors += 1;
     logEvent('[orchestrator-init-error] ' + (err as Error).message);
   }
+}
 
+socket.addEventListener('open', () => {
+  logEvent('[ws] open');
+  initializeRenderer();
   socket.send(JSON.stringify({ kind: 'SESSION_START' }));
+});
+
+// VBF-0: Initialize renderer immediately on page load (don't wait for WebSocket)
+document.addEventListener('DOMContentLoaded', () => {
+  logEvent('[vbf0] DOMContentLoaded: initializing renderer independently of WebSocket');
+  if (!renderOrchestrator) {
+    initializeRenderer();
+  }
 });
 
 socket.addEventListener('close', () => {
@@ -489,6 +520,58 @@ interruptBtnEl.addEventListener('click', () => {
 telemetryBtnEl.addEventListener('click', () => {
   socket.send(JSON.stringify({ kind: 'TELEMETRY_REQUEST' }));
 });
+
+/* ---------- MM6 VISUAL QA CONTROLS (DEV-ONLY) ---------- */
+// These controls inject PerformanceFrame through the real production path:
+// QA button → PerformanceFrame → RenderOrchestrator → Avatar2DRenderer → Canvas
+// NOT direct renderer calls (to verify full chain works)
+
+const qaPanel = document.getElementById('mm6QAPanel');
+if (qaPanel) {
+  let currentExpression: any = 'LISTENING';
+  let currentGaze: any = 'USER';
+  let currentActivity: any = 'SILENT';
+
+  const injectFrame = () => {
+    if (!renderOrchestrator) {
+      logEvent('[mm6-qa] renderOrchestrator not initialized');
+      return;
+    }
+    const frame: PerformanceFrame = {
+      expression: currentExpression,
+      gesture: 'NONE',
+      gaze: currentGaze,
+      speech_activity: currentActivity,
+      posture: 'NEUTRAL',
+    } as any;
+    renderOrchestrator.applyPerformanceFrame(frame);
+    logEvent(`[mm6-qa] frame injected: expr=${currentExpression} gaze=${currentGaze} activity=${currentActivity}`);
+  };
+
+  const qaButtons = {
+    'qa-user': () => { currentGaze = 'USER'; injectFrame(); },
+    'qa-thinking': () => { currentGaze = 'SOFT_DOWN_THINKING'; injectFrame(); },
+    'qa-listening': () => { currentExpression = 'LISTENING'; injectFrame(); },
+    'qa-thinking-expr': () => { currentExpression = 'THINKING'; injectFrame(); },
+    'qa-calm-serious': () => { currentExpression = 'CALM_SERIOUS'; injectFrame(); },
+    'qa-blink': () => { renderOrchestrator?.triggerBlink(); logEvent('[mm6-qa] blink triggered'); },
+    'qa-nod': () => { renderOrchestrator?.triggerNod(); logEvent('[mm6-qa] nod triggered'); },
+    'qa-speaking': () => { currentActivity = 'SPEAKING'; injectFrame(); },
+  };
+
+  Object.entries(qaButtons).forEach(([btnId, handler]) => {
+    const btn = document.getElementById(btnId) as HTMLButtonElement | null;
+    if (btn) {
+      btn.addEventListener('click', () => {
+        try {
+          handler();
+        } catch (err) {
+          logEvent('[mm6-qa-error] ' + (err as Error).message);
+        }
+      });
+    }
+  });
+}
 
 renderState();
 renderDevPanel();

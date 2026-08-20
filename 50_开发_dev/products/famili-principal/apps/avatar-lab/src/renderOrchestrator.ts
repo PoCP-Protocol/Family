@@ -29,6 +29,7 @@ import type { ResolvedRendererProfile, PerformanceFrame } from '@family/fpai-mul
 import { Avatar2DRenderer, type FamilyMouthShape, type CanvasLike } from './avatar2DRenderer';
 import { mapCharacterExpressionToFamilyExpression } from './avatar2DExpressionAdapter';
 import { SpeechPerformanceCoordinator, type SimplePlaybackClock } from './speechPerformanceCoordinator';
+import { GazeRuntime } from './gazeRuntime';
 import {
   lerp,
   expLerp,
@@ -72,6 +73,9 @@ interface PerformanceTransitionState {
   // Speech coordination (MM5)
   speechCoordinator: SpeechPerformanceCoordinator;
   speechClock: SimplePlaybackClock;
+
+  // Gaze coordination (MM6)
+  gazeRuntime: GazeRuntime;
 }
 
 export class RenderOrchestrator {
@@ -93,6 +97,13 @@ export class RenderOrchestrator {
     // MM5: Initialize speech coordinator with clock
     const speechClock = new RenderOrchestratorClock(nowFn);
 
+    // MM6: Initialize gaze runtime
+    const gazeRuntime = new GazeRuntime({
+      gazeTransitionTauMs: 200,
+      randomSource: this.randomSource,
+      pupilSafeTravel: 1.0,
+    });
+
     // MM4: Initialize temporal transition state
     this.transitionState = {
       currentExpressionOpenY: DEFAULT_EXPRESSION_OPEN_Y,
@@ -107,6 +118,7 @@ export class RenderOrchestrator {
       speechCoordinator: new SpeechPerformanceCoordinator({
         clock: speechClock,
       }),
+      gazeRuntime,
     };
   }
 
@@ -154,9 +166,14 @@ export class RenderOrchestrator {
     // The actual current value will lerp toward this target in tick()
     this.transitionState.targetExpressionOpenY = EXPRESSION_EYE_OPENYS[frame.expression] ?? DEFAULT_EXPRESSION_OPEN_Y;
 
+    // MM6: Update semantic gaze signal
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (frame.gaze) {
+      this.transitionState.gazeRuntime.updateSemanticGaze(frame.gaze, now);
+    }
+
     // MM4: Gesture deduplication
     if (frame.gesture === 'SMALL_NOD') {
-      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       this.maybeApplyGesture('SMALL_NOD', now);
     }
 
@@ -195,12 +212,14 @@ export class RenderOrchestrator {
   /**
    * MM4: Update temporal state (expression interpolation, blink timing).
    * MM5: Update speech performance coordinator.
+   * MM6: Update gaze interpolation and pupil positioning.
    *
    * Called every rAF frame by client.ts rafLoop.
    * Updates expression openY with exponential lerp toward target.
    * Auto-triggers blink at natural random intervals.
    * Updates animation state (gesture cleanup, blink/nod status).
    * Updates mouth activity envelope based on playback state.
+   * Updates gaze offset toward semantic target.
    */
   public tick(nowMs: number): void {
     const dt = nowMs - this.transitionState.lastFrameTimeMs;
@@ -230,6 +249,10 @@ export class RenderOrchestrator {
     // MM5: Update mouth activity envelope from speech coordinator
     this.transitionState.speechCoordinator.update();
     this.renderer.setMouthActivity(this.transitionState.speechCoordinator.getMouthActivity());
+
+    // MM6: Update gaze interpolation
+    this.transitionState.gazeRuntime.update(nowMs, dt);
+    this.renderer.setGazeOffset(this.transitionState.gazeRuntime.getCurrentGaze());
   }
 
   /**
