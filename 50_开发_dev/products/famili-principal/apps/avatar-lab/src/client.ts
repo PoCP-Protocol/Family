@@ -13,6 +13,7 @@
  *   - 通过 RenderOrchestrator 原子应用到 Avatar2DRenderer
  */
 import { RenderOrchestrator } from './renderOrchestrator';
+import { StreamingAudioPlayer } from './streamingAudioPlayer';
 import { getIdentityResolver } from '@family/fpai-multimodal-runtime';
 import type { CharacterIdentity, PerformanceFrame } from '@family/fpai-multimodal-contracts';
 import type { RealtimeServerEvent } from '@family/fpai-multimodal-contracts';
@@ -140,6 +141,7 @@ const wsUrl = (window as { AVATAR_LAB_WS_URL?: string }).AVATAR_LAB_WS_URL ?? 'w
 const socket = new WebSocket(wsUrl);
 
 let renderOrchestrator: RenderOrchestrator | null = null;
+let audioPlayer: StreamingAudioPlayer | null = null;
 
 socket.addEventListener('open', () => {
   logEvent('[ws] open');
@@ -176,6 +178,22 @@ socket.addEventListener('open', () => {
       profile,
     });
     logEvent('[orchestrator] initialized with verified identity');
+
+    // MM5: Initialize StreamingAudioPlayer with lifecycle callbacks wired to RenderOrchestrator
+    audioPlayer = new StreamingAudioPlayer({
+      lifecycleCallbacks: {
+        onPlaybackStarted: (turn_id, generation_id, scheduled_start_context_time) => {
+          renderOrchestrator?.notifyPlaybackStarted(turn_id, generation_id, scheduled_start_context_time * 1000);
+        },
+        onPlaybackEnded: (turn_id, generation_id) => {
+          renderOrchestrator?.notifyPlaybackEnded(turn_id, generation_id);
+        },
+        onUtteranceInterrupted: () => {
+          renderOrchestrator?.notifyUtteranceInterrupted();
+        },
+      },
+    });
+    logEvent('[audio-player] initialized with lifecycle callbacks');
 
     // MM4: Start rAF loop for temporal continuity
     // Calls tick() every frame for state transitions + render() for canvas repaint
@@ -271,9 +289,17 @@ socket.addEventListener('message', (event) => {
     case 'PERFORMANCE_PLAN': {
       renderPerformance(payload.plan as Record<string, unknown>);
       // MM3-PATCH-001: Apply PerformanceFrame through RenderOrchestrator atomically
-      if (renderOrchestrator) {
+      // MM5: Begin audio turn and wire playback lifecycle
+      if (renderOrchestrator && audioPlayer && message.turn_id) {
         try {
           const frame = payload.plan as unknown as PerformanceFrame;
+          const turn_id = message.turn_id;
+          const generation_id = String(payload.generation_id ?? 'gen-1');
+
+          // MM5: Initialize audio playback coordinator
+          audioPlayer.beginTurn(turn_id, generation_id);
+
+          // MM3: Apply performance frame
           renderOrchestrator.applyPerformanceFrame(frame);
           logEvent('[performance] frame applied');
         } catch (err) {
@@ -297,6 +323,8 @@ socket.addEventListener('message', (event) => {
       state.last_cancelled_turn = (payload.cancelled_turn_id as string | null) ?? state.last_cancelled_turn;
       state.tts_status = 'cancelled';
       state.avatar_status = 'cancelled';
+      // MM5: Interrupt audio playback immediately
+      audioPlayer?.flush('interrupted');
       // 触发一次 TELEMETRY_REQUEST 以刷新 barge_in_cancel_ms / stale_event_drop_count
       socket.send(JSON.stringify({ kind: 'TELEMETRY_REQUEST' }));
       break;

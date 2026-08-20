@@ -63,9 +63,16 @@ export interface StreamingAudioPlayerMetrics {
   last_playback_position_ms: number;
 }
 
+export interface PlaybackLifecycleCallbacks {
+  onPlaybackStarted?(turn_id: string, generation_id: string, scheduled_start_context_time: number): void;
+  onPlaybackEnded?(turn_id: string, generation_id: string): void;
+  onUtteranceInterrupted?(): void;
+}
+
 export interface StreamingAudioPlayerOptions {
   contextFactory?: AudioContextFactory;
   now?: () => number;
+  lifecycleCallbacks?: PlaybackLifecycleCallbacks;
 }
 
 export class StreamingAudioPlayer {
@@ -85,12 +92,16 @@ export class StreamingAudioPlayer {
   };
   private readonly contextFactory?: AudioContextFactory;
   private readonly nowFn: () => number;
+  private readonly lifecycleCallbacks?: PlaybackLifecycleCallbacks;
   /** 当前挂在 AudioContext 上的 source 列表, flush/stop 时需要 stop() 掉。 */
   private activeSources: AudioBufferSourceLike[] = [];
+  /** MM5: Track if playback start callback was fired for current utterance */
+  private playbackStartedFired = false;
 
   public constructor(opts: StreamingAudioPlayerOptions = {}) {
     this.contextFactory = opts.contextFactory;
     this.nowFn = opts.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
+    this.lifecycleCallbacks = opts.lifecycleCallbacks;
   }
 
   public getState(): PlayerState {
@@ -127,6 +138,7 @@ export class StreamingAudioPlayer {
     this.firstAudioAt = null;
     this.nextPlaybackTime = 0;
     this.state = 'IDLE';
+    this.playbackStartedFired = false;
   }
 
   public enqueueChunk(chunk: StreamingChunk): 'PLAYED' | 'DROPPED_STALE' | 'DROPPED_INTERRUPT' | 'DROPPED_DISPOSED' {
@@ -153,10 +165,12 @@ export class StreamingAudioPlayer {
     source.connect(this.context.destination);
 
     // 首次播放时定基准
+    let isFirstChunk = false;
     if (this.firstAudioAt === null) {
       this.firstAudioAt = this.context.currentTime;
       this.metrics.first_audio_ms = this.nowFn();
       this.nextPlaybackTime = this.context.currentTime;
+      isFirstChunk = true;
     }
     const startAt = Math.max(this.nextPlaybackTime, this.context.currentTime);
     source.start(startAt);
@@ -168,7 +182,23 @@ export class StreamingAudioPlayer {
       // 若队列已尽 → 保持 PLAYING 直到显式 stop / new chunk / turn 结束
       const idx = this.activeSources.indexOf(source);
       if (idx >= 0) this.activeSources.splice(idx, 1);
+
+      // MM5: If all sources have finished and this was the last one, fire playbackEnded
+      if (this.activeSources.length === 0 && this.activeTurn && this.activeGeneration) {
+        this.lifecycleCallbacks?.onPlaybackEnded?.(this.activeTurn, this.activeGeneration);
+      }
     };
+
+    // MM5: Fire playback started callback only once per utterance (on first chunk)
+    if (isFirstChunk && !this.playbackStartedFired) {
+      this.playbackStartedFired = true;
+      this.lifecycleCallbacks?.onPlaybackStarted?.(
+        chunk.turn_id,
+        chunk.generation_id,
+        startAt
+      );
+    }
+
     return 'PLAYED';
   }
 
@@ -184,6 +214,13 @@ export class StreamingAudioPlayer {
     this.activeSources = [];
     this.state = 'FLUSHED';
     this.nextPlaybackTime = 0;
+
+    // MM5: Fire interruption callback if playback was active
+    if (this.playbackStartedFired && reason !== 'turn_switch') {
+      this.lifecycleCallbacks?.onUtteranceInterrupted?.();
+    }
+    this.playbackStartedFired = false;
+
     void reason;
   }
 
