@@ -1,0 +1,120 @@
+{
+  "contract_id": "FAMILI_RDH_SMOKE_INPUT_V1",
+  "frozen_at": "2026-08-21",
+  "purpose": "FIRST_REAL_DIGITAL_HUMAN_ENGINE_SMOKE_TEST",
+  "status": "ACTIVE",
+
+  "visual_asset": {
+    "role": "RDH_SMOKE_VISUAL_INPUT",
+    "file_name": "FAMILI_RDH_SMOKE_REFERENCE_V1.png",
+    "path": "D:\\Family\\50_开发_dev\\experiments\\rdh-benchmark\\assets\\famili-reference-v1\\FAMILI_RDH_SMOKE_REFERENCE_V1.png",
+    "sha256": "dfe1bf5869ee26c819e70f3b99d3f0239e4d24ce1b8918c660114bc4e452b65b",
+    "status": "LOCKED",
+    "visual_identity": "FAMILI_VISUAL_V1",
+    "visual_identity_status": "LOCKED",
+    "modifications": "FORBIDDEN",
+    "reason": "Brand visual anchor already finalized"
+  },
+
+  "audio_asset": {
+    "role": "RDH_ENGINE_SMOKE_AUDIO",
+    "file_name": "FAMILI_RDH_SMOKE_AUDIO_V0.wav",
+    "path": "D:\\Family\\50_开发_dev\\experiments\\rdh-benchmark\\assets\\audio-v1\\FAMILI_RDH_SMOKE_AUDIO_V0.wav",
+    "sha256": "bf0ecbe6af18235f872e1dc8f29061f4c67bb101a5de56bba3fd9efc0c684912",
+    "metadata_path": "D:\\Family\\50_开发_dev\\experiments\\rdh-benchmark\\assets\\audio-v1\\FAMILI_RDH_SMOKE_AUDIO_V0.metadata.json",
+    "status": "READY",
+    "provider": "Zhipu",
+    "model": "glm-4-voice",
+    "voice": "aiohome",
+    "spoken_text": "你好，法咪莉，今天我们聊聊家庭吧。",
+    "technical_specs": {
+      "format": "WAV",
+      "sample_rate": 16000,
+      "channels": 1,
+      "codec": "pcm_s16le",
+      "bit_depth": 16,
+      "duration_ms": 8811
+    },
+    "voice_identity": "FAMILI_VOICE_IDENTITY",
+    "voice_identity_status": "NOT_FINAL",
+    "known_voice_issues": [
+      "NAME_PRONUNCIATION",
+      "WARMTH",
+      "PREMIUM_QUALITY"
+    ],
+    "production_voice": false,
+    "modifications": "FORBIDDEN"
+  },
+
+  "engine_compliance": {
+    "all_engines_must_use": {
+      "visual_bytes_from": "FAMILI_RDH_SMOKE_REFERENCE_V1.png",
+      "visual_sha256": "dfe1bf5869ee26c819e70f3b99d3f0239e4d24ce1b8918c660114bc4e452b65b",
+      "audio_bytes_from": "FAMILI_RDH_SMOKE_AUDIO_V0.wav",
+      "audio_sha256": "bf0ecbe6af18235f872e1dc8f29061f4c67bb101a5de56bba3fd9efc0c684912"
+    },
+    "prohibited_for_all_engines": [
+      "Different visual files",
+      "Different audio files",
+      "Re-encoding audio",
+      "Resampling audio",
+      "Trimming audio",
+      "Normalizing audio",
+      "Audio denoising",
+      "Audio EQ",
+      "Audio compression",
+      "Pitch modification",
+      "Tempo modification"
+    ],
+    "candidate_engines": [
+      "Ditto",
+      "MuseTalk",
+      "LivePortrait-based route"
+    ]
+  },
+
+  "state_matrix": {
+    "FAMILI_VISUAL_V1": "LOCKED",
+    "VISUAL_WORK": "CLOSED",
+    "FAMILI_VOICE_IDENTITY": "NOT_FINAL",
+    "VOICE_REFINEMENT": "PAUSED",
+    "RDH_SMOKE_INPUT_ASSETS": "COMPLETE",
+    "HARDWARE_GPU": "TIER_0",
+    "MODERN_GPU_NODE": "MISSING",
+    "DITTO": "NOT_STARTED"
+  },
+
+  "next_phase": {
+    "blocked_by": "MODERN_GPU_NODE provisioning",
+    "required_steps": [
+      "PROVISION_MODERN_GPU_NODE",
+      "DITTO_ENVIRONMENT_SETUP",
+      "DITTO_FIRST_SMOKE_INFERENCE",
+      "HUMAN_VISUAL_REVIEW"
+    ],
+    "target_output": "DITTO_FAMILI_VISUAL_V1_SMOKE_AUDIO_V0.mp4"
+  },
+
+  "voice_refinement_gate": {
+    "status": "PAUSED",
+    "deferred_work": [
+      "GLM-4-Voice Prompt tuning",
+      "glm-tts optimization",
+      "edge-tts exploration",
+      "Azure voice options",
+      "voice clone experiments",
+      "NAME_PRONUNCIATION refinement",
+      "WARMTH enhancement",
+      "PREMIUM_QUALITY upgrade",
+      "A02-A06 voice variants"
+    ],
+    "resumes_after": "FIRST REAL FAMILI DIGITAL HUMAN VIDEO has been generated and reviewed by human user"
+  },
+
+  "previous_baseline": {
+    "source": "D:\\Family\\50_开发_dev\\experiments\\rdh-benchmark\\assets\\audio-v1\\voice-baseline\\FAMILI_VOICE_BASELINE_V0_CLEAN_FINAL.wav",
+    "sha256": "bf0ecbe6af18235f872e1dc8f29061f4c67bb101a5de56bba3fd9efc0c684912",
+    "status": "ARCHIVED",
+    "note": "Source file preserved; Smoke Audio V0 is byte-for-byte copy"
+  }
+}

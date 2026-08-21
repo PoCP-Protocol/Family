@@ -1,0 +1,38 @@
+{
+  "name": "FAMILI_VISUAL_DIRECTION_V1",
+  "status": "APPROVED_VISUAL_DIRECTION",
+  "approved_date": "2026-08-21",
+  "purpose": [
+    "brand_visual_anchor",
+    "ui_product_reference",
+    "rdh_stylized_human_smoke_reference"
+  ],
+  "not_equal_to": [
+    "final_3d_model",
+    "final_benchmark_neutral_portrait",
+    "photorealistic_human_master"
+  ],
+  "persona_traits": [
+    "知性",
+    "温柔",
+    "可信",
+    "博学",
+    "亲和",
+    "AI科技感"
+  ],
+  "visual_style": "半写实3D动画化女性数字人",
+  "appearance": {
+    "hair": "深色中长发，自然柔顺",
+    "eyes": "大而清澈、富有神采",
+    "skin": "自然白皙、明亮但不过度冷白",
+    "head_pose": "基本正面，轻微自然姿态",
+    "forehead_mole": false,
+    "outerwear": "淡紫色西装",
+    "innerwear": "白色V领上衣",
+    "background": "浅色柔和科技感背景"
+  },
+  "source_image_sha256": "dfe1bf5869ee26c819e70f3b99d3f0239e4d24ce1b8918c660114bc4e452b65b",
+  "visual_direction_sha256": "dfe1bf5869ee26c819e70f3b99d3f0239e4d24ce1b8918c660114bc4e452b65b",
+  "smoke_reference_sha256": "dfe1bf5869ee26c819e70f3b99d3f0239e4d24ce1b8918c660114bc4e452b65b",
+  "notes": "用户重新确认此版为当前法咪莉视觉方向基准：去除额头黑痣，肤色较上一版略提亮但保持自然，头部更正面。"
+}

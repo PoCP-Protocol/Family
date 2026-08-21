@@ -1,0 +1,24 @@
+{
+  "asset_id": "FAMILI_RDH_SMOKE_AUDIO_V0",
+  "role": "RDH_ENGINE_SMOKE_AUDIO",
+  "production_voice": false,
+  "voice_identity_final": false,
+  "provider": "Zhipu",
+  "model": "glm-4-voice",
+  "voice": "aiohome",
+  "spoken_text_observed": "你好，法咪莉，今天我们聊聊家庭吧。",
+  "sample_rate": 16000,
+  "channels": 1,
+  "codec": "pcm_s16le",
+  "bit_depth": 16,
+  "duration_ms": 8811,
+  "sha256": "bf0ecbe6af18235f872e1dc8f29061f4c67bb101a5de56bba3fd9efc0c684912",
+  "human_voice_direction": "APPROVED_BASELINE",
+  "known_voice_issues": [
+    "NAME_PRONUNCIATION",
+    "WARMTH",
+    "PREMIUM_QUALITY"
+  ],
+  "frozen_at": "2026-08-21T00:00:00Z",
+  "reason": "FIRST_REAL_RDH_SMOKE_TEST_INPUT"
+}
